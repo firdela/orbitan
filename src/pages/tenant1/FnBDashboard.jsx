@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '@/components/layout/AppShell';
+import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
 import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
   Shield, BarChart2, Link2, Calendar, ChevronRight,
@@ -50,35 +51,43 @@ export default function FnBDashboard() {
       navigation={NAV}
       title="La Birria Tacos — F&B Console"
       headerRight={
-        <div className="flex items-center gap-2">
-          <span className="hidden sm:inline-flex items-center gap-1.5 bg-orbitan-amber-light text-orbitan-amber text-xs font-semibold px-3 py-1.5 rounded-full">
-            <Utensils className="w-3.5 h-3.5" /> F&B Pack
-          </span>
+        <Link to="/leader-org">
+          <Button size="sm" variant="ghost" className="text-xs text-muted-foreground">
+            ← Platform Console
+          </Button>
+        </Link>
+      }
+    >
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+
+        {/* Header — Enterprise Multi-Pack Identity */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#F97316' }}>
+                <Utensils className="w-4 h-4 text-white" />
+              </div>
+              <h2 className="font-heading font-bold text-xl text-foreground">Taqueria Pte Ltd</h2>
+              <PlanBadge plan="orbitan_business" />
+            </div>
+            <PackBadgeGroup packs={['core', 'fnb', 'finance', 'compliance']} />
+            <p className="text-sm text-muted-foreground mt-1">
+              Client: <span className="font-medium text-foreground">La Birria Tacos</span> &nbsp;·&nbsp;
+              Outlet: <span className="font-medium text-foreground">North Bridge Rd</span> &nbsp;·&nbsp;
+              {new Date().toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
           <Link to="/outlet">
-            <Button size="sm" variant="outline" className="text-xs gap-1">
+            <Button size="sm" variant="outline" className="text-xs gap-1 flex-shrink-0">
               Outlet View <ChevronRight className="w-3 h-3" />
             </Button>
           </Link>
         </div>
-      }
-    >
-      <div className="p-6 max-w-7xl mx-auto space-y-8">
-
-        {/* Header */}
-        <div>
-          <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mb-1">Tenant 1 · Taqueria Pte Ltd</p>
-          <h2 className="text-2xl font-display font-bold text-foreground">F&B Operations Dashboard</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Client: <span className="font-medium text-foreground">La Birria Tacos</span> &nbsp;·&nbsp;
-            Outlet: <span className="font-medium text-foreground">North Bridge Rd</span> &nbsp;·&nbsp;
-            {new Date().toLocaleDateString('en-SG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
-        </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {KPI.map(k => (
-            <div key={k.label} className="bg-card border border-border rounded-xl p-5">
+            <div key={k.label} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs text-muted-foreground font-medium">{k.label}</p>
                 <k.icon className={`w-4 h-4 ${k.color}`} />

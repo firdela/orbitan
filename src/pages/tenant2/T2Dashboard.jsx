@@ -48,7 +48,9 @@ const STATUS_MAP = {
 
 export default function T2Dashboard() {
   return (
-    <AppShell navigation={NAV} title="Renewed Resources — Operations">
+    <AppShell navigation={NAV} title="Renewed Resources — Operations" headerRight={
+      <a href="/leader-org"><button className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-accent transition-colors">← Platform Console</button></a>
+    }>
       <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
 
         {/* Header */}
@@ -59,9 +61,9 @@ export default function T2Dashboard() {
                 <Recycle className="w-4 h-4 text-white" />
               </div>
               <h2 className="font-heading font-bold text-xl text-foreground">Renewed Resources Pte Ltd</h2>
-              <PlanBadge plan="orbitan_growth" />
+              <PlanBadge plan="orbitan_business" />
             </div>
-            <PackBadgeGroup packs={['core', 'sustainability', 'compliance']} />
+            <PackBadgeGroup packs={['core', 'sustainability', 'compliance', 'reporting']} />
             <p className="text-sm text-muted-foreground mt-1">Recycling & Sustainability Operations · Singapore</p>
           </div>
           <div className="flex gap-2">

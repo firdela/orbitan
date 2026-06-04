@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { PLATFORM_IDENTITY, SUBSCRIPTION_PLANS, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS } from '@/lib/orbitan-config';
+import { PLAN_HIERARCHY, PLAN_LABELS } from '@/lib/orbitan-plans';
 import { DEMO_TENANTS } from '@/lib/use-tenant.jsx';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
@@ -14,15 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Building2, Users, Package, BarChart2, Shield, Settings, ChevronRight,
   Globe, Cpu, Layers, Flag, CreditCard, Info, Plus, RefreshCw, CheckCircle2,
-  AlertTriangle, TrendingUp, Zap, Star
+  AlertTriangle, TrendingUp, Zap, Star, Lock
 } from 'lucide-react';
-
-const PLAN_COLORS = {
-  orbitan_starter: 'bg-slate-100 text-slate-700',
-  orbitan_growth: 'bg-orbitan-blue-light text-orbitan-blue',
-  orbitan_business: 'bg-orbitan-purple-light text-orbitan-purple',
-  orbitan_enterprise: 'bg-orbitan-amber-light text-orbitan-amber',
-};
 
 export default function LeaderOrg() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -98,12 +92,10 @@ export default function LeaderOrg() {
                 <div key={tenant.id} className="bg-card border border-border rounded-xl p-5 hover:shadow-md transition-shadow">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-heading font-semibold text-foreground">{tenant.name}</h3>
                         <StatusBadge status={tenant.status} />
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${PLAN_COLORS[tenant.subscription_plan]}`}>
-                          {SUBSCRIPTION_PLANS[tenant.subscription_plan]?.name || tenant.subscription_plan}
-                        </span>
+                        <PlanBadge plan={tenant.subscription_plan} />
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {INDUSTRY_LABELS[tenant.industry]} · {tenant.enabled_modules?.length || 0} modules active · Up to {tenant.max_employees} employees
@@ -190,33 +182,69 @@ export default function LeaderOrg() {
 
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions">
+            <div className="mb-4">
+              <h2 className="font-heading font-semibold text-lg mb-1">Subscription Tiers</h2>
+              <p className="text-sm text-muted-foreground">OrbitanOS plan hierarchy — each tier is a superset of the tier below it.</p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Object.values(SUBSCRIPTION_PLANS).map(plan => (
-                <div key={plan.key} className="bg-card border border-border rounded-xl p-5 flex flex-col">
-                  <div className="mb-4">
-                    <h3 className="font-heading font-bold text-foreground mb-1">{plan.name}</h3>
-                    <p className="text-2xl font-display font-bold text-orbitan-blue">
-                      {plan.price_sgd ? `S$${plan.price_sgd}` : 'Custom'}
-                      {plan.price_sgd && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+              {[
+                { key: 'orbitan_starter', price: 'S$49', period: '/mo', employees: '10', modules: 'Core only', packs: 'Core only', description: 'Single outlet, small teams.' },
+                { key: 'orbitan_growth', price: 'S$149', period: '/mo', employees: '50', modules: '8 modules', packs: '1 Industry Pack', description: 'Growing businesses, one pack.' },
+                { key: 'orbitan_business', price: 'S$399', period: '/mo', employees: '250', modules: 'All standard', packs: 'Multiple Packs + AI', description: 'Multi-site, AI suite, integrations.' },
+                { key: 'orbitan_enterprise', price: 'Custom', period: '', employees: 'Unlimited', modules: 'All + future', packs: 'All Packs', description: 'Enterprise governance, SSO, dedicated CSM.' },
+              ].map((plan, idx) => {
+                const tierCount = tenants.filter(t => t.subscription_plan === plan.key).length;
+                const isEnterprise = plan.key === 'orbitan_enterprise';
+                return (
+                  <div key={plan.key} className={`bg-card border rounded-xl p-5 flex flex-col ${isEnterprise ? 'border-[#D4AF37]/40 shadow-md' : 'border-border'}`}>
+                    {isEnterprise && (
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-[#D4AF37] mb-2">
+                        <Star className="w-3 h-3" /> FLAGSHIP
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mb-3">
+                      <PlanBadge plan={plan.key} />
+                      <span className="text-[10px] text-muted-foreground">Tier {PLAN_HIERARCHY[plan.key]}</span>
+                    </div>
+                    <p className="text-2xl font-display font-bold text-foreground mb-0.5">
+                      {plan.price}<span className="text-sm font-normal text-muted-foreground">{plan.period}</span>
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">{plan.description}</p>
+                    <p className="text-xs text-muted-foreground mb-4">{plan.description}</p>
+                    <div className="space-y-2 flex-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Employees</span>
+                        <span className="font-medium">{plan.employees}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Modules</span>
+                        <span className="font-medium">{plan.modules}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Packs</span>
+                        <span className="font-medium">{plan.packs}</span>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">{tierCount} tenant{tierCount !== 1 ? 's' : ''}</p>
+                      {tierCount > 0 && <CheckCircle2 className="w-3.5 h-3.5 text-orbitan-green" />}
+                    </div>
                   </div>
-                  <div className="space-y-1.5 flex-1">
-                    <p className="text-xs font-medium text-foreground">Employees: {plan.max_employees ?? 'Unlimited'}</p>
-                    <p className="text-xs font-medium text-foreground">Modules: {plan.allowed_modules.includes('all') ? 'All' : plan.allowed_modules.length}</p>
-                    <p className="text-xs font-medium text-foreground">Packs: {
-                      plan.allowed_packs.includes('all') ? 'All' :
-                      plan.allowed_packs.includes('multiple_packs') ? 'Multiple' :
-                      plan.allowed_packs.includes('one_pack') ? 'One Pack' : 'None'
-                    }</p>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-xs text-muted-foreground">
-                      {tenants.filter(t => t.subscription_plan === plan.key).length} active tenant(s)
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
+            </div>
+
+            {/* Feature Gate Legend */}
+            <div className="mt-6 bg-muted rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Lock className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-heading font-semibold text-sm">Feature Gating — Exit-Ready Architecture</h3>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                All module and pack access is enforced by <code className="bg-card px-1.5 py-0.5 rounded text-foreground font-mono">lib/orbitan-plans.js</code> — a pure JavaScript library with zero platform dependencies.
+                This means subscription enforcement logic is fully portable to any backend stack (Node.js, Deno, AWS Lambda, etc.) without modification.
+                The <code className="bg-card px-1.5 py-0.5 rounded text-foreground font-mono">subscriptionGate</code> backend function validates access server-side,
+                and the <code className="bg-card px-1.5 py-0.5 rounded text-foreground font-mono">SubscriptionGate</code> UI component enforces it client-side.
+              </p>
             </div>
           </TabsContent>
 
