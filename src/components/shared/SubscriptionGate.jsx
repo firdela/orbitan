@@ -9,7 +9,33 @@
  *   </SubscriptionGate>
  */
 import React from 'react';
-import { hasModuleAccess, hasPackAccess, meetsMinimumPlan, PLAN_LABELS } from '@/lib/orbitan-plans';
+import { SUBSCRIPTION_PLANS } from '@/lib/orbitan-config';
+
+function hasModuleAccess(tenant, moduleKey) {
+  if (!tenant) return false;
+  const plan = SUBSCRIPTION_PLANS[tenant.subscription_plan];
+  if (!plan) return false;
+  if (plan.allowed_modules.includes("all")) return true;
+  if (tenant.feature_flags?.[moduleKey] === true) return true;
+  if (tenant.feature_flags?.[moduleKey] === false) return false;
+  return (tenant.enabled_modules || []).includes(moduleKey);
+}
+
+function hasPackAccess(tenant, packKey) {
+  if (!tenant) return false;
+  const plan = SUBSCRIPTION_PLANS[tenant.subscription_plan];
+  if (!plan) return false;
+  if (plan.allowed_packs.includes("all")) return true;
+  return (tenant.enabled_packs || []).includes(packKey);
+}
+
+function meetsMinimumPlan(tenant, minPlanKey) {
+  if (!tenant) return false;
+  const current = SUBSCRIPTION_PLANS[tenant.subscription_plan];
+  const required = SUBSCRIPTION_PLANS[minPlanKey];
+  if (!current || !required) return false;
+  return current.tier_level >= required.tier_level;
+}
 import { Lock } from 'lucide-react';
 import { PlanBadge } from '@/components/shared/PackBadge';
 import { cn } from '@/lib/utils';
@@ -39,7 +65,7 @@ export default function SubscriptionGate({
   if (hasAccess) return <>{children}</>;
 
   // Determine which plan unlocks this
-  const requiredPlanLabel = minimumPlan ? PLAN_LABELS[minimumPlan] : 'a higher plan';
+  const requiredPlanLabel = minimumPlan ? (SUBSCRIPTION_PLANS[minimumPlan]?.name || minimumPlan) : 'a higher plan';
 
   if (fallback) return <>{fallback}</>;
 

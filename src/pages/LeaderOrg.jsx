@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { PLATFORM_IDENTITY, SUBSCRIPTION_PLANS, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS } from '@/lib/orbitan-config';
-import { PLAN_HIERARCHY, PLAN_LABELS } from '@/lib/orbitan-plans';
+import { PLATFORM_IDENTITY, SUBSCRIPTION_PLANS, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, OPERATING_CYCLE, LAUNCH_TENANTS } from '@/lib/orbitan-config';
 import { DEMO_TENANTS } from '@/lib/use-tenant.jsx';
+import { getAllPacks, getActivePacks, getFuturePacks } from '@/lib/orbitan-engine';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
 import StatCard from '@/components/shared/StatCard';
@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Building2, Users, Package, BarChart2, Shield, Settings, ChevronRight,
   Globe, Cpu, Layers, Flag, CreditCard, Info, Plus, RefreshCw, CheckCircle2,
-  AlertTriangle, TrendingUp, Zap, Star, Lock
+  AlertTriangle, TrendingUp, Zap, Star, Lock, Rocket, Leaf, Activity
 } from 'lucide-react';
 
 export default function LeaderOrg() {
@@ -71,10 +71,11 @@ export default function LeaderOrg() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 bg-muted">
+          <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1">
             <TabsTrigger value="overview">Tenants</TabsTrigger>
             <TabsTrigger value="modules">Modules & Packs</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+            <TabsTrigger value="cycle">Operating Cycle</TabsTrigger>
             <TabsTrigger value="about">About Platform</TabsTrigger>
           </TabsList>
 
@@ -103,11 +104,11 @@ export default function LeaderOrg() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <PackBadgeGroup
-                        packs={
+                        packs={tenant.enabled_packs || (
                           tenant.id === 'tenant_taqueria' ? ['core', 'fnb', 'finance', 'compliance'] :
-                          tenant.id === 'tenant_renewed'  ? ['core', 'sustainability', 'compliance'] :
-                          ['core', 'retail', 'sustainability']
-                        }
+                          tenant.id === 'tenant_renewed'  ? ['core', 'recycling', 'compliance'] :
+                          ['core', 'retail']
+                        )}
                         size="xs"
                       />
                       <Link to={
@@ -157,15 +158,23 @@ export default function LeaderOrg() {
                 </div>
               </div>
               <div>
-                <h3 className="font-heading font-semibold mb-4 flex items-center gap-2"><Package className="w-4 h-4 text-orbitan-green" />Industry Packs</h3>
-                <div className="space-y-2">
-                  {Object.values(INDUSTRY_PACKS).map(pack => (
+                <h3 className="font-heading font-semibold mb-3 flex items-center gap-2"><Package className="w-4 h-4 text-orbitan-green" />Industry Packs</h3>
+
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Activity className="w-3 h-3" /> Active Launch Packs
+                </p>
+                <div className="space-y-2 mb-4">
+                  {getActivePacks().map(pack => (
                     <div key={pack.key} className="bg-card border border-border rounded-lg px-4 py-3">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium text-foreground">{pack.name}</p>
-                        <span className="text-[10px] bg-orbitan-green-light text-orbitan-green px-2 py-0.5 rounded-full font-medium">Available</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: pack.color_hex }} />
+                          <p className="text-sm font-medium text-foreground">{pack.name}</p>
+                        </div>
+                        <span className="text-[10px] bg-orbitan-green-light text-orbitan-green px-2 py-0.5 rounded-full font-medium">Live</span>
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">{pack.description}</p>
+                      <p className="text-[10px] text-muted-foreground mb-2">Tenants: {pack.launch_tenants.join(', ')}</p>
                       {pack.modules && (
                         <div className="flex flex-wrap gap-1">
                           {pack.modules.map(m => (
@@ -173,6 +182,24 @@ export default function LeaderOrg() {
                           ))}
                         </div>
                       )}
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Rocket className="w-3 h-3" /> Future-Proofed Packs (Seeded)
+                </p>
+                <div className="space-y-2">
+                  {getFuturePacks().map(pack => (
+                    <div key={pack.key} className="bg-card border border-dashed border-border rounded-lg px-4 py-3 opacity-70">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: pack.color_hex }} />
+                          <p className="text-sm font-medium text-foreground">{pack.name}</p>
+                        </div>
+                        <span className="text-[10px] bg-secondary text-muted-foreground px-2 py-0.5 rounded-full font-medium">Ready to Activate</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{pack.description}</p>
                     </div>
                   ))}
                 </div>
@@ -203,9 +230,9 @@ export default function LeaderOrg() {
                       </div>
                     )}
                     <div className="flex items-center gap-2 mb-3">
-                      <PlanBadge plan={plan.key} />
-                      <span className="text-[10px] text-muted-foreground">Tier {PLAN_HIERARCHY[plan.key]}</span>
-                    </div>
+                       <PlanBadge plan={plan.key} />
+                       <span className="text-[10px] text-muted-foreground">Tier {SUBSCRIPTION_PLANS[plan.key]?.tier_level}</span>
+                     </div>
                     <p className="text-2xl font-display font-bold text-foreground mb-0.5">
                       {plan.price}<span className="text-sm font-normal text-muted-foreground">{plan.period}</span>
                     </p>
@@ -244,6 +271,45 @@ export default function LeaderOrg() {
                 This means subscription enforcement logic is fully portable to any backend stack (Node.js, Deno, AWS Lambda, etc.) without modification.
                 The <code className="bg-card px-1.5 py-0.5 rounded text-foreground font-mono">subscriptionGate</code> backend function validates access server-side,
                 and the <code className="bg-card px-1.5 py-0.5 rounded text-foreground font-mono">SubscriptionGate</code> UI component enforces it client-side.
+              </p>
+            </div>
+          </TabsContent>
+
+          {/* Operating Cycle Tab */}
+          <TabsContent value="cycle">
+            <div className="mb-6">
+              <h2 className="font-heading font-semibold text-lg mb-1">The OrbitanOS Operating Cycle</h2>
+              <p className="text-sm text-muted-foreground">The 6 principles that power every module, workflow, and audit trail in OrbitanOS.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+              {Object.values(OPERATING_CYCLE).map((principle, idx) => (
+                <div key={principle.key} className="bg-card border border-border rounded-xl p-5 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-display font-bold text-sm flex-shrink-0"
+                      style={{ background: principle.color }}>
+                      {idx + 1}
+                    </div>
+                    <h3 className="font-display font-bold text-foreground text-lg">{principle.label}</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed mb-3">{principle.description}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {Object.values(MODULES)
+                      .filter(m => m.principle === principle.key)
+                      .map(m => (
+                        <span key={m.key} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                          style={{ color: principle.color, background: principle.color + '15', border: `1px solid ${principle.color}30` }}>
+                          {m.name}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-muted rounded-xl p-5">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">Exit-Ready Architecture Note:</span>{' '}
+                The Operating Cycle is embedded as metadata in <code className="bg-card px-1.5 py-0.5 rounded font-mono">lib/orbitan-config.js</code> via the <code className="bg-card px-1.5 py-0.5 rounded font-mono">OPERATING_CYCLE</code> object.
+                Every module is tagged with its principle key (<code className="bg-card px-1.5 py-0.5 rounded font-mono">principle: "regulate"</code>, etc.), ensuring that when you migrate stacks, the OrbitanOS DNA — including its brand philosophy — travels with the codebase.
               </p>
             </div>
           </TabsContent>

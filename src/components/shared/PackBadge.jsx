@@ -1,27 +1,38 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { INDUSTRY_PACKS } from '@/lib/orbitan-config';
 
-// Orbitan Industry Pack colour registry
-const PACK_CONFIG = {
-  // Industry Packs
-  fnb:              { label: 'F&B',            color: '#F97316', bg: '#FFF7ED', border: '#FED7AA' },
-  food_beverage:    { label: 'F&B',            color: '#F97316', bg: '#FFF7ED', border: '#FED7AA' },
-  retail:           { label: 'Retail',         color: '#22C55E', bg: '#F0FDF4', border: '#BBF7D0' },
-  recycling:        { label: 'Sustainability', color: '#16A34A', bg: '#F0FDF4', border: '#86EFAC' },
-  sustainability:   { label: 'Sustainability', color: '#16A34A', bg: '#F0FDF4', border: '#86EFAC' },
-  healthcare:       { label: 'Healthcare',     color: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC' },
-  education:        { label: 'Education',      color: '#8B5CF6', bg: '#F5F3FF', border: '#DDD6FE' },
-  logistics:        { label: 'Logistics',      color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
-  construction:     { label: 'Construction',   color: '#EAB308', bg: '#FEFCE8', border: '#FEF08A' },
-  technology:       { label: 'Technology',     color: '#0F172A', bg: '#F8FAFC', border: '#E2E8F0' },
-  // Capability Packs
-  core:             { label: 'Core',           color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
-  finance:          { label: 'Finance',        color: '#0F172A', bg: '#F8FAFC', border: '#CBD5E1' },
-  ai:               { label: 'AI Suite',       color: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
-  compliance:       { label: 'Compliance',     color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
-  governance:       { label: 'Governance',     color: '#111827', bg: '#F9FAFB', border: '#E5E7EB' },
-  xero:             { label: 'Xero',           color: '#00A0D2', bg: '#EFF9FF', border: '#BAE6FD' },
+// Build pack config dynamically from the master DNA file
+// Capability packs (non-industry) are defined here as static overrides
+const CAPABILITY_PACKS = {
+  core:       { label: 'Core',       color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
+  finance:    { label: 'Finance',    color: '#0F172A', bg: '#F8FAFC', border: '#CBD5E1' },
+  ai:         { label: 'AI Suite',   color: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
+  compliance: { label: 'Compliance', color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
+  governance: { label: 'Governance', color: '#111827', bg: '#F9FAFB', border: '#E5E7EB' },
+  xero:       { label: 'Xero',       color: '#00A0D2', bg: '#EFF9FF', border: '#BAE6FD' },
 };
+
+function resolvePackConfig(key) {
+  // Check capability packs first
+  if (CAPABILITY_PACKS[key]) return CAPABILITY_PACKS[key];
+  // Then resolve from master DNA
+  const pack = INDUSTRY_PACKS[key];
+  if (pack) {
+    const c = pack.color_hex;
+    return { label: pack.badge_label, color: c, bg: c + '15', border: c + '40' };
+  }
+  // Legacy aliases
+  const ALIASES = {
+    food_beverage: 'fnb',
+    recycling_sustainability: 'recycling',
+    sustainability: 'recycling',
+    technology_software: 'technology',
+    events_activations: 'events',
+  };
+  if (ALIASES[key]) return resolvePackConfig(ALIASES[key]);
+  return { label: key, color: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB' };
+}
 
 // Subscription plan tier badge
 const PLAN_CONFIG = {
@@ -37,7 +48,7 @@ const PLAN_CONFIG = {
  */
 export function PackBadge({ pack, label: overrideLabel, size = 'sm', className }) {
   const key = (pack || '').toLowerCase().replace(/[^a-z_]/g, '');
-  const config = PACK_CONFIG[key] || { label: pack || 'Pack', color: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB' };
+  const config = resolvePackConfig(key);
   const label = overrideLabel || config.label;
 
   const sizeClasses = {

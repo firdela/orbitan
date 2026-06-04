@@ -47,7 +47,7 @@ const GRADE_MAP = {
 
 export default function T3Dashboard() {
   return (
-    <AppShell navigation={NAV} title="Retail Ops — Upcycled Clothing" headerRight={
+    <AppShell navigation={NAV} title="Renewed Fashion" headerRight={
       <a href="/leader-org"><button className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-accent transition-colors">← Platform Console</button></a>
     }>
       <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
@@ -59,10 +59,10 @@ export default function T3Dashboard() {
               <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#22C55E' }}>
                 <ShoppingBag className="w-4 h-4 text-white" />
               </div>
-              <h2 className="font-heading font-bold text-xl text-foreground">Retail Operations Pte Ltd</h2>
+              <h2 className="font-heading font-bold text-xl text-foreground">Renewed Fashion</h2>
               <PlanBadge plan="orbitan_business" />
             </div>
-            <PackBadgeGroup packs={['core', 'retail', 'sustainability', 'compliance']} />
+            <PackBadgeGroup packs={['core', 'retail']} />
             <p className="text-sm text-muted-foreground mt-1">Reuse & Upcycle Clothing · Singapore</p>
           </div>
           <div className="flex gap-2">
