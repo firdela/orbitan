@@ -1,0 +1,151 @@
+{
+  "name": "FinanceMapping",
+  "type": "object",
+  "description": "Maps OrbitanOS entity records to their corresponding Xero GUIDs. Acts as the sync state registry.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "sales_invoice",
+        "purchase_order",
+        "supplier",
+        "reconciliation"
+      ],
+      "description": "Which OrbitanOS entity type this mapping belongs to"
+    },
+    "orbitan_record_id": {
+      "type": "string",
+      "description": "The OrbitanOS entity record ID"
+    },
+    "xero_guid": {
+      "type": "string",
+      "description": "The corresponding GUID in Xero"
+    },
+    "xero_entity_type": {
+      "type": "string",
+      "enum": [
+        "Invoice",
+        "Bill",
+        "Contact",
+        "ManualJournal"
+      ],
+      "description": "Xero object type"
+    },
+    "xero_status": {
+      "type": "string",
+      "description": "Last known status in Xero (e.g. AUTHORISED, PAID)"
+    },
+    "sync_direction": {
+      "type": "string",
+      "enum": [
+        "orbitan_to_xero",
+        "xero_to_orbitan",
+        "bidirectional"
+      ],
+      "default": "orbitan_to_xero"
+    },
+    "last_synced_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sync_attempts": {
+      "type": "number",
+      "default": 0
+    },
+    "last_error": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "tenant_id",
+    "entity_type",
+    "orbitan_record_id"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "tenant_admin"
+          }
+        }
+      ]
+    }
+  }
+}
