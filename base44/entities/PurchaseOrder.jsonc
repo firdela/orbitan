@@ -79,6 +79,82 @@
     "approved_date": {
       "type": "string"
     },
+    "document_url": {
+      "type": "string",
+      "description": "Uploaded supplier invoice/delivery order (image/PDF)"
+    },
+    "processing_status": {
+      "type": "string",
+      "enum": [
+        "raw",
+        "ai_processing",
+        "needs_review",
+        "verified"
+      ],
+      "default": "raw",
+      "description": "AI extraction and human-in-the-loop review state"
+    },
+    "ai_confidence_score": {
+      "type": "number",
+      "description": "AI extraction confidence 0-100"
+    },
+    "raw_ai_output": {
+      "type": "object",
+      "description": "Raw AI extracted data before human verification"
+    },
+    "verified_by": {
+      "type": "string"
+    },
+    "verified_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "xero_bill_guid": {
+      "type": "string",
+      "description": "Xero Bill GUID after sync"
+    },
+    "xero_sync_status": {
+      "type": "string",
+      "enum": [
+        "not_synced",
+        "syncing",
+        "synced",
+        "error"
+      ],
+      "default": "not_synced"
+    },
+    "xero_sync_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_sync_error": {
+      "type": "string",
+      "description": "Last Xero sync error message"
+    },
+    "audit_trail": {
+      "type": "array",
+      "description": "Immutable log of all state changes",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "notes": {
       "type": "string"
     }
@@ -123,6 +199,7 @@
           "user_condition": {
             "role": {
               "$in": [
+                "tenant_admin",
                 "outlet_manager",
                 "supervisor"
               ]

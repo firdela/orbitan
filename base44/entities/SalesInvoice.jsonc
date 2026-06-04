@@ -78,6 +78,41 @@
       ],
       "default": "pending"
     },
+    "document_url": {
+      "type": "string",
+      "description": "Uploaded source document (image/PDF)"
+    },
+    "processing_status": {
+      "type": "string",
+      "enum": [
+        "raw",
+        "ai_processing",
+        "needs_review",
+        "verified"
+      ],
+      "default": "raw",
+      "description": "AI extraction and human-in-the-loop review state"
+    },
+    "ai_confidence_score": {
+      "type": "number",
+      "description": "AI extraction confidence 0-100"
+    },
+    "raw_ai_output": {
+      "type": "object",
+      "description": "Raw AI extracted data before human verification"
+    },
+    "verified_by": {
+      "type": "string",
+      "description": "User ID who verified the document"
+    },
+    "verified_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "xero_guid": {
+      "type": "string",
+      "description": "Xero Invoice GUID after sync"
+    },
     "xero_sync_status": {
       "type": "string",
       "enum": [
@@ -88,8 +123,37 @@
       ],
       "default": "not_synced"
     },
-    "xero_invoice_id": {
-      "type": "string"
+    "xero_sync_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_sync_error": {
+      "type": "string",
+      "description": "Last Xero sync error message"
+    },
+    "audit_trail": {
+      "type": "array",
+      "description": "Immutable log of all state changes",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      }
     },
     "notes": {
       "type": "string"
@@ -128,7 +192,12 @@
         },
         {
           "user_condition": {
-            "role": "outlet_manager"
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
           }
         }
       ]
@@ -144,7 +213,12 @@
         },
         {
           "user_condition": {
-            "role": "outlet_manager"
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
           }
         }
       ]
