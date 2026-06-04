@@ -68,5 +68,79 @@
     "outlet_id",
     "employee_id",
     "date"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "data.outlet_id": "{{user.data.outlet_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "outlet_manager"
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "data.outlet_id": "{{user.data.outlet_id}}",
+          "user_condition": {
+            "role": {
+              "$in": [
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "data.outlet_id": "{{user.data.outlet_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "outlet_manager"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "data.outlet_id": "{{user.data.outlet_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "outlet_manager"
+          }
+        }
+      ]
+    }
+  }
 }
