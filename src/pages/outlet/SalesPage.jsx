@@ -1,0 +1,183 @@
+import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
+import { format } from 'date-fns';
+import AppShell from '@/components/layout/AppShell';
+import PageHeader from '@/components/shared/PageHeader';
+import StatusBadge from '@/components/shared/StatusBadge';
+import StatCard from '@/components/shared/StatCard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  FileText, TrendingUp, DollarSign, Package, CheckCircle2,
+  Plus, Home, Users, Calendar, ShoppingCart, CheckSquare,
+  BarChart2, Shield, Layers, Building2, RefreshCw
+} from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const NAV = [
+  { type: 'section', label: 'Outlet' },
+  { href: '/outlet', icon: Home, label: 'Dashboard' },
+  { href: '/outlet/inventory', icon: Package, label: 'Inventory' },
+  { href: '/outlet/procurement', icon: ShoppingCart, label: 'Purchase Orders' },
+  { href: '/outlet/sales', icon: FileText, label: 'Sales & Reconciliation' },
+  { type: 'section', label: 'Team' },
+  { href: '/outlet/workforce', icon: Users, label: 'My Team' },
+  { href: '/outlet/scheduling', icon: Calendar, label: 'Shift Schedule' },
+  { href: '/outlet/tasks', icon: CheckSquare, label: 'Tasks' },
+  { type: 'section', label: 'Reports' },
+  { href: '/outlet/reports', icon: BarChart2, label: 'Reports' },
+  { href: '/outlet/compliance', icon: Shield, label: 'Compliance' },
+  { type: 'section', label: 'Navigation' },
+  { href: '/company', icon: Building2, label: 'Company Dashboard' },
+  { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
+];
+
+const DEMO_RECONCILIATIONS = [
+  { id: 'r1', date: '2024-01-11', total_revenue: 3420, total_cogs: 1026, gross_profit: 2394, gross_margin_pct: 70, cash_sales: 1200, card_sales: 2220, net_revenue: 3420, status: 'approved', xero_sync_status: 'synced' },
+  { id: 'r2', date: '2024-01-10', total_revenue: 2980, total_cogs: 894, gross_profit: 2086, gross_margin_pct: 70, cash_sales: 980, card_sales: 2000, net_revenue: 2980, status: 'submitted', xero_sync_status: 'not_synced' },
+];
+
+export default function SalesPage() {
+  const [reconciliations, setReconciliations] = useState(DEMO_RECONCILIATIONS);
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '' });
+
+  const grossProfit = (parseFloat(form.total_revenue) || 0) - (parseFloat(form.total_cogs) || 0);
+  const margin = form.total_revenue ? ((grossProfit / parseFloat(form.total_revenue)) * 100).toFixed(1) : 0;
+
+  const handleCreate = async () => {
+    const rec = {
+      tenant_id: "tenant_taqueria",
+      outlet_id: "outlet_nb",
+      date: form.date,
+      total_revenue: parseFloat(form.total_revenue) || 0,
+      total_cogs: parseFloat(form.total_cogs) || 0,
+      gross_profit: grossProfit,
+      gross_margin_pct: parseFloat(margin),
+      cash_sales: parseFloat(form.cash_sales) || 0,
+      card_sales: parseFloat(form.card_sales) || 0,
+      net_revenue: parseFloat(form.total_revenue) || 0,
+      status: 'draft',
+      xero_sync_status: 'not_synced',
+    };
+    const created = await base44.entities.DailyReconciliation.create(rec);
+    setReconciliations(prev => [created, ...prev]);
+    setShowCreate(false);
+  };
+
+  const totalRevenue = reconciliations.reduce((s, r) => s + (r.total_revenue || 0), 0);
+  const avgMargin = reconciliations.length ? (reconciliations.reduce((s, r) => s + (r.gross_margin_pct || 0), 0) / reconciliations.length).toFixed(1) : 0;
+
+  return (
+    <AppShell navigation={NAV} title="">
+      <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
+        <PageHeader
+          title="Sales & Reconciliation"
+          subtitle="Daily P&L tracking with Xero sync"
+          actions={
+            <Button size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
+              <Plus className="w-4 h-4" />
+              New Reconciliation
+            </Button>
+          }
+        />
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard title="Total Revenue" value={`S$${totalRevenue.toLocaleString()}`} subtitle="All records" icon={TrendingUp} color="green" />
+          <StatCard title="Avg Gross Margin" value={`${avgMargin}%`} subtitle="F&B target: 65-75%" icon={BarChart2} color="blue" />
+          <StatCard title="Xero Synced" value={reconciliations.filter(r => r.xero_sync_status === 'synced').length} subtitle={`of ${reconciliations.length} records`} icon={RefreshCw} color="purple" />
+          <StatCard title="Approved" value={reconciliations.filter(r => r.status === 'approved').length} subtitle="Days reconciled" icon={CheckCircle2} color="green" />
+        </div>
+
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-border">
+            <h3 className="font-heading font-semibold text-sm">Daily Reconciliations</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Date</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Revenue</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground hidden sm:table-cell">COGS</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Gross Profit</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground hidden md:table-cell">Margin</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground">Status</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground">Xero</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {reconciliations.map(rec => (
+                  <tr key={rec.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3.5 font-medium text-foreground">
+                      {format(new Date(rec.date + 'T00:00:00'), 'd MMM yyyy')}
+                    </td>
+                    <td className="px-4 py-3.5 text-right font-semibold text-orbitan-green">S${rec.total_revenue?.toLocaleString()}</td>
+                    <td className="px-4 py-3.5 text-right text-muted-foreground hidden sm:table-cell">S${rec.total_cogs?.toLocaleString()}</td>
+                    <td className="px-4 py-3.5 text-right font-semibold">S${rec.gross_profit?.toLocaleString()}</td>
+                    <td className="px-4 py-3.5 text-right text-muted-foreground hidden md:table-cell">{rec.gross_margin_pct}%</td>
+                    <td className="px-4 py-3.5 text-center"><StatusBadge status={rec.status} /></td>
+                    <td className="px-4 py-3.5 text-center"><StatusBadge status={rec.xero_sync_status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Xero integration notice */}
+        <div className="mt-4 bg-orbitan-blue-light border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+          <RefreshCw className="w-4 h-4 text-orbitan-blue flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-orbitan-blue">Xero Integration</p>
+            <p className="text-xs text-blue-700 mt-0.5">Connect your Xero account via the Integrations module to automatically sync daily reconciliations and generate accounting entries.</p>
+            <Button variant="outline" size="sm" className="mt-2 text-xs border-orbitan-blue text-orbitan-blue hover:bg-orbitan-blue hover:text-white">
+              Connect Xero
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Daily Sales Reconciliation</DialogTitle></DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label className="text-xs mb-1 block">Date</Label>
+              <Input type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs mb-1 block">Total Revenue (S$)</Label>
+                <Input type="number" value={form.total_revenue} onChange={e => setForm(p => ({ ...p, total_revenue: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">Total COGS (S$)</Label>
+                <Input type="number" value={form.total_cogs} onChange={e => setForm(p => ({ ...p, total_cogs: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">Cash Sales (S$)</Label>
+                <Input type="number" value={form.cash_sales} onChange={e => setForm(p => ({ ...p, cash_sales: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div>
+                <Label className="text-xs mb-1 block">Card Sales (S$)</Label>
+                <Input type="number" value={form.card_sales} onChange={e => setForm(p => ({ ...p, card_sales: e.target.value }))} placeholder="0.00" />
+              </div>
+            </div>
+            {form.total_revenue && (
+              <div className="bg-muted rounded-xl p-4 space-y-1 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Gross Profit</span><span className="font-semibold text-orbitan-green">S${grossProfit.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Gross Margin</span><span className="font-semibold">{margin}%</span></div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+            <Button onClick={handleCreate} disabled={!form.total_revenue}>Submit</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </AppShell>
+  );
+}

@@ -1,0 +1,72 @@
+{
+  "name": "Shift",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "employee_id": {
+      "type": "string"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "start_time": {
+      "type": "string"
+    },
+    "end_time": {
+      "type": "string"
+    },
+    "break_duration_mins": {
+      "type": "number",
+      "default": 30
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "confirmed",
+        "in_progress",
+        "completed",
+        "absent",
+        "cancelled"
+      ],
+      "default": "scheduled"
+    },
+    "clock_in": {
+      "type": "string"
+    },
+    "clock_out": {
+      "type": "string"
+    },
+    "clock_in_method": {
+      "type": "string",
+      "enum": [
+        "pin",
+        "geo",
+        "manual",
+        "qr"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    },
+    "published": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "tenant_id",
+    "outlet_id",
+    "employee_id",
+    "date"
+  ]
+}

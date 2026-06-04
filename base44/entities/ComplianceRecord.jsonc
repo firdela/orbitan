@@ -1,0 +1,64 @@
+{
+  "name": "ComplianceRecord",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "description": "e.g. Food Safety Audit, Fire Drill, License Renewal"
+    },
+    "title": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "in_review",
+        "submitted",
+        "approved",
+        "rejected",
+        "overdue"
+      ],
+      "default": "pending"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "submitted_date": {
+      "type": "string"
+    },
+    "submitted_by": {
+      "type": "string"
+    },
+    "document_url": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "food_safety",
+        "fire_safety",
+        "licensing",
+        "hr",
+        "environmental",
+        "financial",
+        "other"
+      ]
+    }
+  },
+  "required": [
+    "tenant_id",
+    "type",
+    "title"
+  ]
+}

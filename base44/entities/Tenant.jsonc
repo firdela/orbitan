@@ -1,0 +1,104 @@
+{
+  "name": "Tenant",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Organisation name"
+    },
+    "legal_name": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string",
+      "enum": [
+        "food_beverage",
+        "recycling_sustainability",
+        "retail",
+        "healthcare",
+        "education",
+        "logistics",
+        "events_activations",
+        "technology_software",
+        "facilities_management",
+        "other"
+      ]
+    },
+    "subscription_plan": {
+      "type": "string",
+      "enum": [
+        "orbitan_starter",
+        "orbitan_growth",
+        "orbitan_business",
+        "orbitan_enterprise"
+      ],
+      "default": "orbitan_starter"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "suspended",
+        "trial",
+        "cancelled",
+        "onboarding"
+      ],
+      "default": "onboarding"
+    },
+    "enabled_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Module keys enabled for this tenant"
+    },
+    "enabled_packs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Industry pack keys enabled for this tenant"
+    },
+    "feature_flags": {
+      "type": "object",
+      "description": "Key-value feature flag overrides for this tenant"
+    },
+    "max_employees": {
+      "type": "number",
+      "default": 10
+    },
+    "contact_email": {
+      "type": "string"
+    },
+    "contact_name": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string",
+      "default": "Singapore"
+    },
+    "currency": {
+      "type": "string",
+      "default": "SGD"
+    },
+    "logo_url": {
+      "type": "string"
+    },
+    "onboarding_completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "trial_ends_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "industry",
+    "subscription_plan"
+  ]
+}

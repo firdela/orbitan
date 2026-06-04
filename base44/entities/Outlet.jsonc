@@ -1,0 +1,58 @@
+{
+  "name": "Outlet",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "restaurant",
+        "retail_store",
+        "warehouse",
+        "office",
+        "event_site",
+        "campus",
+        "processing_facility",
+        "other"
+      ],
+      "default": "other"
+    },
+    "operating_hours": {
+      "type": "string"
+    },
+    "contact_person": {
+      "type": "string"
+    },
+    "contact_phone": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "temporarily_closed"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "company_id",
+    "name"
+  ]
+}

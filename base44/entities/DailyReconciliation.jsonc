@@ -1,0 +1,79 @@
+{
+  "name": "DailyReconciliation",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "total_revenue": {
+      "type": "number"
+    },
+    "total_cogs": {
+      "type": "number"
+    },
+    "gross_profit": {
+      "type": "number"
+    },
+    "gross_margin_pct": {
+      "type": "number"
+    },
+    "cash_sales": {
+      "type": "number"
+    },
+    "card_sales": {
+      "type": "number"
+    },
+    "other_sales": {
+      "type": "number"
+    },
+    "discounts": {
+      "type": "number"
+    },
+    "refunds": {
+      "type": "number"
+    },
+    "net_revenue": {
+      "type": "number"
+    },
+    "variance": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "submitted",
+        "approved",
+        "flagged"
+      ],
+      "default": "draft"
+    },
+    "submitted_by": {
+      "type": "string"
+    },
+    "xero_sync_status": {
+      "type": "string",
+      "enum": [
+        "not_synced",
+        "synced",
+        "error"
+      ],
+      "default": "not_synced"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "outlet_id",
+    "date"
+  ]
+}

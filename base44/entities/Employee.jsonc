@@ -1,0 +1,85 @@
+{
+  "name": "Employee",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "tenant_admin",
+        "client_manager",
+        "outlet_manager",
+        "worker",
+        "supervisor"
+      ],
+      "default": "worker"
+    },
+    "position": {
+      "type": "string"
+    },
+    "department": {
+      "type": "string"
+    },
+    "employment_type": {
+      "type": "string",
+      "enum": [
+        "full_time",
+        "part_time",
+        "contract",
+        "temporary"
+      ],
+      "default": "full_time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "on_leave",
+        "terminated"
+      ],
+      "default": "active"
+    },
+    "hire_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "avatar_url": {
+      "type": "string"
+    },
+    "pay_rate": {
+      "type": "number"
+    },
+    "pay_type": {
+      "type": "string",
+      "enum": [
+        "hourly",
+        "monthly",
+        "daily"
+      ],
+      "default": "monthly"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "full_name",
+    "role"
+  ]
+}

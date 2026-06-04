@@ -1,0 +1,70 @@
+{
+  "name": "InventoryItem",
+  "type": "object",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "sku": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "unit": {
+      "type": "string",
+      "description": "e.g. kg, litre, piece, box"
+    },
+    "current_stock": {
+      "type": "number",
+      "default": 0
+    },
+    "par_level": {
+      "type": "number",
+      "description": "Minimum stock level before replenishment"
+    },
+    "reorder_point": {
+      "type": "number"
+    },
+    "cost_per_unit": {
+      "type": "number"
+    },
+    "supplier_id": {
+      "type": "string"
+    },
+    "is_ingredient": {
+      "type": "boolean",
+      "default": false
+    },
+    "storage_location": {
+      "type": "string"
+    },
+    "expiry_tracking": {
+      "type": "boolean",
+      "default": false
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "discontinued"
+      ],
+      "default": "active"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "name",
+    "unit"
+  ]
+}
