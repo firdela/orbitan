@@ -44,14 +44,31 @@ const CATEGORY_COLORS = {
 };
 
 export default function FnBCompliance() {
+  const [records, setRecords] = useState(DEMO_RECORDS);
   const [filter, setFilter] = useState('all');
   const [showAdd, setShowAdd] = useState(false);
+  const [newRecord, setNewRecord] = useState({ title: '', type: '', due_date: '', category: 'food_safety' });
 
-  const filtered = DEMO_RECORDS.filter(r => filter === 'all' || r.status === filter || r.category === filter);
+  const filtered = records.filter(r => filter === 'all' || r.status === filter || r.category === filter);
 
-  const overdueCount = DEMO_RECORDS.filter(r => r.status === 'overdue').length;
-  const pendingCount = DEMO_RECORDS.filter(r => r.status === 'pending' || r.status === 'in_review').length;
-  const approvedCount = DEMO_RECORDS.filter(r => r.status === 'approved').length;
+  function submitRecord(id) {
+    setRecords(prev => prev.map(r => r.id === id ? { ...r, status: 'submitted', submitted_date: new Date().toISOString().split('T')[0] } : r));
+  }
+
+  function takeAction(id) {
+    setRecords(prev => prev.map(r => r.id === id ? { ...r, status: 'in_review' } : r));
+  }
+
+  function addRecord() {
+    if (!newRecord.title || !newRecord.type) return;
+    setRecords(prev => [...prev, { ...newRecord, id: `c${Date.now()}`, status: 'pending', submitted_date: null, submitted_by: null }]);
+    setShowAdd(false);
+    setNewRecord({ title: '', type: '', due_date: '', category: 'food_safety' });
+  }
+
+  const overdueCount = records.filter(r => r.status === 'overdue').length;
+  const pendingCount = records.filter(r => r.status === 'pending' || r.status === 'in_review').length;
+  const approvedCount = records.filter(r => r.status === 'approved').length;
 
   return (
     <AppShell navigation={NAV} title="Compliance — La Birria Tacos">
@@ -122,10 +139,10 @@ export default function FnBCompliance() {
                   </p>
                 </div>
                 {r.status === 'overdue' && (
-                  <Button size="sm" variant="outline" className="text-xs text-orbitan-red border-orbitan-red flex-shrink-0">Take Action</Button>
+                  <Button size="sm" variant="outline" className="text-xs text-orbitan-red border-orbitan-red flex-shrink-0" onClick={() => takeAction(r.id)}>Take Action</Button>
                 )}
                 {r.status === 'pending' && (
-                  <Button size="sm" className="text-xs flex-shrink-0">Submit</Button>
+                  <Button size="sm" className="text-xs flex-shrink-0" onClick={() => submitRecord(r.id)}>Submit</Button>
                 )}
               </div>
             </div>
@@ -135,15 +152,29 @@ export default function FnBCompliance() {
         {showAdd && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
             <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-xl">
-              <h3 className="font-heading font-bold text-lg mb-4">New Compliance Record</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-heading font-bold text-lg">New Compliance Record</h3>
+                <button onClick={() => setShowAdd(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+              </div>
               <div className="space-y-3">
-                <div><label className="text-xs font-medium text-muted-foreground">Title</label><Input className="mt-1" placeholder="e.g. Monthly HACCP Checklist" /></div>
-                <div><label className="text-xs font-medium text-muted-foreground">Type</label><Input className="mt-1" placeholder="e.g. Food Safety Audit" /></div>
-                <div><label className="text-xs font-medium text-muted-foreground">Due Date</label><Input type="date" className="mt-1" /></div>
+                <div><label className="text-xs font-medium text-muted-foreground">Title</label><Input value={newRecord.title} onChange={e => setNewRecord({ ...newRecord, title: e.target.value })} className="mt-1" placeholder="e.g. Monthly HACCP Checklist" /></div>
+                <div><label className="text-xs font-medium text-muted-foreground">Type</label><Input value={newRecord.type} onChange={e => setNewRecord({ ...newRecord, type: e.target.value })} className="mt-1" placeholder="e.g. Food Safety Audit" /></div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Category</label>
+                  <select value={newRecord.category} onChange={e => setNewRecord({ ...newRecord, category: e.target.value })} className="mt-1 w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring">
+                    <option value="food_safety">Food Safety</option>
+                    <option value="licensing">Licensing</option>
+                    <option value="fire_safety">Fire Safety</option>
+                    <option value="hr">HR</option>
+                    <option value="environmental">Environmental</option>
+                    <option value="financial">Financial</option>
+                  </select>
+                </div>
+                <div><label className="text-xs font-medium text-muted-foreground">Due Date</label><Input type="date" value={newRecord.due_date} onChange={e => setNewRecord({ ...newRecord, due_date: e.target.value })} className="mt-1" /></div>
               </div>
               <div className="flex gap-3 mt-5">
                 <Button variant="outline" className="flex-1" onClick={() => setShowAdd(false)}>Cancel</Button>
-                <Button className="flex-1" onClick={() => setShowAdd(false)}>Save</Button>
+                <Button className="flex-1" onClick={addRecord}>Save Record</Button>
               </div>
             </div>
           </div>

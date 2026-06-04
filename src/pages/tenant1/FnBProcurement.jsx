@@ -50,6 +50,32 @@ export default function FnBProcurement() {
   const [activeTab, setActiveTab] = useState('orders');
   const [newPO, setNewPO] = useState({ supplier_id: 's1', notes: '', items: [{ item_name: '', quantity: 1, unit: 'kg', unit_price: 0 }] });
 
+  function addLineItem() {
+    setNewPO(p => ({ ...p, items: [...p.items, { item_name: '', quantity: 1, unit: 'kg', unit_price: 0 }] }));
+  }
+  function removeLineItem(idx) {
+    setNewPO(p => ({ ...p, items: p.items.filter((_, i) => i !== idx) }));
+  }
+  function updateLineItem(idx, field, value) {
+    setNewPO(p => ({ ...p, items: p.items.map((item, i) => i === idx ? { ...item, [field]: value } : item) }));
+  }
+  function createPO() {
+    const total = newPO.items.reduce((a, i) => a + (parseFloat(i.quantity) * parseFloat(i.unit_price) || 0), 0);
+    const supplier = SUPPLIERS.find(s => s.id === newPO.supplier_id);
+    setPos(prev => [...prev, {
+      id: `po${Date.now()}`,
+      po_number: `PO-2026-00${prev.length + 5}`,
+      supplier_name: supplier?.name || '',
+      status: 'draft',
+      total_amount: total,
+      requested_date: new Date().toISOString().split('T')[0],
+      expected_delivery_date: '',
+      items: newPO.items,
+    }]);
+    setShowCreate(false);
+    setNewPO({ supplier_id: 's1', notes: '', items: [{ item_name: '', quantity: 1, unit: 'kg', unit_price: 0 }] });
+  }
+
   function advanceStatus(po) {
     const idx = STATUS_FLOW.indexOf(po.status);
     if (idx < STATUS_FLOW.length - 1) {
@@ -176,12 +202,85 @@ export default function FnBProcurement() {
         )}
 
         {/* PO Detail Modal */}
+        {/* New PO Create Modal */}
+        {showCreate && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+            <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-heading font-bold text-lg">New Purchase Order</h3>
+                <button onClick={() => setShowCreate(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Supplier</label>
+                  <select
+                    value={newPO.supplier_id}
+                    onChange={e => setNewPO({ ...newPO, supplier_id: e.target.value })}
+                    className="mt-1 w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    {SUPPLIERS.map(s => <option key={s.id} value={s.id}>{s.name} — {s.category}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-medium text-muted-foreground">Line Items</label>
+                    <button onClick={addLineItem} className="text-xs text-primary hover:underline font-medium">+ Add Item</button>
+                  </div>
+                  <div className="space-y-2">
+                    {newPO.items.map((item, idx) => (
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-5">
+                          <Input placeholder="Item name" value={item.item_name} onChange={e => updateLineItem(idx, 'item_name', e.target.value)} className="text-xs" />
+                        </div>
+                        <div className="col-span-2">
+                          <Input type="number" placeholder="Qty" value={item.quantity} onChange={e => updateLineItem(idx, 'quantity', e.target.value)} className="text-xs" />
+                        </div>
+                        <div className="col-span-2">
+                          <Input placeholder="Unit" value={item.unit} onChange={e => updateLineItem(idx, 'unit', e.target.value)} className="text-xs" />
+                        </div>
+                        <div className="col-span-2">
+                          <Input type="number" placeholder="Price" value={item.unit_price} onChange={e => updateLineItem(idx, 'unit_price', e.target.value)} className="text-xs" />
+                        </div>
+                        <div className="col-span-1 text-center">
+                          {newPO.items.length > 1 && (
+                            <button onClick={() => removeLineItem(idx)} className="text-orbitan-red hover:opacity-70 text-sm font-bold">✕</button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 text-right font-semibold text-sm text-orbitan-blue">
+                    Total: S${newPO.items.reduce((a, i) => a + (parseFloat(i.quantity) * parseFloat(i.unit_price) || 0), 0).toFixed(2)}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Notes (optional)</label>
+                  <Input value={newPO.notes} onChange={e => setNewPO({ ...newPO, notes: e.target.value })} className="mt-1" placeholder="Any special instructions..." />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-5">
+                <button
+                  onClick={() => setShowCreate(false)}
+                  className="flex-1 border border-input rounded-md px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent transition-colors"
+                >Cancel</button>
+                <button
+                  onClick={createPO}
+                  className="flex-1 bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-colors"
+                >Create PO (Draft)</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {selectedPO && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
             <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-lg shadow-xl">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-heading font-bold text-lg">{selectedPO.po_number}</h3>
-                <StatusBadge status={selectedPO.status} />
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={selectedPO.status} />
+                  <button onClick={() => setSelectedPO(null)} className="text-muted-foreground hover:text-foreground ml-1">✕</button>
+                </div>
               </div>
               <div className="space-y-2 text-sm mb-4">
                 <div className="flex justify-between"><span className="text-muted-foreground">Supplier</span><span className="font-medium">{selectedPO.supplier_name}</span></div>

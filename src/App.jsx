@@ -26,6 +26,9 @@ import FnBSales from '@/pages/tenant1/FnBSales';
 import FnBCompliance from '@/pages/tenant1/FnBCompliance';
 import FnBXero from '@/pages/tenant1/FnBXero';
 import FnBReporting from '@/pages/tenant1/FnBReporting';
+import FnBScheduling from '@/pages/tenant1/FnBScheduling';
+import FnBWorkforce from '@/pages/tenant1/FnBWorkforce';
+import FnBTasks from '@/pages/tenant1/FnBTasks';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -83,6 +86,9 @@ const AuthenticatedApp = () => {
       <Route path="/t1/compliance" element={<FnBCompliance />} />
       <Route path="/t1/xero" element={<FnBXero />} />
       <Route path="/t1/reporting" element={<FnBReporting />} />
+      <Route path="/t1/scheduling" element={<FnBScheduling />} />
+      <Route path="/t1/workforce" element={<FnBWorkforce />} />
+      <Route path="/t1/tasks" element={<FnBTasks />} />
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />

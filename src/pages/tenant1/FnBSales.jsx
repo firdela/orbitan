@@ -45,7 +45,34 @@ const DEMO_INVOICES = [
 export default function FnBSales() {
   const [activeTab, setActiveTab] = useState('reconciliation');
   const [showNew, setShowNew] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [selectedRecon, setSelectedRecon] = useState(null);
+  const [recons, setRecons] = useState(DEMO_RECONS);
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '', discounts: '' });
+
+  function submitRecon() {
+    if (!form.total_revenue || !form.total_cogs) return;
+    const revenue = parseFloat(form.total_revenue);
+    const cogs = parseFloat(form.total_cogs);
+    const profit = revenue - cogs;
+    const margin = ((profit / revenue) * 100).toFixed(1);
+    setRecons(prev => [{
+      id: `r${Date.now()}`,
+      date: form.date,
+      total_revenue: revenue,
+      total_cogs: cogs,
+      gross_profit: profit,
+      gross_margin_pct: parseFloat(margin),
+      cash_sales: parseFloat(form.cash_sales) || 0,
+      card_sales: parseFloat(form.card_sales) || 0,
+      discounts: parseFloat(form.discounts) || 0,
+      net_revenue: revenue - (parseFloat(form.discounts) || 0),
+      status: 'submitted',
+      xero_sync_status: 'not_synced',
+    }, ...prev]);
+    setShowNew(false);
+    setForm({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '', discounts: '' });
+  }
 
   const weekRevenue = DEMO_RECONS.slice(0, 5).reduce((a, r) => a + r.total_revenue, 0);
   const avgMargin = (DEMO_RECONS.reduce((a, r) => a + r.gross_margin_pct, 0) / DEMO_RECONS.length).toFixed(1);
@@ -110,9 +137,9 @@ export default function FnBSales() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {DEMO_RECONS.map(r => (
-                    <tr key={r.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{r.date}</td>
+                  {recons.map(r => (
+                    <tr key={r.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setSelectedRecon(r)}>
+                      <td className="px-4 py-3 font-medium text-foreground hover:text-primary">{r.date}</td>
                       <td className="px-4 py-3 text-right font-semibold text-foreground">S${r.total_revenue.toLocaleString()}</td>
                       <td className="px-4 py-3 text-right text-muted-foreground hidden sm:table-cell">S${r.total_cogs.toLocaleString()}</td>
                       <td className="px-4 py-3 text-right font-semibold text-orbitan-green">S${r.gross_profit.toLocaleString()}</td>
@@ -145,8 +172,8 @@ export default function FnBSales() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {DEMO_INVOICES.map(inv => (
-                    <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-medium text-foreground">{inv.invoice_number}</td>
+                    <tr key={inv.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setSelectedInvoice(inv)}>
+                      <td className="px-4 py-3 font-medium text-foreground hover:text-primary">{inv.invoice_number}</td>
                       <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{inv.customer_name}</td>
                       <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{inv.date}</td>
                       <td className="px-4 py-3 text-right font-semibold text-foreground">S${inv.total.toLocaleString()}</td>
@@ -160,6 +187,58 @@ export default function FnBSales() {
         )}
 
         {/* New Reconciliation Modal */}
+        {/* Invoice Detail Modal */}
+        {selectedInvoice && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+            <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-heading font-bold text-lg">{selectedInvoice.invoice_number}</h3>
+                <button onClick={() => setSelectedInvoice(null)} className="text-muted-foreground hover:text-foreground">✕</button>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Customer</span><span className="font-medium">{selectedInvoice.customer_name}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span>{selectedInvoice.date}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Payment</span><span className="capitalize">{selectedInvoice.payment_method}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Status</span><StatusBadge status={selectedInvoice.payment_status} /></div>
+                <div className="flex justify-between pt-2 border-t border-border mt-2">
+                  <span className="font-semibold text-foreground">Total</span>
+                  <span className="font-bold text-orbitan-green text-lg">S${selectedInvoice.total.toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="mt-5 flex gap-2">
+                {selectedInvoice.payment_status === 'pending' && (
+                  <Button size="sm" className="flex-1 text-xs">Mark Paid</Button>
+                )}
+                <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => setSelectedInvoice(null)}>Close</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reconciliation Detail Modal */}
+        {selectedRecon && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+            <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-heading font-bold text-lg">Reconciliation — {selectedRecon.date}</h3>
+                <button onClick={() => setSelectedRecon(null)} className="text-muted-foreground hover:text-foreground">✕</button>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Total Revenue</span><span className="font-semibold text-orbitan-green">S${selectedRecon.total_revenue.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Total COGS</span><span className="text-orbitan-red">S${selectedRecon.total_cogs.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Gross Profit</span><span className="font-semibold">S${selectedRecon.gross_profit.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Gross Margin</span><span className="font-semibold">{selectedRecon.gross_margin_pct}%</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Cash Sales</span><span>S${selectedRecon.cash_sales.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Card Sales</span><span>S${selectedRecon.card_sales.toLocaleString()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Discounts</span><span>S${selectedRecon.discounts.toLocaleString()}</span></div>
+                <div className="flex justify-between border-t border-border pt-2 mt-1"><span className="text-muted-foreground">Status</span><StatusBadge status={selectedRecon.status} /></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Xero</span><StatusBadge status={selectedRecon.xero_sync_status} /></div>
+              </div>
+              <Button className="w-full mt-5 text-xs" onClick={() => setSelectedRecon(null)}>Close</Button>
+            </div>
+          </div>
+        )}
+
         {showNew && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
             <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md shadow-xl">
@@ -184,7 +263,7 @@ export default function FnBSales() {
               </div>
               <div className="flex gap-3 mt-5">
                 <Button variant="outline" className="flex-1" onClick={() => setShowNew(false)}>Cancel</Button>
-                <Button className="flex-1" onClick={() => setShowNew(false)}>Submit</Button>
+                <Button className="flex-1" onClick={submitRecon}>Submit</Button>
               </div>
             </div>
           </div>
