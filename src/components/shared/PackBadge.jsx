@@ -36,10 +36,10 @@ function resolvePackConfig(key) {
 
 // Subscription plan tier badge
 const PLAN_CONFIG = {
-  orbitan_starter:    { label: 'Starter',    gradient: 'linear-gradient(135deg, #3B82F6, #1D4ED8)' },
-  orbitan_growth:     { label: 'Growth',     gradient: 'linear-gradient(135deg, #34D399, #059669)' },
-  orbitan_business:   { label: 'Business',   gradient: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' },
-  orbitan_enterprise: { label: 'Enterprise', gradient: 'linear-gradient(135deg, #374151, #111827)', accent: '#D4AF37' },
+  orbitan_starter:    { label: 'Starter',    gradient: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', border: 'transparent' },
+  orbitan_growth:     { label: 'Growth',     gradient: 'linear-gradient(135deg, #34D399, #059669)', border: 'transparent' },
+  orbitan_business:   { label: 'Business',   gradient: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', border: 'transparent' },
+  orbitan_enterprise: { label: 'Enterprise', gradient: 'linear-gradient(135deg, #111827, #1F2937)', border: '#D4AF37' },
 };
 
 /**
@@ -88,10 +88,15 @@ export function PackBadgeGroup({ packs = [], size = 'sm', className }) {
  */
 export function PlanBadge({ plan, className }) {
   const config = PLAN_CONFIG[plan] || PLAN_CONFIG.orbitan_starter;
+  const isEnterprise = plan === 'orbitan_enterprise';
   return (
     <span
-      className={cn('inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full text-white', className)}
-      style={{ background: config.gradient }}
+      className={cn('inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border', className)}
+      style={{
+        background: config.gradient,
+        color: isEnterprise ? '#D4AF37' : '#fff',
+        borderColor: config.border,
+      }}
     >
       {config.label}
     </span>
