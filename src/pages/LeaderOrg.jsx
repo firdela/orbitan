@@ -116,7 +116,11 @@ export default function LeaderOrg() {
                           </span>
                         ))}
                       </div>
-                      <Link to="/company">
+                      <Link to={
+                        tenant.id === 'tenant_taqueria' ? '/t1/dashboard' :
+                        tenant.id === 'tenant_renewed' ? '/company' :
+                        '/company'
+                      }>
                         <Button variant="outline" size="sm" className="gap-1 text-xs">
                           View <ChevronRight className="w-3 h-3" />
                         </Button>

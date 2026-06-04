@@ -18,6 +18,15 @@ import SchedulingPage from '@/pages/outlet/SchedulingPage';
 import SalesPage from '@/pages/outlet/SalesPage';
 import TasksPage from '@/pages/outlet/TasksPage';
 
+// Tenant 1 — F&B Pack (Taqueria Pte Ltd / La Birria Tacos)
+import FnBDashboard from '@/pages/tenant1/FnBDashboard';
+import FnBInventory from '@/pages/tenant1/FnBInventory';
+import FnBProcurement from '@/pages/tenant1/FnBProcurement';
+import FnBSales from '@/pages/tenant1/FnBSales';
+import FnBCompliance from '@/pages/tenant1/FnBCompliance';
+import FnBXero from '@/pages/tenant1/FnBXero';
+import FnBReporting from '@/pages/tenant1/FnBReporting';
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
@@ -65,6 +74,15 @@ const AuthenticatedApp = () => {
       <Route path="/outlet/scheduling" element={<SchedulingPage />} />
       <Route path="/outlet/sales" element={<SalesPage />} />
       <Route path="/outlet/tasks" element={<TasksPage />} />
+
+      {/* Tenant 1 — F&B Pack (Taqueria / La Birria Tacos) */}
+      <Route path="/t1/dashboard" element={<FnBDashboard />} />
+      <Route path="/t1/inventory" element={<FnBInventory />} />
+      <Route path="/t1/procurement" element={<FnBProcurement />} />
+      <Route path="/t1/sales" element={<FnBSales />} />
+      <Route path="/t1/compliance" element={<FnBCompliance />} />
+      <Route path="/t1/xero" element={<FnBXero />} />
+      <Route path="/t1/reporting" element={<FnBReporting />} />
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />
