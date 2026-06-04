@@ -1,0 +1,204 @@
+{
+  "name": "FoodSafetyLog",
+  "type": "object",
+  "description": "Daily food safety and hygiene checklist completed by outlet staff. Enforces regulatory compliance and creates an auditable trail.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "shift_id": {
+      "type": "string",
+      "description": "Linked shift ID"
+    },
+    "logged_by": {
+      "type": "string",
+      "description": "User ID of the staff member"
+    },
+    "logged_by_name": {
+      "type": "string"
+    },
+    "log_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "log_type": {
+      "type": "string",
+      "enum": [
+        "opening",
+        "mid_shift",
+        "closing"
+      ],
+      "default": "opening"
+    },
+    "temperature_checks": {
+      "type": "array",
+      "description": "Fridge/freezer and food temperature readings",
+      "items": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "e.g. Walk-in Chiller, Prep Counter"
+          },
+          "temperature_celsius": {
+            "type": "number"
+          },
+          "is_within_range": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "hygiene_checklist": {
+      "type": "array",
+      "description": "Standard hygiene tasks to be confirmed",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "is_completed": {
+            "type": "boolean",
+            "default": false
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "pest_control_check": {
+      "type": "boolean",
+      "default": false
+    },
+    "waste_disposed": {
+      "type": "boolean",
+      "default": false
+    },
+    "handwashing_station_stocked": {
+      "type": "boolean",
+      "default": false
+    },
+    "overall_status": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "needs_attention"
+      ],
+      "default": "pass"
+    },
+    "photo_evidence_url": {
+      "type": "string",
+      "description": "Optional photo uploaded as evidence"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Manager who reviewed this log"
+    },
+    "reviewed_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "outlet_id",
+    "log_date",
+    "logged_by"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "data.outlet_id": "{{user.data.outlet_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "outlet_manager",
+                "supervisor",
+                "worker"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "data.outlet_id": "{{user.data.outlet_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor",
+                "worker"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "data.outlet_id": "{{user.data.outlet_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "data.outlet_id": "{{user.data.outlet_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "outlet_manager"
+          }
+        }
+      ]
+    }
+  }
+}

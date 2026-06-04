@@ -1,0 +1,224 @@
+{
+  "name": "ClockRecord",
+  "type": "object",
+  "description": "Corporate-grade clock-in/out records with GPS, photo verification, and productivity metrics. Source of truth for attendance and payroll.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "employee_id": {
+      "type": "string"
+    },
+    "employee_name": {
+      "type": "string"
+    },
+    "shift_id": {
+      "type": "string",
+      "description": "Linked Shift record"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "clock_in_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "clock_in_method": {
+      "type": "string",
+      "enum": [
+        "pin",
+        "qr",
+        "geo",
+        "photo",
+        "manual"
+      ],
+      "default": "pin"
+    },
+    "clock_in_lat": {
+      "type": "number",
+      "description": "GPS latitude at clock-in"
+    },
+    "clock_in_lng": {
+      "type": "number",
+      "description": "GPS longitude at clock-in"
+    },
+    "clock_in_geo_verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "clock_in_photo_url": {
+      "type": "string",
+      "description": "Selfie photo at clock-in"
+    },
+    "clock_in_photo_verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "clock_out_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "clock_out_lat": {
+      "type": "number"
+    },
+    "clock_out_lng": {
+      "type": "number"
+    },
+    "clock_out_geo_verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "clock_out_photo_url": {
+      "type": "string"
+    },
+    "total_hours_worked": {
+      "type": "number",
+      "description": "Calculated hours between clock-in and clock-out minus breaks"
+    },
+    "break_duration_mins": {
+      "type": "number",
+      "default": 30
+    },
+    "overtime_hours": {
+      "type": "number",
+      "default": 0
+    },
+    "labour_cost": {
+      "type": "number",
+      "description": "total_hours_worked * employee pay_rate"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "clocked_in",
+        "on_break",
+        "clocked_out",
+        "absent",
+        "pending_verification"
+      ],
+      "default": "clocked_in"
+    },
+    "tasks_assigned": {
+      "type": "number",
+      "default": 0
+    },
+    "tasks_completed": {
+      "type": "number",
+      "default": 0
+    },
+    "productivity_score": {
+      "type": "number",
+      "description": "(tasks_completed / tasks_assigned) * 100"
+    },
+    "verified_by": {
+      "type": "string",
+      "description": "Manager who verified this record"
+    },
+    "verified_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "outlet_id",
+    "employee_id",
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "data.outlet_id": "{{user.data.outlet_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "data.outlet_id": "{{user.data.outlet_id}}",
+          "user_condition": {
+            "role": {
+              "$in": [
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "data.outlet_id": "{{user.data.outlet_id}}",
+          "user_condition": {
+            "role": {
+              "$in": [
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "outlet_manager"
+          }
+        }
+      ]
+    }
+  }
+}

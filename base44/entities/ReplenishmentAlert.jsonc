@@ -1,0 +1,172 @@
+{
+  "name": "ReplenishmentAlert",
+  "type": "object",
+  "description": "Auto-generated alerts when predicted stock falls below reorder point. Drives the Outlet Manager's daily replenishment workflow.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "inventory_item_id": {
+      "type": "string"
+    },
+    "inventory_item_name": {
+      "type": "string"
+    },
+    "current_stock": {
+      "type": "number"
+    },
+    "reorder_point": {
+      "type": "number"
+    },
+    "par_level": {
+      "type": "number"
+    },
+    "predicted_stock_3days": {
+      "type": "number",
+      "description": "Predicted stock in 3 days based on burn rate"
+    },
+    "avg_daily_usage": {
+      "type": "number",
+      "description": "Average units consumed per day (last 7 days)"
+    },
+    "days_until_stockout": {
+      "type": "number"
+    },
+    "suggested_order_qty": {
+      "type": "number",
+      "description": "Recommended quantity to order to reach par level"
+    },
+    "supplier_id": {
+      "type": "string"
+    },
+    "supplier_name": {
+      "type": "string"
+    },
+    "estimated_cost": {
+      "type": "number"
+    },
+    "urgency": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "default": "medium"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "po_created",
+        "dismissed",
+        "resolved"
+      ],
+      "default": "open"
+    },
+    "linked_po_id": {
+      "type": "string",
+      "description": "PO created from this alert"
+    },
+    "acknowledged_by": {
+      "type": "string"
+    },
+    "acknowledged_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "alert_date": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "outlet_id",
+    "inventory_item_id"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "data.outlet_id": "{{user.data.outlet_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "data.outlet_id": "{{user.data.outlet_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "outlet_manager"
+          }
+        }
+      ]
+    }
+  }
+}

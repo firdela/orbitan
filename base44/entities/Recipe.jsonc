@@ -1,0 +1,171 @@
+{
+  "name": "Recipe",
+  "type": "object",
+  "description": "Bill of Materials (BOM) for menu items. Links menu items to their required ingredients for COGS calculation and inventory deduction.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "menu_item_name": {
+      "type": "string",
+      "description": "Name of the menu item (e.g. Birria Taco, Quesadilla)"
+    },
+    "menu_item_sku": {
+      "type": "string",
+      "description": "SKU or POS code for this menu item"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "main",
+        "side",
+        "beverage",
+        "dessert",
+        "combo"
+      ],
+      "default": "main"
+    },
+    "selling_price": {
+      "type": "number",
+      "description": "Selling price of the menu item (SGD)"
+    },
+    "ingredients": {
+      "type": "array",
+      "description": "List of ingredients required to produce one unit of this menu item",
+      "items": {
+        "type": "object",
+        "properties": {
+          "inventory_item_id": {
+            "type": "string"
+          },
+          "inventory_item_name": {
+            "type": "string"
+          },
+          "quantity_required": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string",
+            "description": "e.g. g, ml, pcs"
+          },
+          "cost_per_unit": {
+            "type": "number"
+          },
+          "ingredient_cost": {
+            "type": "number",
+            "description": "quantity_required * cost_per_unit"
+          }
+        }
+      }
+    },
+    "total_cogs": {
+      "type": "number",
+      "description": "Total ingredient cost to produce one unit of this menu item"
+    },
+    "gross_margin_pct": {
+      "type": "number",
+      "description": "Calculated gross margin: ((selling_price - total_cogs) / selling_price) * 100"
+    },
+    "prep_time_mins": {
+      "type": "number"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "menu_item_name"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor",
+                "worker"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "name": "AccountMapping",
+  "type": "object",
+  "description": "Maps OrbitanOS product/expense categories to Xero Chart of Accounts codes. Drives automated journal entry creation in financeController.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "category_name": {
+      "type": "string",
+      "description": "OrbitanOS category label (e.g. Food - Meat, Beverages, Packaging, Labour)"
+    },
+    "category_type": {
+      "type": "string",
+      "enum": [
+        "revenue",
+        "cogs",
+        "expense",
+        "labour",
+        "asset"
+      ],
+      "description": "Determines how this mapping is used in journal entries"
+    },
+    "xero_account_code": {
+      "type": "string",
+      "description": "Xero Chart of Accounts code (e.g. 200, 310, 400)"
+    },
+    "xero_account_name": {
+      "type": "string",
+      "description": "Human-readable Xero account name (e.g. Sales, Cost of Goods Sold)"
+    },
+    "xero_account_type": {
+      "type": "string",
+      "enum": [
+        "REVENUE",
+        "DIRECTCOSTS",
+        "EXPENSE",
+        "OVERHEADS",
+        "CURRENT",
+        "FIXED"
+      ],
+      "description": "Xero account class for validation"
+    },
+    "tax_type": {
+      "type": "string",
+      "description": "Xero tax type (e.g. OUTPUT, INPUT, NONE, EXEMPTOUTPUT)",
+      "default": "NONE"
+    },
+    "tax_rate_pct": {
+      "type": "number",
+      "description": "Applicable tax rate percentage (e.g. 9 for 9% GST)",
+      "default": 0
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, used as fallback when no specific mapping is found"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "category_name",
+    "xero_account_code"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "tenant_admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "tenant_admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "tenant_admin"
+          }
+        }
+      ]
+    }
+  }
+}
