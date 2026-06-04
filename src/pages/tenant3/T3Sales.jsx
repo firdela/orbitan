@@ -1,0 +1,137 @@
+import React, { useState } from 'react';
+import AppShell from '@/components/layout/AppShell';
+import PageHeader from '@/components/shared/PageHeader';
+import { Button } from '@/components/ui/button';
+import {
+  ShoppingBag, Package, FileText, Users, CheckSquare,
+  BarChart2, Heart, Leaf, Plus, CheckCircle2, Clock,
+  Shirt, Tag, CreditCard, Banknote, ArrowUpRight
+} from 'lucide-react';
+
+const NAV = [
+  { type: 'section', label: 'Retail Ops' },
+  { href: '/t3/dashboard', icon: ShoppingBag, label: 'Dashboard' },
+  { href: '/t3/catalog', icon: Shirt, label: 'Product Catalog' },
+  { href: '/t3/inventory', icon: Package, label: 'Inventory' },
+  { href: '/t3/sales', icon: FileText, label: 'Sales & POS' },
+  { href: '/t3/customers', icon: Heart, label: 'Customers' },
+  { type: 'section', label: 'People & Tasks' },
+  { href: '/t3/workforce', icon: Users, label: 'Workforce' },
+  { href: '/t3/tasks', icon: CheckSquare, label: 'Tasks' },
+  { type: 'section', label: 'Intelligence' },
+  { href: '/t3/reporting', icon: BarChart2, label: 'Reporting' },
+];
+
+const DEMO_SALES = [
+  { id: 'S-2026-089', item: "Vintage Levi's Denim Jacket", sku: 'SKU-0041', price: 48, payment: 'card', customer: 'Sarah T.', date: '2026-06-04', status: 'paid', co2_saved: 3.2 },
+  { id: 'S-2026-088', item: 'Upcycled Floral Maxi Dress', sku: 'SKU-0085', price: 35, payment: 'cash', customer: 'Priya M.', date: '2026-06-04', status: 'paid', co2_saved: 2.1 },
+  { id: 'S-2026-087', item: 'H&M Striped Tee (M)', sku: 'SKU-0098', price: 12, payment: 'cash', customer: 'Walk-in', date: '2026-06-03', status: 'paid', co2_saved: 0.8 },
+  { id: 'S-2026-086', item: 'Nike Running Shorts', sku: 'SKU-0076', price: 22, payment: 'card', customer: 'James K.', date: '2026-06-03', status: 'paid', co2_saved: 1.5 },
+  { id: 'S-2026-085', item: 'Leather Tote Bag (Brown)', sku: 'SKU-0097', price: 48, payment: 'transfer', customer: 'Mei Lin', date: '2026-06-02', status: 'paid', co2_saved: 4.8 },
+  { id: 'S-2026-084', item: 'North Face Fleece Jacket (L)', sku: 'SKU-0033', price: 75, payment: 'card', customer: 'Ahmad R.', date: '2026-06-02', status: 'paid', co2_saved: 5.4 },
+];
+
+const PAYMENT_MAP = {
+  cash:     { label: 'Cash',     icon: Banknote,    color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4]' },
+  card:     { label: 'Card',     icon: CreditCard,  color: 'text-blue-600',  bg: 'bg-blue-50' },
+  transfer: { label: 'Transfer', icon: ArrowUpRight, color: 'text-purple-600', bg: 'bg-purple-50' },
+};
+
+export default function T3Sales() {
+  const [activeTab, setActiveTab] = useState('sales');
+
+  const totalRevenue = DEMO_SALES.reduce((s, t) => s + t.price, 0);
+  const totalCO2 = DEMO_SALES.reduce((s, t) => s + t.co2_saved, 0).toFixed(1);
+
+  return (
+    <AppShell navigation={NAV} title="Sales & POS — Retail Ops">
+      <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
+        <PageHeader
+          title="Sales & POS"
+          subtitle="Retail Operations · Sales tracking & point-of-sale"
+          actions={
+            <Button size="sm" className="gap-2" style={{ background: '#22C55E' }}>
+              <Plus className="w-3.5 h-3.5" /> New Sale
+            </Button>
+          }
+        />
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: 'Sales (MTD)', value: DEMO_SALES.length, color: 'text-foreground', bg: 'bg-card border-border' },
+            { label: 'Revenue (MTD)', value: `S$${totalRevenue}`, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4] border-green-200' },
+            { label: 'Avg Sale Value', value: `S$${(totalRevenue / DEMO_SALES.length).toFixed(0)}`, color: 'text-primary', bg: 'bg-orbitan-blue-light border-blue-200' },
+            { label: 'CO₂ Impact', value: `${totalCO2}kg`, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+          ].map(s => (
+            <div key={s.label} className={`rounded-xl border p-4 ${s.bg}`}>
+              <p className={`text-2xl font-display font-bold ${s.color}`}>{s.value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 bg-muted rounded-xl p-1 w-fit">
+          {[{ id: 'sales', label: 'Sales History' }, { id: 'reconcile', label: 'Daily Reconciliation' }].map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`text-sm font-medium px-5 py-2 rounded-lg transition-all ${activeTab === tab.id ? 'bg-white shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'sales' && (
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="divide-y divide-border">
+              {DEMO_SALES.map(sale => {
+                const pm = PAYMENT_MAP[sale.payment] || PAYMENT_MAP.cash;
+                const PayIcon = pm.icon;
+                return (
+                  <div key={sale.id} className="flex items-center gap-3 px-5 py-4 hover:bg-muted/30 transition-colors">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${pm.bg}`}>
+                      <PayIcon className={`w-4 h-4 ${pm.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{sale.item}</p>
+                      <p className="text-xs text-muted-foreground">{sale.id} · {sale.customer} · {sale.date}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-bold text-foreground">S${sale.price}</p>
+                      <p className="text-[11px] text-emerald-600">{sale.co2_saved}kg CO₂ saved</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'reconcile' && (
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <h3 className="font-heading font-semibold text-foreground">Today's Reconciliation — 4 June 2026</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {[
+                { label: 'Cash Sales', value: 'S$47.00', sub: '3 transactions' },
+                { label: 'Card Sales', value: 'S$193.00', sub: '4 transactions' },
+                { label: 'Transfer Sales', value: 'S$48.00', sub: '1 transaction' },
+                { label: 'Total Revenue', value: 'S$288.00', sub: '8 transactions' },
+                { label: 'Items Sold', value: '8 pieces', sub: 'today' },
+                { label: 'CO₂ Saved', value: '18.4 kg', sub: 'from today\'s sales' },
+              ].map(r => (
+                <div key={r.label} className="bg-muted/50 rounded-xl p-3">
+                  <p className="text-base font-bold text-foreground">{r.value}</p>
+                  <p className="text-xs text-muted-foreground">{r.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{r.sub}</p>
+                </div>
+              ))}
+            </div>
+            <Button size="sm" className="gap-2 w-full sm:w-auto" style={{ background: '#22C55E' }}>
+              <CheckCircle2 className="w-3.5 h-3.5" /> Submit Reconciliation
+            </Button>
+          </div>
+        )}
+      </div>
+    </AppShell>
+  );
+}

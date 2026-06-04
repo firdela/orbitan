@@ -35,10 +35,22 @@ import FnBReplenishment from '@/pages/tenant1/FnBReplenishment';
 // Tenant 2 — Recycling & Sustainability Pack (Renewed Resources)
 import T2Dashboard from '@/pages/tenant2/T2Dashboard';
 import T2Collections from '@/pages/tenant2/T2Collections';
+import T2Inventory from '@/pages/tenant2/T2Inventory';
+import T2Procurement from '@/pages/tenant2/T2Procurement';
+import T2Workforce from '@/pages/tenant2/T2Workforce';
+import T2Tasks from '@/pages/tenant2/T2Tasks';
+import T2Compliance from '@/pages/tenant2/T2Compliance';
+import T2Reporting from '@/pages/tenant2/T2Reporting';
 
 // Tenant 3 — Retail Pack (Reused Clothing)
 import T3Dashboard from '@/pages/tenant3/T3Dashboard';
 import T3Catalog from '@/pages/tenant3/T3Catalog';
+import T3Inventory from '@/pages/tenant3/T3Inventory';
+import T3Sales from '@/pages/tenant3/T3Sales';
+import T3Customers from '@/pages/tenant3/T3Customers';
+import T3Workforce from '@/pages/tenant3/T3Workforce';
+import T3Tasks from '@/pages/tenant3/T3Tasks';
+import T3Reporting from '@/pages/tenant3/T3Reporting';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -106,10 +118,22 @@ const AuthenticatedApp = () => {
       {/* Tenant 2 — Recycling & Sustainability (Renewed Resources) */}
       <Route path="/t2/dashboard" element={<T2Dashboard />} />
       <Route path="/t2/collections" element={<T2Collections />} />
+      <Route path="/t2/inventory" element={<T2Inventory />} />
+      <Route path="/t2/procurement" element={<T2Procurement />} />
+      <Route path="/t2/workforce" element={<T2Workforce />} />
+      <Route path="/t2/tasks" element={<T2Tasks />} />
+      <Route path="/t2/compliance" element={<T2Compliance />} />
+      <Route path="/t2/reporting" element={<T2Reporting />} />
 
       {/* Tenant 3 — Retail Pack (Reused Clothing) */}
       <Route path="/t3/dashboard" element={<T3Dashboard />} />
       <Route path="/t3/catalog" element={<T3Catalog />} />
+      <Route path="/t3/inventory" element={<T3Inventory />} />
+      <Route path="/t3/sales" element={<T3Sales />} />
+      <Route path="/t3/customers" element={<T3Customers />} />
+      <Route path="/t3/workforce" element={<T3Workforce />} />
+      <Route path="/t3/tasks" element={<T3Tasks />} />
+      <Route path="/t3/reporting" element={<T3Reporting />} />
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />
