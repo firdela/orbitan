@@ -7,6 +7,7 @@ import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
 import StatCard from '@/components/shared/StatCard';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -109,17 +110,19 @@ export default function LeaderOrg() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <div className="flex flex-wrap gap-1 max-w-xs">
-                        {(tenant.enabled_packs || []).map(pack => (
-                          <span key={pack} className="text-[10px] bg-orbitan-green-light text-orbitan-green px-2 py-0.5 rounded-full font-medium">
-                            {INDUSTRY_PACKS[pack]?.name || pack}
-                          </span>
-                        ))}
-                      </div>
+                      <PackBadgeGroup
+                        packs={
+                          tenant.id === 'tenant_taqueria' ? ['core', 'fnb', 'finance', 'compliance'] :
+                          tenant.id === 'tenant_renewed'  ? ['core', 'sustainability', 'compliance'] :
+                          ['core', 'retail', 'sustainability']
+                        }
+                        size="xs"
+                      />
                       <Link to={
                         tenant.id === 'tenant_taqueria' ? '/t1/dashboard' :
-                        tenant.id === 'tenant_renewed' ? '/company' :
-                        '/company'
+                        tenant.id === 'tenant_renewed'  ? '/t2/dashboard' :
+                        tenant.id === 'tenant_retail'   ? '/t3/dashboard' :
+                        '/leader-org'
                       }>
                         <Button variant="outline" size="sm" className="gap-1 text-xs">
                           View <ChevronRight className="w-3 h-3" />

@@ -1,0 +1,286 @@
+{
+  "name": "MaterialCollection",
+  "type": "object",
+  "description": "Recycling & Sustainability Pack \u2014 tracks waste/material collection jobs, processing status, and sustainability impact metrics for Renewed Resources Pte Ltd.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "collection_reference": {
+      "type": "string",
+      "description": "Unique collection job reference number"
+    },
+    "collection_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "collection_type": {
+      "type": "string",
+      "enum": [
+        "scheduled_pickup",
+        "drop_off",
+        "on_demand",
+        "partner_transfer"
+      ],
+      "default": "scheduled_pickup"
+    },
+    "material_category": {
+      "type": "string",
+      "enum": [
+        "paper_cardboard",
+        "plastics",
+        "metals",
+        "e_waste",
+        "glass",
+        "textiles",
+        "organic",
+        "mixed",
+        "hazardous",
+        "other"
+      ],
+      "default": "mixed"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "residential",
+        "commercial",
+        "industrial",
+        "partner_organisation",
+        "government",
+        "retail"
+      ],
+      "default": "commercial"
+    },
+    "source_name": {
+      "type": "string",
+      "description": "Name of the collection source / client"
+    },
+    "source_address": {
+      "type": "string"
+    },
+    "source_lat": {
+      "type": "number"
+    },
+    "source_lng": {
+      "type": "number"
+    },
+    "gross_weight_kg": {
+      "type": "number",
+      "description": "Total weight collected (kg)"
+    },
+    "net_weight_kg": {
+      "type": "number",
+      "description": "Net recoverable weight after contamination deduction (kg)"
+    },
+    "contamination_pct": {
+      "type": "number",
+      "description": "Estimated contamination percentage (0-100)",
+      "default": 0
+    },
+    "processing_status": {
+      "type": "string",
+      "enum": [
+        "collected",
+        "in_transit",
+        "received_at_facility",
+        "sorting",
+        "processed",
+        "dispatched",
+        "completed"
+      ],
+      "default": "collected"
+    },
+    "processing_facility": {
+      "type": "string"
+    },
+    "processed_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "recovered_materials": {
+      "type": "array",
+      "description": "Breakdown of recovered material types from this collection",
+      "items": {
+        "type": "object",
+        "properties": {
+          "material_type": {
+            "type": "string"
+          },
+          "weight_kg": {
+            "type": "number"
+          },
+          "estimated_value_sgd": {
+            "type": "number"
+          },
+          "disposed_via": {
+            "type": "string",
+            "description": "e.g. Recycled, Upcycled, Landfill"
+          }
+        }
+      }
+    },
+    "co2_saved_kg": {
+      "type": "number",
+      "description": "Estimated CO2 equivalent saved (kg) from recycling this batch"
+    },
+    "trees_saved_equivalent": {
+      "type": "number",
+      "description": "Equivalent trees saved \u2014 used in sustainability reports"
+    },
+    "water_saved_litres": {
+      "type": "number"
+    },
+    "sustainability_score": {
+      "type": "number",
+      "description": "0-100 composite sustainability impact score"
+    },
+    "assigned_driver_id": {
+      "type": "string"
+    },
+    "assigned_driver_name": {
+      "type": "string"
+    },
+    "vehicle_registration": {
+      "type": "string"
+    },
+    "supplier_partner_id": {
+      "type": "string",
+      "description": "Linked Supplier/Partner record"
+    },
+    "linked_inventory_items": {
+      "type": "array",
+      "description": "Inventory items created or updated from this collection",
+      "items": {
+        "type": "string"
+      }
+    },
+    "photo_evidence_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Photos taken at collection site"
+    },
+    "certificate_url": {
+      "type": "string",
+      "description": "Recycling certificate or disposal certificate URL"
+    },
+    "revenue_sgd": {
+      "type": "number",
+      "description": "Revenue generated from sale of recovered materials"
+    },
+    "cost_sgd": {
+      "type": "number",
+      "description": "Collection and processing cost"
+    },
+    "net_value_sgd": {
+      "type": "number"
+    },
+    "compliance_verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "compliance_notes": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "collection_date",
+    "material_category"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor",
+                "worker"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor",
+                "worker"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

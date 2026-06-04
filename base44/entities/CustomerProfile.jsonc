@@ -1,0 +1,217 @@
+{
+  "name": "CustomerProfile",
+  "type": "object",
+  "description": "Retail Pack \u2014 customer management for point-of-sale and purchase history tracking. Supports sustainability loyalty and repeat customer insights.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "male",
+        "female",
+        "non_binary",
+        "prefer_not_to_say"
+      ],
+      "default": "prefer_not_to_say"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date"
+    },
+    "address": {
+      "type": "string"
+    },
+    "preferred_sizes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "e.g. M, 32, UK8"
+    },
+    "preferred_categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "loyalty_tier": {
+      "type": "string",
+      "enum": [
+        "green_starter",
+        "eco_regular",
+        "sustainability_champion",
+        "orbitan_ambassador"
+      ],
+      "default": "green_starter"
+    },
+    "loyalty_points": {
+      "type": "number",
+      "default": 0
+    },
+    "total_purchases": {
+      "type": "number",
+      "default": 0
+    },
+    "total_spend_sgd": {
+      "type": "number",
+      "default": 0
+    },
+    "total_co2_saved_kg": {
+      "type": "number",
+      "default": 0,
+      "description": "Cumulative CO2 saved through purchases"
+    },
+    "total_items_diverted": {
+      "type": "number",
+      "default": 0,
+      "description": "Total items diverted from landfill via purchases"
+    },
+    "first_purchase_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "last_purchase_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "acquisition_channel": {
+      "type": "string",
+      "enum": [
+        "walk_in",
+        "online",
+        "referral",
+        "event",
+        "partner",
+        "social_media",
+        "other"
+      ],
+      "default": "walk_in"
+    },
+    "opt_in_marketing": {
+      "type": "boolean",
+      "default": false
+    },
+    "opt_in_sms": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "vip",
+        "blocked"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "full_name"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor",
+                "worker"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor",
+                "worker"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

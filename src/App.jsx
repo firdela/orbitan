@@ -32,6 +32,14 @@ import FnBTasks from '@/pages/tenant1/FnBTasks';
 import FnBClockIn from '@/pages/tenant1/FnBClockIn';
 import FnBReplenishment from '@/pages/tenant1/FnBReplenishment';
 
+// Tenant 2 — Recycling & Sustainability Pack (Renewed Resources)
+import T2Dashboard from '@/pages/tenant2/T2Dashboard';
+import T2Collections from '@/pages/tenant2/T2Collections';
+
+// Tenant 3 — Retail Pack (Reused Clothing)
+import T3Dashboard from '@/pages/tenant3/T3Dashboard';
+import T3Catalog from '@/pages/tenant3/T3Catalog';
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
@@ -93,6 +101,15 @@ const AuthenticatedApp = () => {
       <Route path="/t1/tasks" element={<FnBTasks />} />
       <Route path="/t1/clockin" element={<FnBClockIn />} />
       <Route path="/t1/replenishment" element={<FnBReplenishment />} />
+
+      {/* Worker Portal */}
+      {/* Tenant 2 — Recycling & Sustainability (Renewed Resources) */}
+      <Route path="/t2/dashboard" element={<T2Dashboard />} />
+      <Route path="/t2/collections" element={<T2Collections />} />
+
+      {/* Tenant 3 — Retail Pack (Reused Clothing) */}
+      <Route path="/t3/dashboard" element={<T3Dashboard />} />
+      <Route path="/t3/catalog" element={<T3Catalog />} />
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />

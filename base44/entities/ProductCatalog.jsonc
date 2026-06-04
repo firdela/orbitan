@@ -1,0 +1,274 @@
+{
+  "name": "ProductCatalog",
+  "type": "object",
+  "description": "Retail Pack \u2014 product catalog for upcycled/reused clothing and sustainable goods. Supports condition grading, price banding, and sustainability impact tracking.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Unique product SKU"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "tops",
+        "bottoms",
+        "outerwear",
+        "footwear",
+        "accessories",
+        "bags",
+        "home_goods",
+        "other"
+      ],
+      "default": "other"
+    },
+    "sub_category": {
+      "type": "string"
+    },
+    "brand": {
+      "type": "string",
+      "description": "Original brand of the item (if known)"
+    },
+    "gender": {
+      "type": "string",
+      "enum": [
+        "mens",
+        "womens",
+        "unisex",
+        "kids",
+        "not_applicable"
+      ],
+      "default": "unisex"
+    },
+    "size": {
+      "type": "string"
+    },
+    "colour": {
+      "type": "string"
+    },
+    "material": {
+      "type": "string"
+    },
+    "condition_grade": {
+      "type": "string",
+      "enum": [
+        "A_new_with_tags",
+        "B_like_new",
+        "C_good",
+        "D_fair",
+        "E_upcycled"
+      ],
+      "default": "C_good",
+      "description": "Condition grading system \u2014 A (best) to E (upcycled/repaired)"
+    },
+    "sourced_from": {
+      "type": "string",
+      "enum": [
+        "recycling_stream",
+        "donation",
+        "trade_in",
+        "direct_purchase",
+        "partner"
+      ],
+      "default": "recycling_stream",
+      "description": "How this product was sourced"
+    },
+    "linked_collection_id": {
+      "type": "string",
+      "description": "MaterialCollection record this item originated from"
+    },
+    "selling_price_sgd": {
+      "type": "number"
+    },
+    "original_rrp_sgd": {
+      "type": "number",
+      "description": "Original retail price before upcycling"
+    },
+    "cost_price_sgd": {
+      "type": "number",
+      "description": "Cost to acquire/process this item"
+    },
+    "gross_margin_pct": {
+      "type": "number"
+    },
+    "current_stock": {
+      "type": "number",
+      "default": 0
+    },
+    "stock_location": {
+      "type": "string",
+      "description": "e.g. Shelf A3, Warehouse B"
+    },
+    "is_pos_ready": {
+      "type": "boolean",
+      "default": false,
+      "description": "Cleared for point-of-sale listing"
+    },
+    "is_online_listed": {
+      "type": "boolean",
+      "default": false
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Product photos"
+    },
+    "sustainability_impact": {
+      "type": "object",
+      "description": "Sustainability metrics for this product",
+      "properties": {
+        "co2_saved_kg": {
+          "type": "number"
+        },
+        "water_saved_litres": {
+          "type": "number"
+        },
+        "landfill_diverted_kg": {
+          "type": "number"
+        },
+        "impact_label": {
+          "type": "string",
+          "description": "e.g. Saves 3.2kg CO\u2082 vs buying new"
+        }
+      }
+    },
+    "upcycling_notes": {
+      "type": "string",
+      "description": "Description of any repairs or modifications made"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "sold",
+        "reserved",
+        "damaged",
+        "returned",
+        "archived"
+      ],
+      "default": "draft"
+    },
+    "sold_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "sold_to_customer_id": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Searchable tags e.g. vintage, streetwear, minimalist"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "name",
+    "condition_grade"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor",
+                "worker"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}
