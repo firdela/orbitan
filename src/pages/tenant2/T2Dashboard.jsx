@@ -1,42 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import AppShell from '@/components/layout/AppShell';
-import PageHeader from '@/components/shared/PageHeader';
 import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
 import { Button } from '@/components/ui/button';
 import {
   Recycle, Package, ShoppingCart, CheckSquare, Shield,
-  BarChart2, Users, Leaf, TrendingUp, Truck, AlertTriangle,
-  CheckCircle2, Clock, Activity, ArrowUpRight
+  BarChart2, Users, Leaf, TrendingUp, AlertTriangle,
+  Home, ArrowUpRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { OrbitanEngine } from '@/lib/orbitan-engine';
 
-const NAV = [
-  { type: 'section', label: 'Sustainability Ops' },
-  { href: '/t2/dashboard', icon: Leaf, label: 'Dashboard' },
-  { href: '/t2/collections', icon: Recycle, label: 'Collections' },
-  { href: '/t2/inventory', icon: Package, label: 'Recovered Materials' },
-  { href: '/t2/procurement', icon: ShoppingCart, label: 'Procurement' },
-  { type: 'section', label: 'People & Tasks' },
-  { href: '/t2/workforce', icon: Users, label: 'Workforce' },
-  { href: '/t2/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Governance' },
-  { href: '/t2/compliance', icon: Shield, label: 'Compliance' },
-  { href: '/t2/reporting', icon: BarChart2, label: 'Reporting' },
-];
+// ── Icon Map ─────────────────────────────────────────────────
+const ICON_MAP = {
+  Home, Package, ShoppingCart, Users, CheckSquare,
+  Shield, BarChart2, Recycle, Leaf, TrendingUp, AlertTriangle,
+};
+
+// ── Tenant stub ───────────────────────────────────────────────
+const TENANT = {
+  name: 'Renewed Resources Pte Ltd',
+  subscription_plan: 'orbitan_business',
+  enabled_modules: ['dashboard', 'collections', 'inventory', 'procurement', 'workforce', 'tasks', 'compliance', 'reporting'],
+  enabled_packs: ['core', 'recycling', 'compliance'],
+};
+
+const engine = OrbitanEngine.for(TENANT);
+const NAV = engine.buildNav('t2', ICON_MAP);
 
 const KPI_DATA = [
-  { label: 'Collections This Month', value: '142', unit: 'jobs', delta: '+18%', icon: Recycle, color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4]' },
-  { label: 'Materials Recovered', value: '8,420', unit: 'kg', delta: '+23%', icon: Package, color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4]' },
-  { label: 'CO₂ Saved', value: '12.4', unit: 'tonnes', delta: '+31%', icon: Leaf, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  { label: 'Revenue (Materials)', value: 'S$6,840', unit: 'MTD', delta: '+12%', icon: TrendingUp, color: 'text-primary', bg: 'bg-orbitan-blue-light' },
+  { label: 'Collections This Month', value: '142', unit: 'jobs',       delta: '+18%', icon: Recycle,     color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4]' },
+  { label: 'Materials Recovered',    value: '8,420', unit: 'kg',       delta: '+23%', icon: Package,     color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4]' },
+  { label: 'CO₂ Saved',             value: '12.4',  unit: 'tonnes',   delta: '+31%', icon: Leaf,        color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  { label: 'Revenue (Materials)',    value: 'S$6,840', unit: 'MTD',   delta: '+12%', icon: TrendingUp,  color: 'text-primary',    bg: 'bg-orbitan-blue-light' },
 ];
 
 const RECENT_COLLECTIONS = [
-  { id: 'C-2026-089', source: 'CapitaLand HQ', material: 'Paper / Cardboard', weight: '320 kg', status: 'completed', date: '2026-06-04' },
-  { id: 'C-2026-088', source: 'Raffles Hotel', material: 'Mixed Plastics', weight: '85 kg', status: 'processing', date: '2026-06-04' },
-  { id: 'C-2026-087', source: 'NUS Campus', material: 'E-Waste', weight: '42 kg', status: 'in_transit', date: '2026-06-03' },
-  { id: 'C-2026-086', source: 'Suntec City', material: 'Metals', weight: '210 kg', status: 'completed', date: '2026-06-03' },
+  { id: 'C-2026-089', source: 'CapitaLand HQ',  material: 'Paper / Cardboard', weight: '320 kg', status: 'completed',  date: '2026-06-04' },
+  { id: 'C-2026-088', source: 'Raffles Hotel',  material: 'Mixed Plastics',    weight: '85 kg',  status: 'processing', date: '2026-06-04' },
+  { id: 'C-2026-087', source: 'NUS Campus',     material: 'E-Waste',           weight: '42 kg',  status: 'in_transit', date: '2026-06-03' },
+  { id: 'C-2026-086', source: 'Suntec City',    material: 'Metals',            weight: '210 kg', status: 'completed',  date: '2026-06-03' },
 ];
 
 const STATUS_MAP = {
@@ -46,10 +48,23 @@ const STATUS_MAP = {
   collected:   { label: 'Collected',  color: 'text-slate-700',   bg: 'bg-slate-50 border-slate-200' },
 };
 
+const MODULE_CARDS = [
+  { label: 'Collections',        href: '/t2/collections', icon: Recycle,     desc: 'Track pickups & processing' },
+  { label: 'Materials Inventory',href: '/t2/inventory',   icon: Package,     desc: 'Recovered stock levels' },
+  { label: 'Compliance',         href: '/t2/compliance',  icon: Shield,      desc: 'Regulatory audit trail' },
+  { label: 'Workforce',          href: '/t2/workforce',   icon: Users,       desc: 'Driver & staff management' },
+  { label: 'Tasks',              href: '/t2/tasks',       icon: CheckSquare, desc: 'Operational assignments' },
+  { label: 'Reporting',          href: '/t2/reporting',   icon: BarChart2,   desc: 'Sustainability KPIs' },
+];
+
 export default function T2Dashboard() {
   return (
     <AppShell navigation={NAV} title="Renewed Resources — Operations" headerRight={
-      <a href="/leader-org"><button className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-accent transition-colors">← Platform Console</button></a>
+      <Link to="/leader-org">
+        <button className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-accent transition-colors">
+          ← Platform Console
+        </button>
+      </Link>
     }>
       <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
 
@@ -63,7 +78,7 @@ export default function T2Dashboard() {
               <h2 className="font-heading font-bold text-xl text-foreground">Renewed Resources Pte Ltd</h2>
               <PlanBadge plan="orbitan_business" />
             </div>
-            <PackBadgeGroup packs={['core', 'sustainability', 'compliance', 'reporting']} />
+            <PackBadgeGroup packs={TENANT.enabled_packs} />
             <p className="text-sm text-muted-foreground mt-1">Recycling & Sustainability Operations · Singapore</p>
           </div>
           <div className="flex gap-2">
@@ -95,9 +110,9 @@ export default function T2Dashboard() {
           <p className="text-xs font-semibold uppercase tracking-widest opacity-70 mb-3">June 2026 — Sustainability Impact</p>
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'CO₂ Saved', value: '12.4t', sub: 'equivalent' },
-              { label: 'Landfill Diverted', value: '8.4t', sub: 'materials' },
-              { label: 'Trees Equivalent', value: '568', sub: 'trees saved' },
+              { label: 'CO₂ Saved',        value: '12.4t', sub: 'equivalent' },
+              { label: 'Landfill Diverted', value: '8.4t',  sub: 'materials' },
+              { label: 'Trees Equivalent',  value: '568',   sub: 'trees saved' },
             ].map(s => (
               <div key={s.label} className="text-center">
                 <p className="text-2xl font-display font-bold">{s.value}</p>
@@ -146,14 +161,7 @@ export default function T2Dashboard() {
 
         {/* Module Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {[
-            { label: 'Collections', href: '/t2/collections', icon: Recycle, desc: 'Track pickups & processing' },
-            { label: 'Materials Inventory', href: '/t2/inventory', icon: Package, desc: 'Recovered stock levels' },
-            { label: 'Compliance', href: '/t2/compliance', icon: Shield, desc: 'Regulatory audit trail' },
-            { label: 'Workforce', href: '/t2/workforce', icon: Users, desc: 'Driver & staff management' },
-            { label: 'Tasks', href: '/t2/tasks', icon: CheckSquare, desc: 'Operational assignments' },
-            { label: 'Reporting', href: '/t2/reporting', icon: BarChart2, desc: 'Sustainability KPIs' },
-          ].map(m => (
+          {MODULE_CARDS.map(m => (
             <Link key={m.href} to={m.href}>
               <div className="bg-card border border-border rounded-xl p-4 hover:shadow-md hover:border-[#16A34A]/30 transition-all cursor-pointer group">
                 <div className="w-9 h-9 rounded-lg bg-[#F0FDF4] flex items-center justify-center mb-3">

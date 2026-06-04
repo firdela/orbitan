@@ -2,47 +2,48 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '@/components/layout/AppShell';
 import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
+import { Button } from '@/components/ui/button';
 import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
   Shield, BarChart2, Link2, Calendar, ChevronRight,
-  AlertTriangle, TrendingUp, DollarSign, Clock, Utensils
+  AlertTriangle, TrendingUp, DollarSign, Clock, Utensils,
+  Home
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { OrbitanEngine } from '@/lib/orbitan-engine';
 
-const NAV = [
-  { type: 'section', label: 'F&B Operations' },
-  { href: '/t1/dashboard', icon: Utensils, label: 'Dashboard' },
-  { href: '/t1/inventory', icon: Package, label: 'Inventory' },
-  { href: '/t1/procurement', icon: ShoppingCart, label: 'Procurement' },
-  { href: '/t1/sales', icon: FileText, label: 'Sales & Invoicing' },
-  { href: '/t1/scheduling', icon: Calendar, label: 'Scheduling' },
-  { type: 'section', label: 'People & Tasks' },
-  { href: '/t1/workforce', icon: Users, label: 'Workforce' },
-  { href: '/t1/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Governance' },
-  { href: '/t1/compliance', icon: Shield, label: 'Compliance' },
-  { href: '/t1/reporting', icon: BarChart2, label: 'Reporting' },
-  { href: '/t1/xero', icon: Link2, label: 'Xero Integration' },
-  { type: 'section', label: 'Platform' },
-  { href: '/leader-org', icon: BarChart2, label: '← Platform Console' },
-];
+// ── Icon Map — keeps OrbitanEngine framework-agnostic ────────
+const ICON_MAP = {
+  Home, Package, ShoppingCart, FileText, Calendar, Users,
+  CheckSquare, Shield, BarChart2, Link2, Clock, AlertTriangle, Utensils,
+};
 
-const MODULES = [
-  { href: '/t1/inventory', icon: Package, label: 'Inventory', desc: 'Ingredient stock & par levels', color: 'bg-orbitan-amber-light text-orbitan-amber', alert: '3 items below par' },
-  { href: '/t1/procurement', icon: ShoppingCart, label: 'Procurement', desc: 'Purchase orders & suppliers', color: 'bg-orbitan-blue-light text-orbitan-blue', alert: '2 POs pending approval' },
-  { href: '/t1/sales', icon: FileText, label: 'Sales & Invoicing', desc: 'Daily reconciliation & COGS', color: 'bg-orbitan-green-light text-orbitan-green', alert: null },
-  { href: '/t1/scheduling', icon: Calendar, label: 'Scheduling', desc: 'Shift planning & attendance', color: 'bg-orbitan-purple-light text-orbitan-purple', alert: null },
-  { href: '/t1/workforce', icon: Users, label: 'Workforce', desc: 'Staff profiles & roles', color: 'bg-orbitan-blue-light text-orbitan-blue', alert: null },
-  { href: '/t1/tasks', icon: CheckSquare, label: 'Tasks', desc: 'Operational task management', color: 'bg-orbitan-amber-light text-orbitan-amber', alert: '5 tasks due today' },
-  { href: '/t1/compliance', icon: Shield, label: 'Compliance', desc: 'Food safety & audit records', color: 'bg-orbitan-red-light text-orbitan-red', alert: '1 overdue audit' },
-  { href: '/t1/xero', icon: Link2, label: 'Xero Integration', desc: 'Accounting sync status', color: 'bg-orbitan-green-light text-orbitan-green', alert: null },
+// ── Tenant stub for engine (replace with real tenant record in prod) ──
+const TENANT = {
+  name: 'Taqueria Pte Ltd',
+  subscription_plan: 'orbitan_business',
+  enabled_modules: ['dashboard', 'inventory', 'procurement', 'sales', 'scheduling', 'replenishment', 'workforce', 'clockin', 'tasks', 'compliance', 'reporting', 'xero'],
+  enabled_packs: ['core', 'fnb', 'finance', 'compliance'],
+};
+
+const engine = OrbitanEngine.for(TENANT);
+const NAV = engine.buildNav('t1', ICON_MAP);
+
+const MODULE_CARDS = [
+  { href: '/t1/inventory',     icon: Package,      label: 'Inventory',       desc: 'Ingredient stock & par levels',      color: 'bg-orbitan-amber-light text-orbitan-amber',  alert: '3 items below par' },
+  { href: '/t1/procurement',   icon: ShoppingCart, label: 'Procurement',     desc: 'Purchase orders & suppliers',        color: 'bg-orbitan-blue-light text-orbitan-blue',   alert: '2 POs pending approval' },
+  { href: '/t1/sales',         icon: FileText,     label: 'Sales & Invoicing',desc: 'Daily reconciliation & COGS',       color: 'bg-orbitan-green-light text-orbitan-green', alert: null },
+  { href: '/t1/scheduling',    icon: Calendar,     label: 'Scheduling',      desc: 'Shift planning & attendance',        color: 'bg-orbitan-purple-light text-orbitan-purple',alert: null },
+  { href: '/t1/workforce',     icon: Users,        label: 'Workforce',       desc: 'Staff profiles & roles',             color: 'bg-orbitan-blue-light text-orbitan-blue',   alert: null },
+  { href: '/t1/tasks',         icon: CheckSquare,  label: 'Tasks',           desc: 'Operational task management',        color: 'bg-orbitan-amber-light text-orbitan-amber', alert: '5 tasks due today' },
+  { href: '/t1/compliance',    icon: Shield,       label: 'Compliance',      desc: 'Food safety & audit records',        color: 'bg-orbitan-red-light text-orbitan-red',     alert: '1 overdue audit' },
+  { href: '/t1/xero',          icon: Link2,        label: 'Xero Integration',desc: 'Accounting sync status',             color: 'bg-orbitan-green-light text-orbitan-green', alert: null },
 ];
 
 const KPI = [
   { label: "Today's Revenue", value: 'S$1,842', sub: 'La Birria Tacos · North Bridge Rd', icon: DollarSign, color: 'text-orbitan-green' },
-  { label: 'Gross Margin', value: '62.4%', sub: 'vs 60.1% last week', icon: TrendingUp, color: 'text-orbitan-blue' },
-  { label: 'Low Stock Items', value: '3', sub: 'Requires replenishment', icon: AlertTriangle, color: 'text-orbitan-amber' },
-  { label: 'Open Shifts Today', value: '8', sub: '2 unconfirmed', icon: Clock, color: 'text-orbitan-purple' },
+  { label: 'Gross Margin',    value: '62.4%',   sub: 'vs 60.1% last week',               icon: TrendingUp,    color: 'text-orbitan-blue' },
+  { label: 'Low Stock Items', value: '3',       sub: 'Requires replenishment',            icon: AlertTriangle, color: 'text-orbitan-amber' },
+  { label: 'Open Shifts',     value: '8',       sub: '2 unconfirmed',                     icon: Clock,         color: 'text-orbitan-purple' },
 ];
 
 export default function FnBDashboard() {
@@ -70,7 +71,7 @@ export default function FnBDashboard() {
               <h2 className="font-heading font-bold text-xl text-foreground">Taqueria Pte Ltd</h2>
               <PlanBadge plan="orbitan_business" />
             </div>
-            <PackBadgeGroup packs={['core', 'fnb', 'finance', 'compliance']} />
+            <PackBadgeGroup packs={TENANT.enabled_packs} />
             <p className="text-sm text-muted-foreground mt-1">
               Client: <span className="font-medium text-foreground">La Birria Tacos</span> &nbsp;·&nbsp;
               Outlet: <span className="font-medium text-foreground">North Bridge Rd</span> &nbsp;·&nbsp;
@@ -102,7 +103,7 @@ export default function FnBDashboard() {
         <div>
           <h3 className="font-heading font-semibold text-foreground mb-4">Active Modules — F&B Pack</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {MODULES.map(m => (
+            {MODULE_CARDS.map(m => (
               <Link key={m.href} to={m.href}>
                 <div className="bg-card border border-border rounded-xl p-5 hover:shadow-md hover:border-primary/30 transition-all group h-full">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${m.color}`}>

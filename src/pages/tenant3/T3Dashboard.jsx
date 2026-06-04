@@ -5,36 +5,40 @@ import { Button } from '@/components/ui/button';
 import {
   ShoppingBag, Package, FileText, Users, CheckSquare,
   BarChart2, ShoppingCart, Leaf, TrendingUp, Tag,
-  Heart, ArrowUpRight, Star, Shirt
+  Heart, ArrowUpRight, Shirt, Home, Shield
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { OrbitanEngine } from '@/lib/orbitan-engine';
 
-const NAV = [
-  { type: 'section', label: 'Retail Ops' },
-  { href: '/t3/dashboard', icon: ShoppingBag, label: 'Dashboard' },
-  { href: '/t3/catalog', icon: Shirt, label: 'Product Catalog' },
-  { href: '/t3/inventory', icon: Package, label: 'Inventory' },
-  { href: '/t3/sales', icon: FileText, label: 'Sales & POS' },
-  { href: '/t3/customers', icon: Heart, label: 'Customers' },
-  { type: 'section', label: 'People & Tasks' },
-  { href: '/t3/workforce', icon: Users, label: 'Workforce' },
-  { href: '/t3/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Intelligence' },
-  { href: '/t3/reporting', icon: BarChart2, label: 'Reporting' },
-];
+// ── Icon Map ─────────────────────────────────────────────────
+const ICON_MAP = {
+  Home, Package, ShoppingCart, FileText, Users, CheckSquare,
+  BarChart2, Leaf, TrendingUp, Heart, Shirt, ShoppingBag, Shield,
+};
+
+// ── Tenant stub ───────────────────────────────────────────────
+const TENANT = {
+  name: 'Renewed Fashion',
+  subscription_plan: 'orbitan_business',
+  enabled_modules: ['dashboard', 'catalog', 'inventory', 'sales', 'customers', 'workforce', 'tasks', 'reporting'],
+  enabled_packs: ['core', 'retail'],
+};
+
+const engine = OrbitanEngine.for(TENANT);
+const NAV = engine.buildNav('t3', ICON_MAP);
 
 const KPI_DATA = [
-  { label: 'Items Listed', value: '348', unit: 'products', delta: '+42 this week', icon: Shirt, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4]' },
-  { label: 'Sales This Month', value: 'S$4,280', unit: 'MTD', delta: '+28%', icon: TrendingUp, color: 'text-primary', bg: 'bg-orbitan-blue-light' },
-  { label: 'Items Sold', value: '89', unit: 'pieces', delta: '+15%', icon: ShoppingBag, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4]' },
-  { label: 'CO₂ Impact', value: '284', unit: 'kg saved', delta: 'via purchases', icon: Leaf, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  { label: 'Items Listed',       value: '348',     unit: 'products', delta: '+42 this week', icon: Shirt,       color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4]' },
+  { label: 'Sales This Month',   value: 'S$4,280', unit: 'MTD',      delta: '+28%',          icon: TrendingUp,  color: 'text-primary',   bg: 'bg-orbitan-blue-light' },
+  { label: 'Items Sold',         value: '89',      unit: 'pieces',   delta: '+15%',          icon: ShoppingBag, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4]' },
+  { label: 'CO₂ Impact',        value: '284',     unit: 'kg saved', delta: 'via purchases',  icon: Leaf,        color: 'text-emerald-600',bg: 'bg-emerald-50' },
 ];
 
 const RECENT_SALES = [
-  { id: 'S-089', item: 'Vintage Levi\'s Denim Jacket', grade: 'B_like_new', price: 'S$48', customer: 'Sarah T.', date: '2026-06-04' },
-  { id: 'S-088', item: 'Upcycled Floral Maxi Dress', grade: 'E_upcycled', price: 'S$35', customer: 'Priya M.', date: '2026-06-04' },
-  { id: 'S-087', item: 'H&M Striped Tee (M)', grade: 'C_good', price: 'S$12', customer: 'Walk-in', date: '2026-06-03' },
-  { id: 'S-086', item: 'Nike Running Shorts', grade: 'B_like_new', price: 'S$22', customer: 'James K.', date: '2026-06-03' },
+  { id: 'S-089', item: "Vintage Levi's Denim Jacket", grade: 'B_like_new', price: 'S$48', customer: 'Sarah T.',  date: '2026-06-04' },
+  { id: 'S-088', item: 'Upcycled Floral Maxi Dress',  grade: 'E_upcycled', price: 'S$35', customer: 'Priya M.',  date: '2026-06-04' },
+  { id: 'S-087', item: 'H&M Striped Tee (M)',          grade: 'C_good',     price: 'S$12', customer: 'Walk-in',   date: '2026-06-03' },
+  { id: 'S-086', item: 'Nike Running Shorts',          grade: 'B_like_new', price: 'S$22', customer: 'James K.',  date: '2026-06-03' },
 ];
 
 const GRADE_MAP = {
@@ -45,10 +49,23 @@ const GRADE_MAP = {
   E_upcycled:      { label: 'Upcycled ♻', color: '#7C3AED', bg: '#EDE9FE' },
 };
 
+const MODULE_CARDS = [
+  { label: 'Product Catalog', href: '/t3/catalog',    icon: Shirt,       desc: 'Manage upcycled products' },
+  { label: 'Inventory',       href: '/t3/inventory',  icon: Package,     desc: 'Stock & warehouse view' },
+  { label: 'Sales & POS',     href: '/t3/sales',      icon: FileText,    desc: 'Process & track sales' },
+  { label: 'Customers',       href: '/t3/customers',  icon: Heart,       desc: 'Profiles & purchase history' },
+  { label: 'Workforce',       href: '/t3/workforce',  icon: Users,       desc: 'Staff management' },
+  { label: 'Reporting',       href: '/t3/reporting',  icon: BarChart2,   desc: 'Sustainability KPIs' },
+];
+
 export default function T3Dashboard() {
   return (
     <AppShell navigation={NAV} title="Renewed Fashion" headerRight={
-      <a href="/leader-org"><button className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-accent transition-colors">← Platform Console</button></a>
+      <Link to="/leader-org">
+        <button className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-accent transition-colors">
+          ← Platform Console
+        </button>
+      </Link>
     }>
       <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
 
@@ -62,7 +79,7 @@ export default function T3Dashboard() {
               <h2 className="font-heading font-bold text-xl text-foreground">Renewed Fashion</h2>
               <PlanBadge plan="orbitan_business" />
             </div>
-            <PackBadgeGroup packs={['core', 'retail']} />
+            <PackBadgeGroup packs={TENANT.enabled_packs} />
             <p className="text-sm text-muted-foreground mt-1">Reuse & Upcycle Clothing · Singapore</p>
           </div>
           <div className="flex gap-2">
@@ -95,10 +112,10 @@ export default function T3Dashboard() {
           <div className="flex flex-wrap gap-3">
             {[
               { grade: 'A_new_with_tags', count: 28 },
-              { grade: 'B_like_new', count: 94 },
-              { grade: 'C_good', count: 142 },
-              { grade: 'D_fair', count: 56 },
-              { grade: 'E_upcycled', count: 28 },
+              { grade: 'B_like_new',      count: 94 },
+              { grade: 'C_good',          count: 142 },
+              { grade: 'D_fair',          count: 56 },
+              { grade: 'E_upcycled',      count: 28 },
             ].map(g => {
               const cfg = GRADE_MAP[g.grade];
               return (
@@ -145,14 +162,7 @@ export default function T3Dashboard() {
 
         {/* Module Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {[
-            { label: 'Product Catalog', href: '/t3/catalog', icon: Shirt, desc: 'Manage upcycled products' },
-            { label: 'Inventory', href: '/t3/inventory', icon: Package, desc: 'Stock & warehouse view' },
-            { label: 'Sales & POS', href: '/t3/sales', icon: FileText, desc: 'Process & track sales' },
-            { label: 'Customers', href: '/t3/customers', icon: Heart, desc: 'Profiles & purchase history' },
-            { label: 'Workforce', href: '/t3/workforce', icon: Users, desc: 'Staff management' },
-            { label: 'Reporting', href: '/t3/reporting', icon: BarChart2, desc: 'Sustainability KPIs' },
-          ].map(m => (
+          {MODULE_CARDS.map(m => (
             <Link key={m.href} to={m.href}>
               <div className="bg-card border border-border rounded-xl p-4 hover:shadow-md hover:border-[#22C55E]/30 transition-all cursor-pointer group">
                 <div className="w-9 h-9 rounded-lg bg-[#F0FDF4] flex items-center justify-center mb-3">
