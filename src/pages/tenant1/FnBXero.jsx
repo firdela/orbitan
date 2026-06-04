@@ -80,23 +80,18 @@ export default function FnBXero() {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [syncingId, setSyncingId] = useState(null);
 
-  // Simulate Xero OAuth popup flow
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
+
+  // Xero OAuth requires a registered connector with real credentials.
+  // Until configured by the platform admin, show the setup guide.
   function handleConnectXero() {
-    setConnecting(true);
-    // In production: open Xero OAuth URL from the connector
-    const popup = window.open(
-      'https://login.xero.com/identity/connect/authorize?response_type=code&client_id=XERO_CLIENT_ID&redirect_uri=https://app.xero.com&scope=openid+profile+email+accounting.transactions+accounting.contacts',
-      'xero_oauth',
-      'width=600,height=700,left=300,top=100'
-    );
-    // Poll for popup close
-    const timer = setInterval(() => {
-      if (!popup || popup.closed) {
-        clearInterval(timer);
-        setConnecting(false);
-        setConnected(true); // Demo: assume success once popup closes
-      }
-    }, 500);
+    setShowSetupGuide(true);
+  }
+
+  // Demo-only: allow simulating a connected state for UI preview
+  function handleDemoConnect() {
+    setShowSetupGuide(false);
+    setConnected(true);
   }
 
   function handleDisconnect() {
@@ -379,6 +374,59 @@ export default function FnBXero() {
           </div>
         )}
       </div>
+
+      {/* Xero Setup Guide Modal */}
+      {showSetupGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center font-bold text-blue-600 text-lg">X</div>
+                <p className="font-heading font-semibold text-foreground">Connect Xero Account</p>
+              </div>
+              <button onClick={() => setShowSetupGuide(false)} className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted">
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                To connect Xero, your platform administrator needs to register the Xero OAuth app credentials in OrbitanOS. This is a one-time setup.
+              </p>
+              <div className="space-y-3">
+                {[
+                  { step: '1', label: 'Create a Xero App', desc: 'Go to developer.xero.com → My Apps → New App. Set type to "Web App".' },
+                  { step: '2', label: 'Copy Credentials', desc: 'Copy your Client ID and Client Secret from the Xero app settings.' },
+                  { step: '3', label: 'Register in OrbitanOS', desc: 'Your Orbitan platform admin registers these credentials in the Integrations settings.' },
+                  { step: '4', label: 'Authorise', desc: 'Once registered, the Connect button will open the official Xero login window.' },
+                ].map(s => (
+                  <div key={s.step} className="flex items-start gap-3 p-3 bg-muted/50 rounded-xl border border-border">
+                    <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{s.step}</span>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{s.label}</p>
+                      <p className="text-xs text-muted-foreground">{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-start gap-2 p-3 bg-orbitan-amber-light rounded-xl border border-amber-200 text-xs text-orbitan-amber">
+                <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>This is a one-time setup by your Orbitan platform admin. Finance users will then see a standard Xero login window when connecting.</span>
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 py-4 border-t border-border">
+              <Button variant="outline" className="flex-1" onClick={() => setShowSetupGuide(false)}>Close</Button>
+              <Button className="flex-1 gap-2" variant="outline" asChild>
+                <a href="https://developer.xero.com/app/manage" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-4 h-4" /> Open Xero Developer Portal
+                </a>
+              </Button>
+              <Button className="flex-1 text-xs" onClick={handleDemoConnect}>
+                Preview Connected State
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Review Modal */}
       {selectedRecord && (
