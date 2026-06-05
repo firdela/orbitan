@@ -1,26 +1,10 @@
 import React, { useState } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
-import {
-  ShoppingBag, Package, FileText, Users, CheckSquare,
-  BarChart2, Leaf, Plus, Search, Tag, Shirt,
-  Heart, X, CheckCircle2, Clock, AlertCircle
-} from 'lucide-react';
-
-const NAV = [
-  { type: 'section', label: 'Retail Ops' },
-  { href: '/t3/dashboard', icon: ShoppingBag, label: 'Dashboard' },
-  { href: '/t3/catalog', icon: Shirt, label: 'Product Catalog' },
-  { href: '/t3/inventory', icon: Package, label: 'Inventory' },
-  { href: '/t3/sales', icon: FileText, label: 'Sales & POS' },
-  { href: '/t3/customers', icon: Heart, label: 'Customers' },
-  { type: 'section', label: 'People & Tasks' },
-  { href: '/t3/workforce', icon: Users, label: 'Workforce' },
-  { href: '/t3/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Intelligence' },
-  { href: '/t3/reporting', icon: BarChart2, label: 'Reporting' },
-];
+import { Plus, Search, Shirt, X } from 'lucide-react';
+import { T3_NAV, T3_TENANT } from '@/lib/tenant-nav';
 
 const DEMO_PRODUCTS = [
   { id: 'P-001', name: "Vintage Levi's 501 Denim Jacket", sku: 'LV-DNM-M-001', category: 'outerwear', gender: 'unisex', size: 'M', colour: 'Indigo', brand: "Levi's", condition_grade: 'B_like_new', selling_price_sgd: 48, cost_price_sgd: 8, current_stock: 1, sourced_from: 'recycling_stream', is_pos_ready: true, co2_saved_kg: 8.4, status: 'active' },
@@ -52,7 +36,7 @@ export default function T3Catalog() {
   });
 
   return (
-    <AppShell navigation={NAV} title="Product Catalog — Retail Ops">
+    <AppShell navigation={T3_NAV} tenant={T3_TENANT} title="" headerRight={<TenantSwitcher />}>
       <div className="p-4 sm:p-6 space-y-5 max-w-5xl mx-auto">
         <PageHeader
           title="Product Catalog"

@@ -1,28 +1,14 @@
 import React, { useState } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Recycle, Package, ShoppingCart, CheckSquare, Shield,
-  BarChart2, Users, Leaf, Plus, Search, Filter,
-  MapPin, Weight, Calendar, CheckCircle2, Clock,
-  Truck, AlertCircle, X, ArrowRight
+  Recycle, Package, Plus, Search, Filter,
+  CheckCircle2, Truck, AlertCircle, X
 } from 'lucide-react';
-
-const NAV = [
-  { type: 'section', label: 'Sustainability Ops' },
-  { href: '/t2/dashboard', icon: Leaf, label: 'Dashboard' },
-  { href: '/t2/collections', icon: Recycle, label: 'Collections' },
-  { href: '/t2/inventory', icon: Package, label: 'Recovered Materials' },
-  { href: '/t2/procurement', icon: ShoppingCart, label: 'Procurement' },
-  { type: 'section', label: 'People & Tasks' },
-  { href: '/t2/workforce', icon: Users, label: 'Workforce' },
-  { href: '/t2/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Governance' },
-  { href: '/t2/compliance', icon: Shield, label: 'Compliance' },
-  { href: '/t2/reporting', icon: BarChart2, label: 'Reporting' },
-];
+import { T2_NAV, T2_TENANT } from '@/lib/tenant-nav';
 
 const DEMO_COLLECTIONS = [
   { id: 'C-2026-089', source: 'CapitaLand HQ', address: '168 Robinson Rd', material_category: 'paper_cardboard', gross_weight_kg: 320, net_weight_kg: 304, co2_saved_kg: 480, processing_status: 'completed', collection_date: '2026-06-04', driver: 'Ahmad Razif', revenue_sgd: 224 },
@@ -69,7 +55,7 @@ export default function T2Collections() {
   const totalRevenue = DEMO_COLLECTIONS.reduce((s, c) => s + c.revenue_sgd, 0);
 
   return (
-    <AppShell navigation={NAV} title="Collections — Renewed Resources">
+    <AppShell navigation={T2_NAV} tenant={T2_TENANT} title="" headerRight={<TenantSwitcher />}>
       <div className="p-4 sm:p-6 space-y-5 max-w-5xl mx-auto">
         <PageHeader
           title="Collection Jobs"

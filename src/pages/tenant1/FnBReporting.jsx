@@ -1,29 +1,11 @@
 import React, { useState } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
-import {
-  Package, ShoppingCart, FileText, Users, CheckSquare,
-  Shield, BarChart2, Link2, Calendar, TrendingUp, TrendingDown,
-  DollarSign, Utensils
-} from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, BarChart2 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const NAV = [
-  { type: 'section', label: 'F&B Operations' },
-  { href: '/t1/dashboard', icon: Utensils, label: 'Dashboard' },
-  { href: '/t1/inventory', icon: Package, label: 'Inventory' },
-  { href: '/t1/procurement', icon: ShoppingCart, label: 'Procurement' },
-  { href: '/t1/sales', icon: FileText, label: 'Sales & Invoicing' },
-  { href: '/t1/scheduling', icon: Calendar, label: 'Scheduling' },
-  { type: 'section', label: 'People & Tasks' },
-  { href: '/t1/workforce', icon: Users, label: 'Workforce' },
-  { href: '/t1/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Governance' },
-  { href: '/t1/compliance', icon: Shield, label: 'Compliance' },
-  { href: '/t1/reporting', icon: BarChart2, label: 'Reporting' },
-  { href: '/t1/xero', icon: Link2, label: 'Xero Integration' },
-];
+import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
 
 const WEEKLY_DATA = [
   { day: 'Mon', revenue: 1620, cogs: 632, profit: 988 },
@@ -58,7 +40,7 @@ export default function FnBReporting() {
   const avgMargin = ((totalProfit / totalRevenue) * 100).toFixed(1);
 
   return (
-    <AppShell navigation={NAV} title="Reporting — La Birria Tacos">
+    <AppShell navigation={T1_NAV} tenant={T1_TENANT} title="" headerRight={<TenantSwitcher />}>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
         <PageHeader
           title="F&B Performance Reports"

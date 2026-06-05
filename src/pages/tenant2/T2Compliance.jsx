@@ -1,26 +1,10 @@
 import React, { useState } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
-import {
-  Recycle, Package, ShoppingCart, CheckSquare, Shield,
-  BarChart2, Users, Leaf, Plus, CheckCircle2, AlertTriangle,
-  Clock, XCircle, FileText, AlertCircle
-} from 'lucide-react';
-
-const NAV = [
-  { type: 'section', label: 'Sustainability Ops' },
-  { href: '/t2/dashboard', icon: Leaf, label: 'Dashboard' },
-  { href: '/t2/collections', icon: Recycle, label: 'Collections' },
-  { href: '/t2/inventory', icon: Package, label: 'Recovered Materials' },
-  { href: '/t2/procurement', icon: ShoppingCart, label: 'Procurement' },
-  { type: 'section', label: 'People & Tasks' },
-  { href: '/t2/workforce', icon: Users, label: 'Workforce' },
-  { href: '/t2/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Governance' },
-  { href: '/t2/compliance', icon: Shield, label: 'Compliance' },
-  { href: '/t2/reporting', icon: BarChart2, label: 'Reporting' },
-];
+import { Plus, CheckCircle2, AlertTriangle, Clock, XCircle, FileText, AlertCircle } from 'lucide-react';
+import { T2_NAV, T2_TENANT } from '@/lib/tenant-nav';
 
 const DEMO_RECORDS = [
   { id: 'c1', title: 'NEA Waste Collector Licence Renewal', type: 'Licensing', category: 'licensing', status: 'pending', due_date: '2026-07-01', submitted_by: null },
@@ -57,7 +41,7 @@ export default function T2Compliance() {
   const pendingCount = DEMO_RECORDS.filter(r => r.status === 'pending').length;
 
   return (
-    <AppShell navigation={NAV} title="Compliance — Renewed Resources">
+    <AppShell navigation={T2_NAV} tenant={T2_TENANT} title="" headerRight={<TenantSwitcher />}>
       <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
         <PageHeader
           title="Compliance"

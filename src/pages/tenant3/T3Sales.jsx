@@ -1,26 +1,10 @@
 import React, { useState } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
-import {
-  ShoppingBag, Package, FileText, Users, CheckSquare,
-  BarChart2, Heart, Leaf, Plus, CheckCircle2, Clock,
-  Shirt, Tag, CreditCard, Banknote, ArrowUpRight
-} from 'lucide-react';
-
-const NAV = [
-  { type: 'section', label: 'Retail Ops' },
-  { href: '/t3/dashboard', icon: ShoppingBag, label: 'Dashboard' },
-  { href: '/t3/catalog', icon: Shirt, label: 'Product Catalog' },
-  { href: '/t3/inventory', icon: Package, label: 'Inventory' },
-  { href: '/t3/sales', icon: FileText, label: 'Sales & POS' },
-  { href: '/t3/customers', icon: Heart, label: 'Customers' },
-  { type: 'section', label: 'People & Tasks' },
-  { href: '/t3/workforce', icon: Users, label: 'Workforce' },
-  { href: '/t3/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Intelligence' },
-  { href: '/t3/reporting', icon: BarChart2, label: 'Reporting' },
-];
+import { Plus, CheckCircle2, CreditCard, Banknote, ArrowUpRight } from 'lucide-react';
+import { T3_NAV, T3_TENANT } from '@/lib/tenant-nav';
 
 const DEMO_SALES = [
   { id: 'S-2026-089', item: "Vintage Levi's Denim Jacket", sku: 'SKU-0041', price: 48, payment: 'card', customer: 'Sarah T.', date: '2026-06-04', status: 'paid', co2_saved: 3.2 },
@@ -44,7 +28,7 @@ export default function T3Sales() {
   const totalCO2 = DEMO_SALES.reduce((s, t) => s + t.co2_saved, 0).toFixed(1);
 
   return (
-    <AppShell navigation={NAV} title="Sales & POS — Retail Ops">
+    <AppShell navigation={T3_NAV} tenant={T3_TENANT} title="" headerRight={<TenantSwitcher />}>
       <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
         <PageHeader
           title="Sales & POS"

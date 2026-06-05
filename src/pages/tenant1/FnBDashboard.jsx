@@ -8,26 +8,11 @@ import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
   Shield, BarChart2, Link2, Calendar, ChevronRight,
   AlertTriangle, TrendingUp, DollarSign, Clock, Utensils,
-  Home
 } from 'lucide-react';
-import { OrbitanEngine } from '@/lib/orbitan-engine';
+import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
 
-// ── Icon Map — keeps OrbitanEngine framework-agnostic ────────
-const ICON_MAP = {
-  Home, Package, ShoppingCart, FileText, Calendar, Users,
-  CheckSquare, Shield, BarChart2, Link2, Clock, AlertTriangle, Utensils,
-};
-
-// ── Tenant stub for engine (replace with real tenant record in prod) ──
-const TENANT = {
-  name: 'Taqueria Pte Ltd',
-  subscription_plan: 'orbitan_business',
-  enabled_modules: ['dashboard', 'inventory', 'procurement', 'sales', 'scheduling', 'replenishment', 'workforce', 'clockin', 'tasks', 'compliance', 'reporting', 'xero'],
-  enabled_packs: ['core', 'fnb', 'finance', 'compliance'],
-};
-
-const engine = OrbitanEngine.for(TENANT);
-const NAV = engine.buildNav('t1', ICON_MAP);
+const TENANT = T1_TENANT;
+const NAV = T1_NAV;
 
 const MODULE_CARDS = [
   { href: '/t1/inventory',     icon: Package,      label: 'Inventory',       desc: 'Ingredient stock & par levels',      color: 'bg-orbitan-amber-light text-orbitan-amber',  alert: '3 items below par' },

@@ -1,26 +1,11 @@
 import React, { useState } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
-import {
-  ShoppingBag, Package, FileText, Users, CheckSquare,
-  BarChart2, Heart, Shirt, Download, Leaf
-} from 'lucide-react';
+import { Download } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
-
-const NAV = [
-  { type: 'section', label: 'Retail Ops' },
-  { href: '/t3/dashboard', icon: ShoppingBag, label: 'Dashboard' },
-  { href: '/t3/catalog', icon: Shirt, label: 'Product Catalog' },
-  { href: '/t3/inventory', icon: Package, label: 'Inventory' },
-  { href: '/t3/sales', icon: FileText, label: 'Sales & POS' },
-  { href: '/t3/customers', icon: Heart, label: 'Customers' },
-  { type: 'section', label: 'People & Tasks' },
-  { href: '/t3/workforce', icon: Users, label: 'Workforce' },
-  { href: '/t3/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Intelligence' },
-  { href: '/t3/reporting', icon: BarChart2, label: 'Reporting' },
-];
+import { T3_NAV, T3_TENANT } from '@/lib/tenant-nav';
 
 const MONTHLY_SALES = [
   { month: 'Jan', revenue: 2100, items: 48, co2_saved: 112 },
@@ -52,7 +37,7 @@ export default function T3Reporting() {
   const [period, setPeriod] = useState('mtd');
 
   return (
-    <AppShell navigation={NAV} title="Reporting — Retail Ops">
+    <AppShell navigation={T3_NAV} tenant={T3_TENANT} title="" headerRight={<TenantSwitcher />}>
       <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
         <PageHeader
           title="Retail Reporting"
