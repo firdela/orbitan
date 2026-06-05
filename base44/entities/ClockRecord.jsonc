@@ -1,7 +1,7 @@
 {
   "name": "ClockRecord",
   "type": "object",
-  "description": "Corporate-grade clock-in/out records with GPS, photo verification, and productivity metrics. Source of truth for attendance and payroll.",
+  "description": "Corporate-grade clock-in/out records with GPS, photo verification, and productivity metrics. Source of truth for attendance and payroll. EXIT-READY: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -14,6 +14,26 @@
     },
     "employee_name": {
       "type": "string"
+    },
+    "employee_role": {
+      "type": "string"
+    },
+    "pay_rate": {
+      "type": "number",
+      "description": "Employee pay rate at time of shift (captured for immutability)"
+    },
+    "pay_type": {
+      "type": "string",
+      "enum": [
+        "hourly",
+        "monthly",
+        "daily"
+      ],
+      "default": "hourly"
+    },
+    "overtime_multiplier": {
+      "type": "number",
+      "default": 1.5
     },
     "shift_id": {
       "type": "string",
@@ -75,6 +95,24 @@
     "clock_out_photo_url": {
       "type": "string"
     },
+    "scheduled_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Scheduled shift start time for lateness calculation"
+    },
+    "scheduled_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "late_mins": {
+      "type": "number",
+      "default": 0,
+      "description": "Minutes late vs scheduled start"
+    },
+    "early_leave_mins": {
+      "type": "number",
+      "default": 0
+    },
     "total_hours_worked": {
       "type": "number",
       "description": "Calculated hours between clock-in and clock-out minus breaks"
@@ -89,7 +127,15 @@
     },
     "labour_cost": {
       "type": "number",
-      "description": "total_hours_worked * employee pay_rate"
+      "description": "total_hours_worked * pay_rate"
+    },
+    "overtime_cost": {
+      "type": "number",
+      "description": "overtime_hours * pay_rate * overtime_multiplier"
+    },
+    "total_shift_cost": {
+      "type": "number",
+      "description": "labour_cost + overtime_cost"
     },
     "status": {
       "type": "string",
@@ -101,6 +147,17 @@
         "pending_verification"
       ],
       "default": "clocked_in"
+    },
+    "validation_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "disputed"
+      ],
+      "default": "pending",
+      "description": "Manager validation state \u2014 must be approved before payroll inclusion"
     },
     "tasks_assigned": {
       "type": "number",
@@ -118,9 +175,25 @@
       "type": "string",
       "description": "Manager who verified this record"
     },
+    "verified_by_name": {
+      "type": "string"
+    },
     "verified_date": {
       "type": "string",
       "format": "date-time"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Reason if manager rejects this clock record"
+    },
+    "payroll_snapshot_id": {
+      "type": "string",
+      "description": "Linked PayrollSnapshot once included in a pay run"
+    },
+    "payroll_locked": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once included in a locked PayrollSnapshot \u2014 immutable"
     },
     "notes": {
       "type": "string"
@@ -173,6 +246,7 @@
           "user_condition": {
             "role": {
               "$in": [
+                "tenant_admin",
                 "outlet_manager",
                 "supervisor"
               ]
@@ -190,7 +264,8 @@
           }
         },
         {
-          "data.employee_id": "{{user.id}}"
+          "data.employee_id": "{{user.id}}",
+          "data.payroll_locked": false
         },
         {
           "data.outlet_id": "{{user.data.outlet_id}}",

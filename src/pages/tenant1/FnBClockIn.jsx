@@ -9,6 +9,7 @@ import {
   Clock, MapPin, Camera, CheckCircle2, AlertCircle,
   LogIn, LogOut, Timer, Star, TrendingUp
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
 const NAV = [
@@ -21,6 +22,7 @@ const NAV = [
   { label: 'Workforce', href: '/t1/workforce', icon: Users },
   { label: 'Scheduling', href: '/t1/scheduling', icon: Clock },
   { label: 'Clock In / Out', href: '/t1/clockin', icon: Timer },
+  { label: 'Timesheets', href: '/t1/timesheets', icon: ClipboardList },
   { label: 'Tasks', href: '/t1/tasks', icon: CheckSquare },
   { type: 'section', label: 'Governance' },
   { label: 'Compliance', href: '/t1/compliance', icon: Shield },
@@ -261,6 +263,23 @@ export default function FnBClockIn() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Manager CTA — Timesheets */}
+        {isManager && (
+          <Link
+            to="/t1/timesheets"
+            className="flex items-center justify-between px-5 py-3.5 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <ClipboardList className="w-5 h-5 text-primary" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Timesheet Manager</p>
+                <p className="text-xs text-muted-foreground">Validate shifts · Generate payroll · Lock records</p>
+              </div>
+            </div>
+            <span className="text-xs text-primary font-medium group-hover:translate-x-0.5 transition-transform">→</span>
+          </Link>
         )}
 
         {/* Team Status (Managers only) */}

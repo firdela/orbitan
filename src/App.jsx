@@ -43,6 +43,9 @@ import T2Tasks from '@/pages/tenant2/T2Tasks';
 import T2Compliance from '@/pages/tenant2/T2Compliance';
 import T2Reporting from '@/pages/tenant2/T2Reporting';
 
+// Workforce — Timesheet Manager (shared across tenants)
+import TimesheetManager from '@/pages/workforce/TimesheetManager';
+
 // AI Suite
 import AIStudio from '@/pages/ai/AIStudio';
 
@@ -117,6 +120,7 @@ const AuthenticatedApp = () => {
       <Route path="/t1/tasks" element={<FnBTasks />} />
       <Route path="/t1/clockin" element={<FnBClockIn />} />
       <Route path="/t1/replenishment" element={<FnBReplenishment />} />
+      <Route path="/t1/timesheets" element={<TimesheetManager />} />
 
       {/* Worker Portal */}
       {/* Tenant 2 — Recycling & Sustainability (Renewed Resources) */}
