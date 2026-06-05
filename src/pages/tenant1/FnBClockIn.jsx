@@ -60,16 +60,28 @@ export default function FnBClockIn() {
 
   const loadUserAndStatus = async () => {
     setLoading(true);
-    const me = await base44.auth.me();
-    setUser(me);
+    try {
+      const isAuthed = await base44.auth.isAuthenticated();
+      if (!isAuthed) {
+        base44.auth.redirectToLogin();
+        return;
+      }
+      const me = await base44.auth.me();
+      setUser(me);
 
-    const statusRes = await base44.functions.invoke('clockController', { action: 'get_status' });
-    setClockStatus(statusRes.data.status);
-    setActiveRecord(statusRes.data.record);
+      const statusRes = await base44.functions.invoke('clockController', { action: 'get_status' });
+      setClockStatus(statusRes.data.status);
+      setActiveRecord(statusRes.data.record);
 
-    // Load team status if manager
-    if (['admin', 'outlet_manager', 'supervisor'].includes(me?.role)) {
-      loadTeamStatus();
+      if (['admin', 'outlet_manager', 'supervisor'].includes(me?.role)) {
+        loadTeamStatus();
+      }
+    } catch (err) {
+      if (err?.message?.toLowerCase().includes('authentication') || err?.message?.toLowerCase().includes('unauthorized')) {
+        base44.auth.redirectToLogin();
+        return;
+      }
+      setClockStatus('not_clocked_in');
     }
     setLoading(false);
   };
