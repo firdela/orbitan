@@ -3,10 +3,15 @@ import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
+import WorkforceInsightsPanel from '@/components/workforce/WorkforceInsightsPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, X, UserCircle } from 'lucide-react';
+import { Plus, Search, X, UserCircle, Brain } from 'lucide-react';
 import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
+
+// Demo tenant/outlet IDs — replace with real IDs from the Tenant entity
+const T1_TENANT_ID = 'taqueria-pte-ltd';
+const T1_OUTLET_ID = 'la-birria-northbridge';
 
 const ROLE_COLORS = {
   outlet_manager: 'bg-orbitan-blue-light text-orbitan-blue',
@@ -27,6 +32,7 @@ export default function FnBWorkforce() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [activeTab, setActiveTab] = useState('staff'); // 'staff' | 'insights'
   const [newStaff, setNewStaff] = useState({ full_name: '', position: '', role: 'worker', employment_type: 'full_time', email: '', phone: '', pay_rate: '', pay_type: 'monthly' });
 
   const filtered = staff.filter(s =>
@@ -53,12 +59,27 @@ export default function FnBWorkforce() {
           title="Workforce Management"
           subtitle="La Birria Tacos · North Bridge Rd · Workforce Module"
           actions={
-            <Button size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
-              <Plus className="w-4 h-4" /> Add Staff
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setActiveTab(activeTab === 'insights' ? 'staff' : 'insights')}>
+                <Brain className="w-4 h-4 text-orbitan-purple" />
+                {activeTab === 'insights' ? 'Staff List' : 'AI Insights'}
+              </Button>
+              {activeTab === 'staff' && (
+                <Button size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
+                  <Plus className="w-4 h-4" /> Add Staff
+                </Button>
+              )}
+            </div>
           }
         />
 
+        {/* AI Workforce Insights Panel */}
+        {activeTab === 'insights' && (
+          <WorkforceInsightsPanel tenantId={T1_TENANT_ID} outletId={T1_OUTLET_ID} />
+        )}
+
+        {activeTab === 'staff' && (
+        <div className="space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-card border border-border rounded-xl p-4 text-center">
@@ -111,6 +132,9 @@ export default function FnBWorkforce() {
           ))}
         </div>
       </div>
+
+      </div>
+      )}
 
       {/* Staff Detail Modal */}
       {selected && (

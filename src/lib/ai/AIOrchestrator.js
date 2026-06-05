@@ -149,6 +149,39 @@ The Training Module must include:
   },
 
   /**
+   * Shift Optimiser — AI-driven schedule recommendations from ClockRecord + Sales data
+   * Part of the "Refine" principle — feeds directly into the AI Suite.
+   */
+  shiftOptimiserPrompt({ tenantName, outletName, clockSummary, salesSummary, industry }) {
+    const perfLines = (clockSummary || []).map(r =>
+      `- ${r.employee_name}: ${r.avg_hours?.toFixed(1) || 0}h avg/shift, productivity ${r.avg_productivity?.toFixed(0) || 0}%, ${r.total_shifts || 0} shifts`
+    ).join('\n') || 'No clock data provided.';
+
+    const salesLines = (salesSummary || []).map(r =>
+      `- ${r.date}: SGD ${r.total_revenue?.toFixed(2) || 0} revenue, ${r.transaction_count || 0} transactions`
+    ).join('\n') || 'No sales data provided.';
+
+    return `Analyse the following workforce and sales data for ${tenantName}${outletName ? ` (${outletName})` : ''} and generate optimised shift scheduling recommendations.
+
+**Workforce Performance (Last 30 Days):**
+${perfLines}
+
+**Sales Performance (Last 30 Days):**
+${salesLines}
+
+**Industry Context:** ${industry?.replace('_', ' ') || 'operations'}
+
+Generate a Shift Optimisation Report that includes:
+1. Peak Hours Analysis (when is revenue highest vs staffing levels)
+2. Underperforming Shifts (low productivity + low revenue periods)
+3. Overstaffing Risks (high labour cost vs low revenue windows)
+4. Top 3 Specific Scheduling Recommendations (with reasoning)
+5. Estimated Labour Cost Savings if recommendations are applied
+6. Suggested Training Focus for underperforming employees (link to Renew principle)
+7. Review Checklist (3 items for manager sign-off)`;
+  },
+
+  /**
    * Policy Generator — formal organisational policy
    */
   policyPrompt({ title, category, tenantName, industry }) {
@@ -225,5 +258,13 @@ export const DOCUMENT_TYPES = {
     auto_publish_eligible: false,
     description: 'Structured audit or compliance verification checklist',
     icon: 'ShieldCheck',
+  },
+  shift_optimiser: {
+    key: 'shift_optimiser',
+    label: 'Shift Optimiser Report',
+    principle: 'refine',
+    auto_publish_eligible: true,
+    description: 'AI-generated shift scheduling recommendations from workforce + sales data',
+    icon: 'BarChart3',
   },
 };

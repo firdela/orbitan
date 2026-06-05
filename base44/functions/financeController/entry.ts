@@ -349,6 +349,144 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── ACTION: sync_labour_costs ────────────────────────────────────────────
+    // Reads verified ClockRecords for a given date range and outlet, maps
+    // labour costs to the AccountMapping entity, and creates Xero-compatible
+    // manual journal entries. EXIT-READY: swap Xero endpoint for any ERP.
+    if (action_type === 'sync_labour_costs') {
+      const { outlet_id, tenant_id, date_from, date_to } = data || {};
+      if (!outlet_id || !tenant_id || !date_from || !date_to) {
+        return Response.json({ error: 'outlet_id, tenant_id, date_from, date_to are required in data' }, { status: 400 });
+      }
+
+      // Fetch all verified ClockRecords in date range
+      const clockRecords = await base44.entities.ClockRecord.filter({
+        tenant_id,
+        outlet_id,
+        status: 'clocked_out',
+      });
+
+      const rangeRecords = clockRecords.filter(r => r.date >= date_from && r.date <= date_to && r.labour_cost > 0);
+
+      if (!rangeRecords.length) {
+        return Response.json({ success: true, message: 'No verified labour records found for this period.', synced: 0 });
+      }
+
+      // Fetch the Labour account mapping for this tenant
+      const accountMappings = await base44.entities.AccountMapping.filter({ tenant_id, is_active: true });
+      const labourMapping = accountMappings.find(m => m.category_type === 'labour') || {
+        xero_account_code: '477',
+        xero_account_name: 'Wages & Salaries',
+        tax_type: 'NONE',
+      };
+
+      // Aggregate labour cost per employee per day
+      const totalLabourCost = rangeRecords.reduce((sum, r) => sum + (r.labour_cost || 0), 0);
+      const totalHours = rangeRecords.reduce((sum, r) => sum + (r.total_hours_worked || 0), 0);
+
+      // Build journal entry lines per employee
+      const journalLines = rangeRecords.map(r => ({
+        employee_name: r.employee_name,
+        date: r.date,
+        hours_worked: r.total_hours_worked,
+        overtime_hours: r.overtime_hours || 0,
+        labour_cost_sgd: r.labour_cost,
+        xero_account_code: labourMapping.xero_account_code,
+        xero_account_name: labourMapping.xero_account_name,
+      }));
+
+      // Simulate Xero manual journal creation
+      // When Xero connector is live:
+      //   const { accessToken } = await base44.asServiceRole.connectors.getWorkspaceConnection('xero');
+      //   POST to https://api.xero.com/api.xro/2.0/ManualJournals with lines
+      const simulatedJournalGuid = `XERO-JNL-LABOUR-${Date.now()}`;
+
+      await logAudit(base44, {
+        tenant_id,
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: user.role,
+        action_type: 'LABOUR_COSTS_SYNCED',
+        module: 'workforce',
+        target_entity: 'ClockRecord',
+        target_record_id: `batch_${date_from}_${date_to}`,
+        outlet_id,
+        previous_state: null,
+        new_state: { total_labour_cost: totalLabourCost, total_hours: totalHours, records: rangeRecords.length },
+        details: `Labour costs synced to Xero for ${date_from} → ${date_to}. Total: SGD ${totalLabourCost.toFixed(2)} across ${rangeRecords.length} records.`,
+      });
+
+      return Response.json({
+        success: true,
+        message: `Labour costs synced for ${rangeRecords.length} clock records.`,
+        summary: {
+          date_range: `${date_from} → ${date_to}`,
+          records_processed: rangeRecords.length,
+          total_hours_worked: totalHours.toFixed(2),
+          total_labour_cost_sgd: totalLabourCost.toFixed(2),
+          xero_account: `${labourMapping.xero_account_code} — ${labourMapping.xero_account_name}`,
+          journal_guid: simulatedJournalGuid,
+        },
+        journal_lines: journalLines,
+        note: 'Live Xero journal posting will activate once the Xero connector is authorised.',
+      });
+    }
+
+    // ─── ACTION: verify_clock_record ─────────────────────────────────────────
+    // Manager manually verifies a flagged ClockRecord (e.g. after compliance gate)
+    if (action_type === 'verify_clock_record') {
+      if (!record_id) {
+        return Response.json({ error: 'record_id is required' }, { status: 400 });
+      }
+
+      const clockRecord = await base44.entities.ClockRecord.get(record_id);
+
+      await base44.entities.ClockRecord.update(record_id, {
+        status: 'clocked_out',
+        verified_by: user.id,
+        verified_date: timestamp,
+        notes: (clockRecord.notes || '') + ` | Manually verified by ${user.full_name} on ${timestamp}`,
+      });
+
+      // Mark the associated urgent task as completed
+      const tasks = await base44.asServiceRole.entities.Task.filter({
+        tenant_id: clockRecord.tenant_id,
+        outlet_id: clockRecord.outlet_id,
+        module_context: 'compliance',
+        status: 'pending',
+      });
+      const relatedTask = tasks.find(t => t.title?.includes(clockRecord.employee_name) && t.title?.includes(clockRecord.date));
+      if (relatedTask) {
+        await base44.asServiceRole.entities.Task.update(relatedTask.id, {
+          status: 'completed',
+          completed_date: timestamp,
+        });
+      }
+
+      await logAudit(base44, {
+        tenant_id: clockRecord.tenant_id,
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: user.role,
+        action_type: 'CLOCK_RECORD_VERIFIED',
+        module: 'workforce',
+        target_entity: 'ClockRecord',
+        target_record_id: record_id,
+        outlet_id: clockRecord.outlet_id,
+        previous_state: { status: clockRecord.status },
+        new_state: { status: 'clocked_out', verified_by: user.full_name },
+        details: `ClockRecord manually verified by ${user.full_name} after compliance gate review.`,
+      });
+
+      return Response.json({
+        success: true,
+        message: 'Clock record verified successfully.',
+        record_id,
+        verified_by: user.full_name,
+        verified_at: timestamp,
+      });
+    }
+
     return Response.json({ error: `Unknown action_type: ${action_type}` }, { status: 400 });
 
   } catch (error) {
