@@ -10,10 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
 import { MODULES, INDUSTRY_LABELS } from '@/lib/orbitan-config';
+import AIBlueprintPreviewModal from '@/components/leader/AIBlueprintPreviewModal';
 import {
   Rocket, CheckCircle2, AlertTriangle, Loader2, ChevronDown, ChevronUp,
-  Zap, Shield, ClipboardList, Package, Users, FileText, Play, RefreshCw,
-  Building2, Activity, Info
+  Zap, Shield, ClipboardList, Package, FileText, Play,
+  Building2, Info, Sparkles, Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -52,6 +53,11 @@ function ActivationReport({ report }) {
           <Badge variant="outline" className="text-[10px]">
             {report.records_created.length} records seeded
           </Badge>
+          {report.ai_documents_generated?.length > 0 && (
+            <Badge className="text-[10px] bg-orbitan-purple-light text-orbitan-purple border-0">
+              <Sparkles className="w-2.5 h-2.5 mr-1" /> {report.ai_documents_generated.length} AI docs
+            </Badge>
+          )}
           {report.audit_logged && (
             <Badge className="text-[10px] bg-orbitan-blue-light text-orbitan-blue border-0">
               <Shield className="w-2.5 h-2.5 mr-1" /> Audit Logged
@@ -97,7 +103,7 @@ function ActivationReport({ report }) {
   );
 }
 
-function ManifestCard({ manifest, onActivate, activating, report }) {
+function ManifestCard({ manifest, onActivate, onPreview, activating, report }) {
   const [expanded, setExpanded] = useState(false);
   const packColor = PACK_COLORS[manifest.pack] || '#2563EB';
   const icon = INDUSTRY_ICONS[manifest.industry] || '🏢';
@@ -202,19 +208,42 @@ function ManifestCard({ manifest, onActivate, activating, report }) {
           )}
         </div>
 
-        {/* Activate button */}
-        <Button
-          onClick={() => onActivate(manifest.tenant_ref)}
-          disabled={activating === manifest.tenant_ref || activating === 'all'}
-          className="w-full gap-2 font-semibold"
-          style={{ background: packColor }}
-        >
-          {activating === manifest.tenant_ref ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Activating...</>
-          ) : (
-            <><Play className="w-4 h-4" /> Activate {manifest.display_name}</>
+        {/* AI Documents badge */}
+        {manifest.seed_preview?.AIDocument?.length > 0 && (
+          <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-orbitan-blue-light rounded-lg">
+            <Sparkles className="w-3.5 h-3.5 text-orbitan-blue flex-shrink-0" />
+            <span className="text-xs text-orbitan-blue font-medium">
+              {manifest.seed_preview.AIDocument.length} AI document{manifest.seed_preview.AIDocument.length > 1 ? 's' : ''} will be generated
+            </span>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          {manifest.seed_preview?.AIDocument?.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPreview(manifest)}
+              disabled={activating !== null}
+              className="gap-1.5 text-xs flex-shrink-0"
+            >
+              <Eye className="w-3.5 h-3.5" /> Preview AI
+            </Button>
           )}
-        </Button>
+          <Button
+            onClick={() => onActivate(manifest.tenant_ref)}
+            disabled={activating === manifest.tenant_ref || activating === 'all'}
+            className="flex-1 gap-2 font-semibold"
+            style={{ background: packColor }}
+          >
+            {activating === manifest.tenant_ref ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Activating...</>
+            ) : (
+              <><Play className="w-4 h-4" /> Activate</>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Activation Report */}
@@ -233,6 +262,7 @@ export default function RampUpPanel() {
   const [activating, setActivating] = useState(null); // tenant_ref | 'all' | null
   const [reports, setReports] = useState({}); // { tenant_ref: report }
   const [error, setError] = useState(null);
+  const [previewManifest, setPreviewManifest] = useState(null); // manifest object for modal
 
   useEffect(() => { loadManifests(); }, []);
 
@@ -346,11 +376,23 @@ export default function RampUpPanel() {
             key={manifest.tenant_ref}
             manifest={manifest}
             onActivate={handleActivate}
+            onPreview={(m) => setPreviewManifest(m)}
             activating={activating}
             report={reports[manifest.tenant_ref]}
           />
         ))}
       </div>
+
+      {/* AI Blueprint Preview Modal */}
+      <AIBlueprintPreviewModal
+        manifest={previewManifest}
+        open={!!previewManifest}
+        onClose={() => setPreviewManifest(null)}
+        onConfirmActivate={(tenantRef) => {
+          setPreviewManifest(null);
+          handleActivate(tenantRef);
+        }}
+      />
     </div>
   );
 }
