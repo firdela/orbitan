@@ -1,5 +1,17 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
+// ── Audit Helper (inline — no local imports in Deno deploy) ──────────────────
+const logAudit = async (base44Client, payload) => {
+  try {
+    await base44Client.asServiceRole.entities.AuditLog.create({
+      ...payload,
+      ip_address: payload.ip_address || 'server_context',
+    });
+  } catch (err) {
+    console.error('[financeController] AuditLog write failed:', err?.message);
+  }
+};
+
 /**
  * Finance Controller — OrbitanOS
  * Central middleware for Xero integration and finance document orchestration.
@@ -82,6 +94,21 @@ Deno.serve(async (req) => {
         audit_trail: updatedTrail
       });
 
+      await logAudit(base44, {
+        tenant_id: record.tenant_id,
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: user.role,
+        action_type: entity_type === 'sales_invoice' ? 'INVOICE_VERIFIED' : 'PO_VERIFIED',
+        module: entity_type === 'sales_invoice' ? 'finance' : 'procurement',
+        target_entity: entityName,
+        target_record_id: record_id,
+        outlet_id: record.outlet_id,
+        previous_state: { processing_status: record.processing_status },
+        new_state: { processing_status: 'verified', verified_by_name: user.full_name },
+        details: `Document verified by ${user.full_name} (${user.role})`,
+      });
+
       return Response.json({
         success: true,
         message: 'Document verified successfully. Ready for Xero sync.',
@@ -120,6 +147,21 @@ Deno.serve(async (req) => {
           action: 'rejected',
           details: `Document rejected by ${user.full_name}. Reason: ${rejectionReason}`
         }]
+      });
+
+      await logAudit(base44, {
+        tenant_id: record.tenant_id,
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: user.role,
+        action_type: entity_type === 'sales_invoice' ? 'INVOICE_REJECTED' : 'PO_REJECTED',
+        module: entity_type === 'sales_invoice' ? 'finance' : 'procurement',
+        target_entity: entityName,
+        target_record_id: record_id,
+        outlet_id: record.outlet_id,
+        previous_state: { processing_status: record.processing_status },
+        new_state: { processing_status: 'rejected', rejection_reason: rejectionReason },
+        details: `Document rejected by ${user.full_name}. Reason: ${rejectionReason}`,
       });
 
       return Response.json({
