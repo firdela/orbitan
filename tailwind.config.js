@@ -73,6 +73,25 @@ module.exports = {
           'red-light': 'hsl(var(--orbitan-red-light))',
           purple: 'hsl(var(--orbitan-purple))',
           'purple-light': 'hsl(var(--orbitan-purple-light))',
+        },
+        // Subscription plan colours
+        plan: {
+          starter:    '#2563EB',
+          growth:     '#10B981',
+          business:   '#7C3AED',
+          enterprise: '#111827',
+          gold:       '#D4AF37',
+        },
+        // Industry pack colours
+        pack: {
+          fnb:          '#F97316',
+          retail:       '#22C55E',
+          healthcare:   '#06B6D4',
+          education:    '#8B5CF6',
+          logistics:    '#2563EB',
+          construction: '#EAB308',
+          recycling:    '#16A34A',
+          technology:   '#0F172A',
         }
   		},
   		fontFamily: {

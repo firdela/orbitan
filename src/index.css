@@ -6,84 +6,122 @@
 
 @layer base {
   :root {
-    --background: 0 0% 99%;
-    --foreground: 220 20% 10%;
+    /* ── Core Surfaces — "Titanium White" OS aesthetic ── */
+    --background: 220 20% 97%;
+    --foreground: 220 25% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 220 25% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
-    --primary: 220 85% 45%;
+    --popover-foreground: 220 25% 9%;
+
+    /* ── Orbitan Primary — Orbit Blue #2563EB ── */
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 95%;
-    --secondary-foreground: 220 20% 25%;
-    --muted: 220 15% 96%;
-    --muted-foreground: 220 10% 52%;
-    --accent: 220 15% 94%;
-    --accent-foreground: 220 20% 18%;
+
+    /* ── Secondary & Muted ── */
+    --secondary: 220 16% 93%;
+    --secondary-foreground: 220 25% 22%;
+    --muted: 220 16% 94%;
+    --muted-foreground: 220 10% 50%;
+
+    /* ── Accent ── */
+    --accent: 220 16% 92%;
+    --accent-foreground: 220 25% 16%;
+
+    /* ── States ── */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 91%;
-    --input: 220 15% 91%;
-    --ring: 220 85% 45%;
-    --radius: 0.625rem;
 
-    /* Orbitan Brand Tokens */
-    --orbitan-blue: 220 85% 45%;
-    --orbitan-blue-light: 220 85% 96%;
-    --orbitan-slate: 220 20% 18%;
+    /* ── Borders & Inputs — ultra-refined ── */
+    --border: 220 18% 89%;
+    --input: 220 18% 89%;
+    --ring: 221 83% 53%;
+
+    /* ── Radius — slightly tighter for enterprise feel ── */
+    --radius: 0.75rem;
+
+    /* ── Orbitan Brand Colour Tokens ── */
+    /* Subscription Plans */
+    --plan-starter:    221 83% 53%;   /* Orbit Blue    #2563EB */
+    --plan-growth:     160 84% 39%;   /* Growth Emerald #10B981 */
+    --plan-business:   263 70% 50%;   /* Business Violet #7C3AED */
+    --plan-enterprise: 222 47% 11%;   /* Enterprise Titanium #111827 */
+    --plan-enterprise-gold: 43 74% 51%; /* Enterprise Gold #D4AF37 */
+
+    /* Industry Packs — master brand colours */
+    --pack-fnb:          24 95% 53%;  /* F&B Orange       #F97316 */
+    --pack-retail:       142 71% 45%; /* Retail Green     #22C55E */
+    --pack-healthcare:   192 91% 43%; /* Healthcare Cyan  #06B6D4 */
+    --pack-education:    263 70% 50%; /* Education Violet #8B5CF6 */
+    --pack-logistics:    221 83% 53%; /* Logistics Blue   #2563EB */
+    --pack-construction: 43 96% 56%;  /* Construction Yellow #EAB308 */
+    --pack-recycling:    138 72% 37%; /* Sustainability   #16A34A */
+    --pack-technology:   222 47% 11%; /* Technology Black #0F172A */
+
+    /* Legacy Orbitan semantic tokens */
+    --orbitan-blue: 221 83% 53%;
+    --orbitan-blue-light: 221 83% 96%;
+    --orbitan-slate: 220 25% 16%;
     --orbitan-slate-mid: 220 12% 46%;
-    --orbitan-green: 152 60% 40%;
-    --orbitan-green-light: 152 60% 95%;
+    --orbitan-green: 138 72% 37%;
+    --orbitan-green-light: 138 72% 95%;
     --orbitan-amber: 38 92% 50%;
     --orbitan-amber-light: 38 92% 95%;
     --orbitan-red: 0 72% 51%;
     --orbitan-red-light: 0 72% 96%;
-    --orbitan-purple: 262 60% 50%;
-    --orbitan-purple-light: 262 60% 96%;
+    --orbitan-purple: 263 70% 50%;
+    --orbitan-purple-light: 263 70% 96%;
 
+    /* ── Typography ── */
     --font-heading: 'Sora', ui-sans-serif, system-ui, sans-serif;
     --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
     --font-display: 'Sora', ui-sans-serif, system-ui, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
 
-    --sidebar-background: 220 30% 12%;
-    --sidebar-foreground: 220 15% 85%;
-    --sidebar-primary: 220 85% 60%;
+    /* ── Sidebar — "Deep Titanium" dark rail ── */
+    --sidebar-background: 222 47% 9%;
+    --sidebar-foreground: 220 15% 82%;
+    --sidebar-primary: 221 83% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 25% 18%;
-    --sidebar-accent-foreground: 220 15% 92%;
-    --sidebar-border: 220 25% 18%;
-    --sidebar-ring: 220 85% 60%;
+    --sidebar-accent: 222 35% 15%;
+    --sidebar-accent-foreground: 220 15% 94%;
+    --sidebar-border: 222 35% 14%;
+    --sidebar-ring: 221 83% 65%;
+
+    /* ── Card elevation shadow tokens ── */
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+    --shadow-card-hover: 0 4px 16px 0 rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.05);
+    --shadow-modal: 0 20px 60px -10px rgb(0 0 0 / 0.15);
   }
 
   .dark {
-    --background: 220 25% 8%;
+    --background: 222 47% 7%;
     --foreground: 220 15% 94%;
-    --card: 220 22% 11%;
+    --card: 222 40% 10%;
     --card-foreground: 220 15% 94%;
-    --popover: 220 22% 11%;
+    --popover: 222 40% 10%;
     --popover-foreground: 220 15% 94%;
-    --primary: 220 85% 60%;
+    --primary: 221 83% 62%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 20% 16%;
+    --secondary: 222 30% 15%;
     --secondary-foreground: 220 15% 85%;
-    --muted: 220 20% 15%;
+    --muted: 222 30% 14%;
     --muted-foreground: 220 10% 55%;
-    --accent: 220 20% 18%;
+    --accent: 222 30% 17%;
     --accent-foreground: 220 15% 92%;
     --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 20% 18%;
-    --input: 220 20% 18%;
-    --ring: 220 85% 60%;
-    --sidebar-background: 220 30% 7%;
-    --sidebar-foreground: 220 15% 85%;
-    --sidebar-primary: 220 85% 60%;
+    --border: 222 30% 17%;
+    --input: 222 30% 17%;
+    --ring: 221 83% 62%;
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 220 15% 80%;
+    --sidebar-primary: 221 83% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 25% 14%;
+    --sidebar-accent: 222 35% 12%;
     --sidebar-accent-foreground: 220 15% 92%;
-    --sidebar-border: 220 25% 14%;
-    --sidebar-ring: 220 85% 60%;
+    --sidebar-border: 222 35% 12%;
+    --sidebar-ring: 221 83% 65%;
   }
 }
 
@@ -95,21 +133,80 @@
     @apply bg-background text-foreground font-body antialiased;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
+    @apply font-heading tracking-tight;
   }
 }
 
 @layer utilities {
+  /* ── Orbitan Gradients ── */
   .orbitan-gradient {
-    background: linear-gradient(135deg, hsl(220, 85%, 45%) 0%, hsl(240, 70%, 55%) 100%);
+    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
   }
   .orbitan-gradient-subtle {
-    background: linear-gradient(135deg, hsl(220, 85%, 97%) 0%, hsl(240, 70%, 97%) 100%);
+    background: linear-gradient(135deg, hsl(221, 83%, 97%) 0%, hsl(263, 70%, 97%) 100%);
   }
+
+  /* ── Subscription Plan Gradients ── */
+  .gradient-starter {
+    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+  }
+  .gradient-growth {
+    background: linear-gradient(135deg, #34D399, #059669);
+  }
+  .gradient-business {
+    background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+  }
+  .gradient-enterprise {
+    background: linear-gradient(135deg, #1F2937, #111827);
+  }
+
+  /* ── Titanium Glass Card ── */
   .glass-card {
-    @apply bg-white/80 backdrop-blur-sm border border-white/60 shadow-sm;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow: var(--shadow-card);
   }
+
+  /* ── Elevated Card ── */
+  .card-elevated {
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .card-elevated:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
+  }
+
+  /* ── Sidebar ── */
   .sidebar-item-active {
     @apply bg-sidebar-accent text-sidebar-accent-foreground font-medium;
+  }
+
+  /* ── Active indicator stripe ── */
+  .nav-active-stripe {
+    position: relative;
+  }
+  .nav-active-stripe::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    border-radius: 0 2px 2px 0;
+    background: hsl(var(--sidebar-primary));
+  }
+
+  /* ── Divider ── */
+  .orbitan-divider {
+    @apply border-t border-border/60 my-4;
+  }
+
+  /* ── KPI Number ── */
+  .kpi-value {
+    @apply text-2xl font-display font-bold tracking-tight text-foreground;
   }
 }
