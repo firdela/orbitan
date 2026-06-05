@@ -132,9 +132,7 @@ export default function FnBWorkforce() {
           ))}
         </div>
       </div>
-
-      </div>
-      )}
+        )}
 
       {/* Staff Detail Modal */}
       {selected && (
@@ -225,6 +223,7 @@ export default function FnBWorkforce() {
           </div>
         </div>
       )}
+    </div>
     </AppShell>
   );
 }
