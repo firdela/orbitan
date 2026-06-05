@@ -12,6 +12,7 @@ import {
   ChevronRight, User, MapPin, Star, AlertCircle, CheckCircle2,
   Briefcase, Layers, Building2
 } from 'lucide-react';
+import FoodSafetyLogWidget from '@/components/worker/FoodSafetyLogWidget';
 
 const DEMO_WORKER = {
   name: "Ahmad Rizal",
@@ -216,6 +217,14 @@ export default function WorkerPortal() {
             ))}
           </div>
         </div>
+
+        {/* Food Safety Log */}
+        <FoodSafetyLogWidget
+          employeeId="demo-worker-1"
+          employeeName={DEMO_WORKER.name}
+          tenantId="t1-demo"
+          outletId="outlet-1"
+        />
 
         {/* Navigation Links */}
         <div className="flex flex-col gap-2">

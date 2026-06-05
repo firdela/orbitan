@@ -2,6 +2,7 @@ import React from 'react';
 import AppShell from '@/components/layout/AppShell';
 import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
+import NotificationsInbox from '@/components/shared/NotificationsInbox';
 import { Button } from '@/components/ui/button';
 import {
   Recycle, Package, ShoppingCart, CheckSquare, Shield,
@@ -61,7 +62,7 @@ const MODULE_CARDS = [
 
 export default function T2Dashboard() {
   return (
-    <AppShell navigation={NAV} tenant={TENANT} title="" headerRight={<TenantSwitcher />}>
+    <AppShell navigation={NAV} tenant={TENANT} title="" headerRight={<div className="flex items-center gap-2"><NotificationsInbox tenantSlug="t2" /><TenantSwitcher /></div>}>
       <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
 
         {/* Header — Phase A: Enterprise Multi-Pack Identity */}

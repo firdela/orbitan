@@ -5,6 +5,7 @@ import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
 import { Plus, CheckCircle2, CreditCard, Banknote, ArrowUpRight } from 'lucide-react';
 import { T3_NAV, T3_TENANT } from '@/lib/tenant-nav';
+import POSModal from '@/components/pos/POSModal';
 
 const DEMO_SALES = [
   { id: 'S-2026-089', item: "Vintage Levi's Denim Jacket", sku: 'SKU-0041', price: 48, payment: 'card', customer: 'Sarah T.', date: '2026-06-04', status: 'paid', co2_saved: 3.2 },
@@ -23,18 +24,26 @@ const PAYMENT_MAP = {
 
 export default function T3Sales() {
   const [activeTab, setActiveTab] = useState('sales');
+  const [posOpen, setPosOpen] = useState(false);
 
   const totalRevenue = DEMO_SALES.reduce((s, t) => s + t.price, 0);
   const totalCO2 = DEMO_SALES.reduce((s, t) => s + t.co2_saved, 0).toFixed(1);
 
   return (
     <AppShell navigation={T3_NAV} tenant={T3_TENANT} title="" headerRight={<TenantSwitcher />}>
+      <POSModal
+        open={posOpen}
+        onClose={() => setPosOpen(false)}
+        tenantId={T3_TENANT.name}
+        outletId="t3-outlet-1"
+        onSaleComplete={() => setPosOpen(false)}
+      />
       <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
         <PageHeader
           title="Sales & POS"
           subtitle="Retail Operations · Sales tracking & point-of-sale"
           actions={
-            <Button size="sm" className="gap-2" style={{ background: '#22C55E' }}>
+            <Button size="sm" className="gap-2 text-white" style={{ background: '#22C55E' }} onClick={() => setPosOpen(true)}>
               <Plus className="w-3.5 h-3.5" /> New Sale
             </Button>
           }

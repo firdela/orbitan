@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import AppShell from '@/components/layout/AppShell';
 import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
+import NotificationsInbox from '@/components/shared/NotificationsInbox';
 import { Button } from '@/components/ui/button';
 import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
@@ -39,7 +40,7 @@ export default function FnBDashboard() {
       navigation={NAV}
       tenant={TENANT}
       title=""
-      headerRight={<TenantSwitcher />}
+      headerRight={<div className="flex items-center gap-2"><NotificationsInbox tenantSlug="t1" /><TenantSwitcher /></div>}
     >
       <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
 
