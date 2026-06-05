@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import RampUpPanel from '@/components/leader/RampUpPanel';
 import {
   Building2, Users, Package, BarChart2, Shield, Settings, ChevronRight,
   Globe, Cpu, Layers, Flag, CreditCard, Info, Plus, RefreshCw, CheckCircle2,
@@ -69,11 +70,19 @@ export default function LeaderOrg() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1">
             <TabsTrigger value="overview">Tenants</TabsTrigger>
+            <TabsTrigger value="rampup" className="gap-1.5">
+              <Rocket className="w-3.5 h-3.5" />Ramp Up
+            </TabsTrigger>
             <TabsTrigger value="modules">Modules & Packs</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
             <TabsTrigger value="cycle">Operating Cycle</TabsTrigger>
             <TabsTrigger value="about">About Platform</TabsTrigger>
           </TabsList>
+
+          {/* Ramp Up Tab */}
+          <TabsContent value="rampup">
+            <RampUpPanel />
+          </TabsContent>
 
           {/* Tenants Tab */}
           <TabsContent value="overview">
