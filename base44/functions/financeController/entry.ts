@@ -58,17 +58,26 @@ Deno.serve(async (req) => {
 
       const record = await base44.entities[entityName].get(record_id);
 
-      // Append to audit trail
+      // ── GOVERNANCE GATE: Document must be attached before verification ──
+      if (!record.document_url) {
+        return Response.json({
+          error: 'Governance Violation: Cannot verify a record with no attached document. Upload the invoice/receipt first.',
+          record_id,
+          governance_rule: 'document_first'
+        }, { status: 422 });
+      }
+
       const existingTrail = record.audit_trail || [];
       const updatedTrail = [...existingTrail, {
         ...auditEntry,
         action: 'verified',
-        details: `Document verified by ${user.full_name}. Ready for Xero sync.`
+        details: `Document verified by ${user.full_name} (${user.role}). Attached document confirmed. Ready for Xero sync.`
       }];
 
       await base44.entities[entityName].update(record_id, {
         processing_status: 'verified',
         verified_by: user.id,
+        verified_by_name: user.full_name,
         verified_date: timestamp,
         audit_trail: updatedTrail
       });
@@ -80,6 +89,46 @@ Deno.serve(async (req) => {
         entity_type,
         verified_by: user.full_name,
         verified_at: timestamp
+      });
+    }
+
+    // ─── ACTION: reject_document ───────────────────────────────────────────────
+    if (action_type === 'reject_document') {
+      if (!record_id || !entity_type) {
+        return Response.json({ error: 'record_id and entity_type are required' }, { status: 400 });
+      }
+
+      const entityMap = {
+        sales_invoice: 'SalesInvoice',
+        purchase_order: 'PurchaseOrder'
+      };
+
+      const entityName = entityMap[entity_type];
+      if (!entityName) {
+        return Response.json({ error: `Unsupported entity_type: ${entity_type}` }, { status: 400 });
+      }
+
+      const record = await base44.entities[entityName].get(record_id);
+      const rejectionReason = data?.rejection_reason || 'No reason provided';
+
+      const existingTrail = record.audit_trail || [];
+      await base44.entities[entityName].update(record_id, {
+        processing_status: 'rejected',
+        rejection_reason: rejectionReason,
+        audit_trail: [...existingTrail, {
+          ...auditEntry,
+          action: 'rejected',
+          details: `Document rejected by ${user.full_name}. Reason: ${rejectionReason}`
+        }]
+      });
+
+      return Response.json({
+        success: true,
+        message: 'Document rejected. Record returned to staff for correction.',
+        record_id,
+        entity_type,
+        rejected_by: user.full_name,
+        reason: rejectionReason
       });
     }
 

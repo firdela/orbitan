@@ -7,10 +7,15 @@ import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
   Shield, BarChart2, Link2, Calendar, CheckCircle2,
   AlertTriangle, RefreshCw, ExternalLink, Utensils, XCircle,
-  Eye, Send, Clock, AlertCircle, ChevronRight, Activity
+  Eye, Send, Clock, AlertCircle, ChevronRight, Activity, Inbox
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import XeroReviewModal from '@/components/finance/XeroReviewModal';
+import FinanceReviewQueue from '@/components/finance/FinanceReviewQueue';
+
+// Tenant 1 identifiers for Taqueria Pte Ltd / La Birria Tacos
+const TENANT_ID = 'taqueria_pte_ltd';
+const OUTLET_ID = 'la_birria_north_bridge';
 
 const NAV = [
   { type: 'section', label: 'F&B Operations' },
@@ -208,7 +213,8 @@ export default function FnBXero() {
           <>
             <div className="flex gap-1 bg-muted rounded-xl p-1 w-full sm:w-auto">
               {[
-                { id: 'review', label: `Review Queue${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
+                { id: 'inbox', label: 'Document Inbox' },
+                { id: 'review', label: `Legacy Queue${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
                 { id: 'log', label: 'Sync Log' },
                 { id: 'config', label: 'Configuration' },
               ].map(tab => (
@@ -221,6 +227,11 @@ export default function FnBXero() {
                 </button>
               ))}
             </div>
+
+            {/* ── Document Inbox Tab (Live DB — Hamka's Queue) ── */}
+            {activeTab === 'inbox' && (
+              <FinanceReviewQueue tenantId={TENANT_ID} outletId={OUTLET_ID} />
+            )}
 
             {/* ── Review Queue Tab ─────────────────────────── */}
             {activeTab === 'review' && (

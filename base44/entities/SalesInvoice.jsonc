@@ -65,6 +65,7 @@
         "cash",
         "card",
         "transfer",
+        "paynow",
         "other"
       ]
     },
@@ -80,18 +81,24 @@
     },
     "document_url": {
       "type": "string",
-      "description": "Uploaded source document (image/PDF)"
+      "description": "Uploaded source document / PayNow slip (image/PDF) \u2014 MANDATORY before verification"
     },
     "processing_status": {
       "type": "string",
       "enum": [
+        "awaiting_evidence",
         "raw",
         "ai_processing",
         "needs_review",
-        "verified"
+        "verified",
+        "rejected"
       ],
-      "default": "raw",
-      "description": "AI extraction and human-in-the-loop review state"
+      "default": "awaiting_evidence",
+      "description": "Document capture and human-in-the-loop review state"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Reason provided by manager when rejecting a document"
     },
     "ai_confidence_score": {
       "type": "number",
@@ -104,6 +111,10 @@
     "verified_by": {
       "type": "string",
       "description": "User ID who verified the document"
+    },
+    "verified_by_name": {
+      "type": "string",
+      "description": "Name of manager who verified"
     },
     "verified_date": {
       "type": "string",
