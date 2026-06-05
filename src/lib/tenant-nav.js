@@ -7,7 +7,7 @@
 import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
   Shield, BarChart2, Link2, Calendar, Clock, AlertTriangle,
-  Recycle, Leaf, Shirt, Heart, Home
+  Recycle, Leaf, Shirt, Heart, Home, Bot
 } from 'lucide-react';
 import { Utensils } from 'lucide-react';
 import { OrbitanEngine } from '@/lib/orbitan-engine';
@@ -15,17 +15,17 @@ import { OrbitanEngine } from '@/lib/orbitan-engine';
 // ── Shared icon maps ─────────────────────────────────────────
 const T1_ICON_MAP = {
   Home, Package, ShoppingCart, FileText, Calendar, Users,
-  CheckSquare, Shield, BarChart2, Link2, Clock, AlertTriangle, Utensils,
+  CheckSquare, Shield, BarChart2, Link2, Clock, AlertTriangle, Utensils, Bot,
 };
 
 const T2_ICON_MAP = {
   Home, Package, ShoppingCart, Users, CheckSquare,
-  Shield, BarChart2, Recycle, Leaf, AlertTriangle,
+  Shield, BarChart2, Recycle, Leaf, AlertTriangle, Bot,
 };
 
 const T3_ICON_MAP = {
   Home, Package, ShoppingCart, FileText, Users, CheckSquare,
-  BarChart2, Leaf, Heart, Shirt, ShoppingBag: Package,
+  BarChart2, Leaf, Heart, Shirt, Bot,
 };
 
 // ── Tenant stubs ─────────────────────────────────────────────

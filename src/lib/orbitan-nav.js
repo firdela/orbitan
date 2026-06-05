@@ -38,6 +38,9 @@ export const MODULE_REGISTRY = {
   compliance:  { label: 'Compliance',         iconKey: 'Shield' },
   reporting:   { label: 'Reporting',          iconKey: 'BarChart2' },
   xero:        { label: 'Xero Integration',   iconKey: 'Link2' },
+
+  // AI Suite
+  ai_studio:   { label: 'AI Studio',          iconKey: 'Bot' },
 };
 
 /**
@@ -88,6 +91,7 @@ export const TENANT_NAV_MANIFESTS = {
     { module: 'reporting',     path: '/reporting' },
     { module: 'xero',          path: '/xero' },
     NAV_SECTIONS.platform,
+    { type: 'link', href: '/t1/ai-studio', label: 'AI Studio', iconKey: 'Bot' },
     { type: 'link', href: '/leader-org', label: '← Platform Console', iconKey: 'BarChart2' },
   ],
 
@@ -105,6 +109,7 @@ export const TENANT_NAV_MANIFESTS = {
     { module: 'compliance',    path: '/compliance' },
     { module: 'reporting',     path: '/reporting' },
     NAV_SECTIONS.platform,
+    { type: 'link', href: '/t2/ai-studio', label: 'AI Studio', iconKey: 'Bot' },
     { type: 'link', href: '/leader-org', label: '← Platform Console', iconKey: 'BarChart2' },
   ],
 
@@ -122,6 +127,7 @@ export const TENANT_NAV_MANIFESTS = {
     NAV_SECTIONS.governance,
     { module: 'reporting',     path: '/reporting' },
     NAV_SECTIONS.platform,
+    { type: 'link', href: '/t3/ai-studio', label: 'AI Studio', iconKey: 'Bot' },
     { type: 'link', href: '/leader-org', label: '← Platform Console', iconKey: 'BarChart2' },
   ],
 };

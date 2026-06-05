@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
   Shield, BarChart2, Link2, Calendar, ChevronRight,
-  AlertTriangle, TrendingUp, DollarSign, Clock, Utensils,
+  AlertTriangle, TrendingUp, DollarSign, Clock, Utensils, Bot,
 } from 'lucide-react';
 import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
 
@@ -23,6 +23,7 @@ const MODULE_CARDS = [
   { href: '/t1/tasks',         icon: CheckSquare,  label: 'Tasks',           desc: 'Operational task management',        color: 'bg-orbitan-amber-light text-orbitan-amber', alert: '5 tasks due today' },
   { href: '/t1/compliance',    icon: Shield,       label: 'Compliance',      desc: 'Food safety & audit records',        color: 'bg-orbitan-red-light text-orbitan-red',     alert: '1 overdue audit' },
   { href: '/t1/xero',          icon: Link2,        label: 'Xero Integration',desc: 'Accounting sync status',             color: 'bg-orbitan-green-light text-orbitan-green', alert: null },
+  { href: '/t1/ai-studio',    icon: Bot,          label: 'AI Studio',       desc: 'Generate SOPs, training & policies', color: 'bg-orbitan-purple-light text-orbitan-purple', alert: null },
 ];
 
 const KPI = [

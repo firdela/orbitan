@@ -42,6 +42,9 @@ import T2Tasks from '@/pages/tenant2/T2Tasks';
 import T2Compliance from '@/pages/tenant2/T2Compliance';
 import T2Reporting from '@/pages/tenant2/T2Reporting';
 
+// AI Suite
+import AIStudio from '@/pages/ai/AIStudio';
+
 // Tenant 3 — Retail Pack (Reused Clothing)
 import T3Dashboard from '@/pages/tenant3/T3Dashboard';
 import T3Catalog from '@/pages/tenant3/T3Catalog';
@@ -134,6 +137,11 @@ const AuthenticatedApp = () => {
       <Route path="/t3/workforce" element={<T3Workforce />} />
       <Route path="/t3/tasks" element={<T3Tasks />} />
       <Route path="/t3/reporting" element={<T3Reporting />} />
+
+      {/* AI Suite — accessible from all tenants */}
+      <Route path="/t1/ai-studio" element={<AIStudio tenantSlug="t1" />} />
+      <Route path="/t2/ai-studio" element={<AIStudio tenantSlug="t2" />} />
+      <Route path="/t3/ai-studio" element={<AIStudio tenantSlug="t3" />} />
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />

@@ -1,0 +1,210 @@
+{
+  "name": "AIDocument",
+  "type": "object",
+  "description": "OrbitanOS AI Suite \u2014 stores all AI-generated documents (SOPs, Training Modules, Policies). Every document enters 'in_review' state and requires manager approval (Regulate principle) before activation. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "sop",
+        "training_module",
+        "policy",
+        "shift_brief",
+        "incident_report",
+        "compliance_checklist"
+      ],
+      "description": "Type of AI-generated document"
+    },
+    "title": {
+      "type": "string"
+    },
+    "industry_context": {
+      "type": "string",
+      "enum": [
+        "food_beverage",
+        "recycling_sustainability",
+        "retail",
+        "healthcare",
+        "education",
+        "logistics",
+        "other"
+      ],
+      "description": "Industry the document was generated for \u2014 injects context into AI prompts"
+    },
+    "principle": {
+      "type": "string",
+      "enum": [
+        "renew",
+        "relate",
+        "respond",
+        "refine",
+        "regulate",
+        "reach"
+      ],
+      "description": "Which OrbitanOS Operating Cycle principle this document serves"
+    },
+    "content_markdown": {
+      "type": "string",
+      "description": "Full AI-generated document content in Markdown format"
+    },
+    "source_context": {
+      "type": "object",
+      "description": "Structured data injected into the AI prompt (e.g. ComplianceRecord, task list, AuditLog events)"
+    },
+    "model_used": {
+      "type": "string",
+      "description": "AI model identifier used for generation e.g. claude_sonnet_4_6, gemini_3_1_pro, gpt_5_4"
+    },
+    "ai_confidence_score": {
+      "type": "number",
+      "description": "0-100 self-assessed confidence score from the AI"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "generating",
+        "in_review",
+        "approved",
+        "rejected",
+        "archived",
+        "auto_published"
+      ],
+      "default": "in_review",
+      "description": "Review state \u2014 all AI docs enter in_review. auto_published only for low-risk tasks when auto_publish_enabled=true on tenant"
+    },
+    "auto_publish_eligible": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for low-risk doc types (training tips, shift briefs) that can bypass manager review if tenant setting allows"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "User ID of manager who reviewed"
+    },
+    "reviewed_by_name": {
+      "type": "string"
+    },
+    "reviewed_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rejection_reason": {
+      "type": "string"
+    },
+    "linked_compliance_id": {
+      "type": "string",
+      "description": "Linked ComplianceRecord if generated from compliance context"
+    },
+    "linked_employee_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Employees this training module is assigned to"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "e.g. food_safety, onboarding, clock_out_review"
+    },
+    "version": {
+      "type": "number",
+      "default": 1,
+      "description": "Document version \u2014 incremented on re-generation"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "document_type",
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "tenant_admin"
+          }
+        }
+      ]
+    }
+  }
+}
