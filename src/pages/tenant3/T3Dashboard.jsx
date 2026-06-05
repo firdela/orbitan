@@ -1,6 +1,7 @@
 import React from 'react';
 import AppShell from '@/components/layout/AppShell';
-import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
+import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
 import {
   ShoppingBag, Package, FileText, Users, CheckSquare,
@@ -9,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { OrbitanEngine } from '@/lib/orbitan-engine';
+
 
 // ── Icon Map ─────────────────────────────────────────────────
 const ICON_MAP = {
@@ -60,35 +62,22 @@ const MODULE_CARDS = [
 
 export default function T3Dashboard() {
   return (
-    <AppShell navigation={NAV} title="Renewed Fashion" headerRight={
-      <Link to="/leader-org">
-        <button className="text-xs text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-lg hover:bg-accent transition-colors">
-          ← Platform Console
-        </button>
-      </Link>
-    }>
+    <AppShell navigation={NAV} tenant={TENANT} title="" headerRight={<TenantSwitcher />}>
       <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
 
-        {/* Header */}
+        {/* Header — Phase A: Enterprise Multi-Pack Identity */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#22C55E' }}>
-                <ShoppingBag className="w-4 h-4 text-white" />
-              </div>
-              <h2 className="font-heading font-bold text-xl text-foreground">Renewed Fashion</h2>
-              <PlanBadge plan="orbitan_business" />
-            </div>
-            <PackBadgeGroup packs={TENANT.enabled_packs} />
-            <p className="text-sm text-muted-foreground mt-1">Reuse & Upcycle Clothing · Singapore</p>
-          </div>
-          <div className="flex gap-2">
-            <Link to="/t3/catalog">
-              <Button size="sm" className="gap-2" style={{ background: '#22C55E' }}>
-                <Tag className="w-3.5 h-3.5" /> Add Product
-              </Button>
-            </Link>
-          </div>
+          <EnterpriseIdentityBar
+            tenant={{ ...TENANT, brand: 'Renewed Fashion', outlet: null }}
+            showPlan
+            showOutlet
+            size="lg"
+          />
+          <Link to="/t3/catalog">
+            <Button size="sm" className="gap-2 flex-shrink-0" style={{ background: '#22C55E' }}>
+              <Tag className="w-3.5 h-3.5" /> Add Product
+            </Button>
+          </Link>
         </div>
 
         {/* KPIs */}

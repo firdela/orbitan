@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '@/components/layout/AppShell';
-import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
+import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
 import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
@@ -50,34 +51,20 @@ export default function FnBDashboard() {
   return (
     <AppShell
       navigation={NAV}
-      title="La Birria Tacos — F&B Console"
-      headerRight={
-        <Link to="/leader-org">
-          <Button size="sm" variant="ghost" className="text-xs text-muted-foreground">
-            ← Platform Console
-          </Button>
-        </Link>
-      }
+      tenant={TENANT}
+      title=""
+      headerRight={<TenantSwitcher />}
     >
       <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
 
-        {/* Header — Enterprise Multi-Pack Identity */}
+        {/* Header — Phase A: Enterprise Multi-Pack Identity */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#F97316' }}>
-                <Utensils className="w-4 h-4 text-white" />
-              </div>
-              <h2 className="font-heading font-bold text-xl text-foreground">Taqueria Pte Ltd</h2>
-              <PlanBadge plan="orbitan_business" />
-            </div>
-            <PackBadgeGroup packs={TENANT.enabled_packs} />
-            <p className="text-sm text-muted-foreground mt-1">
-              Client: <span className="font-medium text-foreground">La Birria Tacos</span> &nbsp;·&nbsp;
-              Outlet: <span className="font-medium text-foreground">North Bridge Rd</span> &nbsp;·&nbsp;
-              {new Date().toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-            </p>
-          </div>
+          <EnterpriseIdentityBar
+            tenant={{ ...TENANT, brand: 'La Birria Tacos', outlet: 'North Bridge Rd' }}
+            showPlan
+            showOutlet
+            size="lg"
+          />
           <Link to="/outlet">
             <Button size="sm" variant="outline" className="text-xs gap-1 flex-shrink-0">
               Outlet View <ChevronRight className="w-3 h-3" />

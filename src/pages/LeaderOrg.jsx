@@ -11,6 +11,7 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Building2, Users, Package, BarChart2, Shield, Settings, ChevronRight,
@@ -37,12 +38,7 @@ export default function LeaderOrg() {
               <Shield className="w-3.5 h-3.5" />
               Platform Owner Console
             </div>
-            <Link to="/company">
-              <Button variant="outline" size="sm" className="text-xs gap-1.5">
-                <Building2 className="w-3.5 h-3.5" />
-                Tenant View
-              </Button>
-            </Link>
+            <TenantSwitcher />
           </div>
         </div>
       </header>

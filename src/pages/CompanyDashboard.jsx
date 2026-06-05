@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '@/components/layout/AppShell';
 import StatCard from '@/components/shared/StatCard';
 import PageHeader from '@/components/shared/PageHeader';
-import { DEMO_TENANTS } from '@/lib/use-tenant.jsx';
+import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
+import { useTenant } from '@/lib/use-tenant.jsx';
 import { MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, SUBSCRIPTION_PLANS } from '@/lib/orbitan-config';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import StatusBadge from '@/components/shared/StatusBadge';
 import {
   Building2, Users, Package, BarChart2, ShoppingCart, FileText,
@@ -48,7 +49,7 @@ const MODULE_CARDS = [
 ];
 
 export default function CompanyDashboard() {
-  const [tenant] = useState(DEMO_TENANTS[0]);
+  const { currentTenant: tenant } = useTenant();
   const plan = SUBSCRIPTION_PLANS[tenant.subscription_plan];
 
   const enabledModules = tenant.enabled_modules || [];
@@ -57,31 +58,33 @@ export default function CompanyDashboard() {
   return (
     <AppShell
       navigation={NAV}
+      tenant={tenant}
       title=""
       headerRight={
         <div className="flex items-center gap-2">
-          <span className="text-xs bg-orbitan-blue-light text-orbitan-blue px-2.5 py-1 rounded-full font-semibold hidden sm:inline-flex">
-            {plan?.name}
-          </span>
+          <TenantSwitcher />
           <Link to="/worker">
-            <Button variant="outline" size="sm" className="text-xs">Worker View</Button>
+            <Button variant="outline" size="sm" className="text-xs hidden sm:flex">Worker View</Button>
           </Link>
         </div>
       }
     >
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
-        <PageHeader
-          title={tenant.name}
-          subtitle={`${INDUSTRY_LABELS[tenant.industry]} · ${enabledPacks.map(p => INDUSTRY_PACKS[p]?.name).join(', ')}`}
-          actions={
-            <Link to="/outlet">
-              <Button size="sm" className="gap-1.5">
-                <MapPin className="w-3.5 h-3.5" />
-                Go to Outlet
-              </Button>
-            </Link>
-          }
-        />
+        {/* Phase A — Enterprise Multi-Pack Identity Header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <EnterpriseIdentityBar
+            tenant={tenant}
+            showPlan
+            showOutlet
+            size="lg"
+          />
+          <Link to="/outlet">
+            <Button size="sm" className="gap-1.5 flex-shrink-0">
+              <MapPin className="w-3.5 h-3.5" />
+              Go to Outlet
+            </Button>
+          </Link>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

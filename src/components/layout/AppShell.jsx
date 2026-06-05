@@ -3,9 +3,10 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import OrbitanLogo from './OrbitanLogo';
 import PlatformFooter from './PlatformFooter';
+import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
 import { Menu, X } from 'lucide-react';
 
-export default function AppShell({ navigation, children, headerRight, title }) {
+export default function AppShell({ navigation, children, headerRight, title, tenant }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
@@ -73,8 +74,19 @@ export default function AppShell({ navigation, children, headerRight, title }) {
           })}
         </nav>
 
-        {/* Sidebar Footer */}
-        <div className="px-4 py-4 border-t border-sidebar-border/40">
+        {/* Sidebar Footer — Enterprise Identity + Copyright */}
+        <div className="px-4 py-4 border-t border-sidebar-border/40 space-y-3">
+          {tenant && (
+            <div className="py-1">
+              <EnterpriseIdentityBar
+                tenant={tenant}
+                showPlan
+                showOutlet={false}
+                size="sm"
+                className="[&_*]:!text-sidebar-foreground/70 [&_.font-heading]:!text-sidebar-foreground"
+              />
+            </div>
+          )}
           <p className="text-[9px] text-sidebar-foreground/25 leading-relaxed tracking-wide uppercase">
             Orbitan & OrbitanOS<br />
             © 2026 Muhammad Firdaus Bin Ismail
