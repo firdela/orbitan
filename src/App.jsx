@@ -6,6 +6,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { TenantProvider } from '@/lib/use-tenant.jsx';
+import { GlobalOutletProvider } from '@/lib/GlobalOutletContext';
 
 // Page imports
 import LeaderOrg from '@/pages/LeaderOrg';
@@ -156,9 +157,11 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <TenantProvider>
-          <Router>
+        <GlobalOutletProvider>
+        <Router>
             <AuthenticatedApp />
           </Router>
+          </GlobalOutletProvider>
           <Toaster />
         </TenantProvider>
       </QueryClientProvider>

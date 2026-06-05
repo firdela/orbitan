@@ -1,0 +1,223 @@
+{
+  "name": "FinanceSyncQueue",
+  "type": "object",
+  "description": "OrbitanOS Finance Integration Layer \u2014 decoupled ERP sync queue. Ensures data consistency even during Xero/external service outages. Every financial event (invoice, PO, write-off) passes through this queue before external sync. Exit-Ready: replace Xero adapter with any ERP without touching business logic.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "queue_type": {
+      "type": "string",
+      "enum": [
+        "invoice_sync",
+        "po_sync",
+        "credit_note",
+        "write_off",
+        "journal_entry",
+        "labour_cost",
+        "reconciliation"
+      ],
+      "description": "Type of financial operation to sync"
+    },
+    "source_entity": {
+      "type": "string",
+      "description": "Origin entity type e.g. SalesInvoice, PurchaseOrder, ComplianceRecord, ClockRecord"
+    },
+    "source_record_id": {
+      "type": "string",
+      "description": "ID of the source record that triggered this queue entry"
+    },
+    "erp_target": {
+      "type": "string",
+      "enum": [
+        "xero",
+        "quickbooks",
+        "myob",
+        "manual_export"
+      ],
+      "default": "xero",
+      "description": "Target ERP system \u2014 swap without changing upstream logic"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Serialized ERP-ready payload (e.g. Xero Invoice object). Built by financeController."
+    },
+    "financial_impact_sgd": {
+      "type": "number",
+      "description": "SGD value of this queue entry"
+    },
+    "impact_category": {
+      "type": "string",
+      "enum": [
+        "revenue",
+        "expense",
+        "write_off",
+        "labour",
+        "adjustment"
+      ],
+      "description": "Accounting category for journal routing"
+    },
+    "threshold_applied": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this entry passed the financial_impact_threshold gate (S$50 default)"
+    },
+    "threshold_value_sgd": {
+      "type": "number",
+      "default": 50,
+      "description": "The threshold value applied at time of queue creation"
+    },
+    "compliance_record_id": {
+      "type": "string",
+      "description": "If write_off: the ComplianceRecord that triggered this entry"
+    },
+    "compliance_category": {
+      "type": "string",
+      "description": "Category of the compliance failure e.g. food_safety, fire_safety"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "synced",
+        "failed",
+        "skipped",
+        "manual_review"
+      ],
+      "default": "pending",
+      "description": "Queue processing status"
+    },
+    "sync_attempts": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of sync attempts made"
+    },
+    "last_attempt_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "synced_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "erp_reference_id": {
+      "type": "string",
+      "description": "ERP-side ID after successful sync e.g. Xero Invoice GUID"
+    },
+    "last_error": {
+      "type": "string",
+      "description": "Last sync error message for debugging"
+    },
+    "skip_reason": {
+      "type": "string",
+      "description": "Why this entry was skipped e.g. below_threshold, duplicate"
+    },
+    "batch_id": {
+      "type": "string",
+      "description": "Groups entries synced together in end-of-shift batch"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "immediate",
+        "end_of_shift",
+        "end_of_day"
+      ],
+      "default": "end_of_shift",
+      "description": "Sync priority: immediate for high-value, batched for routine"
+    },
+    "created_by_id": {
+      "type": "string",
+      "description": "User or system process that created this entry"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "queue_type",
+    "source_entity",
+    "source_record_id"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "tenant_admin"
+          }
+        }
+      ]
+    }
+  }
+}
