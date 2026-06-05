@@ -1,0 +1,125 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "description": "Global, immutable audit trail registry for all high-value events across OrbitanOS. Exit-ready \u2014 portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "actor_id": {
+      "type": "string",
+      "description": "User ID who performed the action"
+    },
+    "actor_name": {
+      "type": "string"
+    },
+    "actor_role": {
+      "type": "string",
+      "description": "Role of the user at time of action"
+    },
+    "action_type": {
+      "type": "string",
+      "description": "Standardised action key e.g. document_verified, stock_adjusted, status_changed, clock_out"
+    },
+    "module": {
+      "type": "string",
+      "enum": [
+        "finance",
+        "inventory",
+        "procurement",
+        "workforce",
+        "compliance",
+        "sales",
+        "scheduling",
+        "retail",
+        "sustainability",
+        "system"
+      ],
+      "description": "Which OrbitanOS module generated this event"
+    },
+    "target_entity": {
+      "type": "string",
+      "description": "Entity type affected e.g. SalesInvoice, ComplianceRecord, ClockRecord"
+    },
+    "target_record_id": {
+      "type": "string"
+    },
+    "previous_state": {
+      "type": "object",
+      "description": "Snapshot of the record before the change"
+    },
+    "new_state": {
+      "type": "object",
+      "description": "Snapshot of the record after the change"
+    },
+    "details": {
+      "type": "string",
+      "description": "Human-readable description of what changed"
+    },
+    "ip_address": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "actor_id",
+    "action_type",
+    "target_entity",
+    "target_record_id"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "tenant_admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "outlet_manager"
+          }
+        }
+      ]
+    },
+    "read": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "tenant_admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "outlet_manager"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
