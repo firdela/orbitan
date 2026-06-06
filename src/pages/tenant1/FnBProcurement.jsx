@@ -75,14 +75,10 @@ export default function FnBProcurement() {
 
   return (
     <AppShell navigation={T1_NAV} tenant={T1_TENANT} title="" headerRight={<TenantSwitcher />}>
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: '#F97316' }}>
-          <Truck className="w-3.5 h-3.5" />
-          F&B Pack · Procurement Module
-        </div>
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
         <PageHeader
           title="Procurement & Purchase Orders"
-          subtitle="La Birria Tacos · North Bridge Rd"
+          subtitle="La Birria Tacos · North Bridge Rd · F&B Pack"
           actions={
             <Button size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
               <Plus className="w-4 h-4" /> New Purchase Order

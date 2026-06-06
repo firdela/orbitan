@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
+import StatusBadge from '@/components/shared/StatusBadge';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Package, AlertTriangle, Search, Plus, RefreshCw, Utensils } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Package, AlertTriangle, Search, Plus, RefreshCw } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
 
-const SEED_ITEMS = [
+const DEMO_ITEMS = [
   { id: '1', name: 'Beef Chuck (Birria Cut)', sku: 'ING-001', category: 'Meat', unit: 'kg', current_stock: 8, par_level: 15, reorder_point: 10, cost_per_unit: 22, is_ingredient: true, status: 'active' },
   { id: '2', name: 'Corn Tortillas', sku: 'ING-002', category: 'Bread & Wraps', unit: 'pack (50)', current_stock: 4, par_level: 10, reorder_point: 5, cost_per_unit: 4.5, is_ingredient: true, status: 'active' },
   { id: '3', name: 'Dried Guajillo Chillies', sku: 'ING-003', category: 'Spices', unit: 'kg', current_stock: 2.5, par_level: 3, reorder_point: 2, cost_per_unit: 18, is_ingredient: true, status: 'active' },
@@ -33,40 +34,26 @@ export default function FnBInventory() {
   const [filterLow, setFilterLow] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [newItem, setNewItem] = useState({ name: '', category: 'Meat', unit: 'kg', current_stock: 0, par_level: 0, cost_per_unit: 0, is_ingredient: true });
-  const queryClient = useQueryClient();
 
-  const { data: liveItems, isLoading } = useQuery({
-    queryKey: ['inventory', 'tenant_taqueria'],
-    queryFn: () => base44.entities.InventoryItem.filter({ tenant_id: 'tenant_taqueria' }),
-  });
-
-  const allItems = (liveItems && liveItems.length > 0) ? liveItems : SEED_ITEMS;
-
-  const items = allItems.filter(i => {
-    const matchSearch = (i.name || '').toLowerCase().includes(search.toLowerCase()) || (i.sku || '').toLowerCase().includes(search.toLowerCase());
+  const items = DEMO_ITEMS.filter(i => {
+    const matchSearch = i.name.toLowerCase().includes(search.toLowerCase()) || i.sku.toLowerCase().includes(search.toLowerCase());
     const matchLow = !filterLow || stockStatus(i) !== 'ok';
     return matchSearch && matchLow;
   });
 
-  const lowCount = allItems.filter(i => stockStatus(i) !== 'ok').length;
+  const lowCount = DEMO_ITEMS.filter(i => stockStatus(i) !== 'ok').length;
 
   async function handleAddItem() {
     await base44.entities.InventoryItem.create({ ...newItem, tenant_id: 'tenant_taqueria', outlet_id: 'outlet_nbr' });
-    queryClient.invalidateQueries({ queryKey: ['inventory', 'tenant_taqueria'] });
     setShowAdd(false);
   }
 
   return (
     <AppShell navigation={T1_NAV} tenant={T1_TENANT} title="" headerRight={<TenantSwitcher />}>
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-        {/* F&B Pack accent bar */}
-        <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: '#F97316' }}>
-          <Utensils className="w-3.5 h-3.5" />
-          F&B Pack · Ingredient & Stock Management
-        </div>
+      <div className="p-6 max-w-7xl mx-auto space-y-6">
         <PageHeader
-          title="Inventory"
-          subtitle="La Birria Tacos · North Bridge Rd"
+          title="Ingredient & Stock Inventory"
+          subtitle="La Birria Tacos · North Bridge Rd · F&B Pack"
           actions={
             <Button size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
               <Plus className="w-4 h-4" /> Add Item
@@ -157,7 +144,7 @@ export default function FnBInventory() {
         {/* Summary */}
         <div className="grid grid-cols-3 gap-4 text-center">
           <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-2xl font-display font-bold text-foreground">{allItems.length}</p>
+            <p className="text-2xl font-display font-bold text-foreground">{DEMO_ITEMS.length}</p>
             <p className="text-xs text-muted-foreground">Total Items</p>
           </div>
           <div className="bg-orbitan-amber-light border border-amber-200 rounded-xl p-4">
@@ -165,8 +152,8 @@ export default function FnBInventory() {
             <p className="text-xs text-muted-foreground">Below Par</p>
           </div>
           <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-2xl font-display font-bold" style={{ color: '#F97316' }}>
-              S${allItems.reduce((a, i) => a + (i.current_stock || 0) * (i.cost_per_unit || 0), 0).toFixed(0)}
+            <p className="text-2xl font-display font-bold text-orbitan-green">
+              S${DEMO_ITEMS.reduce((a, i) => a + i.current_stock * i.cost_per_unit, 0).toFixed(0)}
             </p>
             <p className="text-xs text-muted-foreground">Stock Value</p>
           </div>

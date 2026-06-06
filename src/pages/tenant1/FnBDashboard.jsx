@@ -5,8 +5,6 @@ import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import NotificationsInbox from '@/components/shared/NotificationsInbox';
 import { Button } from '@/components/ui/button';
-import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
   Shield, BarChart2, Link2, Calendar, ChevronRight,
@@ -37,27 +35,6 @@ const KPI = [
 ];
 
 export default function FnBDashboard() {
-  const { data: inventoryItems } = useQuery({
-    queryKey: ['inventory', 'tenant_taqueria'],
-    queryFn: () => base44.entities.InventoryItem.filter({ tenant_id: 'tenant_taqueria' }),
-  });
-  const { data: openTasks } = useQuery({
-    queryKey: ['tasks', 'tenant_taqueria', 'open'],
-    queryFn: () => base44.entities.Task.filter({ tenant_id: 'tenant_taqueria', status: 'pending' }),
-  });
-
-  const lowStockCount = inventoryItems
-    ? inventoryItems.filter(i => i.current_stock <= (i.reorder_point || 0)).length
-    : 3;
-  const openTaskCount = openTasks ? openTasks.length : 5;
-
-  const LIVE_KPI = [
-    { label: "Today's Revenue", value: 'S$1,842', sub: 'La Birria Tacos · North Bridge Rd', icon: DollarSign, color: 'text-orbitan-green' },
-    { label: 'Gross Margin',    value: '62.4%',   sub: 'vs 60.1% last week',               icon: TrendingUp,    color: 'text-orbitan-blue' },
-    { label: 'Low Stock Items', value: String(lowStockCount), sub: 'Requires replenishment', icon: AlertTriangle, color: 'text-orbitan-amber' },
-    { label: 'Open Tasks',      value: String(openTaskCount), sub: 'Pending action today',   icon: Clock,         color: 'text-orbitan-purple' },
-  ];
-
   return (
     <AppShell
       navigation={NAV}
@@ -67,24 +44,16 @@ export default function FnBDashboard() {
     >
       <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
 
-        {/* F&B Orange accent brand strip */}
-        <div className="rounded-xl px-4 py-3 flex items-center gap-3" style={{ background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)', border: '1px solid #FED7AA' }}>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#F97316' }}>
-            <Utensils className="w-4 h-4 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-heading font-bold text-sm text-foreground">Taqueria Pte Ltd — La Birria Tacos</p>
-            <p className="text-xs text-muted-foreground">North Bridge Rd · F&B Pack · Orbitan Growth</p>
-          </div>
+        {/* Header — Phase A: Enterprise Multi-Pack Identity */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <EnterpriseIdentityBar
             tenant={{ ...TENANT, brand: 'La Birria Tacos', outlet: 'North Bridge Rd' }}
             showPlan
-            showOutlet={false}
-            size="sm"
-            className="hidden sm:flex"
+            showOutlet
+            size="lg"
           />
           <Link to="/outlet">
-            <Button size="sm" variant="outline" className="text-xs gap-1 flex-shrink-0 hidden sm:flex">
+            <Button size="sm" variant="outline" className="text-xs gap-1 flex-shrink-0">
               Outlet View <ChevronRight className="w-3 h-3" />
             </Button>
           </Link>
@@ -92,8 +61,8 @@ export default function FnBDashboard() {
 
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {LIVE_KPI.map(k => (
-            <div key={k.label} className="bg-card border border-border rounded-xl p-4 card-elevated">
+          {KPI.map(k => (
+            <div key={k.label} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs text-muted-foreground font-medium">{k.label}</p>
                 <k.icon className={`w-4 h-4 ${k.color}`} />
@@ -106,16 +75,11 @@ export default function FnBDashboard() {
 
         {/* Module Grid */}
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading font-semibold text-foreground">Active Modules — F&B Pack</h3>
-            <span className="text-[11px] font-semibold px-2 py-1 rounded-full text-white" style={{ background: '#F97316' }}>
-              {MODULE_CARDS.length} Modules Active
-            </span>
-          </div>
+          <h3 className="font-heading font-semibold text-foreground mb-4">Active Modules — F&B Pack</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {MODULE_CARDS.map(m => (
               <Link key={m.href} to={m.href}>
-                <div className="bg-card border border-border rounded-xl p-5 hover:shadow-md transition-all group h-full" style={{ '--hover-border': '#F97316' }}>
+                <div className="bg-card border border-border rounded-xl p-5 hover:shadow-md hover:border-primary/30 transition-all group h-full">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${m.color}`}>
                     <m.icon className="w-5 h-5" />
                   </div>
