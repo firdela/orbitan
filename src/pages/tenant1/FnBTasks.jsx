@@ -2,31 +2,13 @@ import React, { useState } from 'react';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Package, ShoppingCart, FileText, Users, CheckSquare,
-  Shield, BarChart2, Link2, Calendar, Plus, Utensils,
-  X, CheckCircle2, Clock, AlertTriangle, Circle
+  CheckSquare, Plus, X, CheckCircle2, Clock, AlertTriangle, Circle, Bot
 } from 'lucide-react';
-
-const NAV = [
-  { type: 'section', label: 'F&B Operations' },
-  { href: '/t1/dashboard', icon: Utensils, label: 'Dashboard' },
-  { href: '/t1/inventory', icon: Package, label: 'Inventory' },
-  { href: '/t1/procurement', icon: ShoppingCart, label: 'Procurement' },
-  { href: '/t1/sales', icon: FileText, label: 'Sales & Invoicing' },
-  { href: '/t1/scheduling', icon: Calendar, label: 'Scheduling' },
-  { type: 'section', label: 'People & Tasks' },
-  { href: '/t1/workforce', icon: Users, label: 'Workforce' },
-  { href: '/t1/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Governance' },
-  { href: '/t1/compliance', icon: Shield, label: 'Compliance' },
-  { href: '/t1/reporting', icon: BarChart2, label: 'Reporting' },
-  { href: '/t1/xero', icon: Link2, label: 'Xero Integration' },
-  { type: 'section', label: 'Platform' },
-  { href: '/leader-org', icon: BarChart2, label: '← Platform Console' },
-];
+import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
 
 const PRIORITY_CONFIG = {
   urgent: { label: 'Urgent', classes: 'bg-orbitan-red-light text-orbitan-red' },
@@ -44,6 +26,8 @@ const INIT_TASKS = [
   { id: 't6', title: 'Check fire extinguisher expiry', description: 'Overdue — schedule re-certification immediately', category: 'Compliance', priority: 'urgent', status: 'overdue', due_date: '2026-05-31', assigned_to_name: 'Ahmad Fauzi', module_context: 'compliance' },
   { id: 't7', title: 'Update supplier contact — DairySG', description: 'New contact person is Wei Lin, update CRM', category: 'Procurement', priority: 'low', status: 'completed', due_date: '2026-06-02', assigned_to_name: 'James Tan', module_context: 'procurement' },
 ];
+
+const T1_TENANT_LOCAL = T1_TENANT;
 
 export default function FnBTasks() {
   const [tasks, setTasks] = useState(INIT_TASKS);
@@ -84,11 +68,15 @@ export default function FnBTasks() {
   }
 
   return (
-    <AppShell navigation={NAV} title="Tasks — La Birria Tacos">
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <AppShell navigation={T1_NAV} tenant={T1_TENANT} title="" headerRight={<TenantSwitcher />}>
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+        <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: '#F97316' }}>
+          <CheckSquare className="w-3.5 h-3.5" />
+          F&B Pack · Task & Operations Module
+        </div>
         <PageHeader
           title="Operational Tasks"
-          subtitle="La Birria Tacos · North Bridge Rd · Task Module"
+          subtitle="La Birria Tacos · North Bridge Rd"
           actions={
             <Button size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
               <Plus className="w-4 h-4" /> New Task
