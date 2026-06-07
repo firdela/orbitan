@@ -56,6 +56,7 @@ import AIStudio from '@/pages/ai/AIStudio';
 // Platform — Revenue Engine
 import WalletPage from '@/pages/platform/WalletPage';
 import MarketplacePage from '@/pages/platform/MarketplacePage';
+import ShieldCommandCenter from '@/pages/platform/ShieldCommandCenter';
 
 // Tenant 3 — Retail Pack (Reused Clothing)
 import T3Dashboard from '@/pages/tenant3/T3Dashboard';
@@ -149,6 +150,7 @@ const AuthenticatedApp = () => {
       {/* Platform — Revenue Engine */}
       <Route path="/platform/wallet" element={<WalletPage />} />
       <Route path="/platform/marketplace" element={<MarketplacePage />} />
+      <Route path="/platform/shield" element={<ShieldCommandCenter />} />
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />

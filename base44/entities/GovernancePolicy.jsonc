@@ -1,0 +1,139 @@
+{
+  "name": "GovernancePolicy",
+  "type": "object",
+  "description": "OrbitanOS Shield\u2122 \u2014 Policy-as-Code registry. Defines operational governance rules evaluated by the Shield Interceptor before sensitive actions. Auditor mode = notify. Guardian mode = block. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "policy_name": {
+      "type": "string",
+      "description": "Unique human-readable identifier e.g. 'no_log_deletion', 'finance_threshold_gate'"
+    },
+    "description": {
+      "type": "string"
+    },
+    "target_entity": {
+      "type": "string",
+      "description": "Entity this policy governs e.g. AuditLog, FinanceSyncQueue, ClockRecord"
+    },
+    "trigger_action": {
+      "type": "string",
+      "enum": [
+        "create",
+        "update",
+        "delete",
+        "all"
+      ],
+      "default": "all"
+    },
+    "condition_json": {
+      "type": "object",
+      "description": "Rule conditions \u2014 e.g. {role_not: 'admin'} or {amount_gt: 500} or {field: 'status', value: 'rejected'}"
+    },
+    "effect": {
+      "type": "string",
+      "enum": [
+        "block",
+        "notify",
+        "auto_remediate"
+      ],
+      "default": "notify",
+      "description": "block = Guardian hard stop | notify = Auditor alert | auto_remediate = automated correction"
+    },
+    "shield_mode": {
+      "type": "string",
+      "enum": [
+        "auditor",
+        "guardian"
+      ],
+      "default": "auditor",
+      "description": "Auditor = Starter/Growth plans | Guardian = Enterprise plans only"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "medium"
+    },
+    "principle": {
+      "type": "string",
+      "enum": [
+        "regulate",
+        "refine",
+        "respond",
+        "renew",
+        "relate",
+        "reach"
+      ],
+      "default": "regulate",
+      "description": "Which 6R principle this policy enforces"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "auto_remediation_action": {
+      "type": "string",
+      "description": "What auto_remediate does e.g. 'pause_sync', 'flag_record', 'notify_admin'"
+    },
+    "violations_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Lifetime count of policy violations triggered"
+    },
+    "last_triggered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "policy_name",
+    "target_entity",
+    "effect"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}",
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

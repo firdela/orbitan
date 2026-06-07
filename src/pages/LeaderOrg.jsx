@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RampUpPanel from '@/components/leader/RampUpPanel';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import WalletCreditBar from '@/components/wallet/WalletCreditBar';
+import ShieldStatusWidget from '@/components/shield/ShieldStatusWidget';
 import {
   Building2, Users, Package, BarChart2, Shield, Settings, ChevronRight,
   Globe, Cpu, Layers, Flag, CreditCard, Info, Plus, RefreshCw, CheckCircle2,
@@ -70,7 +71,7 @@ export default function LeaderOrg() {
         </div>
 
         {/* Revenue Engine Quick Links */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <Link to="/platform/wallet" className="group bg-gradient-to-br from-[#1D4ED8] to-[#111827] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
             <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
               <Wallet className="w-5 h-5 text-white" />
@@ -88,6 +89,16 @@ export default function LeaderOrg() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white">Orbitan Marketplace</p>
               <p className="text-[11px] text-purple-300">Modules · Packs · Integrations</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
+          </Link>
+          <Link to="/platform/shield" className="group bg-gradient-to-br from-[#111827] to-[#1F2937] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow border border-[#D4AF37]/20">
+            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Shield className="w-5 h-5 text-[#D4AF37]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Orbitan Shield™</p>
+              <p className="text-[11px] text-[#D4AF37]/70">Regulate · Govern · Protect</p>
             </div>
             <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
           </Link>
