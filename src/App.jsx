@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
+import OrbitanLoader from '@/components/brand/OrbitanLoader'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
@@ -52,6 +53,10 @@ import TimesheetManager from '@/pages/workforce/TimesheetManager';
 // AI Suite
 import AIStudio from '@/pages/ai/AIStudio';
 
+// Platform — Revenue Engine
+import WalletPage from '@/pages/platform/WalletPage';
+import MarketplacePage from '@/pages/platform/MarketplacePage';
+
 // Tenant 3 — Retail Pack (Reused Clothing)
 import T3Dashboard from '@/pages/tenant3/T3Dashboard';
 import T3Catalog from '@/pages/tenant3/T3Catalog';
@@ -66,20 +71,7 @@ const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
   if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-xl orbitan-gradient flex items-center justify-center">
-            <svg viewBox="0 0 32 32" fill="none" className="w-6 h-6">
-              <circle cx="16" cy="16" r="10" stroke="white" strokeWidth="3" fill="none" opacity="0.9"/>
-              <circle cx="16" cy="6.5" r="3" fill="white"/>
-              <line x1="16" y1="9.5" x2="16" y2="22.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" opacity="0.6"/>
-            </svg>
-          </div>
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      </div>
-    );
+    return <OrbitanLoader size="fullscreen" message="Loading OrbitanOS..." />;
   }
 
   if (authError) {
@@ -153,6 +145,10 @@ const AuthenticatedApp = () => {
       <Route path="/t1/ai-studio" element={<AIStudio tenantSlug="t1" />} />
       <Route path="/t2/ai-studio" element={<AIStudio tenantSlug="t2" />} />
       <Route path="/t3/ai-studio" element={<AIStudio tenantSlug="t3" />} />
+
+      {/* Platform — Revenue Engine */}
+      <Route path="/platform/wallet" element={<WalletPage />} />
+      <Route path="/platform/marketplace" element={<MarketplacePage />} />
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />

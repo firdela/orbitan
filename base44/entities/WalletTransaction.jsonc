@@ -1,0 +1,132 @@
+{
+  "name": "WalletTransaction",
+  "type": "object",
+  "description": "OrbitanOS \u2014 Immutable transaction ledger for all wallet events (credits debited, points earned, cashback, marketplace purchases). Linked to AuditLog for governance. Exit-Ready.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "wallet_id": {
+      "type": "string",
+      "description": "Linked OrbitanWallet record ID"
+    },
+    "transaction_type": {
+      "type": "string",
+      "enum": [
+        "credit_topup",
+        "credit_debit_ai",
+        "credit_debit_module",
+        "credit_debit_marketplace",
+        "points_earned_referral",
+        "points_earned_training",
+        "points_earned_renewal",
+        "points_earned_review",
+        "points_redeemed",
+        "cashback_earned",
+        "cashback_redeemed",
+        "subscription_renewal",
+        "module_unlock",
+        "system_adjustment"
+      ]
+    },
+    "amount": {
+      "type": "number",
+      "description": "Positive = credit/earn, Negative = debit/spend"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "credits",
+        "points",
+        "sgd"
+      ],
+      "description": "What was transacted"
+    },
+    "balance_after": {
+      "type": "number",
+      "description": "Balance snapshot after this transaction"
+    },
+    "description": {
+      "type": "string"
+    },
+    "reference_id": {
+      "type": "string",
+      "description": "Linked record ID (AI doc ID, module ID, etc.)"
+    },
+    "reference_type": {
+      "type": "string",
+      "description": "e.g. AIDocument, ModuleUnlock, SubscriptionRenewal"
+    },
+    "triggered_by": {
+      "type": "string",
+      "description": "User ID or system process that triggered this"
+    },
+    "triggered_by_name": {
+      "type": "string"
+    },
+    "module_used": {
+      "type": "string",
+      "description": "Which OrbitanOS module consumed the credit"
+    },
+    "ai_model_used": {
+      "type": "string",
+      "description": "AI model if credit_debit_ai"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "pending",
+        "reversed",
+        "failed"
+      ],
+      "default": "completed"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Any extra data for audit trail"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "transaction_type",
+    "amount",
+    "currency"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}",
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

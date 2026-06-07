@@ -14,11 +14,13 @@ import { Badge } from '@/components/ui/badge';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RampUpPanel from '@/components/leader/RampUpPanel';
+import OrbitanLoader from '@/components/brand/OrbitanLoader';
+import WalletCreditBar from '@/components/wallet/WalletCreditBar';
 import {
   Building2, Users, Package, BarChart2, Shield, Settings, ChevronRight,
   Globe, Cpu, Layers, Flag, CreditCard, Info, Plus, RefreshCw, CheckCircle2,
-  AlertTriangle, TrendingUp, Zap, Star, Lock, Rocket, Leaf, Activity } from
-'lucide-react';
+  AlertTriangle, TrendingUp, Zap, Star, Lock, Rocket, Leaf, Activity,
+  Wallet, ShoppingBag } from 'lucide-react';
 
 export default function LeaderOrg() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -65,6 +67,30 @@ export default function LeaderOrg() {
           <StatCard title="Module Activations" value={totalModuleUsage} subtitle="Across all tenants" icon={Layers} color="purple" />
           <StatCard title="Industry Packs" value={Object.keys(INDUSTRY_PACKS).length} subtitle="Available packs" icon={Package} color="green" />
           <StatCard title="Platform Health" value="100%" subtitle="All systems operational" icon={CheckCircle2} color="green" trend="up" />
+        </div>
+
+        {/* Revenue Engine Quick Links */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <Link to="/platform/wallet" className="group bg-gradient-to-br from-[#1D4ED8] to-[#111827] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
+            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Wallet className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Orbitan Wallet</p>
+              <p className="text-[11px] text-blue-300">Credits · Rewards · Cashback</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
+          </Link>
+          <Link to="/platform/marketplace" className="group bg-gradient-to-br from-[#6D28D9] to-[#111827] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
+            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <ShoppingBag className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Orbitan Marketplace</p>
+              <p className="text-[11px] text-purple-300">Modules · Packs · Integrations</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
+          </Link>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>

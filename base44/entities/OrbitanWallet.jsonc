@@ -1,0 +1,161 @@
+{
+  "name": "OrbitanWallet",
+  "type": "object",
+  "description": "OrbitanOS Revenue Engine \u2014 Unified wallet per tenant tracking AI credits, loyalty points, cashback, and full transaction audit trail. Powers the Orbitan Credits, Orbitan Rewards, and Orbitan Wallet ecosystem. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "tenant_name": {
+      "type": "string"
+    },
+    "subscription_plan": {
+      "type": "string",
+      "enum": [
+        "orbitan_free",
+        "orbitan_starter",
+        "orbitan_growth",
+        "orbitan_business",
+        "orbitan_enterprise"
+      ],
+      "default": "orbitan_starter"
+    },
+    "balance_credits": {
+      "type": "number",
+      "default": 0,
+      "description": "Orbitan Credits \u2014 used for AI calls, premium modules, marketplace purchases"
+    },
+    "credits_used_this_month": {
+      "type": "number",
+      "default": 0
+    },
+    "credits_quota_monthly": {
+      "type": "number",
+      "default": 100,
+      "description": "Monthly credit quota based on subscription plan"
+    },
+    "credits_rollover_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "loyalty_points": {
+      "type": "number",
+      "default": 0,
+      "description": "Orbitan Rewards points \u2014 earned via referrals, training completions, renewals"
+    },
+    "lifetime_points_earned": {
+      "type": "number",
+      "default": 0
+    },
+    "lifetime_points_redeemed": {
+      "type": "number",
+      "default": 0
+    },
+    "cashback_balance_sgd": {
+      "type": "number",
+      "default": 0,
+      "description": "Orbitan Cashback \u2014 redeemable against subscription invoices"
+    },
+    "lifetime_cashback_earned_sgd": {
+      "type": "number",
+      "default": 0
+    },
+    "reward_tier": {
+      "type": "string",
+      "enum": [
+        "bronze",
+        "silver",
+        "gold",
+        "platinum",
+        "orbitan_elite"
+      ],
+      "default": "bronze",
+      "description": "Orbitan Rewards loyalty tier based on lifetime points"
+    },
+    "ai_calls_this_month": {
+      "type": "number",
+      "default": 0
+    },
+    "ai_calls_lifetime": {
+      "type": "number",
+      "default": 0
+    },
+    "marketplace_purchases": {
+      "type": "number",
+      "default": 0
+    },
+    "modules_unlocked": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Modules unlocked via Orbitan Credits (over subscription tier)"
+    },
+    "last_credit_topup_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_credit_topup_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "auto_topup_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "auto_topup_threshold": {
+      "type": "number",
+      "default": 10
+    },
+    "auto_topup_amount": {
+      "type": "number",
+      "default": 50
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}",
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
