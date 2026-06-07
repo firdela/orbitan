@@ -38,9 +38,9 @@ export default function OutletDashboard() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.InventoryItem.filter({ tenant_id: "tenant_taqueria", outlet_id: "outlet_nb" }),
-      base44.entities.PurchaseOrder.filter({ tenant_id: "tenant_taqueria" }),
-      base44.entities.Task.filter({ tenant_id: "tenant_taqueria" }),
+      base44.entities.InventoryItem.list('-created_date', 50),
+      base44.entities.PurchaseOrder.list('-created_date', 20),
+      base44.entities.Task.list('-created_date', 50),
     ]).then(([inv, po, t]) => {
       setInventoryItems(inv || []);
       setPurchaseOrders(po || []);

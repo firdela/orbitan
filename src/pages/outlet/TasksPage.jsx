@@ -46,7 +46,15 @@ const DEMO_TASKS = [
 ];
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState(DEMO_TASKS);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    base44.entities.Task.list('-created_date', 100)
+      .then(data => setTasks(data?.length ? data : DEMO_TASKS))
+      .catch(() => setTasks(DEMO_TASKS))
+      .finally(() => setLoading(false));
+  }, []);
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState('all');
   const [newTask, setNewTask] = useState({ title: '', priority: 'medium', assigned_to_name: '', due_date: new Date().toISOString().split('T')[0] });
@@ -55,7 +63,7 @@ export default function TasksPage() {
   const counts = { pending: tasks.filter(t => t.status === 'pending').length, in_progress: tasks.filter(t => t.status === 'in_progress').length, completed: tasks.filter(t => t.status === 'completed').length };
 
   const handleAdd = async () => {
-    const task = { ...newTask, id: 't' + Date.now(), status: 'pending', tenant_id: 'tenant_taqueria', outlet_id: 'outlet_nb' };
+    const task = { ...newTask, status: 'pending' };
     const created = await base44.entities.Task.create(task);
     setTasks(prev => [created, ...prev]);
     setShowAdd(false);

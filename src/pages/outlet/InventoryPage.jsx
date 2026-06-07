@@ -45,11 +45,19 @@ const DEMO_ITEMS = [
 ];
 
 export default function InventoryPage() {
-  const [items, setItems] = useState(DEMO_ITEMS);
+  const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
   const [filterLow, setFilterLow] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [newItem, setNewItem] = useState({ name: '', category: '', unit: '', current_stock: '', par_level: '', cost_per_unit: '' });
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    base44.entities.InventoryItem.list('-created_date', 100)
+      .then(data => setItems(data || DEMO_ITEMS))
+      .catch(() => setItems(DEMO_ITEMS))
+      .finally(() => setLoading(false));
+  }, []);
 
   const lowStock = items.filter(i => i.par_level && i.current_stock < i.par_level);
   const filtered = items.filter(i => {
@@ -64,8 +72,6 @@ export default function InventoryPage() {
       current_stock: parseFloat(newItem.current_stock) || 0,
       par_level: parseFloat(newItem.par_level) || 0,
       cost_per_unit: parseFloat(newItem.cost_per_unit) || 0,
-      tenant_id: "tenant_taqueria",
-      outlet_id: "outlet_nb",
       status: "active",
       is_ingredient: true,
     };

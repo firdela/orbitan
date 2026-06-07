@@ -18,6 +18,9 @@ import ProcurementPage from '@/pages/outlet/ProcurementPage';
 import SchedulingPage from '@/pages/outlet/SchedulingPage';
 import SalesPage from '@/pages/outlet/SalesPage';
 import TasksPage from '@/pages/outlet/TasksPage';
+import WorkforcePage from '@/pages/outlet/WorkforcePage';
+import CompliancePage from '@/pages/outlet/CompliancePage';
+import ReportsPage from '@/pages/outlet/ReportsPage';
 
 // Tenant 1 — F&B Pack (Taqueria Pte Ltd / La Birria Tacos)
 import FnBDashboard from '@/pages/tenant1/FnBDashboard';
@@ -106,6 +109,9 @@ const AuthenticatedApp = () => {
       <Route path="/outlet/scheduling" element={<SchedulingPage />} />
       <Route path="/outlet/sales" element={<SalesPage />} />
       <Route path="/outlet/tasks" element={<TasksPage />} />
+      <Route path="/outlet/workforce" element={<WorkforcePage />} />
+      <Route path="/outlet/compliance" element={<CompliancePage />} />
+      <Route path="/outlet/reports" element={<ReportsPage />} />
 
       {/* Tenant 1 — F&B Pack (Taqueria / La Birria Tacos) */}
       <Route path="/t1/dashboard" element={<FnBDashboard />} />
