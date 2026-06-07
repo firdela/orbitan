@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Plus, Search, X, UserCircle, Brain, Users, Clock, TrendingUp, Phone, Mail, Calendar, DollarSign, Shield, Loader2 } from 'lucide-react';
+import ExportDataButton from '@/components/workforce/ExportDataButton';
 import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
 
 const T1_TENANT_ID = 'taqueria_pte_ltd';
@@ -93,6 +94,7 @@ export default function FnBWorkforce() {
                 <Brain className="w-4 h-4" />
                 {activeTab === 'insights' ? 'Team View' : 'AI Insights'}
               </Button>
+              <ExportDataButton tenantId={T1_TENANT_ID} type="workforce" label="Export CSV" />
               <Button size="sm" className="gap-1.5 bg-blue-500 hover:bg-blue-600 text-white border-0" onClick={() => setShowAdd(true)}>
                 <Plus className="w-4 h-4" /> Add Staff
               </Button>

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Plus, AlertTriangle, CheckCircle2, Clock, Shield, FileCheck, AlertCircle, Loader2, X, TrendingUp, Search, Filter } from 'lucide-react';
+import ExportDataButton from '@/components/workforce/ExportDataButton';
 import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
 import { format, differenceInDays } from 'date-fns';
 
@@ -88,9 +89,12 @@ export default function FnBCompliance() {
               <h1 className="text-2xl font-display font-bold">Compliance Centre</h1>
               <p className="text-white/60 text-sm mt-1">La Birria Tacos · North Bridge Rd · F&B Pack</p>
             </div>
-            <Button size="sm" onClick={() => setShowAdd(true)} className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white border-0 flex-shrink-0">
-              <Plus className="w-4 h-4" /> New Record
-            </Button>
+            <div className="flex gap-2 flex-shrink-0">
+              <ExportDataButton tenantId={T1_TENANT_ID} type="compliance" label="Export CSV" />
+              <Button size="sm" onClick={() => setShowAdd(true)} className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white border-0">
+                <Plus className="w-4 h-4" /> New Record
+              </Button>
+            </div>
           </div>
 
           {/* Health Score + Stats */}
