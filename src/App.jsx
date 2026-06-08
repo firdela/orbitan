@@ -8,6 +8,8 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { TenantProvider } from '@/lib/use-tenant.jsx';
 import { GlobalOutletProvider } from '@/lib/GlobalOutletContext';
+import { CurrencyProvider } from '@/lib/CurrencyContext';
+import ReportIssueModal from '@/components/shared/ReportIssueModal';
 
 // Page imports
 import LeaderOrg from '@/pages/LeaderOrg';
@@ -165,12 +167,15 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <TenantProvider>
+        <CurrencyProvider tenantDefaultCurrency="SGD">
         <GlobalOutletProvider>
         <Router>
             <AuthenticatedApp />
+            <ReportIssueModal />
           </Router>
           </GlobalOutletProvider>
           <Toaster />
+        </CurrencyProvider>
         </TenantProvider>
       </QueryClientProvider>
     </AuthProvider>

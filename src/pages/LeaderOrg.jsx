@@ -12,6 +12,7 @@ import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
+import CurrencyDropdown from '@/components/shared/CurrencyDropdown';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RampUpPanel from '@/components/leader/RampUpPanel';
 import CapabilityStack from '@/components/leader/CapabilityStack';
@@ -40,11 +41,12 @@ export default function LeaderOrg() {
       <header className="border-b border-border bg-background sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <OrbitanLogo size="md" showOS />
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="hidden sm:flex items-center gap-2 bg-orbitan-blue-light text-orbitan-blue px-3 py-1.5 rounded-lg text-xs font-semibold">
               <Shield className="w-3.5 h-3.5" />
               Platform Owner Console
             </div>
+            <CurrencyDropdown />
             <TenantSwitcher />
           </div>
         </div>

@@ -354,6 +354,21 @@ export const LAUNCH_TENANTS = {
     currency: "SGD",
     status: "active",
   },
+  izaliqa_bakes: {
+    id_ref: "izaliqa_bakes",
+    name: "Izaliqa Bakes",
+    legal_name: "Izaliqa Bakes",
+    industry: "food_beverage",
+    pack: "fnb",
+    plan: "orbitan_starter",
+    brands: ["Izaliqa Bakes"],
+    outlets: ["Home Kitchen"],
+    enabled_modules: ["task", "inventory", "sales_invoice"],
+    enabled_packs: ["core", "fnb"],
+    country: "Singapore",
+    currency: "SGD",
+    status: "active",
+  },
 };
 
 // ============================================================

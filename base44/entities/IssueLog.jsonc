@@ -1,0 +1,148 @@
+{
+  "name": "IssueLog",
+  "type": "object",
+  "description": "OrbitanOS Pilot Feedback Engine \u2014 captures bugs, improvement suggestions, and compliance queries from all tenants during the pilot phase. Feeds into the Refine & Regulate principles. Exit-Ready.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "reported_by_id": {
+      "type": "string"
+    },
+    "reported_by_name": {
+      "type": "string"
+    },
+    "issue_type": {
+      "type": "string",
+      "enum": [
+        "bug",
+        "improvement",
+        "compliance_query",
+        "usability",
+        "data_issue"
+      ],
+      "default": "bug"
+    },
+    "module": {
+      "type": "string",
+      "enum": [
+        "inventory",
+        "procurement",
+        "sales_invoice",
+        "workforce",
+        "compliance",
+        "scheduling",
+        "reporting",
+        "finance",
+        "ai_studio",
+        "wallet",
+        "marketplace",
+        "shield",
+        "general"
+      ],
+      "default": "general"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "medium"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "page_url": {
+      "type": "string",
+      "description": "Auto-captured page URL at time of report"
+    },
+    "session_context": {
+      "type": "object",
+      "description": "Auto-snapshot: tenant, outlet, user role, current page at time of submission"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "in_progress",
+        "resolved",
+        "wont_fix",
+        "duplicate"
+      ],
+      "default": "new"
+    },
+    "resolved_by": {
+      "type": "string"
+    },
+    "resolved_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "resolution_notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "issue_type",
+    "title",
+    "description"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}",
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        },
+        {
+          "data.reported_by_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}",
+          "user_condition": {
+            "role": "tenant_admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
