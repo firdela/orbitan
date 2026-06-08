@@ -19,10 +19,10 @@ const T1_TENANT_ID = 'taqueria_pte_ltd';
 const T1_OUTLET_ID = 'taqueria_pte_ltd_main';
 
 const WORKER = {
-  name: "Ahmad Rizal",
+  name: "Fahmi",
   position: "Kitchen Staff",
   outlet: "La Birria Tacos (North Bridge Rd)",
-  avatar_initials: "AR",
+  avatar_initials: "FM",
   tenant_id: T1_TENANT_ID,
 };
 
