@@ -8,11 +8,12 @@ import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import {
-  Clock, CheckSquare, Calendar, Bell, LogIn, LogOut,
+  Clock, CheckSquare, Calendar, LogIn, LogOut,
   ChevronRight, MapPin, CheckCircle2, Briefcase, Layers,
   Building2, Zap, Star, Flame, Trophy, Target, BookOpen, Shield
 } from 'lucide-react';
 import FoodSafetyLogWidget from '@/components/worker/FoodSafetyLogWidget';
+import NotificationsInbox from '@/components/shared/NotificationsInbox';
 
 const T1_TENANT_ID = 'taqueria_pte_ltd';
 const T1_OUTLET_ID = 'taqueria_pte_ltd_main';
@@ -103,10 +104,7 @@ export default function WorkerPortal() {
                 <span className="text-[10px] font-bold text-red-600">{urgentTasks} urgent</span>
               </div>
             )}
-            <button className="relative w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-              <Bell className="w-4 h-4 text-muted-foreground" />
-              {urgentTasks > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background" />}
-            </button>
+            <NotificationsInbox tenantSlug="t1" />
             <div className="w-9 h-9 rounded-full orbitan-gradient flex items-center justify-center text-white text-xs font-bold shadow-md">
               {WORKER.avatar_initials}
             </div>

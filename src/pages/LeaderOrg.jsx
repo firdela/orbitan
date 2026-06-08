@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RampUpPanel from '@/components/leader/RampUpPanel';
 import CapabilityStack from '@/components/leader/CapabilityStack';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
+import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionPlansAccordion';
 import WalletCreditBar from '@/components/wallet/WalletCreditBar';
 import ShieldStatusWidget from '@/components/shield/ShieldStatusWidget';
 import {
@@ -114,7 +115,7 @@ export default function LeaderOrg() {
             <TabsTrigger value="rampup" className="gap-1.5">
               <Rocket className="w-3.5 h-3.5" />Ramp Up
             </TabsTrigger>
-            <TabsTrigger value="modules">Modules & Packs</TabsTrigger>
+            <TabsTrigger value="modules">Modules &amp; Packs</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
             <TabsTrigger value="cycle">Operating Cycle</TabsTrigger>
             <TabsTrigger value="about">About Platform</TabsTrigger>
@@ -260,70 +261,7 @@ export default function LeaderOrg() {
 
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions">
-            <div className="mb-4">
-              <h2 className="font-heading font-semibold text-lg mb-1">Subscription Tiers</h2>
-              <p className="text-sm text-muted-foreground">OrbitanOS plan hierarchy — each tier is a superset of the tier below it.</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-              { key: 'orbitan_starter', price: 'S$49', period: '/mo', employees: '10', modules: 'Core only', packs: 'Core only', description: 'Single outlet, small teams.' },
-              { key: 'orbitan_growth', price: 'S$149', period: '/mo', employees: '50', modules: '8 modules', packs: '1 Industry Pack', description: 'Growing businesses, one pack.' },
-              { key: 'orbitan_business', price: 'S$399', period: '/mo', employees: '250', modules: 'All standard', packs: 'Multiple Packs + AI', description: 'Multi-site, AI suite, integrations.' },
-              { key: 'orbitan_enterprise', price: 'Custom', period: '', employees: 'Unlimited', modules: 'All + future', packs: 'All Packs', description: 'Enterprise governance, SSO, dedicated CSM.' }].
-              map((plan, idx) => {
-                const tierCount = tenants.filter((t) => t.subscription_plan === plan.key).length;
-                const isEnterprise = plan.key === 'orbitan_enterprise';
-                return (
-                  <div key={plan.key} className={`bg-card border rounded-xl p-5 flex flex-col ${isEnterprise ? 'border-[#D4AF37]/40 shadow-md' : 'border-border'}`}>
-                    {isEnterprise &&
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-[#D4AF37] mb-2">
-                        <Star className="w-3 h-3" /> FLAGSHIP
-                      </div>
-                    }
-                    <div className="flex items-center gap-2 mb-3">
-                       <PlanBadge plan={plan.key} />
-                       <span className="text-[10px] text-muted-foreground">Tier {SUBSCRIPTION_PLANS[plan.key]?.tier_level}</span>
-                     </div>
-                    <p className="text-2xl font-display font-bold text-foreground mb-0.5">
-                      {plan.price}<span className="text-sm font-normal text-muted-foreground">{plan.period}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-4">{plan.description}</p>
-                    <div className="space-y-2 flex-1 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Employees</span>
-                        <span className="font-medium">{plan.employees}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Modules</span>
-                        <span className="font-medium">{plan.modules}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Packs</span>
-                        <span className="font-medium">{plan.packs}</span>
-                      </div>
-                    </div>
-                    <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">{tierCount} tenant{tierCount !== 1 ? 's' : ''}</p>
-                      {tierCount > 0 && <CheckCircle2 className="w-3.5 h-3.5 text-orbitan-green" />}
-                    </div>
-                  </div>);
-
-              })}
-            </div>
-
-            {/* Feature Gate Legend */}
-            <div className="mt-6 bg-muted rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Lock className="w-4 h-4 text-muted-foreground" />
-                <h3 className="font-heading font-semibold text-sm">Feature Gating — Exit-Ready Architecture</h3>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                All module and pack access is enforced by <code className="bg-card px-1.5 py-0.5 rounded text-foreground font-mono">lib/orbitan-plans.js</code> — a pure JavaScript library with zero platform dependencies.
-                This means subscription enforcement logic is fully portable to any backend stack (Node.js, Deno, AWS Lambda, etc.) without modification.
-                The <code className="bg-card px-1.5 py-0.5 rounded text-foreground font-mono">subscriptionGate</code> backend function validates access server-side,
-                and the <code className="bg-card px-1.5 py-0.5 rounded text-foreground font-mono">SubscriptionGate</code> UI component enforces it client-side.
-              </p>
-            </div>
+            <SubscriptionPlansAccordion tenants={tenants} />
           </TabsContent>
 
           {/* Operating Cycle Tab */}
