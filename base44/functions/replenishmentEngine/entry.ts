@@ -1,13 +1,83 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 /**
- * Replenishment Engine
+ * Replenishment Engine — OrbitanOS Operational Autopilot
+ * Principle: Respond
+ *
  * Runs daily to:
  * 1. Analyse last 7 days of sales against Recipe BOM to calculate avg daily ingredient usage
  * 2. Compare against current stock levels and reorder points
  * 3. Generate ReplenishmentAlert records for items predicted to stock out
- * 4. Auto-draft a PurchaseOrder for critical items
+ * 4. Auto-draft PurchaseOrders for critical items — Industry-Specific Autopilot Rules apply:
+ *    - F&B: Only auto-draft PO if supplier is marked as "preferred"
+ *    - Recycling: If processing backlog detected, auto-create urgent collection Task
+ *    - Retail: If SKU idle >30 days, auto-create Promotion draft Task
+ * Exit-Ready: Pure business logic — swap the entity adapter without touching the rules.
  */
+
+// ── Industry Autopilot Rules ──────────────────────────────────
+async function runFnBAutopilot(base44, tenantId, outletId, poItemsForCritical, suppliers) {
+  // F&B Rule: Only auto-draft PO if supplier is "preferred"
+  const preferredSupplierIds = new Set(
+    suppliers.filter(s => s.is_preferred === true).map(s => s.id)
+  );
+  return poItemsForCritical.filter(item => {
+    if (!item.supplier_id) return false; // No supplier = skip
+    return preferredSupplierIds.has(item.supplier_id);
+  });
+}
+
+async function runRecyclingAutopilot(base44, tenantId, outletId, inventoryItems) {
+  // Recycling Rule: If any recovered material item has current_stock > par_level * 1.5 (processing backlog),
+  // auto-create an urgent collection Task
+  const backlogItems = inventoryItems.filter(item =>
+    item.current_stock > (item.par_level || 0) * 1.5 && item.par_level > 0
+  );
+  if (backlogItems.length === 0) return;
+
+  await base44.asServiceRole.entities.Task.create({
+    tenant_id: tenantId,
+    outlet_id: outletId,
+    title: `URGENT: Processing backlog detected — ${backlogItems.length} material(s) above capacity`,
+    description: `Autopilot Alert: The following materials are at ${'>'}150% of par level and require urgent processing or collection scheduling:\n\n${backlogItems.map(i => `• ${i.name}: ${i.current_stock} ${i.unit} (par: ${i.par_level})`).join('\n')}`,
+    priority: 'high',
+    status: 'pending',
+    source: 'replenishment_autopilot',
+  });
+}
+
+async function runRetailAutopilot(base44, tenantId, outletId, inventoryItems) {
+  // Retail Rule: If a SKU has had no stock movement for >30 days, create a Promotion draft Task
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const slowMovers = inventoryItems.filter(item => {
+    if (!item.updated_date) return false;
+    return new Date(item.updated_date) < thirtyDaysAgo && item.current_stock > 0;
+  });
+
+  for (const item of slowMovers.slice(0, 5)) { // Cap at 5 to avoid spam
+    const existingPromoTasks = await base44.asServiceRole.entities.Task.filter({
+      tenant_id: tenantId,
+      outlet_id: outletId,
+      status: 'pending',
+      source: 'retail_autopilot',
+    });
+    const alreadyExists = existingPromoTasks.some(t => t.title?.includes(item.name));
+    if (alreadyExists) continue;
+
+    await base44.asServiceRole.entities.Task.create({
+      tenant_id: tenantId,
+      outlet_id: outletId,
+      title: `Promotion Opportunity: "${item.name}" — idle ${'>'}30 days`,
+      description: `Retail Autopilot: SKU "${item.name}" (${item.current_stock} ${item.unit} in stock) has not moved in over 30 days. Consider a markdown, bundle deal, or featured display to clear stock.`,
+      priority: 'medium',
+      status: 'pending',
+      source: 'retail_autopilot',
+    });
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -23,6 +93,7 @@ Deno.serve(async (req) => {
 
     const tenantId = user.data?.tenant_id;
     const outletId = user.data?.outlet_id;
+    const industryPack = user.data?.industry_pack || 'fnb'; // Determines autopilot rules
 
     if (!tenantId || !outletId) {
       return Response.json({ error: 'tenant_id and outlet_id required' }, { status: 400 });
@@ -159,9 +230,26 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 6. Auto-draft a PO for critical items grouped by supplier
+    // 6. Industry-Specific Autopilot Rules
+    let eligiblePoItems = poItemsForCritical;
+    const autopilotActions = [];
+
+    if (industryPack === 'fnb' || industryPack === 'food_beverage') {
+      const suppliers = await base44.asServiceRole.entities.Supplier.filter({ tenant_id: tenantId });
+      eligiblePoItems = await runFnBAutopilot(base44, tenantId, outletId, poItemsForCritical, suppliers);
+      const skipped = poItemsForCritical.length - eligiblePoItems.length;
+      if (skipped > 0) autopilotActions.push(`F&B: Skipped ${skipped} item(s) — no preferred supplier`);
+    } else if (industryPack === 'recycling' || industryPack === 'recycling_sustainability') {
+      await runRecyclingAutopilot(base44, tenantId, outletId, inventoryItems);
+      autopilotActions.push('Recycling: Backlog check completed');
+    } else if (industryPack === 'retail') {
+      await runRetailAutopilot(base44, tenantId, outletId, inventoryItems);
+      autopilotActions.push('Retail: Slow-mover promotion tasks evaluated');
+    }
+
+    // 7. Auto-draft a PO for critical items grouped by supplier
     const posBySupplier = {};
-    for (const poItem of poItemsForCritical) {
+    for (const poItem of eligiblePoItems) {
       const supplierId = poItem.supplier_id || 'unknown';
       if (!posBySupplier[supplierId]) posBySupplier[supplierId] = [];
       posBySupplier[supplierId].push(poItem);
@@ -213,7 +301,9 @@ Deno.serve(async (req) => {
         alerts_processed: alertsCreated.length,
         pos_auto_drafted: posCreated.length,
         alerts: alertsCreated,
-        draft_pos: posCreated
+        draft_pos: posCreated,
+        autopilot_actions: autopilotActions,
+        industry_pack_applied: industryPack,
       }
     });
 

@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RampUpPanel from '@/components/leader/RampUpPanel';
+import CapabilityStack from '@/components/leader/CapabilityStack';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import WalletCreditBar from '@/components/wallet/WalletCreditBar';
 import ShieldStatusWidget from '@/components/shield/ShieldStatusWidget';
@@ -107,6 +108,9 @@ export default function LeaderOrg() {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1">
             <TabsTrigger value="overview">Tenants</TabsTrigger>
+            <TabsTrigger value="capability" className="gap-1.5">
+              <Layers className="w-3.5 h-3.5" />Capability Stack
+            </TabsTrigger>
             <TabsTrigger value="rampup" className="gap-1.5">
               <Rocket className="w-3.5 h-3.5" />Ramp Up
             </TabsTrigger>
@@ -115,6 +119,11 @@ export default function LeaderOrg() {
             <TabsTrigger value="cycle">Operating Cycle</TabsTrigger>
             <TabsTrigger value="about">About Platform</TabsTrigger>
           </TabsList>
+
+          {/* Capability Stack Tab */}
+          <TabsContent value="capability">
+            <CapabilityStack />
+          </TabsContent>
 
           {/* Ramp Up Tab */}
           <TabsContent value="rampup">

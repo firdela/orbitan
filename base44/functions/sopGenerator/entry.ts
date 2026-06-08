@@ -142,15 +142,92 @@ Deno.serve(async (req) => {
 
     const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`;
 
-    // ── Invoke AI ───────────────────────────────────────────
+    // ── Stage 1: Draft Generation ───────────────────────────
     let generatedContent = '';
     let confidenceScore = 85;
 
     const modelParams = { prompt: fullPrompt };
     if (selectedModel !== 'automatic') modelParams.model = selectedModel;
 
-    const aiResult = await base44.asServiceRole.integrations.Core.InvokeLLM(modelParams);
-    generatedContent = typeof aiResult === 'string' ? aiResult : aiResult?.response || '';
+    const draftResult = await base44.asServiceRole.integrations.Core.InvokeLLM(modelParams);
+    const draftContent = typeof draftResult === 'string' ? draftResult : draftResult?.response || '';
+
+    // ── Stage 2: AI Critic Review (Regulate — Compliance Validation) ──
+    // Only run critic for high-governance documents (SOPs, policies, compliance checklists)
+    const CRITIC_ELIGIBLE = ['sop', 'policy', 'compliance_checklist'];
+    let criticFeedback = null;
+
+    if (CRITIC_ELIGIBLE.includes(document_type)) {
+      const industryStandards = {
+        food_beverage: 'Singapore Food Agency (SFA) regulations, NEA Environmental Health guidelines, HACCP principles, and SS 590:2013 food safety management standard.',
+        recycling_sustainability: 'NEA Waste Management regulations, ISO 14001:2015 Environmental Management System, Singapore Green Plan 2030 requirements, and EPR (Extended Producer Responsibility) guidelines.',
+        retail: 'Singapore Consumer Protection (Fair Trading) Act, Competition Act, MOM Workplace Safety guidelines, and Personal Data Protection Act (PDPA).',
+        other: 'Singapore MOM Workplace Safety & Health Act, PDPA, and general SME governance best practices.',
+      };
+      const standard = industryStandards[industry] || industryStandards.other;
+
+      const criticPrompt = `You are a strict compliance auditor for the ${industry} industry in Singapore. Review the following ${document_type.toUpperCase()} draft against these regulatory standards: ${standard}
+
+Your task is NOT to rewrite the document — only to identify:
+1. Any missing mandatory compliance elements (list them concisely)
+2. Any regulatory gaps or inaccuracies
+3. A confidence score (0-100) for compliance quality
+
+Respond in this exact JSON format:
+{
+  "missing_elements": ["element 1", "element 2"],
+  "regulatory_gaps": ["gap 1", "gap 2"],
+  "confidence_score": 85,
+  "critical_issues": true or false
+}
+
+DOCUMENT TO REVIEW:
+${draftContent}`;
+
+      const criticResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+        prompt: criticPrompt,
+        model: 'gemini_3_flash',
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            missing_elements: { type: 'array', items: { type: 'string' } },
+            regulatory_gaps: { type: 'array', items: { type: 'string' } },
+            confidence_score: { type: 'number' },
+            critical_issues: { type: 'boolean' },
+          },
+        },
+      });
+      criticFeedback = criticResult || null;
+      confidenceScore = criticFeedback?.confidence_score || 85;
+
+      // ── Stage 3: Finalise — only if critic found issues ──
+      const hasCriticIssues = (criticFeedback?.missing_elements?.length > 0 || criticFeedback?.regulatory_gaps?.length > 0);
+      if (hasCriticIssues) {
+        const refinementPrompt = `${systemPrompt}
+
+You previously generated a ${document_type.toUpperCase()} document. A compliance auditor reviewed it and identified the following issues:
+
+MISSING ELEMENTS: ${(criticFeedback?.missing_elements || []).join('; ')}
+REGULATORY GAPS: ${(criticFeedback?.regulatory_gaps || []).join('; ')}
+
+Below is the original draft. Revise it to address ALL the above issues while keeping everything else intact. Return ONLY the improved document in Markdown format — no commentary.
+
+ORIGINAL DRAFT:
+${draftContent}`;
+
+        const refinedResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          prompt: refinementPrompt,
+          ...(selectedModel !== 'automatic' ? { model: selectedModel } : {}),
+        });
+        generatedContent = typeof refinedResult === 'string' ? refinedResult : refinedResult?.response || draftContent;
+        confidenceScore = Math.min(100, (criticFeedback?.confidence_score || 85) + 8); // Boost score after refinement
+      } else {
+        generatedContent = draftContent;
+      }
+    } else {
+      // Non-critic-eligible types (shift_brief, training_module) — use draft directly
+      generatedContent = draftContent;
+    }
 
     // ── Determine publish status ────────────────────────────
     const isAutoPublishEligible = !NON_AUTO_PUBLISH_TYPES.includes(document_type);
@@ -172,6 +249,12 @@ Deno.serve(async (req) => {
         task_count: tasks.length,
         task_titles: tasks.map(t => t.title),
         user_notes: notes,
+        critic_review: criticFeedback ? {
+          missing_elements: criticFeedback.missing_elements || [],
+          regulatory_gaps: criticFeedback.regulatory_gaps || [],
+          critical_issues: criticFeedback.critical_issues || false,
+          refinement_applied: !!(criticFeedback?.missing_elements?.length > 0 || criticFeedback?.regulatory_gaps?.length > 0),
+        } : null,
       },
       model_used: selectedModel,
       ai_confidence_score: confidenceScore,
