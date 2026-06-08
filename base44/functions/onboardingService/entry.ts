@@ -98,6 +98,37 @@ const LAUNCH_MANIFESTS = {
     ],
   },
 
+  izaliqa_bakes: {
+    tenant_ref: "izaliqa_bakes",
+    display_name: "Izaliqa Bakes",
+    pack: "fnb",
+    plan: "orbitan_starter",
+    industry: "food_beverage",
+    tenant_name: "Izaliqa Bakes",
+    outlet_name: "Home Kitchen",
+    enabled_modules: ["task", "inventory", "sales_invoice"],
+    enabled_packs: ["core", "fnb"],
+    integrations: [],
+    gating: { require_audit_log: true, require_subscription_validation: true },
+    seed_data: {
+      ComplianceRecord: [
+        { title: "Home Kitchen Food Safety Check",    type: "Food Safety Audit",   category: "food_safety", status: "pending", due_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0] },
+        { title: "Monthly Hygiene & Cleanliness Log", type: "Hygiene Inspection",  category: "food_safety", status: "pending", due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0] },
+      ],
+      Task: [
+        { title: "Set up product menu & price list",        module_context: "inventory",    priority: "high",   status: "pending" },
+        { title: "Record opening inventory of ingredients", module_context: "inventory",    priority: "high",   status: "pending" },
+        { title: "Log first sales order",                  module_context: "sales_invoice", priority: "medium", status: "pending" },
+        { title: "Configure order tracking tasks",         module_context: "task",          priority: "medium", status: "pending" },
+        { title: "Onboard to OrbitanOS Starter Plan",      module_context: "workforce",     priority: "high",   status: "pending" },
+      ],
+    },
+    ai_documents: [
+      { document_type: "sop",       title: "Home Bakery Operations & Food Safety SOP" },
+      { document_type: "shift_brief", title: "Daily Baking Session Brief — Izaliqa Bakes" },
+    ],
+  },
+
   renewed_fashion: {
     tenant_ref: "renewed_fashion",
     display_name: "Renewed Fashion",

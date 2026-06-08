@@ -1,38 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { PLATFORM_IDENTITY, SUBSCRIPTION_PLANS, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, OPERATING_CYCLE, LAUNCH_TENANTS } from '@/lib/orbitan-config';
+import { PLATFORM_IDENTITY, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, OPERATING_CYCLE } from '@/lib/orbitan-config';
 import { DEMO_TENANTS } from '@/lib/use-tenant.jsx';
-import { getAllPacks, getActivePacks, getFuturePacks } from '@/lib/orbitan-engine';
+import { getActivePacks, getFuturePacks } from '@/lib/orbitan-engine';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
 import StatCard from '@/components/shared/StatCard';
-import StatusBadge from '@/components/shared/StatusBadge';
-import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
+import { PlanBadge } from '@/components/shared/PackBadge';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import CurrencyDropdown from '@/components/shared/CurrencyDropdown';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import RampUpPanel from '@/components/leader/RampUpPanel';
-import CapabilityStack from '@/components/leader/CapabilityStack';
-import OrbitanLoader from '@/components/brand/OrbitanLoader';
+import TenantCommandCard from '@/components/leader/TenantCommandCard';
 import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionPlansAccordion';
-import WalletCreditBar from '@/components/wallet/WalletCreditBar';
-import ShieldStatusWidget from '@/components/shield/ShieldStatusWidget';
 import {
-  Building2, Users, Package, BarChart2, Shield, Settings, ChevronRight,
-  Globe, Cpu, Layers, Flag, CreditCard, Info, Plus, RefreshCw, CheckCircle2,
-  AlertTriangle, TrendingUp, Zap, Star, Lock, Rocket, Leaf, Activity,
-  Wallet, ShoppingBag } from 'lucide-react';
+  Building2, Package, Shield, ChevronRight,
+  Cpu, Layers, Plus, CheckCircle2, RefreshCw,
+  Rocket, Activity, Zap, Wallet, ShoppingBag } from 'lucide-react';
 
 export default function LeaderOrg() {
   const [activeTab, setActiveTab] = useState('overview');
-  const tenants = DEMO_TENANTS;
+  const [manifests, setManifests] = useState([]);
+  const [activating, setActivating] = useState(null);
+  const [reports, setReports] = useState({});
 
+  const tenants = DEMO_TENANTS;
   const totalTenants = tenants.length;
   const activeTenants = tenants.filter((t) => t.status === 'active').length;
   const totalModuleUsage = tenants.reduce((acc, t) => acc + (t.enabled_modules?.length || 0), 0);
+
+  useEffect(() => {
+    base44.functions.invoke('onboardingService', { action: 'get_manifests' })
+      .then(res => setManifests(res.data?.manifests || []))
+      .catch(() => {});
+  }, []);
+
+  const handleActivate = async (tenantRef) => {
+    setActivating(tenantRef);
+    const res = await base44.functions.invoke('onboardingService', { action: 'activate_tenant', tenant_ref: tenantRef });
+    setReports(prev => ({ ...prev, [tenantRef]: res.data?.report }));
+    setActivating(null);
+  };
+
+  const handleActivateAll = async () => {
+    setActivating('all');
+    const res = await base44.functions.invoke('onboardingService', { action: 'activate_all' });
+    const newReports = {};
+    (res.data?.reports || []).forEach(r => { newReports[r.tenant_ref] = r; });
+    setReports(newReports);
+    setActivating(null);
+  };
+
+  // Map manifest array → lookup by tenant_ref
+  const manifestByRef = {};
+  manifests.forEach(m => { manifestByRef[m.tenant_ref] = m; });
+
+  const TENANT_MANIFEST_REF = {
+    tenant_taqueria: 'taqueria_pte_ltd',
+    tenant_renewed:  'renewed_resources_pte_ltd',
+    tenant_retail:   'renewed_fashion',
+    tenant_izaliqa:  'izaliqa_bakes',
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -121,74 +150,50 @@ export default function LeaderOrg() {
 
           {/* Tenants Command Center Tab */}
           <TabsContent value="overview">
-            {/* Tenant Management */}
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-semibold text-base flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-orbitan-blue" /> Tenant Management
-              </h3>
-              <Button size="sm" className="gap-1.5 flex-shrink-0">
-                <Plus className="w-4 h-4" /> Onboard Tenant
-              </Button>
-            </div>
-            <div className="space-y-3 mb-10">
-              {tenants.map((tenant) =>
-              <div key={tenant.id} className="bg-card border border-border rounded-xl p-5 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="font-heading font-semibold text-foreground">{tenant.name}</h3>
-                        <StatusBadge status={tenant.status} />
-                        <PlanBadge plan={tenant.subscription_plan} />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {INDUSTRY_LABELS[tenant.industry]} · {tenant.enabled_modules?.length || 0} modules active
-                        {tenant.max_employees ? ` · Up to ${tenant.max_employees} employees` : ''}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <PackBadgeGroup packs={tenant.enabled_packs || []} size="xs" />
-                      <Link to={
-                        tenant.id === 'tenant_taqueria' ? '/t1/dashboard' :
-                        tenant.id === 'tenant_renewed' ? '/t2/dashboard' :
-                        tenant.id === 'tenant_retail' ? '/t3/dashboard' :
-                        '/leader-org'
-                      }>
-                        <Button variant="outline" size="sm" className="gap-1 text-xs">
-                          View <ChevronRight className="w-3 h-3" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-border flex flex-wrap gap-1">
-                    {(tenant.enabled_modules || []).slice(0, 8).map((mod) =>
-                      <span key={mod} className="text-[10px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
-                        {MODULES[mod]?.name || mod}
-                      </span>
-                    )}
-                    {(tenant.enabled_modules || []).length > 8 &&
-                      <span className="text-[10px] text-muted-foreground px-2 py-0.5">
-                        +{(tenant.enabled_modules?.length || 0) - 8} more
-                      </span>
-                    }
-                  </div>
-                </div>
-              )}
+            {/* Header row */}
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-heading font-semibold text-base flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-orbitan-blue" /> Tenant Command Center
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Expand any tenant to manage capabilities, modules &amp; activation.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={handleActivateAll}
+                  disabled={activating !== null}
+                >
+                  {activating === 'all'
+                    ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Activating All...</>
+                    : <><Zap className="w-3.5 h-3.5" /> Activate All</>
+                  }
+                </Button>
+                <Button size="sm" className="gap-1.5">
+                  <Plus className="w-4 h-4" /> Onboard Tenant
+                </Button>
+              </div>
             </div>
 
-            {/* Capability Stack */}
-            <div className="mb-2">
-              <h3 className="font-heading font-semibold text-base flex items-center gap-2 mb-4">
-                <Layers className="w-4 h-4 text-orbitan-purple" /> Capability Stack
-              </h3>
-              <CapabilityStack />
-            </div>
-
-            {/* Ramp Up */}
-            <div className="mt-10">
-              <h3 className="font-heading font-semibold text-base flex items-center gap-2 mb-4">
-                <Rocket className="w-4 h-4 text-orbitan-green" /> Ramp Up
-              </h3>
-              <RampUpPanel />
+            {/* Unified Tenant Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {tenants.map(tenant => {
+                const mRef = TENANT_MANIFEST_REF[tenant.id];
+                return (
+                  <TenantCommandCard
+                    key={tenant.id}
+                    tenant={tenant}
+                    manifest={manifestByRef[mRef]}
+                    activating={activating}
+                    onActivate={handleActivate}
+                    report={reports[mRef]}
+                  />
+                );
+              })}
             </div>
           </TabsContent>
 
@@ -196,28 +201,31 @@ export default function LeaderOrg() {
           <TabsContent value="modules">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
-                <h3 className="font-heading font-semibold mb-4 flex items-center gap-2"><Layers className="w-4 h-4 text-orbitan-blue" />Platform Modules</h3>
+                <h3 className="font-heading font-semibold mb-4 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-orbitan-blue" /> Platform Modules
+                </h3>
                 <div className="space-y-2">
-                  {Object.values(MODULES).map((mod) =>
-                  <div key={mod.key} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center justify-between">
+                  {Object.values(MODULES).map(mod => (
+                    <div key={mod.key} className="bg-card border border-border rounded-lg px-4 py-3 flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-foreground">{mod.name}</p>
                         <p className="text-xs text-muted-foreground">{mod.description}</p>
                       </div>
                       <CheckCircle2 className="w-4 h-4 text-orbitan-green flex-shrink-0" />
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
               <div>
-                <h3 className="font-heading font-semibold mb-3 flex items-center gap-2"><Package className="w-4 h-4 text-orbitan-green" />Industry Packs</h3>
-
+                <h3 className="font-heading font-semibold mb-3 flex items-center gap-2">
+                  <Package className="w-4 h-4 text-orbitan-green" /> Industry Packs
+                </h3>
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Activity className="w-3 h-3" /> Active Launch Packs
                 </p>
                 <div className="space-y-2 mb-4">
-                  {getActivePacks().map((pack) =>
-                  <div key={pack.key} className="bg-card border border-border rounded-lg px-4 py-3">
+                  {getActivePacks().map(pack => (
+                    <div key={pack.key} className="bg-card border border-border rounded-lg px-4 py-3">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: pack.color_hex }} />
@@ -227,23 +235,22 @@ export default function LeaderOrg() {
                       </div>
                       <p className="text-xs text-muted-foreground mb-2">{pack.description}</p>
                       <p className="text-[10px] text-muted-foreground mb-2">Tenants: {pack.launch_tenants.join(', ')}</p>
-                      {pack.modules &&
-                    <div className="flex flex-wrap gap-1">
-                          {pack.modules.map((m) =>
-                      <span key={m} className="text-[10px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded">{m}</span>
-                      )}
+                      {pack.modules && (
+                        <div className="flex flex-wrap gap-1">
+                          {pack.modules.map(m => (
+                            <span key={m} className="text-[10px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded">{m}</span>
+                          ))}
                         </div>
-                    }
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Rocket className="w-3 h-3" /> Future-Proofed Packs (Seeded)
                 </p>
                 <div className="space-y-2">
-                  {getFuturePacks().map((pack) =>
-                  <div key={pack.key} className="bg-card border border-dashed border-border rounded-lg px-4 py-3 opacity-70">
+                  {getFuturePacks().map(pack => (
+                    <div key={pack.key} className="bg-card border border-dashed border-border rounded-lg px-4 py-3 opacity-70">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: pack.color_hex }} />
@@ -253,7 +260,7 @@ export default function LeaderOrg() {
                       </div>
                       <p className="text-xs text-muted-foreground">{pack.description}</p>
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>
