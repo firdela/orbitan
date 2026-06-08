@@ -28,7 +28,6 @@ import {
 
 export default function LeaderOrg() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [tenantView, setTenantView] = useState('management'); // 'management' | 'capability' | 'rampup'
   const tenants = DEMO_TENANTS;
 
   const totalTenants = tenants.length;
@@ -39,10 +38,10 @@ export default function LeaderOrg() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top Nav */}
       <header className="border-b border-border bg-background sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <OrbitanLogo size="md" showOS />
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-2 bg-orbitan-blue-light text-orbitan-blue px-3 py-1.5 rounded-lg text-xs font-semibold">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <OrbitanLogo size="sm" showOS />
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="hidden lg:flex items-center gap-2 bg-orbitan-blue-light text-orbitan-blue px-3 py-1.5 rounded-lg text-xs font-semibold">
               <Shield className="w-3.5 h-3.5" />
               Platform Owner Console
             </div>
@@ -122,101 +121,75 @@ export default function LeaderOrg() {
 
           {/* Tenants Command Center Tab */}
           <TabsContent value="overview">
-            {/* Sub-navigation */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div className="flex bg-muted rounded-lg p-1 gap-1">
-                <button
-                  onClick={() => setTenantView('management')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${tenantView === 'management' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <Building2 className="w-3.5 h-3.5" /> Management
-                </button>
-                <button
-                  onClick={() => setTenantView('capability')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${tenantView === 'capability' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <Layers className="w-3.5 h-3.5" /> Capability Stack
-                </button>
-                <button
-                  onClick={() => setTenantView('rampup')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${tenantView === 'rampup' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <Rocket className="w-3.5 h-3.5" /> Ramp Up
-                </button>
-              </div>
-              {tenantView === 'management' && (
-                <Button size="sm" className="gap-1.5 flex-shrink-0">
-                  <Plus className="w-4 h-4" /> Onboard Tenant
-                </Button>
+            {/* Tenant Management */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading font-semibold text-base flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-orbitan-blue" /> Tenant Management
+              </h3>
+              <Button size="sm" className="gap-1.5 flex-shrink-0">
+                <Plus className="w-4 h-4" /> Onboard Tenant
+              </Button>
+            </div>
+            <div className="space-y-3 mb-10">
+              {tenants.map((tenant) =>
+              <div key={tenant.id} className="bg-card border border-border rounded-xl p-5 hover:shadow-md transition-shadow">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="font-heading font-semibold text-foreground">{tenant.name}</h3>
+                        <StatusBadge status={tenant.status} />
+                        <PlanBadge plan={tenant.subscription_plan} />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {INDUSTRY_LABELS[tenant.industry]} · {tenant.enabled_modules?.length || 0} modules active
+                        {tenant.max_employees ? ` · Up to ${tenant.max_employees} employees` : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <PackBadgeGroup packs={tenant.enabled_packs || []} size="xs" />
+                      <Link to={
+                        tenant.id === 'tenant_taqueria' ? '/t1/dashboard' :
+                        tenant.id === 'tenant_renewed' ? '/t2/dashboard' :
+                        tenant.id === 'tenant_retail' ? '/t3/dashboard' :
+                        '/leader-org'
+                      }>
+                        <Button variant="outline" size="sm" className="gap-1 text-xs">
+                          View <ChevronRight className="w-3 h-3" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-border flex flex-wrap gap-1">
+                    {(tenant.enabled_modules || []).slice(0, 8).map((mod) =>
+                      <span key={mod} className="text-[10px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
+                        {MODULES[mod]?.name || mod}
+                      </span>
+                    )}
+                    {(tenant.enabled_modules || []).length > 8 &&
+                      <span className="text-[10px] text-muted-foreground px-2 py-0.5">
+                        +{(tenant.enabled_modules?.length || 0) - 8} more
+                      </span>
+                    }
+                  </div>
+                </div>
               )}
             </div>
 
-            {/* Management View */}
-            {tenantView === 'management' && (
-              <div className="space-y-3 animate-fade-in">
-                {tenants.map((tenant) =>
-                <div key={tenant.id} className="bg-card border border-border rounded-xl p-5 hover:shadow-md transition-shadow">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="font-heading font-semibold text-foreground">{tenant.name}</h3>
-                          <StatusBadge status={tenant.status} />
-                          <PlanBadge plan={tenant.subscription_plan} />
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {INDUSTRY_LABELS[tenant.industry]} · {tenant.enabled_modules?.length || 0} modules active · Up to {tenant.max_employees} employees
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <PackBadgeGroup
-                          packs={tenant.enabled_packs || (
-                            tenant.id === 'tenant_taqueria' ? ['core', 'fnb', 'finance', 'compliance'] :
-                            tenant.id === 'tenant_renewed' ? ['core', 'recycling', 'compliance'] :
-                            ['core', 'retail']
-                          )}
-                          size="xs" />
-                        <Link to={
-                          tenant.id === 'tenant_taqueria' ? '/t1/dashboard' :
-                          tenant.id === 'tenant_renewed' ? '/t2/dashboard' :
-                          tenant.id === 'tenant_retail' ? '/t3/dashboard' :
-                          '/leader-org'
-                        }>
-                          <Button variant="outline" size="sm" className="gap-1 text-xs">
-                            View <ChevronRight className="w-3 h-3" />
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-border flex flex-wrap gap-1">
-                      {(tenant.enabled_modules || []).slice(0, 8).map((mod) =>
-                        <span key={mod} className="text-[10px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
-                          {MODULES[mod]?.name || mod}
-                        </span>
-                      )}
-                      {(tenant.enabled_modules || []).length > 8 &&
-                        <span className="text-[10px] text-muted-foreground px-2 py-0.5">
-                          +{(tenant.enabled_modules?.length || 0) - 8} more
-                        </span>
-                      }
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Capability Stack */}
+            <div className="mb-2">
+              <h3 className="font-heading font-semibold text-base flex items-center gap-2 mb-4">
+                <Layers className="w-4 h-4 text-orbitan-purple" /> Capability Stack
+              </h3>
+              <CapabilityStack />
+            </div>
 
-            {/* Capability Stack View */}
-            {tenantView === 'capability' && (
-              <div className="animate-fade-in">
-                <CapabilityStack />
-              </div>
-            )}
-
-            {/* Ramp Up View */}
-            {tenantView === 'rampup' && (
-              <div className="animate-fade-in">
-                <RampUpPanel />
-              </div>
-            )}
+            {/* Ramp Up */}
+            <div className="mt-10">
+              <h3 className="font-heading font-semibold text-base flex items-center gap-2 mb-4">
+                <Rocket className="w-4 h-4 text-orbitan-green" /> Ramp Up
+              </h3>
+              <RampUpPanel />
+            </div>
           </TabsContent>
 
           {/* Modules & Packs Tab */}

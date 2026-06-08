@@ -66,6 +66,24 @@ export const DEMO_TENANTS = [
     country: LAUNCH_TENANTS.renewed_fashion.country,
     currency: LAUNCH_TENANTS.renewed_fashion.currency,
   },
+  {
+    id: "tenant_izaliqa",
+    name: LAUNCH_TENANTS.izaliqa_bakes.name,
+    legal_name: LAUNCH_TENANTS.izaliqa_bakes.legal_name,
+    industry: LAUNCH_TENANTS.izaliqa_bakes.industry,
+    subscription_plan: LAUNCH_TENANTS.izaliqa_bakes.plan,
+    status: LAUNCH_TENANTS.izaliqa_bakes.status,
+    enabled_modules: LAUNCH_TENANTS.izaliqa_bakes.enabled_modules,
+    enabled_packs: LAUNCH_TENANTS.izaliqa_bakes.enabled_packs,
+    contact_email: "hello@izaliqabakes.sg",
+    max_employees: 10,
+    slug: "t4",
+    base_path: "/t4",
+    brand: LAUNCH_TENANTS.izaliqa_bakes.brands[0],
+    outlet: LAUNCH_TENANTS.izaliqa_bakes.outlets[0],
+    country: LAUNCH_TENANTS.izaliqa_bakes.country,
+    currency: LAUNCH_TENANTS.izaliqa_bakes.currency,
+  },
 ];
 
 // ── Tenant ID → slug resolver (exit-ready utility) ────────────
