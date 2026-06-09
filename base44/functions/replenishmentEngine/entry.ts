@@ -81,19 +81,24 @@ async function runRetailAutopilot(base44, tenantId, outletId, inventoryItems) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
 
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Support both scheduled automation payloads (no user session)
+    // and manual triggers from authenticated users
+    let payload = {};
+    try { payload = await req.json(); } catch (e) {}
 
-    if (!['admin', 'tenant_admin', 'outlet_manager'].includes(user.role)) {
+    let user = null;
+    try { user = await base44.auth.me(); } catch (e) {}
+
+    // Scheduled automations pass tenantId/outletId in the payload (function_args)
+    const tenantId = payload.tenantId || user?.data?.tenant_id;
+    const outletId = payload.outletId || user?.data?.outlet_id;
+    const industryPack = payload.industryPack || user?.data?.industry_pack || 'fnb';
+
+    // If triggered by a logged-in user, enforce role check
+    if (user && !['admin', 'tenant_admin', 'outlet_manager'].includes(user.role)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
-
-    const tenantId = user.data?.tenant_id;
-    const outletId = user.data?.outlet_id;
-    const industryPack = user.data?.industry_pack || 'fnb'; // Determines autopilot rules
 
     if (!tenantId || !outletId) {
       return Response.json({ error: 'tenant_id and outlet_id required' }, { status: 400 });
