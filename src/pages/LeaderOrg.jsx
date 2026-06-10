@@ -14,6 +14,7 @@ import CurrencyDropdown from '@/components/shared/CurrencyDropdown';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TenantCommandCard from '@/components/leader/TenantCommandCard';
 import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionPlansAccordion';
+import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
@@ -145,6 +146,9 @@ export default function LeaderOrg() {
             <TabsTrigger value="modules">Modules &amp; Packs</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
             <TabsTrigger value="cycle">Operating Cycle</TabsTrigger>
+            <TabsTrigger value="orchestrator" className="gap-1.5">
+              <Shield className="w-3.5 h-3.5" />Orchestrator
+            </TabsTrigger>
             <TabsTrigger value="about">About Platform</TabsTrigger>
           </TabsList>
 
@@ -308,6 +312,11 @@ export default function LeaderOrg() {
                 Every module is tagged with its principle key (<code className="bg-card px-1.5 py-0.5 rounded font-mono">principle: "regulate"</code>, etc.), ensuring that when you migrate stacks, the OrbitanOS DNA — including its brand philosophy — travels with the codebase.
               </p>
             </div>
+          </TabsContent>
+
+          {/* Orchestrator Tab */}
+          <TabsContent value="orchestrator">
+            <OrchestratorTab />
           </TabsContent>
 
           {/* About Tab */}

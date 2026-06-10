@@ -1,0 +1,70 @@
+{
+  "name": "SystemSettings",
+  "type": "object",
+  "description": "OrbitanOS Global Governance Registry \u2014 singleton record controlling platform-wide maintenance mode, shield posture, and feature flags. Powered by the Regulate principle. Exit-Ready.",
+  "properties": {
+    "maintenance_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Global kill-switch. When true, all tenant app users see MaintenanceView."
+    },
+    "maintenance_title": {
+      "type": "string",
+      "default": "Scheduled Maintenance",
+      "description": "Headline shown on the MaintenanceView"
+    },
+    "maintenance_message": {
+      "type": "string",
+      "description": "Detailed explanation shown to users during maintenance"
+    },
+    "expected_resume_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Expected time the platform will return to full operation"
+    },
+    "shield_level": {
+      "type": "string",
+      "enum": [
+        "auditor",
+        "guardian"
+      ],
+      "default": "auditor",
+      "description": "Platform-wide Shield posture. guardian = block high-risk actions globally."
+    },
+    "allow_admin_access_during_maintenance": {
+      "type": "boolean",
+      "default": true,
+      "description": "If true, admin users bypass the MaintenanceView and retain full access"
+    },
+    "platform_version": {
+      "type": "string",
+      "description": "Current live platform version string e.g. 1.4.2"
+    },
+    "status_message": {
+      "type": "string",
+      "description": "Optional public-facing status message shown in the app header (e.g. 'Degraded performance on Xero sync')"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

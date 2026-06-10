@@ -1,0 +1,124 @@
+{
+  "name": "DeploymentLog",
+  "type": "object",
+  "description": "OrbitanOS Versioned Release Registry \u2014 immutable audit trail of every platform update. Governed by the Regulate principle. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Semantic version string e.g. 1.4.2"
+    },
+    "release_type": {
+      "type": "string",
+      "enum": [
+        "hotfix",
+        "patch",
+        "minor",
+        "major",
+        "maintenance_window"
+      ],
+      "default": "patch"
+    },
+    "release_notes": {
+      "type": "string",
+      "description": "Markdown-formatted release notes visible to platform owner"
+    },
+    "modules_affected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of OrbitanOS modules touched by this release"
+    },
+    "tenants_affected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tenant IDs this deployment was rolled out to"
+    },
+    "deployment_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "pending_validation",
+        "validated",
+        "live",
+        "rolled_back",
+        "failed"
+      ],
+      "default": "draft",
+      "description": "Current state of this deployment"
+    },
+    "validation_snapshot": {
+      "type": "object",
+      "description": "JSON snapshot of Testing Agent results before go-live"
+    },
+    "feature_flags_toggled": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of feature flag keys activated in this release"
+    },
+    "deployed_by": {
+      "type": "string",
+      "description": "User ID of the platform owner who pushed this release"
+    },
+    "deployed_by_name": {
+      "type": "string"
+    },
+    "deployed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rolled_back_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rollback_reason": {
+      "type": "string"
+    },
+    "maintenance_window_start": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "maintenance_window_end": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "shield_check_passed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if shieldInterceptor governance check passed before activation"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "deployment_status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
