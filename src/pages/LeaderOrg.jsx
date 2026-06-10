@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TenantCommandCard from '@/components/leader/TenantCommandCard';
 import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionPlansAccordion';
 import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
+import AnnouncementsManager from '@/components/announcements/AnnouncementsManager';
+import { Megaphone } from 'lucide-react';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
@@ -148,6 +150,9 @@ export default function LeaderOrg() {
             <TabsTrigger value="cycle">Operating Cycle</TabsTrigger>
             <TabsTrigger value="orchestrator" className="gap-1.5">
               <Shield className="w-3.5 h-3.5" />Orchestrator
+            </TabsTrigger>
+            <TabsTrigger value="broadcast" className="gap-1.5">
+              <Megaphone className="w-3.5 h-3.5" />Broadcast
             </TabsTrigger>
             <TabsTrigger value="about">About Platform</TabsTrigger>
           </TabsList>
@@ -317,6 +322,15 @@ export default function LeaderOrg() {
           {/* Orchestrator Tab */}
           <TabsContent value="orchestrator">
             <OrchestratorTab />
+          </TabsContent>
+
+          {/* Broadcast Tab */}
+          <TabsContent value="broadcast">
+            <AnnouncementsManager
+              tenantId="taqueria_pte_ltd"
+              publisherName="Firdaus"
+              publisherRole="admin"
+            />
           </TabsContent>
 
           {/* About Tab */}

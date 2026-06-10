@@ -1,0 +1,173 @@
+{
+  "name": "Announcement",
+  "type": "object",
+  "description": "OrbitanOS Relate Principle \u2014 Broadcast engine for tenant-wide or outlet-specific announcements. Managers push updates to workers in real-time. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "If null, broadcast is tenant-wide. If set, only visible to that outlet."
+    },
+    "title": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "info",
+        "important",
+        "urgent",
+        "critical"
+      ],
+      "default": "info",
+      "description": "info = routine update | important = action may be needed | urgent = immediate attention | critical = emergency"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "general",
+        "operations",
+        "compliance",
+        "safety",
+        "hr",
+        "training",
+        "shift"
+      ],
+      "default": "general"
+    },
+    "industry_pack": {
+      "type": "string",
+      "enum": [
+        "fnb",
+        "recycling",
+        "retail",
+        "all"
+      ],
+      "default": "all",
+      "description": "Controls which industry pack workers see this announcement"
+    },
+    "published_by_id": {
+      "type": "string"
+    },
+    "published_by_name": {
+      "type": "string"
+    },
+    "published_by_role": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "requires_acknowledgement": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, workers must tap 'Got it' before dismissing"
+    },
+    "acknowledged_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of user IDs who have acknowledged this announcement"
+    },
+    "expiry_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Announcement auto-hides after this date/time"
+    },
+    "linked_document_id": {
+      "type": "string",
+      "description": "Optional: linked AIDocument (SOP/training) for Shield-validated broadcasts"
+    },
+    "pinned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pinned announcements always appear at top of feed"
+    },
+    "views_count": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "tenant_id",
+    "title",
+    "message",
+    "priority"
+  ],
+  "rls": {
+    "create": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        }
+      ]
+    },
+    "update": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "data.tenant_id": "{{user.data.tenant_id}}",
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "tenant_admin"
+          }
+        }
+      ]
+    }
+  }
+}

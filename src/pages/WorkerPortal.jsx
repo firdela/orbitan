@@ -8,6 +8,7 @@ import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import WorkerFeedbackModal from '@/components/worker/WorkerFeedbackModal';
+import AnnouncementFeed from '@/components/announcements/AnnouncementFeed';
 import ReportIssueModal from '@/components/shared/ReportIssueModal';
 import FoodSafetyLogWidget from '@/components/worker/FoodSafetyLogWidget';
 import NotificationsInbox from '@/components/shared/NotificationsInbox';
@@ -526,6 +527,13 @@ export default function WorkerPortal() {
                 </div>
               </div>
             )}
+
+            {/* Announcements Feed */}
+            <AnnouncementFeed
+              tenantId={T1_TENANT_ID}
+              workerId={WORKER_DEMO.id}
+              maxItems={5}
+            />
 
             {/* Feedback CTA */}
             <button onClick={() => setActiveSection('profile')}
