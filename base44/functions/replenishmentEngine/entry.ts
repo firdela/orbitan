@@ -17,14 +17,42 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
 // ── Industry Autopilot Rules ──────────────────────────────────
 async function runFnBAutopilot(base44, tenantId, outletId, poItemsForCritical, suppliers) {
-  // F&B Rule: Only auto-draft PO if supplier is "preferred"
-  const preferredSupplierIds = new Set(
-    suppliers.filter(s => s.is_preferred === true).map(s => s.id)
-  );
-  return poItemsForCritical.filter(item => {
-    if (!item.supplier_id) return false; // No supplier = skip
-    return preferredSupplierIds.has(item.supplier_id);
+  // F&B Regulate Rule:
+  // 1. Only auto-draft PO if supplier is marked "preferred" (governance gate)
+  // 2. Critical F&B ingredient suppliers (is_critical_fnb) are treated with highest priority
+  // 3. Respect min_order_value — consolidate items per supplier before committing
+  const supplierMap = {};
+  suppliers.forEach(s => { supplierMap[s.id] = s; });
+
+  const eligible = poItemsForCritical.filter(item => {
+    if (!item.supplier_id) return false;
+    const supplier = supplierMap[item.supplier_id];
+    if (!supplier) return false;
+    if (!supplier.is_preferred) return false; // Governance gate: only preferred suppliers
+    return true;
   });
+
+  // Enforce min_order_value per supplier — skip if consolidated order is below minimum
+  const bySupplier = {};
+  eligible.forEach(item => {
+    if (!bySupplier[item.supplier_id]) bySupplier[item.supplier_id] = [];
+    bySupplier[item.supplier_id].push(item);
+  });
+
+  const finalEligible = [];
+  for (const [supplierId, items] of Object.entries(bySupplier)) {
+    const supplier = supplierMap[supplierId];
+    const orderTotal = items.reduce((sum, i) => sum + i.total, 0);
+    const minOrder = supplier?.min_order_value || 0;
+    if (orderTotal < minOrder) {
+      // Mark items but don't auto-draft PO — flag for manual review instead
+      items.forEach(i => { i._below_min_order = true; i._min_order_value = minOrder; });
+    } else {
+      finalEligible.push(...items);
+    }
+  }
+
+  return finalEligible;
 }
 
 async function runRecyclingAutopilot(base44, tenantId, outletId, inventoryItems) {

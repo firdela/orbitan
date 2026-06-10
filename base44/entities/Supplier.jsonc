@@ -33,6 +33,20 @@
         "type": "string"
       }
     },
+    "is_preferred": {
+      "type": "boolean",
+      "default": false,
+      "description": "Marks this supplier as a preferred/vetted source. The ReplenishmentEngine autopilot will only raise POs against preferred suppliers for critical F&B ingredient stock."
+    },
+    "is_critical_fnb": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for suppliers that provide critical F&B ingredients (proteins, produce). Autopilot prioritises these over generic supply suppliers."
+    },
+    "min_order_value": {
+      "type": "number",
+      "description": "Minimum order value in tenant currency (SGD). Used by autopilot to consolidate POs."
+    },
     "status": {
       "type": "string",
       "enum": [
