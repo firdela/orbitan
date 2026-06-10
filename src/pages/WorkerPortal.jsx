@@ -8,6 +8,7 @@ import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import WorkerFeedbackModal from '@/components/worker/WorkerFeedbackModal';
+import ReportIssueModal from '@/components/shared/ReportIssueModal';
 import FoodSafetyLogWidget from '@/components/worker/FoodSafetyLogWidget';
 import NotificationsInbox from '@/components/shared/NotificationsInbox';
 import {
@@ -257,7 +258,7 @@ function ShiftsScreen({ clockedIn, clockInTime, elapsed, onClockIn, onClockOut }
   );
 }
 
-function ProfileScreen({ worker, onFeedback }) {
+function ProfileScreen({ worker, onFeedback, onReportIssue }) {
   return (
     <div className="space-y-4">
       {/* Profile card */}
@@ -310,6 +311,15 @@ function ProfileScreen({ worker, onFeedback }) {
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           ))}
+          <button onClick={onReportIssue}
+            className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 active:bg-muted transition-colors text-left border-t border-border">
+            <span className="text-lg flex-shrink-0">🐛</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">Report an Issue</p>
+              <p className="text-xs text-muted-foreground">Bug, data issue, or usability problem</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
       </div>
 
@@ -348,6 +358,7 @@ export default function WorkerPortal() {
   const [activeSection, setActiveSection] = useState('home');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackPreset, setFeedbackPreset] = useState(null);
+  const [reportIssueOpen, setReportIssueOpen] = useState(false);
   const [elapsed, setElapsed] = useState('0:00:00');
 
   useEffect(() => {
@@ -415,10 +426,6 @@ export default function WorkerPortal() {
                 <span className="text-[10px] font-bold text-red-600">{urgentTasks} urgent</span>
               </div>
             )}
-            <button onClick={() => openFeedback('suggestion')}
-              className="w-9 h-9 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors">
-              <MessageSquarePlus className="w-4 h-4 text-primary" />
-            </button>
             <NotificationsInbox tenantSlug="t1" />
             <div className="w-9 h-9 rounded-full orbitan-gradient flex items-center justify-center text-white text-xs font-bold shadow-md">
               {WORKER_DEMO.avatar_initials}
@@ -581,7 +588,7 @@ export default function WorkerPortal() {
 
         {/* PROFILE / ME */}
         {activeSection === 'profile' && (
-          <ProfileScreen worker={WORKER_DEMO} onFeedback={openFeedback} />
+          <ProfileScreen worker={WORKER_DEMO} onFeedback={openFeedback} onReportIssue={() => setReportIssueOpen(true)} />
         )}
 
       </main>
@@ -609,6 +616,13 @@ export default function WorkerPortal() {
         open={feedbackOpen}
         onClose={() => { setFeedbackOpen(false); setFeedbackPreset(null); }}
         worker={WORKER_DEMO}
+      />
+
+      {/* Report Issue Modal — triggered from Me tab, FAB hidden */}
+      <ReportIssueModal
+        hideFloatingButton
+        externalOpen={reportIssueOpen}
+        onExternalClose={() => setReportIssueOpen(false)}
       />
     </div>
   );

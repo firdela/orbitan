@@ -46,7 +46,7 @@ const SEVERITIES = [
   { value: 'critical', label: 'Critical — System failure',   dot: 'bg-red-600' },
 ];
 
-export default function ReportIssueModal() {
+export default function ReportIssueModal({ hideFloatingButton = false, externalOpen, onExternalClose }) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,6 +57,13 @@ export default function ReportIssueModal() {
     title: '',
     description: '',
   });
+
+  // Support external open control
+  const isOpen = externalOpen !== undefined ? externalOpen : open;
+  const handleClose = () => {
+    if (onExternalClose) onExternalClose();
+    else setOpen(false);
+  };
 
   const handleOpen = () => {
     setSubmitted(false);
@@ -88,17 +95,19 @@ export default function ReportIssueModal() {
 
   return (
     <>
-      {/* Floating Trigger Button */}
-      <button
-        onClick={handleOpen}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-orbitan-slate text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg hover:bg-orbitan-blue transition-all duration-200 hover:shadow-xl group"
-        title="Report an Issue"
-      >
-        <MessageSquarePlus className="w-4 h-4" />
-        <span className="hidden sm:inline">Feedback</span>
-      </button>
+      {/* Floating Trigger Button — hidden when embedded */}
+      {!hideFloatingButton && (
+        <button
+          onClick={handleOpen}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-orbitan-slate text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg hover:bg-orbitan-blue transition-all duration-200 hover:shadow-xl group"
+          title="Report an Issue"
+        >
+          <MessageSquarePlus className="w-4 h-4" />
+          <span className="hidden sm:inline">Feedback</span>
+        </button>
+      )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
           {!submitted ? (
             <>
@@ -227,7 +236,7 @@ export default function ReportIssueModal() {
                   Thank you — your feedback has been logged and will be reviewed by the Orbitan team.
                 </p>
               </div>
-              <Button size="sm" onClick={() => setOpen(false)} className="mt-2">
+              <Button size="sm" onClick={handleClose} className="mt-2">
                 Close
               </Button>
             </div>
