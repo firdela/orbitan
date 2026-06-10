@@ -9,7 +9,6 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { TenantProvider } from '@/lib/use-tenant.jsx';
 import { GlobalOutletProvider } from '@/lib/GlobalOutletContext';
 import { CurrencyProvider } from '@/lib/CurrencyContext';
-import ReportIssueModal from '@/components/shared/ReportIssueModal';
 import SystemGuard from '@/components/layout/SystemGuard';
 
 // Page imports
@@ -174,7 +173,6 @@ function App() {
             <SystemGuard>
               <AuthenticatedApp />
             </SystemGuard>
-            <ReportIssueModal />
           </Router>
           </GlobalOutletProvider>
           <Toaster />

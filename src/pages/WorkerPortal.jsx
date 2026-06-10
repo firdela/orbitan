@@ -296,7 +296,6 @@ function ProfileScreen({ worker, onFeedback, onReportIssue }) {
         <div className="divide-y divide-border">
           {[
             { emoji: '💡', label: 'Share a Suggestion', desc: 'Improve how we work', type: 'suggestion' },
-            { emoji: '⚠️', label: 'Report an Issue', desc: 'Something needs fixing', type: 'issue' },
             { emoji: '🌟', label: 'Give Praise', desc: 'Recognise your team', type: 'praise' },
             { emoji: '🚨', label: 'Urgent Escalation', desc: 'Needs immediate attention', type: 'urgent_escalation' },
             { emoji: '🚀', label: 'Improve Orbitan', desc: 'Tell Firdaus & product team', type: 'orbitan_product_feedback' },
@@ -312,7 +311,7 @@ function ProfileScreen({ worker, onFeedback, onReportIssue }) {
             </button>
           ))}
           <button onClick={onReportIssue}
-            className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 active:bg-muted transition-colors text-left border-t border-border">
+            className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 active:bg-muted transition-colors text-left">
             <span className="text-lg flex-shrink-0">🐛</span>
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">Report an Issue</p>
