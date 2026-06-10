@@ -1,0 +1,149 @@
+{
+  "name": "WorkerFeedback",
+  "type": "object",
+  "description": "OrbitanOS Worker Voice \u2014 feedback, suggestions, and escalations submitted by workers. Routes to platform owner (Orbitan product feedback), managers, and leaders. Principle: Relate.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "worker_id": {
+      "type": "string"
+    },
+    "worker_name": {
+      "type": "string"
+    },
+    "worker_role": {
+      "type": "string"
+    },
+    "feedback_type": {
+      "type": "string",
+      "enum": [
+        "suggestion",
+        "issue",
+        "praise",
+        "urgent_escalation",
+        "orbitan_product_feedback"
+      ],
+      "default": "suggestion",
+      "description": "suggestion = improve operations | issue = problem report | praise = recognise team/manager | urgent_escalation = needs immediate manager attention | orbitan_product_feedback = direct to Firdaus / Orbitan product team"
+    },
+    "recipient_type": {
+      "type": "string",
+      "enum": [
+        "my_manager",
+        "business_leader",
+        "orbitan_platform",
+        "all_leaders"
+      ],
+      "default": "my_manager",
+      "description": "Who this feedback is directed to"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "is_anonymous": {
+      "type": "boolean",
+      "default": false
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "normal",
+        "high",
+        "urgent"
+      ],
+      "default": "normal"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "submitted",
+        "seen",
+        "in_review",
+        "resolved",
+        "escalated"
+      ],
+      "default": "submitted"
+    },
+    "response": {
+      "type": "string",
+      "description": "Manager or leader reply"
+    },
+    "responded_by": {
+      "type": "string"
+    },
+    "responded_by_name": {
+      "type": "string"
+    },
+    "responded_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "feedback_type",
+    "subject",
+    "message"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.worker_id": "{{user.id}}"
+        },
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}",
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}",
+          "user_condition": {
+            "role": {
+              "$in": [
+                "tenant_admin",
+                "outlet_manager",
+                "supervisor"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
