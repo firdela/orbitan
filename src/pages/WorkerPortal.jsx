@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, isToday } from 'date-fns';
-import { PLATFORM_IDENTITY } from '@/lib/orbitan-config';
+import { useAuth } from '@/lib/AuthContext';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -12,35 +12,32 @@ import AnnouncementFeed from '@/components/announcements/AnnouncementFeed';
 import ReportIssueModal from '@/components/shared/ReportIssueModal';
 import FoodSafetyLogWidget from '@/components/worker/FoodSafetyLogWidget';
 import NotificationsInbox from '@/components/shared/NotificationsInbox';
+import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import {
   Clock, CheckSquare, Calendar, LogIn, LogOut,
-  ChevronRight, MapPin, CheckCircle2, Briefcase, Layers,
-  Building2, Zap, Star, Flame, Trophy, Target, BookOpen, Shield,
-  MessageSquarePlus, Bell, Home, ListChecks, User,
-  AlertTriangle, Circle, Play, RotateCcw, Utensils,
-  TrendingUp, ArrowRight, X, Loader2
+  ChevronRight, MapPin, CheckCircle2, Flame, Trophy, Shield,
+  MessageSquarePlus, Home, ListChecks, User,
+  RotateCcw, Utensils, Zap, X
 } from 'lucide-react';
 
-const T1_TENANT_ID = 'taqueria_pte_ltd';
-const T1_OUTLET_ID = 'taqueria_pte_ltd_main';
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const WORKER_DEMO = {
-  id: 'demo-worker-1',
-  name: "Fahmi",
-  full_name: "Fahmi Bin Hassan",
-  position: "Kitchen Staff",
-  outlet: "La Birria Tacos (North Bridge Rd)",
-  avatar_initials: "FH",
-  tenant_id: T1_TENANT_ID,
-  outlet_id: T1_OUTLET_ID,
-  role: 'worker',
-};
+function getInitials(name) {
+  if (!name) return '??';
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
 
-const DEMO_SHIFTS = [
-  { id: 1, date: new Date().toISOString().split('T')[0], start_time: "09:00", end_time: "17:00", status: "scheduled", outlet: "La Birria Tacos (NB)" },
-  { id: 2, date: new Date(Date.now() + 86400000).toISOString().split('T')[0], start_time: "11:00", end_time: "19:00", status: "scheduled", outlet: "La Birria Tacos (NB)" },
-  { id: 3, date: new Date(Date.now() + 172800000).toISOString().split('T')[0], start_time: "10:00", end_time: "18:00", status: "scheduled", outlet: "La Birria Tacos (NB)" },
-];
+function computeAttendancePct(records) {
+  if (!records || records.length === 0) return 0;
+  const verified = records.filter(r => r.validation_status === 'approved');
+  return Math.round((verified.length / records.length) * 100);
+}
+
+function computeProductivityPct(tasks) {
+  if (!tasks || tasks.length === 0) return 0;
+  const completed = tasks.filter(t => t.status === 'completed').length;
+  return Math.round((completed / tasks.length) * 100);
+}
 
 const PRIORITY_CONFIG = {
   low:    { color: 'bg-slate-100 text-slate-500',    dot: 'bg-slate-400',    label: 'Low',    ring: 'ring-slate-200' },
@@ -179,9 +176,9 @@ function TasksScreen({ tasks, updateTask }) {
   );
 }
 
-function ShiftsScreen({ clockedIn, clockInTime, elapsed, onClockIn, onClockOut }) {
+function ShiftsScreen({ shifts, clockedIn, clockInTime, elapsed, onClockIn, onClockOut }) {
   const currentTime = new Date();
-  const todayShift = DEMO_SHIFTS.find(s => isToday(new Date(s.date)));
+  const todayShift = shifts.find(s => isToday(new Date(s.date)));
 
   return (
     <div className="space-y-4">
@@ -223,8 +220,14 @@ function ShiftsScreen({ clockedIn, clockInTime, elapsed, onClockIn, onClockOut }
           <h3 className="font-heading font-semibold text-sm">My Schedule</h3>
         </div>
         <div className="divide-y divide-border">
-          {DEMO_SHIFTS.map(shift => {
-            const isShiftToday = isToday(new Date(shift.date + 'T00:00:00'));
+          {shifts.length === 0 && (
+            <div className="px-5 py-10 text-center">
+              <Calendar className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No shifts scheduled yet</p>
+            </div>
+          )}
+          {shifts.map(shift => {
+            const isShiftToday = isToday(new Date(shift.date));
             return (
               <div key={shift.id} className={`px-5 py-4 flex items-center gap-3 ${isShiftToday ? 'bg-primary/5' : ''}`}>
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isShiftToday ? 'orbitan-gradient' : 'bg-muted'}`}>
@@ -232,12 +235,12 @@ function ShiftsScreen({ clockedIn, clockInTime, elapsed, onClockIn, onClockOut }
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">{format(new Date(shift.date + 'T00:00:00'), 'EEE, d MMM')}</p>
+                    <p className="text-sm font-semibold text-foreground">{format(new Date(shift.date), 'EEE, d MMM')}</p>
                     {isShiftToday && <span className="text-[10px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">Today</span>}
                   </div>
-                  <p className="text-xs text-muted-foreground">{shift.start_time} – {shift.end_time} · {shift.outlet}</p>
+                  <p className="text-xs text-muted-foreground">{shift.start_time} – {shift.end_time}</p>
                 </div>
-                <StatusBadge status={isShiftToday && clockedIn ? 'in_progress' : 'scheduled'} />
+                <StatusBadge status={isShiftToday && clockedIn ? 'in_progress' : shift.status} />
               </div>
             );
           })}
@@ -259,28 +262,28 @@ function ShiftsScreen({ clockedIn, clockInTime, elapsed, onClockIn, onClockOut }
   );
 }
 
-function ProfileScreen({ worker, onFeedback, onReportIssue }) {
+function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onReportIssue }) {
   return (
     <div className="space-y-4">
       {/* Profile card */}
       <div className="bg-gradient-to-br from-[#1D4ED8] to-[#111827] rounded-2xl p-6 text-white">
         <div className="flex items-center gap-4 mb-5">
           <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-xl font-bold font-display border-2 border-white/30">
-            {worker.avatar_initials}
+            {worker.initials}
           </div>
           <div>
             <p className="text-xl font-display font-bold">{worker.full_name}</p>
             <p className="text-white/70 text-sm">{worker.position}</p>
-            <p className="text-white/50 text-xs mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" />{worker.outlet}</p>
+            <p className="text-white/50 text-xs mt-0.5 flex items-center gap-1"><MapPin className="w-3 h-3" />{worker.position || 'Team Member'}</p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white/10 rounded-xl p-3 text-center">
-            <p className="text-lg font-bold font-display">87%</p>
+            <p className="text-lg font-bold font-display">{attendancePct}%</p>
             <p className="text-white/60 text-[10px]">Attendance</p>
           </div>
           <div className="bg-white/10 rounded-xl p-3 text-center">
-            <p className="text-lg font-bold font-display">92%</p>
+            <p className="text-lg font-bold font-display">{productivityPct}%</p>
             <p className="text-white/60 text-[10px]">Productivity</p>
           </div>
         </div>
@@ -352,6 +355,9 @@ function ProfileScreen({ worker, onFeedback, onReportIssue }) {
 
 export default function WorkerPortal() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const userEmail = user?.email || '';
+
   const [clockedIn, setClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -378,24 +384,82 @@ export default function WorkerPortal() {
     return () => clearInterval(iv);
   }, [clockedIn, clockInTime]);
 
-  const { data: liveTasks = [] } = useQuery({
-    queryKey: ['worker-tasks', T1_TENANT_ID],
-    queryFn: () => base44.entities.Task.filter({ tenant_id: T1_TENANT_ID }),
+  // ── Live data queries ─────────────────────────────────────────────────────
+
+  const { data: employee, isLoading: empLoading } = useQuery({
+    queryKey: ['worker-employee', userEmail],
+    queryFn: async () => {
+      if (!userEmail) return null;
+      const results = await base44.entities.Employee.filter({ email: userEmail });
+      return results.length > 0 ? results[0] : null;
+    },
+    enabled: !!userEmail,
   });
+
+  const tenantId = employee?.tenant_id || '';
+  const outletId = employee?.outlet_id || '';
+  const workerId = employee?.id || '';
+  const workerName = employee?.full_name || user?.full_name || 'Worker';
+  const workerFirstName = workerName.split(' ')[0];
+  const workerInitials = getInitials(workerName);
+
+  const { data: liveTasks = [] } = useQuery({
+    queryKey: ['worker-tasks', tenantId, workerId],
+    queryFn: () => base44.entities.Task.filter({ tenant_id: tenantId, assigned_to: workerId }),
+    enabled: !!tenantId && !!workerId,
+  });
+
+  const { data: liveShifts = [] } = useQuery({
+    queryKey: ['worker-shifts', tenantId, workerId],
+    queryFn: () => base44.entities.Shift.filter({ tenant_id: tenantId, employee_id: workerId }),
+    enabled: !!tenantId && !!workerId,
+  });
+
+  const { data: clockRecords = [] } = useQuery({
+    queryKey: ['worker-clockrecords', tenantId, workerId],
+    queryFn: () => base44.entities.ClockRecord.filter({ tenant_id: tenantId, employee_id: workerId }),
+    enabled: !!tenantId && !!workerId,
+  });
+
+  const attendancePct = computeAttendancePct(clockRecords);
+  const productivityPct = computeProductivityPct(liveTasks);
 
   const updateTask = useMutation({
     mutationFn: ({ id, status }) => base44.entities.Task.update(id, {
       status,
       completed_date: status === 'completed' ? new Date().toISOString().split('T')[0] : null
     }),
-    onSuccess: () => queryClient.invalidateQueries(['worker-tasks', T1_TENANT_ID]),
+    onSuccess: () => queryClient.invalidateQueries(['worker-tasks', tenantId, workerId]),
   });
 
-  const todayShift = DEMO_SHIFTS.find(s => isToday(new Date(s.date)));
+  const todayShift = liveShifts.find(s => isToday(new Date(s.date)));
   const completedTasks = liveTasks.filter(t => t.status === 'completed').length;
   const totalTasks = liveTasks.length;
   const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   const urgentTasks = liveTasks.filter(t => t.priority === 'urgent' && t.status !== 'completed').length;
+
+  // ── Loading state ─────────────────────────────────────────────────────────
+
+  if (empLoading) {
+    return <OrbitanLoader size="fullscreen" message="Loading your profile…" />;
+  }
+
+  if (!employee && !empLoading && userEmail) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-5">
+          <User className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <h2 className="font-heading font-bold text-xl text-foreground mb-2">Account Not Found</h2>
+        <p className="text-sm text-muted-foreground max-w-xs mb-6">
+          Your account ({userEmail}) is not yet linked to an employee record. Please contact your manager to be onboarded.
+        </p>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          <RotateCcw className="w-4 h-4 mr-2" /> Retry
+        </Button>
+      </div>
+    );
+  }
 
   const hour = currentTime.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -428,7 +492,7 @@ export default function WorkerPortal() {
             )}
             <NotificationsInbox tenantSlug="t1" />
             <div className="w-9 h-9 rounded-full orbitan-gradient flex items-center justify-center text-white text-xs font-bold shadow-md">
-              {WORKER_DEMO.avatar_initials}
+              {workerInitials}
             </div>
           </div>
         </div>
@@ -443,10 +507,10 @@ export default function WorkerPortal() {
             <div className="animate-fade-in">
               <p className="text-xs text-muted-foreground">{format(currentTime, 'EEEE, d MMMM yyyy')}</p>
               <h1 className="text-2xl font-display font-bold text-foreground mt-0.5">
-                {greeting}, <span className="text-orbitan-blue">{WORKER_DEMO.name}</span> 👋
+                {greeting}, <span className="text-orbitan-blue">{workerFirstName}</span> 👋
               </h1>
               <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                <MapPin className="w-3 h-3" />{WORKER_DEMO.outlet}
+                <MapPin className="w-3 h-3" />{employee?.position || 'Team Member'}
               </p>
             </div>
 
@@ -530,8 +594,8 @@ export default function WorkerPortal() {
 
             {/* Announcements Feed */}
             <AnnouncementFeed
-              tenantId={T1_TENANT_ID}
-              workerId={WORKER_DEMO.id}
+              tenantId={tenantId}
+              workerId={workerId}
               maxItems={5}
             />
 
@@ -558,6 +622,7 @@ export default function WorkerPortal() {
         {/* SHIFTS */}
         {activeSection === 'shifts' && (
           <ShiftsScreen
+            shifts={liveShifts}
             clockedIn={clockedIn}
             clockInTime={clockInTime}
             elapsed={elapsed}
@@ -574,10 +639,10 @@ export default function WorkerPortal() {
               <p className="text-xs text-muted-foreground">Orbitan Shield™ · Regulate Principle</p>
             </div>
             <FoodSafetyLogWidget
-              employeeId={WORKER_DEMO.id}
-              employeeName={WORKER_DEMO.name}
-              tenantId={T1_TENANT_ID}
-              outletId={T1_OUTLET_ID}
+              employeeId={workerId}
+              employeeName={workerFirstName}
+              tenantId={tenantId}
+              outletId={outletId}
             />
             <Link to="/t1/compliance"
               className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3.5 hover:border-primary/30 transition-all group">
@@ -595,7 +660,17 @@ export default function WorkerPortal() {
 
         {/* PROFILE / ME */}
         {activeSection === 'profile' && (
-          <ProfileScreen worker={WORKER_DEMO} onFeedback={openFeedback} onReportIssue={() => setReportIssueOpen(true)} />
+          <ProfileScreen
+            worker={{
+              initials: workerInitials,
+              full_name: workerName,
+              position: employee?.position || 'Team Member',
+            }}
+            attendancePct={attendancePct}
+            productivityPct={productivityPct}
+            onFeedback={openFeedback}
+            onReportIssue={() => setReportIssueOpen(true)}
+          />
         )}
 
       </main>
@@ -622,7 +697,15 @@ export default function WorkerPortal() {
       <WorkerFeedbackModal
         open={feedbackOpen}
         onClose={() => { setFeedbackOpen(false); setFeedbackPreset(null); }}
-        worker={WORKER_DEMO}
+        worker={{
+          id: workerId,
+          name: workerFirstName,
+          full_name: workerName,
+          position: employee?.position || 'Team Member',
+          tenant_id: tenantId,
+          outlet_id: outletId,
+          role: 'worker',
+        }}
       />
 
       {/* Report Issue Modal — triggered from Me tab, FAB hidden */}
