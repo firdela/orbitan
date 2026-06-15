@@ -12,7 +12,7 @@ const ICON_WRAPPER_STYLES = {
 };
 
 export default function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   actionLabel,
@@ -21,6 +21,7 @@ export default function EmptyState({
   size = 'default',
   className,
 }) {
+  const Icon = icon;
   const iconWrapper = ICON_WRAPPER_STYLES[color] || ICON_WRAPPER_STYLES.slate;
   const isLarge = size === 'large';
 
