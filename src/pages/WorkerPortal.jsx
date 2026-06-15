@@ -177,7 +177,7 @@ function TasksScreen({ tasks, updateTask }) {
   );
 }
 
-function ShiftsScreen({ shifts, clockedIn, clockInTime, elapsed, onClockIn, onClockOut, tenantSlug }) {
+function ShiftsScreen({ shifts, clockedIn, clockInTime, elapsed, onClockIn, onClockOut }) {
   const currentTime = new Date();
   const todayShift = shifts.find(s => isToday(new Date(s.date)));
 
@@ -249,7 +249,7 @@ function ShiftsScreen({ shifts, clockedIn, clockInTime, elapsed, onClockIn, onCl
       </div>
 
       {/* Quick link to full timesheets */}
-      <Link to={`/${tenantSlug}/clockin`} className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3.5 hover:border-primary/30 transition-all group">
+      <Link to="/t1/clockin" className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3.5 hover:border-primary/30 transition-all group">
         <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
           <Clock className="w-4 h-4 text-blue-600" />
         </div>
@@ -263,7 +263,7 @@ function ShiftsScreen({ shifts, clockedIn, clockInTime, elapsed, onClockIn, onCl
   );
 }
 
-function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onReportIssue, tenantSlug }) {
+function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onReportIssue }) {
   return (
     <div className="space-y-4">
       {/* Profile card */}
@@ -334,9 +334,9 @@ function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onR
         </div>
         <div className="divide-y divide-border">
           {[
-            { to: `/${tenantSlug}/dashboard`, icon: Utensils, label: 'Dashboard', color: 'bg-orange-50 text-orange-600' },
-            { to: `/${tenantSlug}/compliance`, icon: Shield, label: 'Compliance Centre', color: 'bg-purple-50 text-purple-600' },
-            { to: `/${tenantSlug}/ai-studio`, icon: Zap, label: 'AI Studio & SOPs', color: 'bg-amber-50 text-amber-600' },
+            { to: '/t1/dashboard', icon: Utensils, label: 'F&B Dashboard', color: 'bg-orange-50 text-orange-600' },
+            { to: '/t1/compliance', icon: Shield, label: 'Compliance Centre', color: 'bg-purple-50 text-purple-600' },
+            { to: '/t1/ai-studio', icon: Zap, label: 'AI Studio & SOPs', color: 'bg-amber-50 text-amber-600' },
           ].map(({ to, icon: Icon, label, color }) => (
             <Link key={to} to={to} className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 transition-colors group">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
@@ -367,7 +367,23 @@ export default function WorkerPortal() {
   const [feedbackPreset, setFeedbackPreset] = useState(null);
   const [reportIssueOpen, setReportIssueOpen] = useState(false);
   const [elapsed, setElapsed] = useState('0:00:00');
-  const [clockLoading, setClockLoading] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!clockedIn || !clockInTime) { setElapsed('0:00:00'); return; }
+    const iv = setInterval(() => {
+      const diff = Math.floor((Date.now() - clockInTime.getTime()) / 1000);
+      const h = Math.floor(diff / 3600);
+      const m = Math.floor((diff % 3600) / 60);
+      const s = diff % 60;
+      setElapsed(`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [clockedIn, clockInTime]);
 
   // ── Live data queries ─────────────────────────────────────────────────────
 
@@ -387,12 +403,6 @@ export default function WorkerPortal() {
   const workerName = employee?.full_name || user?.full_name || 'Worker';
   const workerFirstName = workerName.split(' ')[0];
   const workerInitials = getInitials(workerName);
-
-  // ── Resolve tenant slug from employee record for dynamic routing ──
-  const tenantSlug = employee?.tenant_id === '6a21598721243d26f81e0153' ? 't1'
-    : employee?.tenant_id === '6a21598721243d26f81e0154' ? 't2'
-    : employee?.tenant_id === '6a21598721243d26f81e0155' ? 't3'
-    : 't1';
 
   const { data: liveTasks = [] } = useQuery({
     queryKey: ['worker-tasks', tenantId, workerId],
@@ -414,56 +424,6 @@ export default function WorkerPortal() {
 
   const attendancePct = computeAttendancePct(clockRecords);
   const productivityPct = computeProductivityPct(liveTasks);
-
-  // ── Restore clock state from backend on load ──
-  const { data: clockStatus } = useQuery({
-    queryKey: ['clock-status', tenantId, workerId],
-    queryFn: async () => {
-      if (!tenantId || !workerId) return null;
-      const res = await base44.functions.invoke('clockController', { action: 'get_status', employee_id: workerId });
-      return res.data;
-    },
-    enabled: !!tenantId && !!workerId,
-    refetchOnWindowFocus: true,
-  });
-
-  useEffect(() => {
-    if (clockStatus?.status === 'clocked_in' && clockStatus?.record) {
-      setClockedIn(true);
-      setClockInTime(new Date(clockStatus.record.clock_in_time));
-    }
-  }, [clockStatus]);
-
-  // ── Clock-in handler (persists to backend) ──
-  const handleClockIn = async () => {
-    if (!tenantId || !workerId) return;
-    setClockLoading(true);
-    try {
-      const res = await base44.functions.invoke('clockController', { action: 'clock_in', employee_id: workerId });
-      if (res.data?.success) {
-        setClockedIn(true);
-        setClockInTime(new Date());
-        queryClient.invalidateQueries(['worker-clockrecords', tenantId, workerId]);
-      }
-    } catch (e) { /* clockController handles error display */ }
-    setClockLoading(false);
-  };
-
-  // ── Clock-out handler (persists to backend) ──
-  const handleClockOut = async () => {
-    if (!tenantId || !workerId) return;
-    setClockLoading(true);
-    try {
-      const res = await base44.functions.invoke('clockController', { action: 'clock_out', employee_id: workerId });
-      if (res.data?.success) {
-        setClockedIn(false);
-        setClockInTime(null);
-        setElapsed('0:00:00');
-        queryClient.invalidateQueries(['worker-clockrecords', tenantId, workerId]);
-      }
-    } catch (e) { /* clockController handles error display */ }
-    setClockLoading(false);
-  };
 
   const updateTask = useMutation({
     mutationFn: ({ id, status }) => base44.entities.Task.update(id, {
@@ -519,7 +479,7 @@ export default function WorkerPortal() {
                 <span className="text-[10px] font-bold text-red-600">{urgentTasks} urgent</span>
               </div>
             )}
-            <NotificationsInbox tenantSlug={tenantSlug || 't1'} />
+            <NotificationsInbox tenantSlug="t1" />
             <div className="w-9 h-9 rounded-full orbitan-gradient flex items-center justify-center text-white text-xs font-bold shadow-md">
               {workerInitials}
             </div>
@@ -584,11 +544,10 @@ export default function WorkerPortal() {
                 </div>
               )}
               <button
-                onClick={clockedIn ? handleClockOut : handleClockIn}
-                disabled={clockLoading}
-                className="w-full bg-white/20 hover:bg-white/30 active:scale-[0.98] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all border border-white/20 disabled:opacity-50">
-                {clockLoading ? <RotateCcw className="w-4 h-4 animate-spin" /> : clockedIn ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
-                {clockLoading ? 'Processing...' : clockedIn ? 'Clock Out' : 'Clock In Now'}
+                onClick={() => { if (clockedIn) { setClockedIn(false); setClockInTime(null); } else { setClockedIn(true); setClockInTime(new Date()); } }}
+                className="w-full bg-white/20 hover:bg-white/30 active:scale-[0.98] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all border border-white/20">
+                {clockedIn ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                {clockedIn ? 'Clock Out' : 'Clock In Now'}
               </button>
             </div>
 
@@ -656,9 +615,8 @@ export default function WorkerPortal() {
             clockedIn={clockedIn}
             clockInTime={clockInTime}
             elapsed={elapsed}
-            onClockIn={handleClockIn}
-            onClockOut={handleClockOut}
-            tenantSlug={tenantSlug}
+            onClockIn={() => { setClockedIn(true); setClockInTime(new Date()); }}
+            onClockOut={() => { setClockedIn(false); setClockInTime(null); }}
           />
         )}
 
@@ -675,7 +633,7 @@ export default function WorkerPortal() {
               tenantId={tenantId}
               outletId={outletId}
             />
-            <Link to={`/${tenantSlug}/compliance`}
+            <Link to="/t1/compliance"
               className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3.5 hover:border-primary/30 transition-all group">
               <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
                 <Shield className="w-4 h-4 text-purple-600" />
@@ -701,7 +659,6 @@ export default function WorkerPortal() {
             productivityPct={productivityPct}
             onFeedback={openFeedback}
             onReportIssue={() => setReportIssueOpen(true)}
-            tenantSlug={tenantSlug}
           />
         )}
 
