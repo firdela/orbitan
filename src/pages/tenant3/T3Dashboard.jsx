@@ -3,6 +3,7 @@ import AppShell from '@/components/layout/AppShell';
 import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import NotificationsInbox from '@/components/shared/NotificationsInbox';
+import ShieldStatusWidget from '@/components/shield/ShieldStatusWidget';
 import { Button } from '@/components/ui/button';
 import {
   ShoppingBag, Package, FileText, Users, CheckSquare,
@@ -49,7 +50,7 @@ const MODULE_CARDS = [
 
 export default function T3Dashboard() {
   return (
-    <AppShell navigation={NAV} tenant={TENANT} title="" headerRight={<div className="flex items-center gap-2"><NotificationsInbox tenantSlug="t3" /><TenantSwitcher /></div>}>
+    <AppShell navigation={NAV} tenant={TENANT} title="" headerRight={<div className="flex items-center gap-2"><ShieldStatusWidget status="healthy" compact /><NotificationsInbox tenantSlug="t3" /><TenantSwitcher /></div>}>
       <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
 
         {/* Header — Phase A: Enterprise Multi-Pack Identity */}

@@ -36,11 +36,19 @@ Deno.serve(async (req) => {
       return Response.json({ allowed: true, reason: 'No tenant context — pass-through' });
     }
 
-    // Fetch active policies for this entity and tenant
-    const policies = await base44.asServiceRole.entities.GovernancePolicy.filter({
-      tenant_id: resolvedTenantId,
-      is_active: true
-    });
+    // Fetch active policies — BOTH tenant-specific AND platform-wide (tenant_id = 'orbitan_platform')
+    const [tenantPolicies, platformPolicies] = await Promise.all([
+      base44.asServiceRole.entities.GovernancePolicy.filter({
+        tenant_id: resolvedTenantId,
+        is_active: true
+      }),
+      base44.asServiceRole.entities.GovernancePolicy.filter({
+        tenant_id: 'orbitan_platform',
+        is_active: true
+      })
+    ]);
+
+    const policies = [...tenantPolicies, ...platformPolicies];
 
     const applicablePolicies = policies.filter(p =>
       p.target_entity === entity_name &&

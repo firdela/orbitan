@@ -78,6 +78,10 @@ export default function ShieldCommandCenter() {
 
   const seedPolicies = useMutation({
     mutationFn: async () => {
+      // Seed as platform-wide policies (tenant_id = 'orbitan_platform')
+      const existing = await base44.entities.GovernancePolicy.list('', 200);
+      const platformPolicies = existing.filter(p => p.tenant_id === PLATFORM_TENANT_ID);
+      if (platformPolicies.length > 0) return; // Already seeded
       for (const p of DEFAULT_POLICIES) {
         await base44.entities.GovernancePolicy.create({ ...p, tenant_id: PLATFORM_TENANT_ID, is_active: true });
       }

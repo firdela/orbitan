@@ -4,17 +4,30 @@ import AppShell from '@/components/layout/AppShell';
 import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import NotificationsInbox from '@/components/shared/NotificationsInbox';
+import ShieldStatusWidget from '@/components/shield/ShieldStatusWidget';
 import { Button } from '@/components/ui/button';
 import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
   Shield, BarChart2, Link2, Calendar, ChevronRight,
   TrendingUp, DollarSign, Clock, Utensils, Bot, Rocket,
+  Home,
 } from 'lucide-react';
-import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
+import { OrbitanEngine } from '@/lib/orbitan-engine';
 import EmptyState from '@/components/shared/EmptyState';
 
-const TENANT = T1_TENANT;
-const NAV = T1_NAV;
+const ICON_MAP = { Home, Package, ShoppingCart, FileText, Calendar, Users, CheckSquare, Shield, BarChart2, Link2, Clock, Utensils, Bot };
+
+const TENANT = {
+  name: 'Taqueria Pte Ltd',
+  subscription_plan: 'orbitan_business',
+  enabled_modules: ['dashboard', 'inventory', 'procurement', 'sales', 'scheduling', 'replenishment', 'workforce', 'clockin', 'tasks', 'compliance', 'reporting', 'xero'],
+  enabled_packs: ['core', 'fnb', 'finance', 'compliance'],
+  brand: 'La Birria Tacos',
+  outlet: 'North Bridge Rd',
+};
+
+const engine = OrbitanEngine.for(TENANT);
+const NAV = engine.buildNav('t1', ICON_MAP);
 
 const MODULE_CARDS = [
   { href: '/t1/inventory',     icon: Package,      label: 'Inventory',       desc: 'Ingredient stock & par levels',      color: 'bg-orbitan-amber-light text-orbitan-amber' },
@@ -41,7 +54,7 @@ export default function FnBDashboard() {
       navigation={NAV}
       tenant={TENANT}
       title=""
-      headerRight={<div className="flex items-center gap-2"><NotificationsInbox tenantSlug="t1" /><TenantSwitcher /></div>}
+      headerRight={<div className="flex items-center gap-2"><ShieldStatusWidget status="healthy" compact /><NotificationsInbox tenantSlug="t1" /><TenantSwitcher /></div>}
     >
       <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
 
