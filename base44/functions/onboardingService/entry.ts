@@ -351,6 +351,63 @@ Deno.serve(async (req) => {
       return Response.json({ reports });
     }
 
+    // ── HANDLE ACCESS REQUEST — Send email notification to tenant managers ──
+    // Supports both direct API calls (action: "handle_access_request")
+    // AND entity automation triggers (where payload wraps data under "data")
+    const isEntityAutomation = !action && body.event?.entity_name === "AccessRequest";
+    if (action === "handle_access_request" || isEntityAutomation) {
+      const payload = isEntityAutomation ? (body.data || {}) : body;
+      const { email, tenant_id, company_name, outlet_name, role_requested } = payload;
+
+      if (!email || !tenant_id) {
+        return Response.json({ error: "email and tenant_id are required" }, { status: 400 });
+      }
+
+      // Find tenant admins and outlet managers for this tenant
+      const managers = await base44.asServiceRole.entities.Employee.filter({
+        tenant_id,
+        role: { $in: ["tenant_admin", "outlet_manager"] },
+        status: "active",
+      });
+
+      const managerEmails = managers.map(m => m.email).filter(Boolean);
+
+      // Send email to each manager (non-blocking — allSettled)
+      const emailResults = await Promise.allSettled(
+        managerEmails.map(to =>
+          base44.integrations.Core.SendEmail({
+            to,
+            subject: `[OrbitanOS] New Access Request — ${company_name || tenant_id}`,
+            body: [
+              `Hello,`,
+              ``,
+              `A new worker has requested access to join ${company_name || tenant_id} on OrbitanOS.`,
+              ``,
+              `📧 Email: ${email}`,
+              `🏢 Company: ${company_name || tenant_id}`,
+              outlet_name ? `📍 Outlet: ${outlet_name}` : null,
+              `👤 Role Requested: ${(role_requested || "worker").replace(/_/g, " ") || "worker"}`,
+              ``,
+              `Please log in to OrbitanOS to review and approve this request.`,
+              ``,
+              `— OrbitanOS Access Registry · Regulate Principle`,
+            ].filter(Boolean).join("\n"),
+          })
+        )
+      );
+
+      const notifiedCount = emailResults.filter(r => r.status === "fulfilled").length;
+      const failedCount = emailResults.filter(r => r.status === "rejected").length;
+
+      return Response.json({
+        success: true,
+        managers_found: managers.length,
+        emails_sent: notifiedCount,
+        emails_failed: failedCount,
+        details: "Access request received. Manager notifications dispatched.",
+      });
+    }
+
     return Response.json({ error: "Unknown action" }, { status: 400 });
 
   } catch (error) {
