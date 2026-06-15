@@ -16,7 +16,8 @@ import TenantCommandCard from '@/components/leader/TenantCommandCard';
 import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionPlansAccordion';
 import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
 import AnnouncementsManager from '@/components/announcements/AnnouncementsManager';
-import { Megaphone } from 'lucide-react';
+import PilotCommandCenter from '@/components/leader/PilotCommandCenter';
+import { Megaphone, Radar } from 'lucide-react';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
@@ -153,6 +154,9 @@ export default function LeaderOrg() {
             </TabsTrigger>
             <TabsTrigger value="broadcast" className="gap-1.5">
               <Megaphone className="w-3.5 h-3.5" />Broadcast
+            </TabsTrigger>
+            <TabsTrigger value="pilot" className="gap-1.5">
+              <Radar className="w-3.5 h-3.5" />Pilot Control
             </TabsTrigger>
             <TabsTrigger value="about">About Platform</TabsTrigger>
           </TabsList>
@@ -331,6 +335,9 @@ export default function LeaderOrg() {
               publisherName="Firdaus"
               publisherRole="admin"
             />
+          </TabsContent>
+          <TabsContent value="pilot">
+            <PilotCommandCenter />
           </TabsContent>
 
           {/* About Tab */}
