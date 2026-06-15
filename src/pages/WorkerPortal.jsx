@@ -8,6 +8,7 @@ import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import WorkerFeedbackModal from '@/components/worker/WorkerFeedbackModal';
+import AccessRequestView from '@/components/worker/AccessRequestView';
 import AnnouncementFeed from '@/components/announcements/AnnouncementFeed';
 import ReportIssueModal from '@/components/shared/ReportIssueModal';
 import FoodSafetyLogWidget from '@/components/worker/FoodSafetyLogWidget';
@@ -444,21 +445,9 @@ export default function WorkerPortal() {
     return <OrbitanLoader size="fullscreen" message="Loading your profile…" />;
   }
 
+  // Render Governed Onboarding Pipeline when user is authenticated but not yet linked to an employee record
   if (!employee && !empLoading && userEmail) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-5">
-          <User className="w-8 h-8 text-muted-foreground" />
-        </div>
-        <h2 className="font-heading font-bold text-xl text-foreground mb-2">Account Not Found</h2>
-        <p className="text-sm text-muted-foreground max-w-xs mb-6">
-          Your account ({userEmail}) is not yet linked to an employee record. Please contact your manager to be onboarded.
-        </p>
-        <Button variant="outline" onClick={() => window.location.reload()}>
-          <RotateCcw className="w-4 h-4 mr-2" /> Retry
-        </Button>
-      </div>
-    );
+    return <AccessRequestView />;
   }
 
   const hour = currentTime.getHours();
