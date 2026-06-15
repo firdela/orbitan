@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import OrbitanLoader from '@/components/brand/OrbitanLoader'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -10,6 +10,8 @@ import { TenantProvider } from '@/lib/use-tenant.jsx';
 import { GlobalOutletProvider } from '@/lib/GlobalOutletContext';
 import { CurrencyProvider } from '@/lib/CurrencyContext';
 import SystemGuard from '@/components/layout/SystemGuard';
+import RoleGateway from '@/components/auth/RoleGateway';
+import AccessRequestView from '@/components/worker/AccessRequestView';
 
 // Page imports
 import LeaderOrg from '@/pages/LeaderOrg';
@@ -88,8 +90,11 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-      {/* Default: redirect to leader-org console */}
-      <Route path="/" element={<Navigate to="/leader-org" replace />} />
+      {/* Default: RoleGateway resolves workspace dynamically */}
+      <Route path="/" element={<RoleGateway />} />
+
+      {/* Governed Onboarding — Access Request pipeline */}
+      <Route path="/request-access" element={<AccessRequestView />} />
 
       {/* Platform Owner Console */}
       <Route path="/leader-org" element={<LeaderOrg />} />
