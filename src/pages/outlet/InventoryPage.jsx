@@ -8,12 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  Package, Plus, Search, AlertTriangle, CheckCircle2,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Package, Plus, Search, AlertTriangle, CheckCircle2, MoreHorizontal,
   Filter, ShoppingCart, Home, Users, Calendar, FileText,
-  CheckSquare, BarChart2, Shield, Layers, Building2
+  CheckSquare, BarChart2, Shield, Layers, Building2, Pencil
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import QuickStockDialog from '@/components/inventory/QuickStockDialog';
+import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
+import { useAuth } from '@/lib/AuthContext';
 
 const NAV = [
   { type: 'section', label: 'Outlet' },
@@ -45,14 +51,19 @@ const DEMO_ITEMS = [
 ];
 
 export default function InventoryPage() {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
   const [filterLow, setFilterLow] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [formMode, setFormMode] = useState('add');
+  const [editingItem, setEditingItem] = useState(null);
   const [newItem, setNewItem] = useState({ name: '', category: '', unit: '', current_stock: '', par_level: '', cost_per_unit: '' });
+  const [adjustItem, setAdjustItem] = useState(null);
+  const [showAdjust, setShowAdjust] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     base44.entities.InventoryItem.list('-created_date', 100)
       .then(data => setItems(data || DEMO_ITEMS))
       .catch(() => setItems(DEMO_ITEMS))
@@ -66,19 +77,74 @@ export default function InventoryPage() {
     return matchSearch && matchLow;
   });
 
-  const handleAddItem = async () => {
-    const item = {
-      ...newItem,
+  const handleSaveItem = async () => {
+    const itemData = {
+      name: newItem.name,
+      category: newItem.category,
+      unit: newItem.unit,
       current_stock: parseFloat(newItem.current_stock) || 0,
       par_level: parseFloat(newItem.par_level) || 0,
       cost_per_unit: parseFloat(newItem.cost_per_unit) || 0,
       status: "active",
       is_ingredient: true,
     };
-    const created = await base44.entities.InventoryItem.create(item);
-    setItems(prev => [created, ...prev]);
+
+    if (formMode === 'edit' && editingItem) {
+      const updated = await base44.entities.InventoryItem.update(editingItem.id, itemData);
+      setItems(prev => prev.map(i => i.id === editingItem.id ? updated : i));
+    } else {
+      const created = await base44.entities.InventoryItem.create(itemData);
+      setItems(prev => [created, ...prev]);
+    }
+
+    resetForm();
+  };
+
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setNewItem({
+      name: item.name || '',
+      category: item.category || '',
+      unit: item.unit || '',
+      current_stock: item.current_stock?.toString() || '',
+      par_level: item.par_level?.toString() || '',
+      cost_per_unit: item.cost_per_unit?.toString() || '',
+    });
+    setFormMode('edit');
+    setShowForm(true);
+  };
+
+  const handleStockAdjust = async (item, newStock, reason) => {
+    const oldStock = item.current_stock;
+    const updated = await base44.entities.InventoryItem.update(item.id, { current_stock: newStock });
+    setItems(prev => prev.map(i => i.id === item.id ? updated : i));
+
+    auditFrontend({
+      tenant_id: item.tenant_id,
+      outlet_id: item.outlet_id,
+      actor_id: user?.id,
+      actor_name: user?.full_name || user?.email,
+      actor_role: user?.role,
+      action_type: ACTION_TYPES.STOCK_ADJUSTED,
+      module: 'inventory',
+      target_entity: 'InventoryItem',
+      target_record_id: item.id,
+      previous_state: { current_stock: oldStock },
+      new_state: { current_stock: newStock },
+      details: `Stock adjusted from ${oldStock} to ${newStock} ${item.unit}. Reason: ${reason || 'Manual adjustment'}`,
+    });
+  };
+
+  const openAdjustDialog = (item) => {
+    setAdjustItem(item);
+    setShowAdjust(true);
+  };
+
+  const resetForm = () => {
     setNewItem({ name: '', category: '', unit: '', current_stock: '', par_level: '', cost_per_unit: '' });
-    setShowAdd(false);
+    setEditingItem(null);
+    setFormMode('add');
+    setShowForm(false);
   };
 
   return (
@@ -88,7 +154,7 @@ export default function InventoryPage() {
           title="Inventory"
           subtitle={`${items.length} items · ${lowStock.length} below par level`}
           actions={
-            <Button size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
+            <Button size="sm" className="gap-1.5" onClick={() => { setFormMode('add'); setShowForm(true); }}>
               <Plus className="w-4 h-4" />
               Add Item
             </Button>
@@ -137,6 +203,7 @@ export default function InventoryPage() {
                   <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground hidden md:table-cell">Par Level</th>
                   <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground hidden md:table-cell">Cost/Unit</th>
                   <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground">Status</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground w-8"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -175,6 +242,25 @@ export default function InventoryPage() {
                           </span>
                         )}
                       </td>
+                      <td className="px-2 py-3.5 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(item)}>
+                              <Pencil className="w-4 h-4 mr-2" />
+                              Edit Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openAdjustDialog(item)}>
+                              <Package className="w-4 h-4 mr-2" />
+                              Adjust Stock
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
                     </tr>
                   );
                 })}
@@ -187,11 +273,11 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Add Item Dialog */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+      {/* Add / Edit Item Dialog */}
+      <Dialog open={showForm} onOpenChange={resetForm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Inventory Item</DialogTitle>
+            <DialogTitle>{formMode === 'edit' ? 'Edit Inventory Item' : 'Add Inventory Item'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             {[
@@ -213,11 +299,21 @@ export default function InventoryPage() {
             ))}
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button onClick={handleAddItem} disabled={!newItem.name}>Add Item</Button>
+            <Button variant="outline" onClick={resetForm}>Cancel</Button>
+            <Button onClick={handleSaveItem} disabled={!newItem.name}>
+              {formMode === 'edit' ? 'Save Changes' : 'Add Item'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Quick Stock Adjustment Dialog */}
+      <QuickStockDialog
+        open={showAdjust}
+        onOpenChange={setShowAdjust}
+        item={adjustItem}
+        onSave={handleStockAdjust}
+      />
     </AppShell>
   );
 }
