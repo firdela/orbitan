@@ -8,30 +8,31 @@ import { Button } from '@/components/ui/button';
 import {
   Package, ShoppingCart, FileText, Users, CheckSquare,
   Shield, BarChart2, Link2, Calendar, ChevronRight,
-  AlertTriangle, TrendingUp, DollarSign, Clock, Utensils, Bot,
+  TrendingUp, DollarSign, Clock, Utensils, Bot, Rocket,
 } from 'lucide-react';
 import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
+import EmptyState from '@/components/shared/EmptyState';
 
 const TENANT = T1_TENANT;
 const NAV = T1_NAV;
 
 const MODULE_CARDS = [
-  { href: '/t1/inventory',     icon: Package,      label: 'Inventory',       desc: 'Ingredient stock & par levels',      color: 'bg-orbitan-amber-light text-orbitan-amber',  alert: '3 items below par' },
-  { href: '/t1/procurement',   icon: ShoppingCart, label: 'Procurement',     desc: 'Purchase orders & suppliers',        color: 'bg-orbitan-blue-light text-orbitan-blue',   alert: '2 POs pending approval' },
-  { href: '/t1/sales',         icon: FileText,     label: 'Sales & Invoicing',desc: 'Daily reconciliation & COGS',       color: 'bg-orbitan-green-light text-orbitan-green', alert: null },
-  { href: '/t1/scheduling',    icon: Calendar,     label: 'Scheduling',      desc: 'Shift planning & attendance',        color: 'bg-orbitan-purple-light text-orbitan-purple',alert: null },
-  { href: '/t1/workforce',     icon: Users,        label: 'Workforce',       desc: 'Staff profiles & roles',             color: 'bg-orbitan-blue-light text-orbitan-blue',   alert: null },
-  { href: '/t1/tasks',         icon: CheckSquare,  label: 'Tasks',           desc: 'Operational task management',        color: 'bg-orbitan-amber-light text-orbitan-amber', alert: '5 tasks due today' },
-  { href: '/t1/compliance',    icon: Shield,       label: 'Compliance',      desc: 'Food safety & audit records',        color: 'bg-orbitan-red-light text-orbitan-red',     alert: '1 overdue audit' },
-  { href: '/t1/xero',          icon: Link2,        label: 'Xero Integration',desc: 'Accounting sync status',             color: 'bg-orbitan-green-light text-orbitan-green', alert: null },
-  { href: '/t1/ai-studio',    icon: Bot,          label: 'AI Studio',       desc: 'Generate SOPs, training & policies', color: 'bg-orbitan-purple-light text-orbitan-purple', alert: null },
+  { href: '/t1/inventory',     icon: Package,      label: 'Inventory',       desc: 'Ingredient stock & par levels',      color: 'bg-orbitan-amber-light text-orbitan-amber' },
+  { href: '/t1/procurement',   icon: ShoppingCart, label: 'Procurement',     desc: 'Purchase orders & suppliers',        color: 'bg-orbitan-blue-light text-orbitan-blue' },
+  { href: '/t1/sales',         icon: FileText,     label: 'Sales & Invoicing',desc: 'Daily reconciliation & COGS',       color: 'bg-orbitan-green-light text-orbitan-green' },
+  { href: '/t1/scheduling',    icon: Calendar,     label: 'Scheduling',      desc: 'Shift planning & attendance',        color: 'bg-orbitan-purple-light text-orbitan-purple' },
+  { href: '/t1/workforce',     icon: Users,        label: 'Workforce',       desc: 'Staff profiles & roles',             color: 'bg-orbitan-blue-light text-orbitan-blue' },
+  { href: '/t1/tasks',         icon: CheckSquare,  label: 'Tasks',           desc: 'Operational task management',        color: 'bg-orbitan-amber-light text-orbitan-amber' },
+  { href: '/t1/compliance',    icon: Shield,       label: 'Compliance',      desc: 'Food safety & audit records',        color: 'bg-orbitan-red-light text-orbitan-red' },
+  { href: '/t1/xero',          icon: Link2,        label: 'Xero Integration',desc: 'Accounting sync status',             color: 'bg-orbitan-green-light text-orbitan-green' },
+  { href: '/t1/ai-studio',    icon: Bot,          label: 'AI Studio',       desc: 'Generate SOPs, training & policies', color: 'bg-orbitan-purple-light text-orbitan-purple' },
 ];
 
 const KPI = [
-  { label: "Today's Revenue", value: 'S$1,842', sub: 'La Birria Tacos · North Bridge Rd', icon: DollarSign, color: 'text-orbitan-green' },
-  { label: 'Gross Margin',    value: '62.4%',   sub: 'vs 60.1% last week',               icon: TrendingUp,    color: 'text-orbitan-blue' },
-  { label: 'Low Stock Items', value: '3',       sub: 'Requires replenishment',            icon: AlertTriangle, color: 'text-orbitan-amber' },
-  { label: 'Open Shifts',     value: '8',       sub: '2 unconfirmed',                     icon: Clock,         color: 'text-orbitan-purple' },
+  { label: "Today's Revenue", value: 'S$0.00',  sub: 'Pilot Day — awaiting first transaction', icon: DollarSign,  color: 'text-muted-foreground' },
+  { label: 'Gross Margin',    value: '—',       sub: 'Calculated after first sale',             icon: TrendingUp,  color: 'text-muted-foreground' },
+  { label: 'Low Stock Items', value: '0',       sub: 'Inventory ready to be loaded',            icon: Package,     color: 'text-muted-foreground' },
+  { label: 'Open Shifts',     value: '0',       sub: 'Schedule your first shift',               icon: Clock,       color: 'text-muted-foreground' },
 ];
 
 export default function FnBDashboard() {
@@ -59,6 +60,16 @@ export default function FnBDashboard() {
           </Link>
         </div>
 
+        {/* Pilot Launch Message */}
+        <div className="bg-card border border-border rounded-xl p-6">
+          <EmptyState
+            icon={Rocket}
+            title="Pilot Phase Active — Taqueria Pte Ltd"
+            description="Your F&B operating system is live. Inventory is clean, compliance records are reset, and all modules are ready. Log your opening ingredient stock to begin your first service cycle."
+            color="amber"
+          />
+        </div>
+
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {KPI.map(k => (
@@ -67,7 +78,7 @@ export default function FnBDashboard() {
                 <p className="text-xs text-muted-foreground font-medium">{k.label}</p>
                 <k.icon className={`w-4 h-4 ${k.color}`} />
               </div>
-              <p className={`text-2xl font-display font-bold ${k.color}`}>{k.value}</p>
+              <p className="text-2xl font-display font-bold text-muted-foreground">{k.value}</p>
               <p className="text-xs text-muted-foreground mt-1">{k.sub}</p>
             </div>
           ))}
@@ -85,11 +96,9 @@ export default function FnBDashboard() {
                   </div>
                   <h4 className="font-heading font-semibold text-sm text-foreground mb-1 group-hover:text-primary transition-colors">{m.label}</h4>
                   <p className="text-xs text-muted-foreground mb-3">{m.desc}</p>
-                  {m.alert && (
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-orbitan-amber bg-orbitan-amber-light px-2 py-1 rounded-lg">
-                      <AlertTriangle className="w-3 h-3 flex-shrink-0" /> {m.alert}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground bg-muted px-2 py-1 rounded-lg">
+                    <Rocket className="w-3 h-3 flex-shrink-0" /> Pilot Ready
+                  </div>
                 </div>
               </Link>
             ))}
