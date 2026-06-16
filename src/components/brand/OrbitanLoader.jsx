@@ -8,7 +8,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/9673d29b5_ORBITANbluelogo.png';
+const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
 
 // The 6R principle colours for the orbit ring segments
 const R_COLORS = [
