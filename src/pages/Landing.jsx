@@ -179,6 +179,52 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Success Stories — Placeholder ── */}
+      <section id="stories" className="py-20 md:py-28 px-6">
+        <div className="max-w-6xl mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-14">
+            <p className="text-xs tracking-[0.2em] uppercase text-[#D4AF37] font-bold mb-3">Customer Stories</p>
+            <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Trusted by Industry Leaders</h2>
+            <p className="text-slate-400 max-w-lg mx-auto text-sm">
+              See how businesses across F&B, sustainability, and retail are transforming with OrbitanOS.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { industry: 'Food & Beverage', pack: 'F&B Pack', color: '#F97316', logo: Store },
+              { industry: 'Sustainability', pack: 'Recycling Pack', color: '#16A34A', logo: Leaf },
+              { industry: 'Retail', pack: 'Retail Pack', color: '#22C55E', logo: ShoppingBag },
+            ].map((story, i) => {
+              const Icon = story.logo;
+              return (
+                <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="relative group bg-white/[0.02] border border-white/[0.05] rounded-2xl p-6 overflow-hidden hover:border-white/[0.1] transition-all duration-500">
+                  <div className="absolute inset-0 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-500"
+                    style={{ background: `radial-gradient(circle at 50% 0%, ${story.color}, transparent 70%)` }} />
+                  <div className="relative z-10 space-y-4">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${story.color}15` }}>
+                      <Icon className="w-6 h-6" style={{ color: story.color }} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold mb-2 inline-block"
+                        style={{ backgroundColor: `${story.color}15`, color: story.color }}>{story.pack}</span>
+                      <p className="text-slate-400 text-xs leading-relaxed mt-2">
+                        Success Story: <span className="text-white font-medium">{story.industry}</span> — Coming Soon
+                      </p>
+                    </div>
+                    <div className="h-px bg-gradient-to-r from-white/[0.06] to-transparent" />
+                    <p className="text-[10px] text-slate-600 italic">
+                      "How {story.industry} businesses achieved operational excellence with OrbitanOS."
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* ── Subscription Plans ── */}
       <section id="plans" className="py-20 md:py-28 px-6 bg-[#060B14]">
         <div className="max-w-6xl mx-auto">
@@ -264,6 +310,112 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Connected Ecosystem ── */}
+      <section id="ecosystem" className="py-20 md:py-28 px-6 bg-[#060B14]">
+        <div className="max-w-5xl mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-14">
+            <p className="text-xs tracking-[0.2em] uppercase text-[#D4AF37] font-bold mb-3">Connected Ecosystem</p>
+            <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Integrate Everything</h2>
+            <p className="text-slate-400 max-w-lg mx-auto text-sm">
+              OrbitanOS connects with the tools you already use. Finance, workforce, compliance — all in one operating system.
+            </p>
+          </motion.div>
+
+          {/* Integration Network Visual */}
+          <motion.div {...fadeUp} className="relative flex items-center justify-center mb-12">
+            <div className="w-20 h-20 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20 flex items-center justify-center z-10">
+              <img src={LOGO_URL} alt="Orbitan" className="w-10 h-10 opacity-80" />
+            </div>
+            {/* Connection lines with pulsing dots */}
+            {[0, 72, 144, 216, 288].map((angle, i) => (
+              <div key={i} className="absolute top-1/2 left-1/2 origin-left h-px"
+                style={{ width: '140px', transform: `rotate(${angle}deg)`, background: `linear-gradient(90deg, rgba(59,130,246,0.3), transparent)` }}>
+                <div className="absolute right-0 -top-1 w-2 h-2 rounded-full bg-[#3B82F6]/60 animate-pulse" />
+              </div>
+            ))}
+            {/* Satellite nodes */}
+            {['Finance', 'Workforce', 'Inventory', 'Compliance', 'AI'].map((label, i) => {
+              const angles = [0, 72, 144, 216, 288];
+              const rad = (angles[i] * Math.PI) / 180;
+              const x = Math.cos(rad) * 140;
+              const y = Math.sin(rad) * 140;
+              return (
+                <div key={label} className="absolute flex flex-col items-center gap-1"
+                  style={{ transform: `translate(${x}px, ${y}px)` }}>
+                  <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
+                    <Zap className="w-4 h-4 text-[#3B82F6]/60" />
+                  </div>
+                  <span className="text-[9px] text-slate-500 font-medium">{label}</span>
+                </div>
+              );
+            })}
+          </motion.div>
+
+          {/* Integration Partners Grid */}
+          <motion.div {...fadeUp} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            {['Xero', 'Google', 'Slack', 'Stripe', 'WhatsApp'].map((partner, i) => (
+              <div key={i} className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 flex flex-col items-center gap-2 hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-300 group">
+                <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <span className="text-[10px] font-bold text-slate-500 group-hover:text-white transition-colors">{partner[0]}</span>
+                </div>
+                <span className="text-[9px] text-slate-600 group-hover:text-slate-400 transition-colors">{partner}</span>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Mobile App — Placeholder ── */}
+      <section id="mobile" className="py-20 md:py-28 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <motion.div {...fadeUp} className="space-y-6">
+              <div>
+                <p className="text-xs tracking-[0.2em] uppercase text-[#D4AF37] font-bold mb-3">Coming Soon</p>
+                <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">OrbitanOS in Your Pocket</h2>
+                <p className="text-slate-400 text-sm leading-relaxed max-w-md">
+                  Clock in, manage tasks, and stay connected — all from your phone. The full OrbitanOS experience, optimised for mobile.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <div className="h-11 px-5 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center gap-2 cursor-not-allowed opacity-60">
+                  <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.37 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+                  <span className="text-xs text-slate-500 font-medium">App Store</span>
+                </div>
+                <div className="h-11 px-5 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center gap-2 cursor-not-allowed opacity-60">
+                  <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.807 1.626a1 1 0 010 1.732l-2.807 1.626L15.206 12l2.492-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z"/></svg>
+                  <span className="text-xs text-slate-500 font-medium">Google Play</span>
+                </div>
+              </div>
+            </motion.div>
+            <motion.div {...fadeUp} className="flex justify-center">
+              <div className="relative">
+                <div className="w-56 h-96 rounded-[2rem] border-2 border-white/[0.08] bg-[#0F172A] overflow-hidden shadow-2xl">
+                  <div className="h-8 border-b border-white/[0.05] flex items-center justify-center">
+                    <div className="w-16 h-1 rounded-full bg-white/[0.1]" />
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/10 flex items-center justify-center mx-auto">
+                      <img src={LOGO_URL} alt="Orbitan" className="w-6 h-6 opacity-60" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-2 w-3/4 rounded bg-white/[0.06] mx-auto" />
+                      <div className="h-2 w-1/2 rounded bg-white/[0.04] mx-auto" />
+                    </div>
+                    <div className="space-y-1.5 mt-3">
+                      <div className="h-8 rounded-lg bg-white/[0.03] border border-white/[0.05]" />
+                      <div className="h-8 rounded-lg bg-white/[0.03] border border-white/[0.05]" />
+                      <div className="h-8 rounded-lg bg-white/[0.03] border border-white/[0.05]" />
+                    </div>
+                  </div>
+                </div>
+                <div className="absolute -inset-4 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.08)_0%,transparent_70%)] rounded-[3rem] -z-10" />
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA ── */}
       <section className="py-20 md:py-28 px-6 bg-[#060B14]">
         <div className="max-w-3xl mx-auto text-center">
@@ -297,6 +449,7 @@ export default function Landing() {
           <div className="flex items-center gap-6">
             <a href="#framework" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Framework</a>
             <a href="#packs" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Packs</a>
+            <a href="#stories" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Stories</a>
             <a href="#plans" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Plans</a>
             <a href="#shield" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Security</a>
           </div>

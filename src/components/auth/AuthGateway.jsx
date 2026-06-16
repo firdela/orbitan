@@ -4,18 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
-  LogIn, UserPlus, Search, Shield, ArrowRight,
-  Zap, Building2, Sparkles, ChevronRight, Lock
+  LogIn, UserPlus, Search, Shield, ChevronRight
 } from 'lucide-react';
 
 const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
 
 const PRINCIPLES = ['Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach'];
-
-const PRINCIPLE_COLORS = {
-  Renew: '#16A34A', Relate: '#2563EB', Respond: '#F97316',
-  Refine: '#7C3AED', Regulate: '#DC2626', Reach: '#D4AF37'
-};
 
 const GATEWAY_CARDS = [
   {
@@ -112,8 +106,8 @@ export default function AuthGateway() {
                 src={LOGO_URL}
                 alt="Orbitan"
                 className="w-20 h-20"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, ease: 'linear' }}
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
               />
               <p className="text-slate-500 text-[11px] tracking-[0.25em] uppercase font-medium">Initialising</p>
             </motion.div>
