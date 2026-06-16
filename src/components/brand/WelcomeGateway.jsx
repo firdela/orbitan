@@ -10,7 +10,7 @@ import {
   Search, MapPin, Building2, Store, Factory, Warehouse, ChevronRight, Loader2
 } from 'lucide-react';
 
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/9673d29b5_ORBITANbluelogo.png';
+const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
 
 const PRINCIPLES = [
   'Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach',
@@ -159,7 +159,7 @@ export default function WelcomeGateway() {
             <motion.img
               src={LOGO_URL}
               alt="Orbitan"
-              className="w-28 h-28 md:w-36 md:h-36"
+              className="w-32 h-32 md:w-40 md:h-40"
               initial={{ scale: 0.2, rotate: -180, opacity: 0 }}
               animate={{ scale: 1, rotate: 360, opacity: 1 }}
               transition={{ duration: 2, ease: [0.25, 0.1, 0.25, 1] }}

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { OPERATING_CYCLE, SUBSCRIPTION_PLANS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
 
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/9673d29b5_ORBITANbluelogo.png';
+const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
 
 const PRINCIPLES = ['Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach'];
 
@@ -76,7 +76,7 @@ export default function Landing() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.04)_0%,transparent_50%)]" />
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, ease: 'easeOut' }}>
-            <img src={LOGO_URL} alt="Orbitan" className="w-20 h-20 md:w-24 md:h-24 mx-auto mb-8" />
+            <img src={LOGO_URL} alt="Orbitan" className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-8 drop-shadow-lg" />
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3 }}
             className="text-4xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight leading-[1.08] mb-5">
