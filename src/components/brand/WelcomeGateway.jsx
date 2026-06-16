@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -7,48 +7,58 @@ import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Search, MapPin, Building2, ChevronRight, Loader2
+  Search, MapPin, Building2, Store, Factory, Warehouse, ChevronRight, Loader2
 } from 'lucide-react';
 
 const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/9673d29b5_ORBITANbluelogo.png';
 
 const PRINCIPLES = [
-  { key: 'Renew',   desc: 'Continuous Learning & Innovation' },
-  { key: 'Relate',  desc: 'People & Workforce Engagement' },
-  { key: 'Respond', desc: 'Daily Operations & Execution' },
-  { key: 'Refine',  desc: 'Analytics & Intelligence' },
-  { key: 'Regulate',desc: 'Governance & Orbitan Shield™' },
-  { key: 'Reach',   desc: 'Growth & Expansion' },
+  'Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach',
 ];
+
+const OUTLET_ICONS = {
+  restaurant: Store,
+  retail_store: Store,
+  warehouse: Warehouse,
+  processing_facility: Factory,
+  office: Building2,
+  default: MapPin,
+};
 
 export default function WelcomeGateway() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const userEmail = user?.email || '';
+  const searchRef = useRef(null);
 
-  // Animation phases
-  const [phase, setPhase] = useState('logo'); // logo | content
+  const [phase, setPhase] = useState('logo');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedOutlet, setSelectedOutlet] = useState(null);
 
   // Auto-advance from logo spin to content
   useEffect(() => {
-    const timer = setTimeout(() => setPhase('content'), 2200);
+    const timer = setTimeout(() => setPhase('content'), 2400);
     return () => clearTimeout(timer);
   }, []);
 
-  // Fetch all active outlets globally
-  const { data: outlets = [], isLoading: outletsLoading } = useQuery({
-    queryKey: ['welcome-outlets-global'],
-    queryFn: () => base44.entities.Outlet.filter({ status: 'active' }),
-    enabled: phase === 'content',
-  });
+  // Click outside to close search dropdown
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
-  // Fetch tenants for display names
-  const { data: tenants = [] } = useQuery({
-    queryKey: ['welcome-tenants-global'],
-    queryFn: () => base44.entities.Tenant.filter({ status: 'active' }),
+  // Fetch workplaces via backend function (bypasses RLS for public discovery)
+  const { data: workplaces = [], isLoading: wpLoading } = useQuery({
+    queryKey: ['welcome-workplaces'],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('discoverWorkplaces', {});
+      return res.data || [];
+    },
     enabled: phase === 'content',
   });
 
@@ -61,38 +71,29 @@ export default function WelcomeGateway() {
 
   const pendingRequest = existingRequests.find(r => r.status === 'pending');
 
-  const filteredOutlets = outlets.filter(o => {
-    if (!searchQuery.trim()) return outlets.slice(0, 8);
+  const filteredWorkplaces = (() => {
+    if (!workplaces.length) return [];
+    if (!searchQuery.trim()) return workplaces.slice(0, 8);
     const q = searchQuery.toLowerCase();
-    return (
-      o.name?.toLowerCase().includes(q) ||
-      o.address?.toLowerCase().includes(q) ||
-      o.type?.toLowerCase().includes(q)
+    return workplaces.filter(w =>
+      w.name?.toLowerCase().includes(q) ||
+      w.address?.toLowerCase().includes(q) ||
+      w.tenant_name?.toLowerCase().includes(q) ||
+      w.type?.toLowerCase().includes(q)
     );
-  });
+  })();
 
-  const getTenantName = (tenantId) => {
-    return tenants.find(t => t.id === tenantId)?.name || '';
-  };
-
-  const getOutletTypeIcon = (type) => {
-    if (type === 'restaurant' || type === 'retail_store') return Building2;
-    return MapPin;
-  };
-
-  const handleSelectOutlet = (outlet) => {
-    setSelectedOutlet(outlet);
-    // Navigate to access request with pre-filled outlet context
+  const handleSelect = (workplace) => {
     const params = new URLSearchParams({
-      outlet_id: outlet.id,
-      outlet_name: outlet.name || '',
-      tenant_id: outlet.tenant_id || '',
-      company_name: getTenantName(outlet.tenant_id),
+      outlet_id: workplace.id,
+      outlet_name: workplace.name || '',
+      tenant_id: workplace.tenant_id || '',
+      company_name: workplace.tenant_name || '',
     });
     navigate(`/request-access?${params.toString()}`);
   };
 
-  // Show pending request state
+  // ── Pending Request View ──
   if (pendingRequest && isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center p-6 text-center">
@@ -117,7 +118,7 @@ export default function WelcomeGateway() {
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <div className="flex items-center gap-3">
-              <Building2 className="w-5 h-5 text-orbitan-blue" />
+              <Building2 className="w-5 h-5 text-[#3B82F6]" />
               <div className="text-left">
                 <p className="text-sm font-semibold text-white">{pendingRequest.company_name}</p>
                 <p className="text-xs text-slate-400">Role: {pendingRequest.role_requested?.replace(/_/g, ' ') || 'worker'}</p>
@@ -141,32 +142,32 @@ export default function WelcomeGateway() {
 
   return (
     <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center relative overflow-hidden">
-      {/* Subtle background radial gradient */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.08)_0%,transparent_70%)]" />
+      {/* Background radial */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.06)_0%,transparent_70%)]" />
 
-      {/* ── Phase 1: Logo Spin Entrance ── */}
+      {/* ── Phase 1: Logo Spin ── */}
       <AnimatePresence>
         {phase === 'logo' && (
           <motion.div
-            key="logo-phase"
+            key="logo"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 0.8, filter: 'blur(8px)' }}
-            transition={{ duration: 0.5, ease: 'easeInOut' }}
+            exit={{ opacity: 0, scale: 0.85, filter: 'blur(8px)' }}
+            transition={{ duration: 0.5 }}
             className="flex flex-col items-center gap-6 z-10"
           >
             <motion.img
               src={LOGO_URL}
               alt="Orbitan"
-              className="w-28 h-28 md:w-36 md:h-36 drop-shadow-[0_0_40px_rgba(37,99,235,0.3)]"
-              initial={{ scale: 0.3, rotate: -180, opacity: 0 }}
+              className="w-28 h-28 md:w-36 md:h-36"
+              initial={{ scale: 0.2, rotate: -180, opacity: 0 }}
               animate={{ scale: 1, rotate: 360, opacity: 1 }}
-              transition={{ duration: 1.8, ease: [0.25, 0.1, 0.25, 1] }}
+              transition={{ duration: 2, ease: [0.25, 0.1, 0.25, 1] }}
             />
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.2, duration: 0.5 }}
+              transition={{ delay: 1.3, duration: 0.5 }}
               className="text-slate-400 text-xs tracking-[0.2em] uppercase font-medium"
             >
               Initialising
@@ -179,13 +180,13 @@ export default function WelcomeGateway() {
       <AnimatePresence>
         {phase === 'content' && (
           <motion.div
-            key="content-phase"
+            key="content"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
             className="z-10 w-full max-w-lg mx-auto px-6 flex flex-col items-center gap-8"
           >
-            {/* Logo — subtle persistent */}
+            {/* Small persistent logo */}
             <motion.img
               src={LOGO_URL}
               alt="Orbitan"
@@ -195,7 +196,7 @@ export default function WelcomeGateway() {
               transition={{ duration: 0.6 }}
             />
 
-            {/* Headline block */}
+            {/* Headline */}
             <div className="text-center space-y-2">
               <motion.h1
                 initial={{ opacity: 0, y: 12 }}
@@ -226,52 +227,51 @@ export default function WelcomeGateway() {
 
             {/* Workplace Search */}
             <motion.div
+              ref={searchRef}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.7 }}
               className="w-full space-y-3"
             >
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 z-10" />
                 <Input
                   placeholder="Search for your workplace..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
                   onFocus={() => setSearchOpen(true)}
-                  className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-[#3B82F6]/50 focus:ring-[#3B82F6]/20 rounded-xl text-sm"
+                  className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-[#3B82F6]/50 rounded-xl text-sm"
                 />
               </div>
 
-              {/* Search results */}
               {searchOpen && (
-                <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl overflow-hidden max-h-72 overflow-y-auto">
-                  {outletsLoading ? (
+                <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl overflow-hidden max-h-72 overflow-y-auto">
+                  {wpLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
                     </div>
-                  ) : filteredOutlets.length === 0 ? (
+                  ) : filteredWorkplaces.length === 0 ? (
                     <div className="py-8 text-center">
                       <MapPin className="w-8 h-8 text-slate-600 mx-auto mb-2" />
                       <p className="text-sm text-slate-500">No workplaces found</p>
                       <p className="text-xs text-slate-600 mt-1">Try a different search term</p>
                     </div>
                   ) : (
-                    filteredOutlets.map((outlet) => {
-                      const Icon = getOutletTypeIcon(outlet.type);
-                      const tenantName = getTenantName(outlet.tenant_id);
+                    filteredWorkplaces.map((w) => {
+                      const Icon = OUTLET_ICONS[w.type] || OUTLET_ICONS.default;
                       return (
                         <button
-                          key={outlet.id}
-                          onClick={() => handleSelectOutlet(outlet)}
-                          className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.05] transition-colors border-b border-white/[0.04] last:border-b-0 group"
+                          key={w.id}
+                          onClick={() => handleSelect(w)}
+                          className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.06] transition-colors border-b border-white/[0.04] last:border-b-0 group"
                         >
                           <div className="w-9 h-9 rounded-lg bg-[#3B82F6]/10 flex items-center justify-center flex-shrink-0">
                             <Icon className="w-4 h-4 text-[#3B82F6]" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">{outlet.name}</p>
+                            <p className="text-sm font-medium text-white truncate">{w.name}</p>
                             <p className="text-xs text-slate-500 truncate">
-                              {tenantName}{outlet.address ? ` · ${outlet.address}` : ''}
+                              {w.tenant_name}{w.address ? ` · ${w.address}` : ''}
                             </p>
                           </div>
                           <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-[#3B82F6] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
@@ -290,12 +290,12 @@ export default function WelcomeGateway() {
               transition={{ duration: 0.5, delay: 1 }}
               className="flex flex-wrap justify-center gap-2"
             >
-              {PRINCIPLES.map((p, i) => (
+              {PRINCIPLES.map((p) => (
                 <span
-                  key={p.key}
+                  key={p}
                   className="text-[10px] px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.06] text-slate-500 font-medium tracking-wide"
                 >
-                  {p.key}
+                  {p}
                 </span>
               ))}
             </motion.div>
@@ -307,7 +307,7 @@ export default function WelcomeGateway() {
               transition={{ duration: 0.5, delay: 1.2 }}
               className="text-[10px] text-slate-600 text-center max-w-xs"
             >
-              OrbitanOS serves as the Workforce Plexus that connects people, operations, knowledge, compliance, communication, and growth across the organisation.
+              The Workforce Plexus — connecting people, operations, knowledge, compliance, communication, and growth.
             </motion.p>
           </motion.div>
         )}
