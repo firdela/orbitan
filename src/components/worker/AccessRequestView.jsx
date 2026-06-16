@@ -49,6 +49,27 @@ export default function AccessRequestView() {
   const pendingRequest = existingRequests.find(r => r.status === 'pending');
   const [liveRequest, setLiveRequest] = useState(null);
 
+  const submitMutation = useMutation({
+    mutationFn: (data) => base44.entities.AccessRequest.create(data),
+    onSuccess: () => {
+      setSubmitted(true);
+      setStep(4);
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!selectedTenant) return;
+    submitMutation.mutate({
+      email: userEmail,
+      tenant_id: selectedTenant.id,
+      outlet_id: selectedOutlet?.id || null,
+      company_name: selectedTenant.name,
+      outlet_name: selectedOutlet?.name || null,
+      role_requested: selectedRole,
+      status: 'pending',
+    });
+  };
+
   // ── Real-time subscription: listen for AccessRequest status changes ──
   useEffect(() => {
     if (!userEmail) return;
