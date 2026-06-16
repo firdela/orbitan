@@ -11,6 +11,7 @@ import { GlobalOutletProvider } from '@/lib/GlobalOutletContext';
 import { CurrencyProvider } from '@/lib/CurrencyContext';
 import SystemGuard from '@/components/layout/SystemGuard';
 import RoleGateway from '@/components/auth/RoleGateway';
+import WelcomeGateway from '@/components/brand/WelcomeGateway';
 import AccessRequestView from '@/components/worker/AccessRequestView';
 
 // Page imports
@@ -92,6 +93,9 @@ const AuthenticatedApp = () => {
     <Routes>
       {/* Default: RoleGateway resolves workspace dynamically */}
       <Route path="/" element={<RoleGateway />} />
+
+      {/* Orbitan Brand Gateway — Welcome Entrance */}
+      <Route path="/welcome" element={<WelcomeGateway />} />
 
       {/* Governed Onboarding — Access Request pipeline */}
       <Route path="/request-access" element={<AccessRequestView />} />

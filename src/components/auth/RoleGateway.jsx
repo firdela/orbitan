@@ -62,6 +62,6 @@ export default function RoleGateway() {
     return <Navigate to="/worker" replace />;
   }
 
-  // No employee record — onboarding pipeline
-  return <Navigate to="/request-access" replace />;
+  // No employee record — welcome gateway
+  return <Navigate to="/welcome" replace />;
 }
