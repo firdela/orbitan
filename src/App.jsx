@@ -11,10 +11,11 @@ import { GlobalOutletProvider } from '@/lib/GlobalOutletContext';
 import { CurrencyProvider } from '@/lib/CurrencyContext';
 import SystemGuard from '@/components/layout/SystemGuard';
 import RoleGateway from '@/components/auth/RoleGateway';
-import WelcomeGateway from '@/components/brand/WelcomeGateway';
-import AccessRequestView from '@/components/worker/AccessRequestView';
 
 // Page imports
+import Landing from '@/pages/Landing';
+import WelcomeGateway from '@/components/brand/WelcomeGateway';
+import AccessRequestView from '@/components/worker/AccessRequestView';
 import LeaderOrg from '@/pages/LeaderOrg';
 import CompanyDashboard from '@/pages/CompanyDashboard';
 import OutletDashboard from '@/pages/OutletDashboard';
@@ -91,11 +92,14 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-      {/* Default: RoleGateway resolves workspace dynamically */}
-      <Route path="/" element={<RoleGateway />} />
+      {/* Orbitan Public Landing — Brand & Marketing Hub */}
+      <Route path="/" element={<Landing />} />
 
-      {/* Orbitan Brand Gateway — Welcome Entrance */}
-      <Route path="/welcome" element={<WelcomeGateway />} />
+      {/* Orbitan Brand Gateway — Access Portal */}
+      <Route path="/join" element={<WelcomeGateway />} />
+
+      {/* RoleGateway resolves workspace dynamically for authenticated users */}
+      <Route path="/workspace" element={<RoleGateway />} />
 
       {/* Governed Onboarding — Access Request pipeline */}
       <Route path="/request-access" element={<AccessRequestView />} />
