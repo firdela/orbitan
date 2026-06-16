@@ -10,7 +10,7 @@ import {
   Search, MapPin, Building2, Store, Factory, Warehouse, ChevronRight, Loader2
 } from 'lucide-react';
 
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
+const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/9673d29b5_ORBITANbluelogo.png';
 
 const PRINCIPLES = [
   'Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach',
