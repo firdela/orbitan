@@ -443,7 +443,7 @@ export default function Landing() {
       <footer className="py-10 px-6 border-t border-white/[0.05]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src={LOGO_URL} alt="Orbitan" className="w-5 h-5 opacity-50" />
+            <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png" alt="Orbitan" className="w-5 h-5 opacity-50" />
             <span className="text-xs text-slate-600">Orbitan & OrbitanOS © {new Date().getFullYear()} Muhammad Firdaus Bin Ismail</span>
           </div>
           <div className="flex items-center gap-6">
