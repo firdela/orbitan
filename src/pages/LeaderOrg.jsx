@@ -8,6 +8,7 @@ import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
 import StatCard from '@/components/shared/StatCard';
 import { PlanBadge } from '@/components/shared/PackBadge';
+import { CapabilityBadge, CapabilityStack } from '@/components/shared/CapabilityBadge';
 import { Button } from '@/components/ui/button';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import CurrencyDropdown from '@/components/shared/CurrencyDropdown';
@@ -249,11 +250,7 @@ export default function LeaderOrg() {
                       <p className="text-xs text-muted-foreground mb-2">{pack.description}</p>
                       <p className="text-[10px] text-muted-foreground mb-2">Tenants: {pack.launch_tenants.join(', ')}</p>
                       {pack.modules && (
-                        <div className="flex flex-wrap gap-1">
-                          {pack.modules.map(m => (
-                            <span key={m} className="text-[10px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded">{m}</span>
-                          ))}
-                        </div>
+                        <CapabilityStack packs={pack.modules.map((m) => ({ type: m.toLowerCase().replace(/\s+/g, '_'), label: m }))} />
                       )}
                     </div>
                   ))}
@@ -301,16 +298,7 @@ export default function LeaderOrg() {
                     <h3 className="font-display font-bold text-foreground text-lg">{principle.label}</h3>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed mb-3">{principle.description}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {Object.values(MODULES).
-                  filter((m) => m.principle === principle.key).
-                  map((m) =>
-                  <span key={m.key} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                  style={{ color: principle.color, background: principle.color + '15', border: `1px solid ${principle.color}30` }}>
-                          {m.name}
-                        </span>
-                  )}
-                  </div>
+                  <CapabilityStack packs={Object.values(MODULES).filter((m) => m.principle === principle.key).map((m) => ({ type: m.key, label: m.name }))} />
                 </div>
               )}
             </div>

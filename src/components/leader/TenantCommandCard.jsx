@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { MODULES, INDUSTRY_LABELS, SUBSCRIPTION_PLANS } from '@/lib/orbitan-config';
 import { PlanBadge } from '@/components/shared/PackBadge';
+import { CapabilityBadge, CapabilityStack } from '@/components/shared/CapabilityBadge';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -126,18 +127,10 @@ export default function TenantCommandCard({ tenant, manifest, activating, onActi
         </div>
 
         {/* Pack tags — always visible */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {activePacks.map(pk => {
-            const meta = PACK_META[pk];
-            if (!meta) return null;
-            return (
-              <span key={pk}
-                className="inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                style={{ background: meta.color + '18', color: meta.color, border: `1px solid ${meta.color}35` }}>
-                {meta.label}
-              </span>
-            );
-          })}
+        <div className="flex flex-wrap gap-1.5 mt-3 items-center">
+          {activePacks.map(pk => (
+            <CapabilityBadge key={pk} type={pk} size="sm" />
+          ))}
           <span className="text-[11px] text-muted-foreground px-1 py-0.5 self-center">
             {activeModules.length} modules active
           </span>
@@ -151,14 +144,7 @@ export default function TenantCommandCard({ tenant, manifest, activating, onActi
           {/* Active Modules */}
           <div className="px-5 py-4">
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Active Modules</p>
-            <div className="flex flex-wrap gap-1">
-              {activeModules.map(mk => (
-                <span key={mk} className="inline-flex items-center gap-1 text-[10px] bg-orbitan-blue-light text-orbitan-blue px-2 py-0.5 rounded-full font-medium">
-                  <CheckCircle2 className="w-2.5 h-2.5" />
-                  {MODULES[mk]?.name || mk}
-                </span>
-              ))}
-            </div>
+            <CapabilityStack packs={activeModules.map(mk => ({ type: mk, label: MODULES[mk]?.name || mk }))} />
           </div>
 
           {/* Locked Modules */}

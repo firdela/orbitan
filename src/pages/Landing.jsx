@@ -7,6 +7,7 @@ import {
   ArrowRight, Shield, Store, Leaf, ShoppingBag,
   ChevronRight, Check, Sparkles, Zap, Lock, Globe, Server } from
 'lucide-react';
+import { CapabilityBadge, CapabilityStack } from '@/components/shared/CapabilityBadge';
 import { OPERATING_CYCLE, SUBSCRIPTION_PLANS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
 
 const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
@@ -164,14 +165,10 @@ export default function Landing() {
                   </div>
                   <h3 className="font-display font-bold text-white text-lg mb-1">{pack.name}</h3>
                   <p className="text-slate-500 text-xs leading-relaxed mb-4">{pack.description}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {pack.modules.slice(0, 5).map((m) =>
-                    <span key={m} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.06] text-slate-400">{m}</span>
-                    )}
-                    {pack.modules.length > 5 &&
+                  <CapabilityStack packs={pack.modules.map((m) => ({ type: m.toLowerCase().replace(/\s+/g, '_'), label: m })).slice(0, 5)} />
+                  {pack.modules.length > 5 &&
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.06] text-slate-500">+{pack.modules.length - 5} more</span>
-                    }
-                  </div>
+                  }
                 </motion.div>);
 
             })}
