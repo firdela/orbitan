@@ -9,27 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Plus, TrendingUp, DollarSign, RefreshCw } from 'lucide-react';
 import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_RECONS = [
-  { id: 'r1', date: '2026-06-03', total_revenue: 1842, total_cogs: 691, gross_profit: 1151, gross_margin_pct: 62.5, cash_sales: 820, card_sales: 1022, discounts: 45, net_revenue: 1797, status: 'approved', xero_sync_status: 'synced' },
-  { id: 'r2', date: '2026-06-02', total_revenue: 1620, total_cogs: 632, gross_profit: 988, gross_margin_pct: 61.0, cash_sales: 710, card_sales: 910, discounts: 30, net_revenue: 1590, status: 'approved', xero_sync_status: 'synced' },
-  { id: 'r3', date: '2026-06-01', total_revenue: 2100, total_cogs: 805, gross_profit: 1295, gross_margin_pct: 61.7, cash_sales: 960, card_sales: 1140, discounts: 60, net_revenue: 2040, status: 'submitted', xero_sync_status: 'not_synced' },
-  { id: 'r4', date: '2026-05-31', total_revenue: 1788, total_cogs: 697, gross_profit: 1091, gross_margin_pct: 61.0, cash_sales: 790, card_sales: 998, discounts: 20, net_revenue: 1768, status: 'approved', xero_sync_status: 'synced' },
-  { id: 'r5', date: '2026-05-30', total_revenue: 950, total_cogs: 384, gross_profit: 566, gross_margin_pct: 59.6, cash_sales: 380, card_sales: 570, discounts: 0, net_revenue: 950, status: 'approved', xero_sync_status: 'synced' },
-];
-
-const DEMO_INVOICES = [
-  { id: 'inv1', invoice_number: 'INV-2026-088', date: '2026-06-03', customer_name: 'GrabFood Settlement', total: 632.40, payment_status: 'paid', payment_method: 'transfer' },
-  { id: 'inv2', invoice_number: 'INV-2026-087', date: '2026-06-03', customer_name: 'Foodpanda Settlement', total: 489.60, payment_status: 'paid', payment_method: 'transfer' },
-  { id: 'inv3', invoice_number: 'INV-2026-086', date: '2026-06-02', customer_name: 'Walk-in (Cash)', total: 720.00, payment_status: 'paid', payment_method: 'cash' },
-  { id: 'inv4', invoice_number: 'INV-2026-085', date: '2026-06-01', customer_name: 'Corporate Catering — Lazada', total: 1200.00, payment_status: 'pending', payment_method: 'transfer' },
-];
+const invoices = [];
 
 export default function FnBSales() {
   const [activeTab, setActiveTab] = useState('reconciliation');
   const [showNew, setShowNew] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedRecon, setSelectedRecon] = useState(null);
-  const [recons, setRecons] = useState(DEMO_RECONS);
+  const [recons, setRecons] = useState([]);
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '', discounts: '' });
 
   function submitRecon() {
@@ -56,8 +43,8 @@ export default function FnBSales() {
     setForm({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '', discounts: '' });
   }
 
-  const weekRevenue = DEMO_RECONS.slice(0, 5).reduce((a, r) => a + r.total_revenue, 0);
-  const avgMargin = (DEMO_RECONS.reduce((a, r) => a + r.gross_margin_pct, 0) / DEMO_RECONS.length).toFixed(1);
+  const weekRevenue = 0;
+  const avgMargin = '0.0';
 
   return (
     <AppShell navigation={T1_NAV} tenant={T1_TENANT} title="" headerRight={<TenantSwitcher />}>
@@ -84,11 +71,11 @@ export default function FnBSales() {
           </div>
           <div className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs text-muted-foreground mb-2">Pending Invoices</p>
-            <p className="text-2xl font-display font-bold text-orbitan-amber">{DEMO_INVOICES.filter(i => i.payment_status === 'pending').length}</p>
+            <p className="text-2xl font-display font-bold text-orbitan-amber">0</p>
           </div>
           <div className="bg-orbitan-green-light border border-green-200 rounded-xl p-4">
             <p className="text-xs text-muted-foreground mb-2">Xero Synced</p>
-            <p className="text-2xl font-display font-bold text-orbitan-green">{DEMO_RECONS.filter(r => r.xero_sync_status === 'synced').length}/{DEMO_RECONS.length}</p>
+            <p className="text-2xl font-display font-bold text-orbitan-green">0/0</p>
           </div>
         </div>
 
@@ -153,7 +140,7 @@ export default function FnBSales() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {DEMO_INVOICES.map(inv => (
+                  {invoices.map(inv => (
                     <tr key={inv.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setSelectedInvoice(inv)}>
                       <td className="px-4 py-3 font-medium text-foreground hover:text-primary">{inv.invoice_number}</td>
                       <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{inv.customer_name}</td>

@@ -35,18 +35,8 @@ const PRIORITY_CONFIG = {
   low: { label: 'Low', classes: 'bg-secondary text-muted-foreground' },
 };
 
-const INIT_TASKS = [
-  { id: 't1', title: 'Receive beef delivery from SG Meat Co.', description: 'Check quality, weigh and log into inventory', category: 'Procurement', priority: 'urgent', status: 'pending', due_date: '2026-06-04', assigned_to_name: 'Ahmad Fauzi', module_context: 'procurement' },
-  { id: 't2', title: 'Complete monthly HACCP log', description: 'Fill temperature records for June audit', category: 'Compliance', priority: 'high', status: 'in_progress', due_date: '2026-06-10', assigned_to_name: 'Sarah Lim', module_context: 'compliance' },
-  { id: 't3', title: 'Submit daily cash reconciliation', description: 'Tally POS cash vs system and submit', category: 'Finance', priority: 'high', status: 'pending', due_date: '2026-06-04', assigned_to_name: 'Nurul Ain', module_context: 'sales' },
-  { id: 't4', title: 'Reorder tortillas — stock critical', description: 'Raise PO for at least 20 packs from Pan Asian', category: 'Inventory', priority: 'urgent', status: 'pending', due_date: '2026-06-04', assigned_to_name: 'Ahmad Fauzi', module_context: 'inventory' },
-  { id: 't5', title: 'Brief new service crew on SOP', description: 'Cover food handling and customer service protocols', category: 'HR', priority: 'medium', status: 'pending', due_date: '2026-06-06', assigned_to_name: 'Sarah Lim', module_context: 'workforce' },
-  { id: 't6', title: 'Check fire extinguisher expiry', description: 'Overdue — schedule re-certification immediately', category: 'Compliance', priority: 'urgent', status: 'overdue', due_date: '2026-05-31', assigned_to_name: 'Ahmad Fauzi', module_context: 'compliance' },
-  { id: 't7', title: 'Update supplier contact — DairySG', description: 'New contact person is Wei Lin, update CRM', category: 'Procurement', priority: 'low', status: 'completed', due_date: '2026-06-02', assigned_to_name: 'James Tan', module_context: 'procurement' },
-];
-
 export default function FnBTasks() {
-  const [tasks, setTasks] = useState(INIT_TASKS);
+  const [tasks, setTasks] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [selected, setSelected] = useState(null);

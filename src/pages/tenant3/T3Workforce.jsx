@@ -6,14 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Plus, Phone, Mail, X, UserPlus, TrendingUp } from 'lucide-react';
 import { T3_NAV, T3_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_STAFF = [
-  { id: 'e1', full_name: 'Zara Lim', role: 'outlet_manager', position: 'Store Manager', dept: 'Management', status: 'active', phone: '+65 9100 1111', email: 'zara@renewedfashion.sg', employment_type: 'full_time', hire_date: '2021-09-01', pay_rate: 3800, pay_type: 'monthly', clock_status: 'clocked_in', clock_in_time: '09:00', sales_today: 5, sales_month: 82 },
-  { id: 'e2', full_name: 'Tommy Chen', role: 'worker', position: 'Sales Associate', dept: 'Floor', status: 'active', phone: '+65 9200 2222', email: 'tommy@renewedfashion.sg', employment_type: 'full_time', hire_date: '2023-02-14', pay_rate: 14, pay_type: 'hourly', clock_status: 'clocked_in', clock_in_time: '09:15', sales_today: 3, sales_month: 44 },
-  { id: 'e3', full_name: 'Aisha Binte Jamal', role: 'worker', position: 'Sorter / Grader', dept: 'Processing', status: 'active', phone: '+65 9300 3333', email: 'aisha@renewedfashion.sg', employment_type: 'part_time', hire_date: '2023-07-10', pay_rate: 13, pay_type: 'hourly', clock_status: 'clocked_in', clock_in_time: '10:00', sales_today: null, sales_month: null },
-  { id: 'e4', full_name: 'Ravi Subramaniam', role: 'worker', position: 'Sales Associate', dept: 'Floor', status: 'active', phone: '+65 9400 4444', email: 'ravi@renewedfashion.sg', employment_type: 'part_time', hire_date: '2023-11-01', pay_rate: 14, pay_type: 'hourly', clock_status: 'clocked_out', clock_in_time: '—', sales_today: 0, sales_month: 28 },
-  { id: 'e5', full_name: 'Clara Wong', role: 'supervisor', position: 'Senior Associate', dept: 'Floor', status: 'on_leave', phone: '+65 9500 5555', email: 'clara@renewedfashion.sg', employment_type: 'full_time', hire_date: '2022-04-20', pay_rate: 16, pay_type: 'hourly', clock_status: 'absent', clock_in_time: '—', sales_today: 0, sales_month: 58 },
-];
-
 const CLOCK_MAP = {
   clocked_in:  { label: 'On Duty',  bg: 'bg-[#F0FDF4]', color: 'text-[#22C55E]', dot: 'bg-[#22C55E]' },
   clocked_out: { label: 'Off Duty', bg: 'bg-muted',      color: 'text-muted-foreground', dot: 'bg-muted-foreground' },
@@ -34,8 +26,9 @@ export default function T3Workforce() {
   const [selectedEmp, setSelectedEmp] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
 
-  const onDuty = DEMO_STAFF.filter(e => e.clock_status === 'clocked_in').length;
-  const totalSalesToday = DEMO_STAFF.reduce((s, e) => s + (e.sales_today || 0), 0);
+  const staff = [];
+  const onDuty = 0;
+  const totalSalesToday = 0;
 
   return (
     <AppShell navigation={T3_NAV} tenant={T3_TENANT} title="" headerRight={<TenantSwitcher />}>
@@ -52,9 +45,9 @@ export default function T3Workforce() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total Staff', value: DEMO_STAFF.length, color: 'text-foreground', bg: 'bg-card border-border' },
-            { label: 'On Duty', value: onDuty, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4] border-green-200' },
-            { label: 'On Leave', value: DEMO_STAFF.filter(e => e.status === 'on_leave').length, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
+            { label: 'Total Staff', value: 0, color: 'text-foreground', bg: 'bg-card border-border' },
+            { label: 'On Duty', value: 0, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4] border-green-200' },
+            { label: 'On Leave', value: 0, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
             { label: 'Sales Today', value: totalSalesToday, color: 'text-primary', bg: 'bg-orbitan-blue-light border-blue-200' },
           ].map(s => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.bg}`}>
@@ -67,7 +60,7 @@ export default function T3Workforce() {
         {/* Live status strip */}
         <div className="bg-[#F0FDF4] border border-green-200 rounded-xl px-5 py-3.5 flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-          <p className="text-sm font-medium text-[#22C55E]">{onDuty} staff on duty · {totalSalesToday} sales processed today · Store is open</p>
+          <p className="text-sm font-medium text-[#22C55E]">0 staff on duty · 0 sales today</p>
         </div>
 
         <div className="flex gap-1 bg-muted rounded-xl p-1 w-fit">
@@ -81,7 +74,7 @@ export default function T3Workforce() {
 
         {tab === 'team' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {DEMO_STAFF.map(emp => {
+            {staff.map(emp => {
               const es = EMP_STATUS[emp.status] || EMP_STATUS.active;
               const cs = CLOCK_MAP[emp.clock_status] || CLOCK_MAP.clocked_out;
               return (
@@ -114,10 +107,10 @@ export default function T3Workforce() {
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Today — 5 June 2026</p>
-              <p className="text-xs text-muted-foreground">{onDuty}/{DEMO_STAFF.length} present</p>
+              <p className="text-xs text-muted-foreground">0/0 present</p>
             </div>
             <div className="divide-y divide-border">
-              {DEMO_STAFF.map(emp => {
+              {staff.map(emp => {
                 const cs = CLOCK_MAP[emp.clock_status] || CLOCK_MAP.clocked_out;
                 return (
                   <div key={emp.id} className="flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors">
@@ -150,7 +143,7 @@ export default function T3Workforce() {
         {tab === 'performance' && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">Sales performance for floor staff — current month.</p>
-            {DEMO_STAFF.filter(e => e.sales_month !== null).map(emp => {
+            {staff.filter(e => e.sales_month !== null).map(emp => {
               const target = 80;
               const pct = Math.min(100, Math.round((emp.sales_month / target) * 100));
               const cs = CLOCK_MAP[emp.clock_status] || CLOCK_MAP.clocked_out;

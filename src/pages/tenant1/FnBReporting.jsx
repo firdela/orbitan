@@ -12,32 +12,10 @@ import { format, subDays, startOfDay } from 'date-fns';
 const T1_TENANT_ID = 'taqueria_pte_ltd';
 const T1_OUTLET_ID = 'taqueria_pte_ltd_main';
 
-// Benchmark/seed weekly data for visual richness
-const WEEKLY_SEED = [
-  { day: 'Mon', revenue: 1620, cogs: 632, profit: 988 },
-  { day: 'Tue', revenue: 1788, cogs: 697, profit: 1091 },
-  { day: 'Wed', revenue: 2100, cogs: 805, profit: 1295 },
-  { day: 'Thu', revenue: 1842, cogs: 691, profit: 1151 },
-  { day: 'Fri', revenue: 2340, cogs: 892, profit: 1448 },
-  { day: 'Sat', revenue: 2810, cogs: 1065, profit: 1745 },
-  { day: 'Sun', revenue: 950, cogs: 370, profit: 580 },
-];
-
-const MONTHLY_MARGIN = [
-  { month: 'Jan', margin: 58.2 }, { month: 'Feb', margin: 59.1 },
-  { month: 'Mar', margin: 60.5 }, { month: 'Apr', margin: 61.0 },
-  { month: 'May', margin: 61.8 }, { month: 'Jun', margin: 62.4 },
-];
-
+const WEEKLY_SEED = [];
+const MONTHLY_MARGIN = [];
 const PIE_COLORS = ['#F97316', '#2563EB', '#10B981', '#8B5CF6', '#EF4444'];
-
-const TOP_ITEMS = [
-  { name: 'Birria Taco (3 pcs)', sales: 312, revenue: 2496, cogs: 936 },
-  { name: 'Consommé Bowl', sales: 198, revenue: 1386, cogs: 520 },
-  { name: 'Birria Quesadilla', sales: 145, revenue: 1160, cogs: 435 },
-  { name: 'Loaded Nachos', sales: 88, revenue: 704, cogs: 264 },
-  { name: 'House Agua Fresca', sales: 210, revenue: 630, cogs: 126 },
-];
+const TOP_ITEMS = [];
 
 function KPICard({ label, value, sub, icon: Icon, iconColor, bg, trend, trendVal }) {
   return (
@@ -81,9 +59,9 @@ export default function FnBReporting() {
   const liveProfit = liveRevenue - liveCOGS;
   const hasLiveData = invoices.length > 0;
 
-  const totalRevenue = hasLiveData ? liveRevenue : WEEKLY_SEED.reduce((a, d) => a + d.revenue, 0);
-  const totalCOGS = hasLiveData ? liveCOGS : WEEKLY_SEED.reduce((a, d) => a + d.cogs, 0);
-  const totalProfit = hasLiveData ? liveProfit : WEEKLY_SEED.reduce((a, d) => a + d.profit, 0);
+  const totalRevenue = liveRevenue;
+  const totalCOGS = liveCOGS;
+  const totalProfit = liveProfit;
   const avgMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0.0';
 
   const pendingSync = syncQueue.filter(q => q.status === 'pending').length;
@@ -93,7 +71,7 @@ export default function FnBReporting() {
   const paymentBreakdown = invoices.length > 0
     ? Object.entries(invoices.reduce((acc, inv) => { acc[inv.payment_method || 'other'] = (acc[inv.payment_method || 'other'] || 0) + (inv.total || 0); return acc; }, {}))
         .map(([name, value]) => ({ name, value: Math.round(value) }))
-    : [{ name: 'paynow', value: 4200 }, { name: 'card', value: 3100 }, { name: 'cash', value: 1950 }];
+    : [];
 
   const isLoading = loadingInvoices || loadingSync;
 
@@ -113,10 +91,10 @@ export default function FnBReporting() {
                 <span className="text-emerald-300 text-xs font-semibold uppercase tracking-widest">Refine · Analytics</span>
               </div>
               <h1 className="text-2xl font-display font-bold">F&B Performance Reports</h1>
-              <p className="text-white/60 text-sm mt-1">La Birria Tacos · North Bridge Rd · {hasLiveData ? `${invoices.length} live invoices` : 'Benchmark data'}</p>
+              <p className="text-white/60 text-sm mt-1">La Birria Tacos · North Bridge Rd · {hasLiveData ? `${invoices.length} live invoices` : 'No data yet'}</p>
             </div>
             <div className="flex items-center gap-2">
-              {!hasLiveData && <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-1 rounded-lg">Using benchmark data</span>}
+              {!hasLiveData && <span className="text-[10px] bg-muted/20 text-muted-foreground border border-border/30 px-2 py-1 rounded-lg">Awaiting live data</span>}
               <div className="flex gap-1 bg-white/10 rounded-lg p-1">
                 {['week', 'month'].map(p => (
                   <button key={p} onClick={() => setPeriod(p)}
@@ -189,7 +167,7 @@ export default function FnBReporting() {
           <div className="lg:col-span-2 bg-card border border-border rounded-2xl p-5">
             <div className="mb-4">
               <h3 className="font-heading font-semibold text-foreground">Gross Margin Trend</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">6-month performance — trending <span className="text-emerald-600 font-semibold">↑ +4.2%</span></p>
+              <p className="text-xs text-muted-foreground mt-0.5">6-month performance — awaiting operational data</p>
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={MONTHLY_MARGIN}>

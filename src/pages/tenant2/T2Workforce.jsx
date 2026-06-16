@@ -6,15 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Plus, Phone, Mail, Truck, CheckCircle2, Clock, X, UserPlus } from 'lucide-react';
 import { T2_NAV, T2_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_STAFF = [
-  { id: 'e1', full_name: 'Ahmad Fadzli', role: 'supervisor', position: 'Senior Driver', dept: 'Logistics', status: 'active', phone: '+65 9123 4567', email: 'ahmad@renewedresources.sg', employment_type: 'full_time', hire_date: '2022-03-01', pay_rate: 18, pay_type: 'hourly', clock_status: 'clocked_in', clock_in_time: '07:45', collections_today: 4, collections_month: 62 },
-  { id: 'e2', full_name: 'Hamka Bin Yusof', role: 'tenant_admin', position: 'Operations Manager', dept: 'Management', status: 'active', phone: '+65 9234 5678', email: 'hamka@renewedresources.sg', employment_type: 'full_time', hire_date: '2021-06-15', pay_rate: 4800, pay_type: 'monthly', clock_status: 'clocked_in', clock_in_time: '08:00', collections_today: null, collections_month: null },
-  { id: 'e3', full_name: 'Siti Rahimah', role: 'worker', position: 'Facility Sorter', dept: 'Processing', status: 'active', phone: '+65 9345 6789', email: 'siti@renewedresources.sg', employment_type: 'full_time', hire_date: '2023-01-10', pay_rate: 14, pay_type: 'hourly', clock_status: 'clocked_in', clock_in_time: '08:15', collections_today: null, collections_month: null },
-  { id: 'e4', full_name: 'Benny Tan', role: 'worker', position: 'Driver', dept: 'Logistics', status: 'active', phone: '+65 9456 7890', email: 'benny@renewedresources.sg', employment_type: 'part_time', hire_date: '2023-09-05', pay_rate: 16, pay_type: 'hourly', clock_status: 'clocked_out', clock_in_time: '—', collections_today: 3, collections_month: 44 },
-  { id: 'e5', full_name: 'Nurul Atikah', role: 'worker', position: 'Facility Sorter', dept: 'Processing', status: 'active', phone: '+65 9567 8901', email: 'nurul@renewedresources.sg', employment_type: 'full_time', hire_date: '2023-11-20', pay_rate: 14, pay_type: 'hourly', clock_status: 'clocked_in', clock_in_time: '08:30', collections_today: null, collections_month: null },
-  { id: 'e6', full_name: 'Kevin Lim', role: 'worker', position: 'Driver', dept: 'Logistics', status: 'on_leave', phone: '+65 9678 9012', email: 'kevin@renewedresources.sg', employment_type: 'full_time', hire_date: '2022-07-18', pay_rate: 16, pay_type: 'hourly', clock_status: 'absent', clock_in_time: '—', collections_today: 0, collections_month: 28 },
-];
-
 const ROLE_LABELS = { tenant_admin: 'Admin', supervisor: 'Supervisor', worker: 'Worker', outlet_manager: 'Manager' };
 const DEPT_COLORS = { Logistics: 'bg-blue-50 text-blue-700', Processing: 'bg-green-50 text-green-700', Management: 'bg-purple-50 text-purple-700' };
 const CLOCK_MAP = {
@@ -34,9 +25,10 @@ export default function T2Workforce() {
   const [selectedEmp, setSelectedEmp] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
 
-  const onDuty = DEMO_STAFF.filter(e => e.clock_status === 'clocked_in').length;
-  const drivers = DEMO_STAFF.filter(e => e.dept === 'Logistics');
-  const totalCollections = DEMO_STAFF.reduce((s, e) => s + (e.collections_today || 0), 0);
+  const staff = [];
+  const onDuty = 0;
+  const drivers = [];
+  const totalCollections = 0;
 
   return (
     <AppShell navigation={T2_NAV} tenant={T2_TENANT} title="" headerRight={<TenantSwitcher />}>
@@ -54,9 +46,9 @@ export default function T2Workforce() {
         {/* KPI row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total Staff', value: DEMO_STAFF.length, color: 'text-foreground', bg: 'bg-card border-border' },
-            { label: 'On Duty Now', value: onDuty, color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4] border-green-200' },
-            { label: 'On Leave', value: DEMO_STAFF.filter(e => e.status === 'on_leave').length, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
+            { label: 'Total Staff', value: 0, color: 'text-foreground', bg: 'bg-card border-border' },
+            { label: 'On Duty Now', value: 0, color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4] border-green-200' },
+            { label: 'On Leave', value: 0, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
             { label: 'Collections Today', value: totalCollections, color: 'text-primary', bg: 'bg-orbitan-blue-light border-blue-200' },
           ].map(s => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.bg}`}>
@@ -69,7 +61,7 @@ export default function T2Workforce() {
         {/* Live Duty Banner */}
         <div className="bg-[#F0FDF4] border border-green-200 rounded-xl px-5 py-3.5 flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
-          <p className="text-sm font-medium text-[#16A34A]">{onDuty} of {DEMO_STAFF.length} staff currently on duty · {drivers.filter(d => d.clock_status === 'clocked_in').length} drivers active in the field</p>
+          <p className="text-sm font-medium text-[#16A34A]">0 staff currently on duty · 0 drivers active in the field</p>
         </div>
 
         {/* Tabs */}
@@ -84,7 +76,7 @@ export default function T2Workforce() {
 
         {activeTab === 'team' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {DEMO_STAFF.map(emp => {
+            {staff.map(emp => {
               const es = EMP_STATUS_MAP[emp.status] || EMP_STATUS_MAP.active;
               const cs = CLOCK_MAP[emp.clock_status] || CLOCK_MAP.clocked_out;
               return (
@@ -117,10 +109,10 @@ export default function T2Workforce() {
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Today — 5 June 2026</p>
-              <p className="text-xs text-muted-foreground">{onDuty}/{DEMO_STAFF.length} present</p>
+              <p className="text-xs text-muted-foreground">0/0 present</p>
             </div>
             <div className="divide-y divide-border">
-              {DEMO_STAFF.map(emp => {
+              {staff.map(emp => {
                 const cs = CLOCK_MAP[emp.clock_status] || CLOCK_MAP.clocked_out;
                 return (
                   <div key={emp.id} className="flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors">

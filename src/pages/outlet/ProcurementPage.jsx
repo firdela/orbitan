@@ -33,17 +33,11 @@ const NAV = [
   { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
 ];
 
-const DEMO_SUPPLIERS = ['Fresh Produce SG', 'Metro Meat Suppliers', 'Spice Route Trading', 'PackRight Supplies'];
-const DEMO_ITEMS = ['Beef Brisket (kg)', 'Corn Tortilla Pack', 'Guajillo Chilli (kg)', 'Cilantro (bunch)', 'White Onion (kg)', 'Cooking Oil (5L)', 'Takeaway Boxes', 'Napkins Pack'];
-
-const DEMO_POS = [
-  { id: 'po1', po_number: 'PO-2024-001', supplier_name: 'Metro Meat Suppliers', status: 'approved', total_amount: 330, created_date: '2024-01-10', expected_delivery_date: '2024-01-12', items: [{ item_name: 'Beef Brisket', quantity: 15, unit: 'kg', unit_price: 22, total: 330 }] },
-  { id: 'po2', po_number: 'PO-2024-002', supplier_name: 'Fresh Produce SG', status: 'pending_approval', total_amount: 87.5, created_date: '2024-01-11', items: [{ item_name: 'Cilantro', quantity: 20, unit: 'bunch', unit_price: 1.2, total: 24 }, { item_name: 'White Onion', quantity: 10, unit: 'kg', unit_price: 2.5, total: 25 }] },
-  { id: 'po3', po_number: 'PO-2024-003', supplier_name: 'PackRight Supplies', status: 'draft', total_amount: 94, created_date: '2024-01-12', items: [{ item_name: 'Takeaway Boxes', quantity: 3, unit: 'box/100', unit_price: 18, total: 54 }, { item_name: 'Napkins Pack', quantity: 5, unit: 'pack', unit_price: 4.5, total: 22.5 }] },
-];
+const DEMO_SUPPLIERS = [];
+const DEMO_ITEMS = [];
 
 export default function ProcurementPage() {
-  const [pos, setPos] = useState(DEMO_POS);
+  const [pos, setPos] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newPO, setNewPO] = useState({ supplier_name: '', items: [{ item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] });
 

@@ -10,19 +10,6 @@ import { Package, AlertTriangle, Search, Plus, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_ITEMS = [
-  { id: '1', name: 'Beef Chuck (Birria Cut)', sku: 'ING-001', category: 'Meat', unit: 'kg', current_stock: 8, par_level: 15, reorder_point: 10, cost_per_unit: 22, is_ingredient: true, status: 'active' },
-  { id: '2', name: 'Corn Tortillas', sku: 'ING-002', category: 'Bread & Wraps', unit: 'pack (50)', current_stock: 4, par_level: 10, reorder_point: 5, cost_per_unit: 4.5, is_ingredient: true, status: 'active' },
-  { id: '3', name: 'Dried Guajillo Chillies', sku: 'ING-003', category: 'Spices', unit: 'kg', current_stock: 2.5, par_level: 3, reorder_point: 2, cost_per_unit: 18, is_ingredient: true, status: 'active' },
-  { id: '4', name: 'White Onions', sku: 'ING-004', category: 'Produce', unit: 'kg', current_stock: 6, par_level: 5, reorder_point: 3, cost_per_unit: 1.8, is_ingredient: true, status: 'active' },
-  { id: '5', name: 'Coriander', sku: 'ING-005', category: 'Produce', unit: 'bunch', current_stock: 3, par_level: 8, reorder_point: 4, cost_per_unit: 0.9, is_ingredient: true, status: 'active' },
-  { id: '6', name: 'Lime', sku: 'ING-006', category: 'Produce', unit: 'kg', current_stock: 2, par_level: 3, reorder_point: 2, cost_per_unit: 3.5, is_ingredient: true, status: 'active' },
-  { id: '7', name: 'Oaxaca Cheese', sku: 'ING-007', category: 'Dairy', unit: 'kg', current_stock: 4, par_level: 4, reorder_point: 2, cost_per_unit: 16, is_ingredient: true, status: 'active' },
-  { id: '8', name: 'Beef Consommé Sachets', sku: 'ING-008', category: 'Condiments', unit: 'box (24)', current_stock: 12, par_level: 10, reorder_point: 6, cost_per_unit: 8, is_ingredient: true, status: 'active' },
-  { id: '9', name: 'Takeaway Boxes (L)', sku: 'PKG-001', category: 'Packaging', unit: 'box (100)', current_stock: 3, par_level: 5, reorder_point: 3, cost_per_unit: 12, is_ingredient: false, status: 'active' },
-  { id: '10', name: 'Napkins', sku: 'PKG-002', category: 'Packaging', unit: 'box (500)', current_stock: 6, par_level: 4, reorder_point: 2, cost_per_unit: 7, is_ingredient: false, status: 'active' },
-];
-
 function stockStatus(item) {
   if (item.current_stock <= item.reorder_point) return 'critical';
   if (item.current_stock < item.par_level) return 'low';
@@ -35,13 +22,8 @@ export default function FnBInventory() {
   const [showAdd, setShowAdd] = useState(false);
   const [newItem, setNewItem] = useState({ name: '', category: 'Meat', unit: 'kg', current_stock: 0, par_level: 0, cost_per_unit: 0, is_ingredient: true });
 
-  const items = DEMO_ITEMS.filter(i => {
-    const matchSearch = i.name.toLowerCase().includes(search.toLowerCase()) || i.sku.toLowerCase().includes(search.toLowerCase());
-    const matchLow = !filterLow || stockStatus(i) !== 'ok';
-    return matchSearch && matchLow;
-  });
-
-  const lowCount = DEMO_ITEMS.filter(i => stockStatus(i) !== 'ok').length;
+  const items = []; // Real inventory data will populate from live operations
+  const lowCount = 0;
 
   async function handleAddItem() {
     await base44.entities.InventoryItem.create({ ...newItem, tenant_id: 'tenant_taqueria', outlet_id: 'outlet_nbr' });
@@ -144,7 +126,7 @@ export default function FnBInventory() {
         {/* Summary */}
         <div className="grid grid-cols-3 gap-4 text-center">
           <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-2xl font-display font-bold text-foreground">{DEMO_ITEMS.length}</p>
+            <p className="text-2xl font-display font-bold text-foreground">0</p>
             <p className="text-xs text-muted-foreground">Total Items</p>
           </div>
           <div className="bg-orbitan-amber-light border border-amber-200 rounded-xl p-4">
@@ -153,7 +135,7 @@ export default function FnBInventory() {
           </div>
           <div className="bg-card border border-border rounded-xl p-4">
             <p className="text-2xl font-display font-bold text-orbitan-green">
-              S${DEMO_ITEMS.reduce((a, i) => a + i.current_stock * i.cost_per_unit, 0).toFixed(0)}
+              S$0
             </p>
             <p className="text-xs text-muted-foreground">Stock Value</p>
           </div>

@@ -7,31 +7,9 @@ import { Download } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell } from 'recharts';
 import { T3_NAV, T3_TENANT } from '@/lib/tenant-nav';
 
-const MONTHLY_SALES = [
-  { month: 'Jan', revenue: 2100, items: 48, co2_saved: 112 },
-  { month: 'Feb', revenue: 2450, items: 55, co2_saved: 138 },
-  { month: 'Mar', revenue: 2800, items: 64, co2_saved: 158 },
-  { month: 'Apr', revenue: 3200, items: 72, co2_saved: 184 },
-  { month: 'May', revenue: 3750, items: 84, co2_saved: 218 },
-  { month: 'Jun', revenue: 4280, items: 89, co2_saved: 240 },
-];
-
-const CATEGORY_BREAKDOWN = [
-  { name: 'Tops', value: 38, color: '#EC4899' },
-  { name: 'Bottoms', value: 25, color: '#3B82F6' },
-  { name: 'Outerwear', value: 15, color: '#F59E0B' },
-  { name: 'Footwear', value: 10, color: '#8B5CF6' },
-  { name: 'Bags & Accessories', value: 8, color: '#14B8A6' },
-  { name: 'Other', value: 4, color: '#94A3B8' },
-];
-
-const TOP_ITEMS = [
-  { name: "Vintage Levi's Denim Jacket", sold: 12, revenue: 576, grade: 'B' },
-  { name: 'Upcycled Patchwork Tees', sold: 28, revenue: 504, grade: 'E' },
-  { name: 'North Face Fleece Jacket', sold: 6, revenue: 450, grade: 'B' },
-  { name: 'Nike Running Shorts', sold: 18, revenue: 396, grade: 'C' },
-  { name: 'Leather Tote Bags', sold: 8, revenue: 384, grade: 'B' },
-];
+const MONTHLY_SALES = [];
+const CATEGORY_BREAKDOWN = [];
+const TOP_ITEMS = [];
 
 export default function T3Reporting() {
   const [period, setPeriod] = useState('mtd');
@@ -62,10 +40,10 @@ export default function T3Reporting() {
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Revenue (MTD)', value: 'S$4,280', delta: '+28%', color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4] border-green-200' },
-            { label: 'Items Sold', value: '89 pcs', delta: '+15%', color: 'text-primary', bg: 'bg-orbitan-blue-light border-blue-200' },
-            { label: 'Avg Item Price', value: 'S$48.09', delta: '+11%', color: 'text-foreground', bg: 'bg-card border-border' },
-            { label: 'CO₂ Saved', value: '240 kg', delta: 'via purchases', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+            { label: 'Revenue (MTD)', value: 'S$0', delta: '—', color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4] border-green-200' },
+            { label: 'Items Sold', value: '0 pcs', delta: '—', color: 'text-primary', bg: 'bg-orbitan-blue-light border-blue-200' },
+            { label: 'Avg Item Price', value: 'S$0', delta: '—', color: 'text-foreground', bg: 'bg-card border-border' },
+            { label: 'CO₂ Saved', value: '0 kg', delta: '—', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
           ].map(s => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.bg}`}>
               <p className={`text-xl font-display font-bold ${s.color}`}>{s.value}</p>
@@ -149,10 +127,10 @@ export default function T3Reporting() {
           <p className="text-xs font-semibold uppercase tracking-widest opacity-70 mb-4">2026 Year-to-Date Sustainability Impact</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
             {[
-              { label: 'Items Diverted from Landfill', value: '424 pcs', sub: 'sold & reused' },
-              { label: 'CO₂ Saved', value: '1,050 kg', sub: 'via upcycled purchases' },
-              { label: 'Water Saved', value: '42,000L', sub: 'vs buying new' },
-              { label: 'Customer Revenue', value: 'S$19,580', sub: 'year-to-date' },
+              { label: 'Items Diverted from Landfill', value: '0 pcs', sub: 'awaiting data' },
+              { label: 'CO₂ Saved', value: '0 kg', sub: 'awaiting data' },
+              { label: 'Water Saved', value: '0L', sub: 'awaiting data' },
+              { label: 'Customer Revenue', value: 'S$0', sub: 'awaiting data' },
             ].map(s => (
               <div key={s.label}>
                 <p className="text-2xl font-display font-bold">{s.value}</p>

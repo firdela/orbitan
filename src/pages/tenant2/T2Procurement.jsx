@@ -6,20 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Plus, CheckCircle2, Clock, Truck, XCircle, X, ChevronRight, Mail, Phone, Building2 } from 'lucide-react';
 import { T2_NAV, T2_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_POS = [
-  { id: 'PO-2026-021', supplier: 'EcoFleet Transport Pte Ltd', items: [{ name: 'Collection Vehicle Fuel', qty: 200, unit: 'L', unit_price: 2.40 }, { name: 'PPE Kit — Driver', qty: 4, unit: 'set', unit_price: 85 }, { name: 'Weighing Scale Calibration', qty: 1, unit: 'svc', unit_price: 320 }], status: 'approved', date: '2026-06-04', expected: '2026-06-06', notes: 'Priority order — vehicles need to run Monday' },
-  { id: 'PO-2026-020', supplier: 'Green Sort Solutions', items: [{ name: 'Sorting Conveyor Maintenance', qty: 1, unit: 'svc', unit_price: 680 }, { name: 'Replacement Mesh Screens', qty: 2, unit: 'pcs', unit_price: 80 }], status: 'received', date: '2026-06-02', expected: '2026-06-04', notes: '' },
-  { id: 'PO-2026-019', supplier: 'RE-Sort Pte Ltd', items: [{ name: 'Baling Wire', qty: 50, unit: 'kg', unit_price: 3.20 }, { name: 'Hydraulic Press Service', qty: 1, unit: 'svc', unit_price: 850 }, { name: 'Plastic Sorting Bags', qty: 500, unit: 'pcs', unit_price: 0.60 }, { name: 'Safety Signage Set', qty: 10, unit: 'pcs', unit_price: 25 }, { name: 'Facility Deep Clean', qty: 1, unit: 'svc', unit_price: 620 }], status: 'pending_approval', date: '2026-06-01', expected: '2026-06-07', notes: 'Awaiting Hamka sign-off' },
-  { id: 'PO-2026-018', supplier: 'EcoFleet Transport Pte Ltd', items: [{ name: 'GPS Tracker Subscription (1 vehicle)', qty: 1, unit: 'mth', unit_price: 480 }], status: 'sent', date: '2026-05-29', expected: '2026-06-03', notes: '' },
-  { id: 'PO-2026-017', supplier: 'Material Recovery SG', items: [{ name: 'E-Waste Processing Service', qty: 42, unit: 'kg', unit_price: 18 }, { name: 'Copper Extraction Fee', qty: 18, unit: 'kg', unit_price: 12 }, { name: 'Hazmat Disposal Certificate', qty: 1, unit: 'doc', unit_price: 280 }, { name: 'Certified Destruction Report', qty: 1, unit: 'doc', unit_price: 160 }], status: 'received', date: '2026-05-25', expected: '2026-05-30', notes: 'Completed — certificates filed in compliance' },
-];
-
-const DEMO_SUPPLIERS = [
-  { name: 'EcoFleet Transport Pte Ltd', contact: 'Ahmad Rashid', email: 'ahmad@ecofleet.sg', phone: '+65 6234 5678', category: 'Logistics', terms: 'Net 14', status: 'active', orders_ytd: 8 },
-  { name: 'Green Sort Solutions', contact: 'Lisa Tan', email: 'lisa@greensort.sg', phone: '+65 6345 6789', category: 'Processing', terms: 'COD', status: 'active', orders_ytd: 5 },
-  { name: 'RE-Sort Pte Ltd', contact: 'David Ng', email: 'david@resort.sg', phone: '+65 6456 7890', category: 'Facility Services', terms: 'Net 30', status: 'active', orders_ytd: 3 },
-  { name: 'Material Recovery SG', contact: 'Priya Raj', email: 'priya@mrsg.sg', phone: '+65 6567 8901', category: 'Recovery & Disposal', terms: 'Net 7', status: 'active', orders_ytd: 6 },
-];
+const posList = [];
+const suppliers = [];
 
 const STATUS_MAP = {
   draft:            { label: 'Draft',            bg: 'bg-muted',       color: 'text-muted-foreground', icon: Clock },
@@ -34,7 +22,7 @@ export default function T2Procurement() {
   const [activeTab, setActiveTab] = useState('orders');
   const [selectedPO, setSelectedPO] = useState(null);
 
-  const totalSpend = DEMO_POS.filter(p => p.status !== 'cancelled').reduce((s, p) => s + p.items.reduce((a, i) => a + i.qty * i.unit_price, 0), 0);
+  const totalSpend = 0;
 
   return (
     <AppShell navigation={T2_NAV} tenant={T2_TENANT} title="" headerRight={<TenantSwitcher />}>
@@ -52,9 +40,9 @@ export default function T2Procurement() {
         {/* Summary */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total Orders', value: DEMO_POS.length, color: 'text-foreground', bg: 'bg-card border-border' },
-            { label: 'Pending Approval', value: DEMO_POS.filter(p => p.status === 'pending_approval').length, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
-            { label: 'In Transit', value: DEMO_POS.filter(p => p.status === 'sent').length, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
+            { label: 'Total Orders', value: 0, color: 'text-foreground', bg: 'bg-card border-border' },
+            { label: 'Pending Approval', value: 0, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
+            { label: 'In Transit', value: 0, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
             { label: 'Total Spend (MTD)', value: `S$${totalSpend.toLocaleString()}`, color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4] border-green-200' },
           ].map(s => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.bg}`}>
@@ -77,7 +65,7 @@ export default function T2Procurement() {
         {activeTab === 'orders' && (
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="divide-y divide-border">
-              {DEMO_POS.map(po => {
+              {posList.map(po => {
                 const sc = STATUS_MAP[po.status] || STATUS_MAP.draft;
                 const StatusIcon = sc.icon;
                 const total = po.items.reduce((s, i) => s + i.qty * i.unit_price, 0);
@@ -111,7 +99,7 @@ export default function T2Procurement() {
 
         {activeTab === 'suppliers' && (
           <div className="space-y-3">
-            {DEMO_SUPPLIERS.map(s => (
+            {suppliers.map(s => (
               <div key={s.name} className="bg-card border border-border rounded-xl p-5 hover:shadow-sm transition-shadow">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">

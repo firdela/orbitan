@@ -10,14 +10,6 @@ import {
 } from 'lucide-react';
 import { T2_NAV, T2_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_COLLECTIONS = [
-  { id: 'C-2026-089', source: 'CapitaLand HQ', address: '168 Robinson Rd', material_category: 'paper_cardboard', gross_weight_kg: 320, net_weight_kg: 304, co2_saved_kg: 480, processing_status: 'completed', collection_date: '2026-06-04', driver: 'Ahmad Razif', revenue_sgd: 224 },
-  { id: 'C-2026-088', source: 'Raffles Hotel', address: '1 Beach Rd', material_category: 'plastics', gross_weight_kg: 85, net_weight_kg: 72, co2_saved_kg: 144, processing_status: 'sorting', collection_date: '2026-06-04', driver: 'Tan Wei Ming', revenue_sgd: 108 },
-  { id: 'C-2026-087', source: 'NUS Campus', address: '21 Lower Kent Ridge Rd', material_category: 'e_waste', gross_weight_kg: 42, net_weight_kg: 42, co2_saved_kg: 210, processing_status: 'in_transit', collection_date: '2026-06-03', driver: 'Muthu Rajan', revenue_sgd: 630 },
-  { id: 'C-2026-086', source: 'Suntec City', address: '3 Temasek Blvd', material_category: 'metals', gross_weight_kg: 210, net_weight_kg: 198, co2_saved_kg: 990, processing_status: 'completed', collection_date: '2026-06-03', driver: 'Ahmad Razif', revenue_sgd: 594 },
-  { id: 'C-2026-085', source: 'Marina Bay Sands', address: '10 Bayfront Ave', material_category: 'mixed', gross_weight_kg: 560, net_weight_kg: 420, co2_saved_kg: 630, processing_status: 'received_at_facility', collection_date: '2026-06-02', driver: 'Tan Wei Ming', revenue_sgd: 378 },
-];
-
 const MATERIAL_LABELS = {
   paper_cardboard: { label: 'Paper / Cardboard', color: '#92400E', bg: '#FEF3C7' },
   plastics:        { label: 'Plastics',           color: '#1D4ED8', bg: '#DBEAFE' },
@@ -44,15 +36,16 @@ export default function T2Collections() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [newJob, setNewJob] = useState({ source: '', address: '', material_category: 'mixed', collection_date: '', gross_weight_kg: '', driver: '' });
 
-  const filtered = DEMO_COLLECTIONS.filter(c => {
+  const collections = [];
+  const filtered = collections.filter(c => {
     const matchSearch = c.source.toLowerCase().includes(search.toLowerCase()) || c.id.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || c.processing_status === filterStatus;
     return matchSearch && matchStatus;
   });
 
-  const totalWeight = DEMO_COLLECTIONS.reduce((s, c) => s + c.net_weight_kg, 0);
-  const totalCO2 = DEMO_COLLECTIONS.reduce((s, c) => s + c.co2_saved_kg, 0);
-  const totalRevenue = DEMO_COLLECTIONS.reduce((s, c) => s + c.revenue_sgd, 0);
+  const totalWeight = 0;
+  const totalCO2 = 0;
+  const totalRevenue = 0;
 
   return (
     <AppShell navigation={T2_NAV} tenant={T2_TENANT} title="" headerRight={<TenantSwitcher />}>

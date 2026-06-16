@@ -6,17 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Plus, CheckCircle2, Clock, AlertCircle, Circle, X, User, Calendar } from 'lucide-react';
 import { T2_NAV, T2_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_TASKS = [
-  { id: 't1', title: 'Complete CapitaLand HQ collection report', assigned_to_name: 'Ahmad Fadzli', priority: 'high', status: 'in_progress', due_date: '2026-06-04', category: 'Collections', module: 'Operations', notes: 'Awaiting weight certificate from facility' },
-  { id: 't2', title: 'Weigh and log e-waste batch from NUS', assigned_to_name: 'Siti Rahimah', priority: 'high', status: 'pending', due_date: '2026-06-04', category: 'Processing', module: 'Inventory', notes: '42kg batch pending measurement at Secure Bay D' },
-  { id: 't3', title: 'Update aluminium stock levels after dispatch', assigned_to_name: 'Nurul Atikah', priority: 'medium', status: 'pending', due_date: '2026-06-05', category: 'Inventory', module: 'Inventory', notes: '' },
-  { id: 't4', title: 'Schedule next week collection routes', assigned_to_name: 'Hamka Bin Yusof', priority: 'medium', status: 'pending', due_date: '2026-06-06', category: 'Operations', module: 'Scheduling', notes: 'Coordinate with EcoFleet Transport' },
-  { id: 't5', title: 'Submit monthly environmental compliance report', assigned_to_name: 'Hamka Bin Yusof', priority: 'urgent', status: 'in_progress', due_date: '2026-06-07', category: 'Compliance', module: 'Compliance', notes: 'NEA submission deadline — cannot miss' },
-  { id: 't6', title: 'Vehicle inspection — truck SG1234A', assigned_to_name: 'Benny Tan', priority: 'low', status: 'completed', due_date: '2026-06-03', category: 'Operations', module: 'Maintenance', notes: 'Passed inspection. Certificate filed.' },
-  { id: 't7', title: 'Sort and grade textile batch from Raffles Hotel', assigned_to_name: 'Siti Rahimah', priority: 'medium', status: 'completed', due_date: '2026-06-03', category: 'Processing', module: 'Inventory', notes: '380kg sorted and shelved at Bay F1' },
-  { id: 't8', title: 'Copper wire scrap — arrange smelter pickup', assigned_to_name: 'Ahmad Fadzli', priority: 'high', status: 'pending', due_date: '2026-06-08', category: 'Collections', module: 'Procurement', notes: 'High value batch — 18kg at Secure Bay E' },
-];
-
 const PRIORITY_MAP = {
   urgent: { label: 'Urgent', bg: 'bg-red-50', color: 'text-red-600', border: 'border-red-200', dot: 'bg-red-500' },
   high:   { label: 'High',   bg: 'bg-amber-50', color: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
@@ -48,15 +37,16 @@ export default function T2Tasks() {
   const [showNew, setShowNew] = useState(false);
   const [filterCategory, setFilterCategory] = useState('all');
 
-  const categories = [...new Set(DEMO_TASKS.map(t => t.category))];
+  const tasks = [];
+  const categories = [...new Set(tasks.map(t => t.category))];
 
-  const filtered = DEMO_TASKS.filter(t => {
+  const filtered = tasks.filter(t => {
     const matchFilter = filter === 'active' ? t.status !== 'completed' : filter === 'completed' ? t.status === 'completed' : true;
     const matchCat = filterCategory === 'all' || t.category === filterCategory;
     return matchFilter && matchCat;
   });
 
-  const urgentCount = DEMO_TASKS.filter(t => t.priority === 'urgent' && t.status !== 'completed').length;
+  const urgentCount = 0;
 
   return (
     <AppShell navigation={T2_NAV} tenant={T2_TENANT} title="" headerRight={<TenantSwitcher />}>
@@ -81,10 +71,10 @@ export default function T2Tasks() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total Tasks', value: DEMO_TASKS.length, color: 'text-foreground', bg: 'bg-card border-border' },
-            { label: 'In Progress', value: DEMO_TASKS.filter(t => t.status === 'in_progress').length, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
-            { label: 'Urgent', value: DEMO_TASKS.filter(t => t.priority === 'urgent').length, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
-            { label: 'Completed', value: DEMO_TASKS.filter(t => t.status === 'completed').length, color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4] border-green-200' },
+            { label: 'Total Tasks', value: 0, color: 'text-foreground', bg: 'bg-card border-border' },
+            { label: 'In Progress', value: 0, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
+            { label: 'Urgent', value: 0, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
+            { label: 'Completed', value: 0, color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4] border-green-200' },
           ].map(s => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.bg}`}>
               <p className={`text-2xl font-display font-bold ${s.color}`}>{s.value}</p>

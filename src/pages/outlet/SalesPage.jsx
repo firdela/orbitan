@@ -33,13 +33,8 @@ const NAV = [
   { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
 ];
 
-const DEMO_RECONCILIATIONS = [
-  { id: 'r1', date: '2024-01-11', total_revenue: 3420, total_cogs: 1026, gross_profit: 2394, gross_margin_pct: 70, cash_sales: 1200, card_sales: 2220, net_revenue: 3420, status: 'approved', xero_sync_status: 'synced' },
-  { id: 'r2', date: '2024-01-10', total_revenue: 2980, total_cogs: 894, gross_profit: 2086, gross_margin_pct: 70, cash_sales: 980, card_sales: 2000, net_revenue: 2980, status: 'submitted', xero_sync_status: 'not_synced' },
-];
-
 export default function SalesPage() {
-  const [reconciliations, setReconciliations] = useState(DEMO_RECONCILIATIONS);
+  const [reconciliations, setReconciliations] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '' });
 

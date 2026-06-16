@@ -6,17 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Search, Plus, AlertTriangle, CheckCircle2, TrendingDown, Package, X } from 'lucide-react';
 import { T2_NAV, T2_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_MATERIALS = [
-  { id: 'm1', name: 'Cardboard (Grade A)', category: 'paper_cardboard', unit: 'kg', current_stock: 840, par_level: 200, reorder_point: 150, cost_per_unit: 0.12, storage_location: 'Bay A1', status: 'active', last_collection: '2026-06-04' },
-  { id: 'm2', name: 'Clear PET Bottles', category: 'plastics', unit: 'kg', current_stock: 320, par_level: 100, reorder_point: 80, cost_per_unit: 0.28, storage_location: 'Bay B2', status: 'active', last_collection: '2026-06-04' },
-  { id: 'm3', name: 'Aluminium Cans', category: 'metals', unit: 'kg', current_stock: 95, par_level: 150, reorder_point: 100, cost_per_unit: 1.20, storage_location: 'Bay C1', status: 'active', last_collection: '2026-06-03' },
-  { id: 'm4', name: 'Mixed E-Waste', category: 'e_waste', unit: 'kg', current_stock: 42, par_level: 50, reorder_point: 30, cost_per_unit: 2.50, storage_location: 'Secure Bay D', status: 'active', last_collection: '2026-06-03' },
-  { id: 'm5', name: 'Glass Bottles', category: 'glass', unit: 'kg', current_stock: 210, par_level: 100, reorder_point: 80, cost_per_unit: 0.08, storage_location: 'Bay B3', status: 'active', last_collection: '2026-06-02' },
-  { id: 'm6', name: 'HDPE Plastic (Mixed)', category: 'plastics', unit: 'kg', current_stock: 55, par_level: 100, reorder_point: 70, cost_per_unit: 0.35, storage_location: 'Bay B4', status: 'active', last_collection: '2026-06-01' },
-  { id: 'm7', name: 'Copper Wire Scrap', category: 'metals', unit: 'kg', current_stock: 18, par_level: 30, reorder_point: 20, cost_per_unit: 8.50, storage_location: 'Secure Bay E', status: 'active', last_collection: '2026-05-31' },
-  { id: 'm8', name: 'Textiles (Mixed)', category: 'textiles', unit: 'kg', current_stock: 380, par_level: 200, reorder_point: 150, cost_per_unit: 0.05, storage_location: 'Bay F1', status: 'active', last_collection: '2026-06-04' },
-];
-
 const CATEGORY_LABELS = { paper_cardboard: 'Paper / Cardboard', plastics: 'Plastics', metals: 'Metals', e_waste: 'E-Waste', glass: 'Glass', textiles: 'Textiles', organic: 'Organic', mixed: 'Mixed' };
 const CATEGORY_COLORS = { paper_cardboard: 'bg-amber-50 text-amber-700', plastics: 'bg-blue-50 text-blue-700', metals: 'bg-slate-100 text-slate-700', e_waste: 'bg-purple-50 text-purple-700', glass: 'bg-cyan-50 text-cyan-700', textiles: 'bg-pink-50 text-pink-700', organic: 'bg-green-50 text-green-700', mixed: 'bg-gray-100 text-gray-700' };
 
@@ -33,15 +22,16 @@ export default function T2Inventory() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [newItem, setNewItem] = useState({ name: '', category: 'mixed', unit: 'kg', current_stock: '', par_level: '', cost_per_unit: '', storage_location: '' });
 
-  const filtered = DEMO_MATERIALS.filter(m => {
+  const materials = [];
+  const filtered = materials.filter(m => {
     const matchSearch = m.name.toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCat === 'all' || m.category === filterCat;
     return matchSearch && matchCat;
   });
 
-  const totalValue = DEMO_MATERIALS.reduce((sum, m) => sum + m.current_stock * m.cost_per_unit, 0);
-  const lowStockCount = DEMO_MATERIALS.filter(m => getStockStatus(m) === 'low').length;
-  const totalKg = DEMO_MATERIALS.reduce((s, m) => s + m.current_stock, 0);
+  const totalValue = 0;
+  const lowStockCount = 0;
+  const totalKg = 0;
 
   return (
     <AppShell navigation={T2_NAV} tenant={T2_TENANT} title="" headerRight={<TenantSwitcher />}>
@@ -69,7 +59,7 @@ export default function T2Inventory() {
         {/* Summary */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Material SKUs', value: DEMO_MATERIALS.length, color: 'text-foreground', bg: 'bg-card border-border' },
+            { label: 'Material SKUs', value: 0, color: 'text-foreground', bg: 'bg-card border-border' },
             { label: 'Low / Reorder', value: lowStockCount, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
             { label: 'Total Stock (kg)', value: totalKg.toLocaleString(), color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4] border-green-200' },
             { label: 'Est. Facility Value', value: `S$${totalValue.toFixed(0)}`, color: 'text-primary', bg: 'bg-orbitan-blue-light border-blue-200' },
@@ -164,7 +154,7 @@ export default function T2Inventory() {
           <p className="text-sm font-semibold text-foreground mb-3">Stock Distribution by Category</p>
           <div className="space-y-2.5">
             {Object.keys(CATEGORY_LABELS).map(cat => {
-              const items = DEMO_MATERIALS.filter(m => m.category === cat);
+              const items = materials.filter(m => m.category === cat);
               const totalStock = items.reduce((s, m) => s + m.current_stock, 0);
               if (totalStock === 0) return null;
               const pct = Math.round((totalStock / totalKg) * 100);

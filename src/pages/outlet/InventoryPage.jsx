@@ -39,17 +39,6 @@ const NAV = [
   { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
 ];
 
-const DEMO_ITEMS = [
-  { id: '1', name: 'Beef Brisket', category: 'Meat', unit: 'kg', current_stock: 5.5, par_level: 10, cost_per_unit: 22, is_ingredient: true, status: 'active' },
-  { id: '2', name: 'Corn Tortilla (Pack of 50)', category: 'Dry Goods', unit: 'pack', current_stock: 12, par_level: 20, cost_per_unit: 8.5, is_ingredient: true, status: 'active' },
-  { id: '3', name: 'Guajillo Chilli', category: 'Spices', unit: 'kg', current_stock: 2.1, par_level: 3, cost_per_unit: 35, is_ingredient: true, status: 'active' },
-  { id: '4', name: 'Cilantro (Bunch)', category: 'Produce', unit: 'bunch', current_stock: 8, par_level: 15, cost_per_unit: 1.2, is_ingredient: true, status: 'active' },
-  { id: '5', name: 'White Onion', category: 'Produce', unit: 'kg', current_stock: 6, par_level: 8, cost_per_unit: 2.5, is_ingredient: true, status: 'active' },
-  { id: '6', name: 'Cooking Oil (5L)', category: 'Oils', unit: 'bottle', current_stock: 3, par_level: 6, cost_per_unit: 12, is_ingredient: true, status: 'active' },
-  { id: '7', name: 'Takeaway Boxes (Small)', category: 'Packaging', unit: 'box/100', current_stock: 2, par_level: 5, cost_per_unit: 18, is_ingredient: false, status: 'active' },
-  { id: '8', name: 'Napkins (Pack of 200)', category: 'Packaging', unit: 'pack', current_stock: 6, par_level: 10, cost_per_unit: 4.5, is_ingredient: false, status: 'active' },
-];
-
 export default function InventoryPage() {
   const { user } = useAuth();
   const [items, setItems] = useState([]);
@@ -65,8 +54,8 @@ export default function InventoryPage() {
 
   useEffect(() => {
     base44.entities.InventoryItem.list('-created_date', 100)
-      .then(data => setItems(data || DEMO_ITEMS))
-      .catch(() => setItems(DEMO_ITEMS))
+      .then(data => setItems(data || []))
+      .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);
 

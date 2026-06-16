@@ -7,15 +7,6 @@ import { Plus, CheckCircle2, CreditCard, Banknote, ArrowUpRight } from 'lucide-r
 import { T3_NAV, T3_TENANT } from '@/lib/tenant-nav';
 import POSModal from '@/components/pos/POSModal';
 
-const DEMO_SALES = [
-  { id: 'S-2026-089', item: "Vintage Levi's Denim Jacket", sku: 'SKU-0041', price: 48, payment: 'card', customer: 'Sarah T.', date: '2026-06-04', status: 'paid', co2_saved: 3.2 },
-  { id: 'S-2026-088', item: 'Upcycled Floral Maxi Dress', sku: 'SKU-0085', price: 35, payment: 'cash', customer: 'Priya M.', date: '2026-06-04', status: 'paid', co2_saved: 2.1 },
-  { id: 'S-2026-087', item: 'H&M Striped Tee (M)', sku: 'SKU-0098', price: 12, payment: 'cash', customer: 'Walk-in', date: '2026-06-03', status: 'paid', co2_saved: 0.8 },
-  { id: 'S-2026-086', item: 'Nike Running Shorts', sku: 'SKU-0076', price: 22, payment: 'card', customer: 'James K.', date: '2026-06-03', status: 'paid', co2_saved: 1.5 },
-  { id: 'S-2026-085', item: 'Leather Tote Bag (Brown)', sku: 'SKU-0097', price: 48, payment: 'transfer', customer: 'Mei Lin', date: '2026-06-02', status: 'paid', co2_saved: 4.8 },
-  { id: 'S-2026-084', item: 'North Face Fleece Jacket (L)', sku: 'SKU-0033', price: 75, payment: 'card', customer: 'Ahmad R.', date: '2026-06-02', status: 'paid', co2_saved: 5.4 },
-];
-
 const PAYMENT_MAP = {
   cash:     { label: 'Cash',     icon: Banknote,    color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4]' },
   card:     { label: 'Card',     icon: CreditCard,  color: 'text-blue-600',  bg: 'bg-blue-50' },
@@ -26,8 +17,9 @@ export default function T3Sales() {
   const [activeTab, setActiveTab] = useState('sales');
   const [posOpen, setPosOpen] = useState(false);
 
-  const totalRevenue = DEMO_SALES.reduce((s, t) => s + t.price, 0);
-  const totalCO2 = DEMO_SALES.reduce((s, t) => s + t.co2_saved, 0).toFixed(1);
+  const sales = [];
+  const totalRevenue = 0;
+  const totalCO2 = '0.0';
 
   return (
     <AppShell navigation={T3_NAV} tenant={T3_TENANT} title="" headerRight={<TenantSwitcher />}>
@@ -52,9 +44,9 @@ export default function T3Sales() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Sales (MTD)', value: DEMO_SALES.length, color: 'text-foreground', bg: 'bg-card border-border' },
-            { label: 'Revenue (MTD)', value: `S$${totalRevenue}`, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4] border-green-200' },
-            { label: 'Avg Sale Value', value: `S$${(totalRevenue / DEMO_SALES.length).toFixed(0)}`, color: 'text-primary', bg: 'bg-orbitan-blue-light border-blue-200' },
+            { label: 'Sales (MTD)', value: 0, color: 'text-foreground', bg: 'bg-card border-border' },
+            { label: 'Revenue (MTD)', value: `S$0`, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4] border-green-200' },
+            { label: 'Avg Sale Value', value: `S$0`, color: 'text-primary', bg: 'bg-orbitan-blue-light border-blue-200' },
             { label: 'CO₂ Impact', value: `${totalCO2}kg`, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
           ].map(s => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.bg}`}>
@@ -77,7 +69,7 @@ export default function T3Sales() {
         {activeTab === 'sales' && (
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="divide-y divide-border">
-              {DEMO_SALES.map(sale => {
+              {sales.map(sale => {
                 const pm = PAYMENT_MAP[sale.payment] || PAYMENT_MAP.cash;
                 const PayIcon = pm.icon;
                 return (

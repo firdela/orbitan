@@ -6,15 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Search, Plus, Star, Phone, Mail, X, UserPlus, Leaf, ShoppingBag, TrendingUp } from 'lucide-react';
 import { T3_NAV, T3_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_CUSTOMERS = [
-  { id: 'c1', full_name: 'Sarah Tan', email: 'sarah@email.com', phone: '+65 9111 2222', loyalty_tier: 'sustainability_champion', loyalty_points: 840, total_purchases: 14, total_spend_sgd: 312, total_co2_saved_kg: 28.4, last_purchase_date: '2026-06-04', status: 'active', acquisition: 'walk_in', fav_category: 'Outerwear', items_diverted: 14 },
-  { id: 'c2', full_name: 'Priya Mehra', email: 'priya@email.com', phone: '+65 9222 3333', loyalty_tier: 'eco_regular', loyalty_points: 420, total_purchases: 7, total_spend_sgd: 189, total_co2_saved_kg: 14.2, last_purchase_date: '2026-06-04', status: 'active', acquisition: 'social_media', fav_category: 'Tops', items_diverted: 7 },
-  { id: 'c3', full_name: 'James Koh', email: 'james@email.com', phone: '+65 9333 4444', loyalty_tier: 'eco_regular', loyalty_points: 380, total_purchases: 6, total_spend_sgd: 164, total_co2_saved_kg: 11.8, last_purchase_date: '2026-06-03', status: 'active', acquisition: 'referral', fav_category: 'Bottoms', items_diverted: 6 },
-  { id: 'c4', full_name: 'Mei Lin Chen', email: 'mei@email.com', phone: '+65 9444 5555', loyalty_tier: 'orbitan_ambassador', loyalty_points: 1840, total_purchases: 32, total_spend_sgd: 894, total_co2_saved_kg: 72.1, last_purchase_date: '2026-06-02', status: 'vip', acquisition: 'walk_in', fav_category: 'Outerwear', items_diverted: 32 },
-  { id: 'c5', full_name: 'Ahmad Rashid', email: 'ahmad@email.com', phone: '+65 9555 6666', loyalty_tier: 'green_starter', loyalty_points: 120, total_purchases: 2, total_spend_sgd: 75, total_co2_saved_kg: 5.4, last_purchase_date: '2026-06-02', status: 'active', acquisition: 'event', fav_category: 'Tops', items_diverted: 2 },
-  { id: 'c6', full_name: 'Nurul Huda', email: 'nurul@email.com', phone: '+65 9666 7777', loyalty_tier: 'sustainability_champion', loyalty_points: 920, total_purchases: 18, total_spend_sgd: 452, total_co2_saved_kg: 34.2, last_purchase_date: '2026-05-28', status: 'active', acquisition: 'online', fav_category: 'Accessories', items_diverted: 18 },
-];
-
 const TIER_MAP = {
   green_starter:           { label: 'Green Starter',           color: '#16A34A', bg: '#F0FDF4', pts_next: 200 },
   eco_regular:             { label: 'Eco Regular',             color: '#2563EB', bg: '#DBEAFE', pts_next: 600 },
@@ -36,15 +27,16 @@ export default function T3Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
 
-  const filtered = DEMO_CUSTOMERS.filter(c => {
+  const customers = [];
+  const filtered = customers.filter(c => {
     const matchSearch = c.full_name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase());
     const matchTier = filterTier === 'all' || c.loyalty_tier === filterTier;
     return matchSearch && matchTier;
   });
 
-  const totalCO2 = DEMO_CUSTOMERS.reduce((s, c) => s + c.total_co2_saved_kg, 0).toFixed(1);
-  const totalSpend = DEMO_CUSTOMERS.reduce((s, c) => s + c.total_spend_sgd, 0);
-  const totalDiverted = DEMO_CUSTOMERS.reduce((s, c) => s + c.items_diverted, 0);
+  const totalCO2 = '0.0';
+  const totalSpend = 0;
+  const totalDiverted = 0;
 
   return (
     <AppShell navigation={T3_NAV} tenant={T3_TENANT} title="" headerRight={<TenantSwitcher />}>
@@ -62,8 +54,8 @@ export default function T3Customers() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total Customers', value: DEMO_CUSTOMERS.length, color: 'text-foreground', bg: 'bg-card border-border' },
-            { label: 'VIP Customers', value: DEMO_CUSTOMERS.filter(c => c.status === 'vip').length, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
+            { label: 'Total Customers', value: 0, color: 'text-foreground', bg: 'bg-card border-border' },
+            { label: 'VIP Customers', value: 0, color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
             { label: 'CO₂ Saved (Community)', value: `${totalCO2}kg`, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4] border-green-200' },
             { label: 'Community Spend', value: `S$${totalSpend.toLocaleString()}`, color: 'text-primary', bg: 'bg-orbitan-blue-light border-blue-200' },
           ].map(s => (
@@ -79,7 +71,7 @@ export default function T3Customers() {
           <Leaf className="w-8 h-8 text-emerald-500 flex-shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-emerald-800">Community Sustainability Impact</p>
-            <p className="text-xs text-emerald-600 mt-0.5">Together, {DEMO_CUSTOMERS.length} customers have diverted <strong>{totalDiverted} clothing items</strong> from landfill, saving <strong>{totalCO2}kg of CO₂</strong>.</p>
+            <p className="text-xs text-emerald-600 mt-0.5">Together, our customers have diverted <strong>0 clothing items</strong> from landfill, saving <strong>{totalCO2}kg of CO₂</strong>.</p>
           </div>
         </div>
 
@@ -87,7 +79,7 @@ export default function T3Customers() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {TIER_ORDER.map(tier => {
             const t = TIER_MAP[tier];
-            const count = DEMO_CUSTOMERS.filter(c => c.loyalty_tier === tier).length;
+            const count = customers.filter(c => c.loyalty_tier === tier).length;
             return (
               <button key={tier} onClick={() => setFilterTier(filterTier === tier ? 'all' : tier)}
                 className={`rounded-xl border p-3 text-left transition-all ${filterTier === tier ? 'ring-2 ring-offset-1' : ''}`}

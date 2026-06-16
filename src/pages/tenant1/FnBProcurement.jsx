@@ -9,24 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Plus, ChevronRight, Truck, CheckCircle2 } from 'lucide-react';
 import { T1_NAV, T1_TENANT } from '@/lib/tenant-nav';
 
-const SUPPLIERS = [
-  { id: 's1', name: 'SG Meat Co.', contact: 'Ahmad', phone: '+65 9111 2222', category: 'Meat & Protein', lead_time: 1 },
-  { id: 's2', name: 'Fresh Produce SG', contact: 'James', phone: '+65 8222 3333', category: 'Produce & Veg', lead_time: 1 },
-  { id: 's3', name: 'Pan Asian Food Supply', contact: 'Maria', phone: '+65 9333 4444', category: 'Dry Goods & Spices', lead_time: 2 },
-  { id: 's4', name: 'DairySG Pte Ltd', contact: 'Wei Lin', phone: '+65 9444 5555', category: 'Dairy', lead_time: 2 },
-];
-
-const DEMO_POS = [
-  { id: 'po1', po_number: 'PO-2026-001', supplier_name: 'SG Meat Co.', status: 'approved', total_amount: 286.00, requested_date: '2026-06-01', expected_delivery_date: '2026-06-02', items: [{ item_name: 'Beef Chuck (Birria Cut)', quantity: 13, unit: 'kg', unit_price: 22 }] },
-  { id: 'po2', po_number: 'PO-2026-002', supplier_name: 'Fresh Produce SG', status: 'pending_approval', total_amount: 52.50, requested_date: '2026-06-03', expected_delivery_date: '2026-06-04', items: [{ item_name: 'Coriander', quantity: 20, unit: 'bunch', unit_price: 0.9 }, { item_name: 'Lime', quantity: 5, unit: 'kg', unit_price: 3.5 }] },
-  { id: 'po3', po_number: 'PO-2026-003', supplier_name: 'Pan Asian Food Supply', status: 'draft', total_amount: 126.00, requested_date: '2026-06-04', expected_delivery_date: '2026-06-06', items: [{ item_name: 'Dried Guajillo Chillies', quantity: 3, unit: 'kg', unit_price: 18 }, { item_name: 'Beef Consommé Sachets', quantity: 6, unit: 'box', unit_price: 8 }] },
-  { id: 'po4', po_number: 'PO-2026-004', supplier_name: 'DairySG Pte Ltd', status: 'received', total_amount: 64.00, requested_date: '2026-05-28', expected_delivery_date: '2026-05-30', items: [{ item_name: 'Oaxaca Cheese', quantity: 4, unit: 'kg', unit_price: 16 }] },
-];
+const SUPPLIERS = [];
 
 const STATUS_FLOW = ['draft', 'pending_approval', 'approved', 'sent', 'received'];
 
 export default function FnBProcurement() {
-  const [pos, setPos] = useState(DEMO_POS);
+  const [pos, setPos] = useState([]);
   const [selectedPO, setSelectedPO] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');

@@ -6,14 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Plus, Search, Shirt, X } from 'lucide-react';
 import { T3_NAV, T3_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_PRODUCTS = [
-  { id: 'P-001', name: "Vintage Levi's 501 Denim Jacket", sku: 'LV-DNM-M-001', category: 'outerwear', gender: 'unisex', size: 'M', colour: 'Indigo', brand: "Levi's", condition_grade: 'B_like_new', selling_price_sgd: 48, cost_price_sgd: 8, current_stock: 1, sourced_from: 'recycling_stream', is_pos_ready: true, co2_saved_kg: 8.4, status: 'active' },
-  { id: 'P-002', name: 'Upcycled Floral Patchwork Dress', sku: 'UP-DRS-S-002', category: 'bottoms', gender: 'womens', size: 'S', colour: 'Multi', brand: 'Upcycled by RRO', condition_grade: 'E_upcycled', selling_price_sgd: 35, cost_price_sgd: 12, current_stock: 3, sourced_from: 'recycling_stream', is_pos_ready: true, co2_saved_kg: 4.2, status: 'active' },
-  { id: 'P-003', name: 'H&M Striped Cotton Tee', sku: 'HM-TOP-M-003', category: 'tops', gender: 'unisex', size: 'M', colour: 'Navy/White', brand: 'H&M', condition_grade: 'C_good', selling_price_sgd: 12, cost_price_sgd: 2, current_stock: 5, sourced_from: 'donation', is_pos_ready: true, co2_saved_kg: 2.1, status: 'active' },
-  { id: 'P-004', name: 'Nike Dri-FIT Running Shorts', sku: 'NK-SRT-L-004', category: 'bottoms', gender: 'mens', size: 'L', colour: 'Black', brand: 'Nike', condition_grade: 'B_like_new', selling_price_sgd: 22, cost_price_sgd: 4, current_stock: 2, sourced_from: 'trade_in', is_pos_ready: true, co2_saved_kg: 3.8, status: 'active' },
-  { id: 'P-005', name: 'Zara Structured Blazer', sku: 'ZR-BLZ-S-005', category: 'outerwear', gender: 'womens', size: 'S', colour: 'Camel', brand: 'Zara', condition_grade: 'A_new_with_tags', selling_price_sgd: 65, cost_price_sgd: 15, current_stock: 1, sourced_from: 'donation', is_pos_ready: false, co2_saved_kg: 12.6, status: 'draft' },
-];
-
 const GRADE_MAP = {
   A_new_with_tags: { label: 'New w/ Tags', color: '#16A34A', bg: '#DCFCE7' },
   B_like_new:      { label: 'Like New',    color: '#2563EB', bg: '#DBEAFE' },
@@ -28,7 +20,8 @@ export default function T3Catalog() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [showModal, setShowModal] = useState(false);
 
-  const filtered = DEMO_PRODUCTS.filter(p => {
+  const products = [];
+  const filtered = products.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
     const matchGrade = filterGrade === 'all' || p.condition_grade === filterGrade;
     const matchCat = filterCategory === 'all' || p.category === filterCategory;
@@ -51,10 +44,10 @@ export default function T3Catalog() {
         {/* Stats */}
         <div className="grid grid-cols-4 gap-3">
           {[
-            { label: 'Total Listed', value: DEMO_PRODUCTS.length },
-            { label: 'POS Ready', value: DEMO_PRODUCTS.filter(p => p.is_pos_ready).length },
-            { label: 'Upcycled', value: DEMO_PRODUCTS.filter(p => p.condition_grade === 'E_upcycled').length },
-            { label: 'Total CO₂ Saved', value: `${DEMO_PRODUCTS.reduce((s, p) => s + p.co2_saved_kg, 0).toFixed(1)}kg` },
+            { label: 'Total Listed', value: 0 },
+            { label: 'POS Ready', value: 0 },
+            { label: 'Upcycled', value: 0 },
+            { label: 'Total CO₂ Saved', value: `0.0kg` },
           ].map(s => (
             <div key={s.label} className="bg-card border border-border rounded-xl p-3 text-center">
               <p className="text-lg font-display font-bold text-foreground">{s.value}</p>

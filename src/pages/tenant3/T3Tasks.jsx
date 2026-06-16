@@ -6,17 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Plus, CheckCircle2, Clock, AlertCircle, Circle, X, User, Calendar } from 'lucide-react';
 import { T3_NAV, T3_TENANT } from '@/lib/tenant-nav';
 
-const DEMO_TASKS = [
-  { id: 't1', title: 'Grade and tag new textile batch (15 items)', assigned_to_name: 'Aisha Binte Jamal', priority: 'high', status: 'in_progress', due_date: '2026-06-04', category: 'Processing', notes: 'Batch from Renewed Resources Pte Ltd — mixed clothing, needs sorting by condition' },
-  { id: 't2', title: 'Update POS catalog with new arrivals', assigned_to_name: 'Zara Lim', priority: 'high', status: 'pending', due_date: '2026-06-04', category: 'Catalog', notes: '3 new items graded this week — need photos and POS upload' },
-  { id: 't3', title: 'Restock Rack A from stockroom', assigned_to_name: 'Tommy Chen', priority: 'medium', status: 'pending', due_date: '2026-06-05', category: 'Inventory', notes: '' },
-  { id: 't4', title: 'Follow up with Mei Lin on loyalty redemption', assigned_to_name: 'Zara Lim', priority: 'low', status: 'pending', due_date: '2026-06-06', category: 'Customer', notes: '1840 pts — eligible for ambassador reward bundle' },
-  { id: 't5', title: 'Weekly sales report submission', assigned_to_name: 'Zara Lim', priority: 'urgent', status: 'in_progress', due_date: '2026-06-07', category: 'Reporting', notes: 'Submit to Orbitan platform + email to Renewed Resources parent company' },
-  { id: 't6', title: 'Photograph and list upcycled patchwork tees', assigned_to_name: 'Aisha Binte Jamal', priority: 'medium', status: 'completed', due_date: '2026-06-03', category: 'Catalog', notes: 'Done — 8 tees listed on POS at S$18 each' },
-  { id: 't7', title: 'Clean and organise footwear display', assigned_to_name: 'Tommy Chen', priority: 'low', status: 'completed', due_date: '2026-06-03', category: 'Operations', notes: '' },
-  { id: 't8', title: 'Investigate Nike Air Max stock discrepancy', assigned_to_name: 'Zara Lim', priority: 'high', status: 'pending', due_date: '2026-06-06', category: 'Inventory', notes: 'System shows 0 stock but possible lost item in stockroom — check before reorder' },
-];
-
 const PRIORITY_MAP = {
   urgent: { label: 'Urgent', bg: 'bg-red-50',   color: 'text-red-600',          border: 'border-red-200' },
   high:   { label: 'High',   bg: 'bg-amber-50', color: 'text-amber-700',         border: 'border-amber-200' },
@@ -46,15 +35,16 @@ export default function T3Tasks() {
   const [showNew, setShowNew] = useState(false);
   const [filterCat, setFilterCat] = useState('all');
 
-  const categories = [...new Set(DEMO_TASKS.map(t => t.category))];
+  const tasks = [];
+  const categories = [...new Set(tasks.map(t => t.category))];
 
-  const filtered = DEMO_TASKS.filter(t => {
+  const filtered = tasks.filter(t => {
     const matchFilter = filter === 'active' ? t.status !== 'completed' : filter === 'completed' ? t.status === 'completed' : true;
     const matchCat = filterCat === 'all' || t.category === filterCat;
     return matchFilter && matchCat;
   });
 
-  const urgentCount = DEMO_TASKS.filter(t => t.priority === 'urgent' && t.status !== 'completed').length;
+  const urgentCount = 0;
 
   return (
     <AppShell navigation={T3_NAV} tenant={T3_TENANT} title="" headerRight={<TenantSwitcher />}>
@@ -79,10 +69,10 @@ export default function T3Tasks() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total Tasks', value: DEMO_TASKS.length, color: 'text-foreground', bg: 'bg-card border-border' },
-            { label: 'In Progress', value: DEMO_TASKS.filter(t => t.status === 'in_progress').length, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
-            { label: 'Urgent', value: DEMO_TASKS.filter(t => t.priority === 'urgent').length, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
-            { label: 'Completed', value: DEMO_TASKS.filter(t => t.status === 'completed').length, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4] border-green-200' },
+            { label: 'Total Tasks', value: 0, color: 'text-foreground', bg: 'bg-card border-border' },
+            { label: 'In Progress', value: 0, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
+            { label: 'Urgent', value: 0, color: 'text-red-600', bg: 'bg-red-50 border-red-200' },
+            { label: 'Completed', value: 0, color: 'text-[#22C55E]', bg: 'bg-[#F0FDF4] border-green-200' },
           ].map(s => (
             <div key={s.label} className={`rounded-xl border p-4 ${s.bg}`}>
               <p className={`text-2xl font-display font-bold ${s.color}`}>{s.value}</p>
