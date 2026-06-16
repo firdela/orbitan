@@ -49,25 +49,25 @@ export default function Landing() {
     <div className="min-h-screen bg-[#0A0F1A] text-white overflow-x-hidden">
       {/* ── Navigation ── */}
       <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0A0F1A]/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'}`}>
-        
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png" alt="Orbitan" className="w-8 h-8 opacity-100" />
+            <span className="font-display font-bold text-white text-sm tracking-tight">Orbitan<span className="text-white/30 font-light ml-0.5">OS</span></span>
+          </div>
+          {isAuthenticated ?
+          <Link to="/workspace">
+              <Button variant="outline" className="border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10 text-xs font-bold px-5 h-9 rounded-lg">
+                Workspace
+              </Button>
+            </Link> :
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
+          <Link to="/join">
+              <Button className="bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A] text-xs font-bold px-5 h-9 rounded-lg">
+                Join Orbitan
+              </Button>
+            </Link>
+          }
+        </div>
       </nav>
 
       {/* ── Hero ── */}
