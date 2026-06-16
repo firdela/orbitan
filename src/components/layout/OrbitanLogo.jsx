@@ -1,7 +1,7 @@
 import React from 'react';
 
 // The real Orbitan 3D logo mark
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/9673d29b5_ORBITANbluelogo.png';
+const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/4fb495aab_OrbitonLogowebsite.png';
 
 const SIZES = {
   xs: { icon: 18, text: 'text-[13px]', sub: 'text-[8px]'  },
