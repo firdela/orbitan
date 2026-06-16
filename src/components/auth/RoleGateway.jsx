@@ -35,7 +35,7 @@ export default function RoleGateway() {
 
   // Loading state
   if (isLoadingAuth || empLoading) {
-    return <OrbitanLoader size="fullscreen" message="Loading OrbitanOS..." />;
+    return <OrbitanLoader size="fullscreen" message="Loading Orbitan..." />;
   }
 
   // Platform admin → Leader Org

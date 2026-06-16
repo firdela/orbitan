@@ -90,7 +90,7 @@ export default function AccessRequestView() {
           <div className="w-20 h-20 rounded-full bg-orbitan-green-light flex items-center justify-center mb-6">
             <Sparkles className="w-10 h-10 text-orbitan-green" />
           </div>
-          <h2 className="font-display font-bold text-2xl text-foreground mb-2">Welcome to OrbitanOS</h2>
+          <h2 className="font-display font-bold text-2xl text-foreground mb-2">Welcome to Orbitan</h2>
           <p className="text-muted-foreground text-sm mb-1">
             Your access to <span className="font-semibold text-foreground">{liveRequest.company_name}</span> has been approved.
           </p>

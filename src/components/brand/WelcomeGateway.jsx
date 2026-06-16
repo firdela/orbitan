@@ -205,7 +205,6 @@ export default function WelcomeGateway() {
                 className="text-3xl md:text-4xl font-display font-bold text-white tracking-tight"
               >
                 Welcome to <span className="text-[#3B82F6]">Orbitan</span>
-                <span className="font-light text-white/40 ml-1">OS</span>
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 8 }}

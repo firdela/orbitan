@@ -1,7 +1,8 @@
 import React from 'react';
 
 // The real Orbitan 3D logo mark
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
+const LOGO_MARK_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png';
+const INTEGRATED_LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/98e374e08_generated_image.png';
 
 const SIZES = {
   xs: { icon: 18, text: 'text-[13px]', sub: 'text-[8px]' },
@@ -21,42 +22,48 @@ export default function OrbitanLogo({ size = 'md', variant = 'dark', showOS = fa
   const s = SIZES[size] || SIZES.md;
   const isLight = variant === 'light';
 
+  // Use integrated wordmark for standard display, icon+text for OS contexts
+  if (!showOS) {
+    return (
+      <img
+        src={INTEGRATED_LOGO_URL}
+        alt="Orbitan"
+        className="h-auto object-contain"
+        style={{ width: s.icon * 4, maxHeight: s.icon * 1.5 }}
+      />
+    );
+  }
+
   return (
     <div className="flex items-center gap-2 select-none">
-      {/* Logo mark */}
-      <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png"
-
-      alt="Orbitan"
-      width={s.icon}
-      height={s.icon}
-      className="flex-shrink-0 object-contain drop-shadow-sm" />
-      
-
-      {/* Wordmark */}
+      <img
+        src={LOGO_MARK_URL}
+        alt="Orbitan"
+        width={s.icon}
+        height={s.icon}
+        className="flex-shrink-0 object-contain drop-shadow-sm"
+      />
       <div className="flex flex-col leading-none">
         <span
           className={`font-display font-bold tracking-tight ${s.text}`}
-          style={{ color: isLight ? '#FFFFFF' : 'hsl(var(--foreground))' }}>
-          
+          style={{ color: isLight ? '#FFFFFF' : 'hsl(var(--foreground))' }}
+        >
           Orbitan
-          {showOS &&
           <span
             className="font-light ml-[3px]"
-            style={{ color: isLight ? 'rgba(255,255,255,0.55)' : 'hsl(var(--muted-foreground))' }}>
-            
-              OS
-            </span>
-          }
+            style={{ color: isLight ? 'rgba(255,255,255,0.55)' : 'hsl(var(--muted-foreground))' }}
+          >
+            OS
+          </span>
         </span>
-        {showOS &&
         <span
           className={`${s.sub} font-body tracking-[0.1em] uppercase mt-0.5`}
-          style={{ color: isLight ? 'rgba(255,255,255,0.35)' : 'hsl(var(--muted-foreground))' }}>
-          
-            Operating System
-          </span>
-        }
+          style={{ color: isLight ? 'rgba(255,255,255,0.35)' : 'hsl(var(--muted-foreground))' }}
+        >
+          Operating System
+        </span>
       </div>
-    </div>);
+    </div>
+  );
 
 }

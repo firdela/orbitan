@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
@@ -9,6 +9,7 @@ import {
 'lucide-react';
 import { CapabilityBadge, CapabilityStack } from '@/components/shared/CapabilityBadge';
 import { OPERATING_CYCLE, SUBSCRIPTION_PLANS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
+import OrbitanHeader from '@/components/layout/OrbitanHeader';
 
 const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
 
@@ -38,38 +39,11 @@ const fadeUp = { initial: { opacity: 0, y: 24 }, whileInView: { opacity: 1, y: 0
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
-  const [scrolled, setScrolled] = useState(false);
-
-  React.useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   return (
     <div className="min-h-screen bg-[#0A0F1A] text-white overflow-x-hidden">
       {/* ── Navigation ── */}
-      <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0A0F1A]/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'}`}>
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png" alt="Orbitan" className="w-8 h-8 opacity-100" />
-            <span className="font-display font-bold text-white text-sm tracking-tight">Orbitan<span className="text-white/30 font-light ml-0.5">OS</span></span>
-          </div>
-          {isAuthenticated ?
-          <Link to="/workspace">
-              <Button variant="outline" className="border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10 text-xs font-bold px-5 h-9 rounded-lg">
-                Workspace
-              </Button>
-            </Link> :
-
-          <Link to="/auth/gateway">
-              <Button className="bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A] text-xs font-bold px-5 h-9 rounded-lg">
-                Join Orbitan
-              </Button>
-            </Link>
-          }
-        </div>
-      </nav>
+      <OrbitanHeader variant="dark" transparent showNav />
 
       {/* ── Hero ── */}
       <section className="relative pt-32 pb-20 md:pt-44 md:pb-32 px-6">
