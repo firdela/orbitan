@@ -91,7 +91,7 @@ export default function Landing() {
           className="flex flex-col sm:flex-row items-center justify-center gap-3">
             {isAuthenticated ?
             <Link to="/workspace">
-                <Button className="bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A] text-sm font-semibold px-8 h-12 rounded-xl gap-2">
+                <Button className="bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A] text-sm font-semibold px-8 h-12 rounded-xl gap-2 hidden">
                   Go to Workspace <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link> :
