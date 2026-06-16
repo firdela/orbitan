@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import OrbitanLoader from '@/components/brand/OrbitanLoader'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -97,6 +97,7 @@ const AuthenticatedApp = () => {
 
       {/* Orbitan Brand Gateway — Access Portal */}
       <Route path="/join" element={<WelcomeGateway />} />
+      <Route path="/welcome" element={<Navigate to="/join" replace />} />
 
       {/* RoleGateway resolves workspace dynamically for authenticated users */}
       <Route path="/workspace" element={<RoleGateway />} />
