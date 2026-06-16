@@ -51,7 +51,7 @@ export default function Landing() {
       <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0A0F1A]/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/86d84f31e_Orbitan3dlogo.png" alt="Orbitan" className="w-8 h-8 opacity-0" />
+            <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/86d84f31e_Orbitan3dlogo.png" alt="Orbitan" className="w-8 h-8 opacity-100" />
             <span className="font-display font-bold text-white text-sm tracking-tight">Orbitan<span className="text-white/30 font-light ml-0.5">OS</span></span>
           </div>
           {isAuthenticated ?
