@@ -159,7 +159,7 @@ export default function AuthGateway() {
                 >
                   <img src={LOGO_URL} alt="Orbitan" className="w-7 h-7 opacity-80" />
                   <span className="font-display font-bold text-white text-sm tracking-tight">
-                    Orbitan
+                    Orbitan<span className="text-white/30 font-light">OS</span>
                   </span>
                 </motion.div>
                 <motion.h1
@@ -168,7 +168,7 @@ export default function AuthGateway() {
                   transition={{ duration: 0.5, delay: 0.15 }}
                   className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight"
                 >
-                  Welcome to <span className="text-[#3B82F6]">Orbitan</span>
+                  Welcome to the <span className="text-[#3B82F6]">Operating System</span>
                 </motion.h1>
                 <motion.p
                   initial={{ opacity: 0 }}

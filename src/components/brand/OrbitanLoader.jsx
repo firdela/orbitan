@@ -124,10 +124,10 @@ export default function OrbitanLoader({
       {isFullscreen && (
         <div className="text-center mt-1">
           <p className="text-[11px] font-display font-semibold text-foreground tracking-wide">
-            Orbitan
+            Orbitan<span className="text-muted-foreground font-light">OS</span>
           </p>
           <p className="text-[9px] text-muted-foreground tracking-[0.15em] uppercase mt-0.5">
-            Build Momentum. Navigate Growth.
+            Operating System
           </p>
         </div>
       )}
