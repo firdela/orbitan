@@ -11,6 +11,7 @@ import { GlobalOutletProvider } from '@/lib/GlobalOutletContext';
 import { CurrencyProvider } from '@/lib/CurrencyContext';
 import SystemGuard from '@/components/layout/SystemGuard';
 import RoleGateway from '@/components/auth/RoleGateway';
+import AuthGateway from '@/components/auth/AuthGateway';
 
 // Page imports
 import Landing from '@/pages/Landing';
@@ -94,6 +95,9 @@ const AuthenticatedApp = () => {
     <Routes>
       {/* Orbitan Public Landing — Brand & Marketing Hub */}
       <Route path="/" element={<Landing />} />
+
+      {/* Orbitan Auth Gateway — Intelligent Entry Hub */}
+      <Route path="/auth/gateway" element={<AuthGateway />} />
 
       {/* Orbitan Brand Gateway — Access Portal */}
       <Route path="/join" element={<WelcomeGateway />} />

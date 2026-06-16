@@ -61,7 +61,7 @@ export default function Landing() {
               </Button>
             </Link> :
 
-          <Link to="/join">
+          <Link to="/auth/gateway">
               <Button className="bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A] text-xs font-bold px-5 h-9 rounded-lg">
                 Join Orbitan
               </Button>
@@ -91,12 +91,12 @@ export default function Landing() {
           className="flex flex-col sm:flex-row items-center justify-center gap-3">
             {isAuthenticated ?
             <Link to="/workspace">
-                
-
-              
+                <Button className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-semibold px-8 h-12 rounded-xl gap-2">
+                  Go to Workspace <ArrowRight className="w-4 h-4" />
+                </Button>
               </Link> :
 
-            <Link to="/join">
+            <Link to="/auth/gateway">
                 <Button className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-semibold px-8 h-12 rounded-xl gap-2">
                   Get Started <ArrowRight className="w-4 h-4" />
                 </Button>
@@ -219,7 +219,7 @@ export default function Landing() {
                       </li>
                     )}
                   </ul>
-                  <Link to="/join">
+                  <Link to="/auth/gateway">
                     <Button className={`w-full h-10 rounded-xl text-xs font-bold ${isEnterprise ? 'bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A]' : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'}`}>
                       {isEnterprise ? 'Contact Sales' : 'Get Started'}
                     </Button>
@@ -277,7 +277,7 @@ export default function Landing() {
                 </Button>
               </Link> :
 
-            <Link to="/join">
+            <Link to="/auth/gateway">
                 <Button className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-semibold px-10 h-12 rounded-xl gap-2">
                   Join Orbitan <ArrowRight className="w-4 h-4" />
                 </Button>
