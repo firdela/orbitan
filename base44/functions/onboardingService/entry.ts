@@ -408,6 +408,76 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── HANDLE ACCESS REQUEST APPROVAL — Auto-create Employee record ──
+    // Triggers when an AccessRequest status changes to "approved"
+    // Supports both direct API calls (action: "approve_access_request")
+    // AND entity automation triggers (where payload wraps data under "data")
+    const isApprovalAutomation = !action && body.event?.entity_name === "AccessRequest" && body.event?.type === "update" && body.data?.status === "approved";
+    if (action === "approve_access_request" || isApprovalAutomation) {
+      const payload = isApprovalAutomation ? (body.data || {}) : body;
+      const { email, tenant_id, outlet_id, company_name, role_requested } = payload;
+      const workerName = payload.email ? payload.email.split('@')[0] : "New Worker";
+
+      if (!email || !tenant_id) {
+        return Response.json({ error: "email and tenant_id are required" }, { status: 400 });
+      }
+
+      // Check if Employee record already exists for this email + tenant
+      const existingEmployees = await base44.asServiceRole.entities.Employee.filter({
+        tenant_id,
+        email,
+      });
+
+      if (existingEmployees.length > 0) {
+        return Response.json({
+          success: true,
+          already_exists: true,
+          employee_id: existingEmployees[0].id,
+          details: "Employee record already exists for this user. No duplicate created.",
+        });
+      }
+
+      // Create the Employee record
+      const employee = await base44.asServiceRole.entities.Employee.create({
+        tenant_id,
+        outlet_id: outlet_id || null,
+        full_name: workerName,
+        email,
+        role: role_requested || "worker",
+        status: "active",
+        employment_type: role_requested === "outlet_manager" ? "full_time" : "full_time",
+        hire_date: new Date().toISOString().split('T')[0],
+      });
+
+      // Audit log the approval
+      await base44.asServiceRole.entities.AuditLog.create({
+        tenant_id,
+        actor_id: "system",
+        actor_name: "OrbitanOS Onboarding Engine",
+        actor_role: "system",
+        action_type: "worker_onboarded",
+        module: "workforce",
+        target_entity: "Employee",
+        target_record_id: employee.id,
+        details: `Auto-provisioned Employee record for ${email} as ${(role_requested || "worker").replace(/_/g, " ")} at ${company_name || tenant_id}. AccessRequest approved. Powered by the Regulate principle.`,
+        new_state: {
+          employee_id: employee.id,
+          email,
+          role: role_requested,
+          tenant_id,
+          outlet_id: outlet_id || null,
+        },
+      });
+
+      return Response.json({
+        success: true,
+        employee_id: employee.id,
+        worker_name: workerName,
+        role: role_requested,
+        details: `Employee record created for ${email}. They can now access their OrbitanOS workspace.`,
+      });
+    }
+
     return Response.json({ error: "Unknown action" }, { status: 400 });
 
   } catch (error) {

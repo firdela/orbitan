@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -6,7 +6,7 @@ import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import { Button } from '@/components/ui/button';
 import {
   Building2, MapPin, User, Shield, Send, CheckCircle2, Loader2,
-  ChevronRight, ArrowLeft, IdCard, Clock, Users
+  ChevronRight, ArrowLeft, IdCard, Clock, Users, Sparkles, ArrowRight
 } from 'lucide-react';
 
 const ROLES = [
@@ -47,27 +47,53 @@ export default function AccessRequestView() {
   });
 
   const pendingRequest = existingRequests.find(r => r.status === 'pending');
+  const [liveRequest, setLiveRequest] = useState(null);
 
-  const submitMutation = useMutation({
-    mutationFn: (data) => base44.entities.AccessRequest.create(data),
-    onSuccess: () => {
-      setSubmitted(true);
-      setStep(4);
-    },
-  });
-
-  const handleSubmit = () => {
-    if (!selectedTenant) return;
-    submitMutation.mutate({
-      email: userEmail,
-      tenant_id: selectedTenant.id,
-      outlet_id: selectedOutlet?.id || null,
-      company_name: selectedTenant.name,
-      outlet_name: selectedOutlet?.name || null,
-      role_requested: selectedRole,
-      status: 'pending',
+  // ── Real-time subscription: listen for AccessRequest status changes ──
+  useEffect(() => {
+    if (!userEmail) return;
+    const unsubscribe = base44.entities.AccessRequest.subscribe((event) => {
+      if (event.type === 'update' && event.data?.email === userEmail && event.data?.status === 'approved') {
+        setLiveRequest(event.data);
+      }
     });
-  };
+    return unsubscribe;
+  }, [userEmail]);
+
+  // If subscription detected approval, show celebration state
+  if (liveRequest?.status === 'approved') {
+    const approvedRole = (liveRequest.role_requested || 'worker').replace(/_/g, ' ');
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto">
+          <div className="w-20 h-20 rounded-full bg-orbitan-green-light flex items-center justify-center mb-6">
+            <Sparkles className="w-10 h-10 text-orbitan-green" />
+          </div>
+          <h2 className="font-display font-bold text-2xl text-foreground mb-2">Welcome to OrbitanOS</h2>
+          <p className="text-muted-foreground text-sm mb-1">
+            Your access to <span className="font-semibold text-foreground">{liveRequest.company_name}</span> has been approved.
+          </p>
+          <p className="text-muted-foreground text-xs mb-8">
+            You've been onboarded as <span className="font-medium text-foreground capitalize">{approvedRole}</span>.
+          </p>
+          <div className="bg-card border border-border rounded-xl p-4 w-full mb-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-4 h-4 text-green-600" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-semibold text-foreground">{liveRequest.company_name}</p>
+                <p className="text-[11px] text-muted-foreground capitalize">{approvedRole}</p>
+              </div>
+            </div>
+          </div>
+          <Button onClick={() => window.location.href = '/workspace'} className="gap-2 w-full">
+            Continue to Workspace <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // If there's already a pending request, show that instead
   if (pendingRequest && !submitted) {
