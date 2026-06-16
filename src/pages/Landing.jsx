@@ -9,8 +9,8 @@ import {
 'lucide-react';
 import { CapabilityBadge, CapabilityStack } from '@/components/shared/CapabilityBadge';
 import { OPERATING_CYCLE, SUBSCRIPTION_PLANS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
-
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
+import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
+import { LOGO_ASSETS } from '@/lib/orbitan-identity';
 
 const PRINCIPLES = ['Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach'];
 
@@ -52,8 +52,7 @@ export default function Landing() {
       <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0A0F1A]/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png" alt="Orbitan" className="w-8 h-8 opacity-100" />
-            <span className="font-display font-bold text-white text-sm tracking-tight">Orbitan<span className="text-white/30 font-light ml-0.5">OS</span></span>
+            <OrbitanWordmark size="sm" variant="light" showOS={false} />
           </div>
           {isAuthenticated ?
           <Link to="/workspace">
@@ -77,7 +76,7 @@ export default function Landing() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.04)_0%,transparent_50%)]" />
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.2, ease: 'easeOut' }}>
-            <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png" alt="Orbitan" className="w-56 h-56 md:w-72 md:h-72 lg:w-80 lg:h-80 mx-auto mb-10 drop-shadow-2xl" />
+            <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-56 h-56 md:w-72 md:h-72 lg:w-80 lg:h-80 mx-auto mb-10 drop-shadow-2xl" />
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3 }}
           className="text-4xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight leading-[1.08] mb-5">
@@ -321,7 +320,7 @@ export default function Landing() {
           {/* Integration Network Visual */}
           <motion.div {...fadeUp} className="relative flex items-center justify-center mb-12">
             <div className="w-20 h-20 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20 flex items-center justify-center z-10">
-              <img src={LOGO_URL} alt="Orbitan" className="w-10 h-10 opacity-80" />
+              <img src={LOGO_ASSETS.mark} alt="Orbitan" className="w-10 h-10 opacity-80" />
             </div>
             {/* Connection lines with pulsing dots */}
             {[0, 72, 144, 216, 288].map((angle, i) =>
@@ -393,7 +392,7 @@ export default function Landing() {
                   </div>
                   <div className="p-4 space-y-3">
                     <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/10 flex items-center justify-center mx-auto">
-                      <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png" alt="Orbitan" className="w-6 h-6 opacity-60" />
+                      <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-6 h-6 opacity-60" />
                     </div>
                     <div className="space-y-2">
                       <div className="h-2 w-3/4 rounded bg-white/[0.06] mx-auto" />
@@ -440,7 +439,7 @@ export default function Landing() {
       <footer className="py-10 px-6 border-t border-white/[0.05]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png" alt="Orbitan" className="w-5 h-5 opacity-50" />
+            <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-5 h-5 opacity-50" />
             <span className="text-xs text-slate-600">Orbitan & OrbitanOS © {new Date().getFullYear()} Muhammad Firdaus Bin Ismail</span>
           </div>
           <div className="flex items-center gap-6">

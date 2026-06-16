@@ -1,7 +1,5 @@
 import React from 'react';
-
-// The real Orbitan 3D logo mark
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
+import { LOGO_ASSETS } from '@/lib/orbitan-identity';
 
 const SIZES = {
   xs: { icon: 18, text: 'text-[13px]', sub: 'text-[8px]'  },
@@ -25,7 +23,7 @@ export default function OrbitanLogo({ size = 'md', variant = 'dark', showOS = fa
     <div className="flex items-center gap-2 select-none">
       {/* Logo mark */}
       <img
-        src={LOGO_URL}
+        src={LOGO_ASSETS.mark}
         alt="Orbitan"
         width={s.icon}
         height={s.icon}

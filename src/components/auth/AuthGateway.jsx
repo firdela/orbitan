@@ -3,24 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
-import {
-  LogIn, UserPlus, Search, Shield, ChevronRight
-} from 'lucide-react';
+import { LogIn, UserPlus, Search, Shield, ChevronRight } from 'lucide-react';
+import { SIX_R_PRINCIPLES, SHIELD_BRAND, TAGLINES, resolveTenantBrand, getTenantBackgroundTint } from '@/lib/orbitan-identity';
+import SixRSequence from '@/components/brand/SixRSequence';
+import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
 
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
-
-const PRINCIPLES = ['Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach'];
-
+// ─────────────────────────────────────────────────────────────
+// GATEWAY ENTRY CARDS
+// ─────────────────────────────────────────────────────────────
 const GATEWAY_CARDS = [
   {
     id: 'login',
     title: 'Sign In',
     subtitle: 'Returning member? Access your workspace.',
     icon: LogIn,
-    glow: '#3B82F6',
-    gradient: 'from-blue-600/20 via-blue-500/5 to-transparent',
-    border: 'border-blue-500/20 hover:border-blue-400/40',
-    bg: 'bg-blue-500/[0.03] hover:bg-blue-500/[0.06]',
+    defaultGlow: '#3B82F6',
+    gradient: 'from-blue-600/15 via-blue-500/5 to-transparent',
+    border: 'border-blue-500/15 hover:border-blue-400/30',
+    bg: 'bg-blue-500/[0.02] hover:bg-blue-500/[0.05]',
     action: '/login',
     badge: 'Orbitan Shield™ Verified',
   },
@@ -29,10 +29,10 @@ const GATEWAY_CARDS = [
     title: 'Join Organization',
     subtitle: 'Have an invitation? Activate your account.',
     icon: UserPlus,
-    glow: '#10B981',
-    gradient: 'from-emerald-600/20 via-emerald-500/5 to-transparent',
-    border: 'border-emerald-500/20 hover:border-emerald-400/40',
-    bg: 'bg-emerald-500/[0.03] hover:bg-emerald-500/[0.06]',
+    defaultGlow: '#10B981',
+    gradient: 'from-emerald-600/15 via-emerald-500/5 to-transparent',
+    border: 'border-emerald-500/15 hover:border-emerald-400/30',
+    bg: 'bg-emerald-500/[0.02] hover:bg-emerald-500/[0.05]',
     action: '/join',
     badge: 'Secure Invitation',
   },
@@ -41,27 +41,45 @@ const GATEWAY_CARDS = [
     title: 'Request Access',
     subtitle: 'New here? Find your workplace and get started.',
     icon: Search,
-    glow: '#7C3AED',
-    gradient: 'from-violet-600/20 via-violet-500/5 to-transparent',
-    border: 'border-violet-500/20 hover:border-violet-400/40',
-    bg: 'bg-violet-500/[0.03] hover:bg-violet-500/[0.06]',
+    defaultGlow: '#7C3AED',
+    gradient: 'from-violet-600/15 via-violet-500/5 to-transparent',
+    border: 'border-violet-500/15 hover:border-violet-400/30',
+    bg: 'bg-violet-500/[0.02] hover:bg-violet-500/[0.05]',
     action: '/request-access',
     badge: 'Open Registration',
   },
 ];
 
+// ─────────────────────────────────────────────────────────────
+// AUTH GATEWAY — Intent-Aware Entry Hub
+// ─────────────────────────────────────────────────────────────
 export default function AuthGateway() {
   const navigate = useNavigate();
   const { isAuthenticated, isLoadingAuth } = useAuth();
-  const [phase, setPhase] = useState('boot');
+  const [phase, setPhase] = useState('boot');    // boot → shield → cards
   const [hoveredCard, setHoveredCard] = useState(null);
+  const [tenantContext, setTenantContext] = useState(null);
 
+  // Resolve tenant context from URL params (e.g. ?org=taqueria_pte_ltd)
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('shield'), 600);
-    const t2 = setTimeout(() => setPhase('cards'), 2000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const params = new URLSearchParams(window.location.search);
+    const org = params.get('org');
+    if (org) {
+      const ctx = resolveTenantBrand(org);
+      if (ctx) setTenantContext(ctx);
+    }
   }, []);
 
+  // Phase sequencing
+  const handleBootComplete = () => setPhase('shield');
+  useEffect(() => {
+    if (phase === 'shield') {
+      const t = setTimeout(() => setPhase('cards'), 1600);
+      return () => clearTimeout(t);
+    }
+  }, [phase]);
+
+  // Redirect authenticated users
   useEffect(() => {
     if (!isLoadingAuth && isAuthenticated) {
       navigate('/workspace', { replace: true });
@@ -78,48 +96,42 @@ export default function AuthGateway() {
 
   if (isAuthenticated) return null;
 
+  const tint = getTenantBackgroundTint(tenantContext?.id_ref);
+  const accentColor = tenantContext?.accent || '#3B82F6';
+
   return (
     <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center relative overflow-hidden">
-      {/* Background Luminous Orbs */}
+      {/* ── Background Ambient Orbs ── */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-[40rem] h-[40rem] rounded-full bg-blue-600/[0.03] blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
         <div className="absolute bottom-1/4 right-1/4 w-[35rem] h-[35rem] rounded-full bg-violet-600/[0.03] blur-[100px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50rem] h-[50rem] rounded-full bg-emerald-600/[0.02] blur-[150px]" />
+        {/* Tenant-specific orb */}
+        {tenantContext && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[50rem] h-[50rem] rounded-full blur-[130px]"
+            style={{ backgroundColor: `${accentColor}08` }}
+          />
+        )}
       </div>
 
-      {/* Grid overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)]" />
+      {/* ── Grid Overlay ── */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)]" />
 
+      {/* ── Content ── */}
       <div className="relative z-10 w-full max-w-2xl mx-auto px-6 flex flex-col items-center gap-10">
-        {/* Boot phase — Logo spin */}
         <AnimatePresence mode="wait">
+          {/* Phase 1: Boot — 6R Sequence */}
           {phase === 'boot' && (
-            <motion.div
-              key="boot"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 0.9, filter: 'blur(8px)' }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col items-center gap-4"
-            >
-              <motion.img
-                src={LOGO_URL}
-                alt="Orbitan"
-                className="w-20 h-20"
-                animate={{ rotate: [0, 360] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-              />
-              <p className="text-slate-500 text-[11px] tracking-[0.25em] uppercase font-medium">Initialising</p>
-            </motion.div>
+            <SixRSequence key="boot" onComplete={handleBootComplete} tenantBrand={tenantContext} />
           )}
 
+          {/* Phase 2: Shield — Orbitan Shield™ verification */}
           {phase === 'shield' && (
             <motion.div
               key="shield"
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.6 }}
+              exit={{ opacity: 0, y: -16, filter: 'blur(4px)' }}
+              transition={{ duration: 0.5 }}
               className="flex flex-col items-center gap-4"
             >
               <motion.div
@@ -130,92 +142,95 @@ export default function AuthGateway() {
                 <Shield className="w-8 h-8 text-red-400" />
               </motion.div>
               <div className="text-center">
-                <p className="text-xs tracking-[0.2em] uppercase text-red-400 font-bold mb-1">Orbitan Shield™</p>
-                <p className="text-slate-500 text-[11px]">Powered by Regulate</p>
+                <p className="text-xs tracking-[0.2em] uppercase text-red-400 font-bold mb-1">{SHIELD_BRAND.label}</p>
+                <p className="text-slate-500 text-[11px]">Powered by {SHIELD_BRAND.poweredBy}</p>
               </div>
               <motion.div
                 animate={{ width: ['0%', '100%'] }}
                 transition={{ duration: 1.2, ease: 'easeInOut' }}
-                className="h-[1px] bg-gradient-to-r from-transparent via-red-500/40 to-transparent w-32"
+                className="h-[1px] bg-gradient-to-r from-transparent via-red-500/30 to-transparent w-28"
               />
             </motion.div>
           )}
 
+          {/* Phase 3: Cards — Gateway Entry Points */}
           {phase === 'cards' && (
             <motion.div
               key="cards"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.7 }}
+              transition={{ duration: 0.6 }}
               className="w-full flex flex-col items-center gap-10"
             >
-              {/* Header */}
-              <div className="text-center space-y-2">
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="flex items-center justify-center gap-2 mb-1"
-                >
-                  <img src={LOGO_URL} alt="Orbitan" className="w-7 h-7 opacity-80" />
-                  <span className="font-display font-bold text-white text-sm tracking-tight">
-                    Orbitan<span className="text-white/30 font-light">OS</span>
-                  </span>
-                </motion.div>
+              {/* ── Header ── */}
+              <div className="text-center space-y-3">
+                <OrbitanWordmark size="md" variant="light" showOS={false} />
                 <motion.h1
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.15 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
                   className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight"
                 >
-                  Welcome to the <span className="text-[#3B82F6]">Operating System</span>
+                  Welcome to the{' '}
+                  <span style={{ color: accentColor }}>Operating System</span>
                 </motion.h1>
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
                   className="text-slate-500 text-sm"
                 >
                   Select your entry point to continue
                 </motion.p>
+                {/* Tenant context indicator */}
+                {tenantContext && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.25 }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full"
+                    style={{ backgroundColor: `${accentColor}12`, border: `1px solid ${accentColor}25` }}
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
+                    <span className="text-[10px] font-medium" style={{ color: accentColor }}>
+                      {tenantContext.brand}
+                    </span>
+                  </motion.div>
+                )}
               </div>
 
-              {/* Gateway Cards */}
+              {/* ── Gateway Cards ── */}
               <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
                 {GATEWAY_CARDS.map((card, i) => {
                   const Icon = card.icon;
                   const isHovered = hoveredCard === card.id;
+                  const glow = tenantContext ? accentColor : card.defaultGlow;
                   return (
                     <motion.button
                       key={card.id}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 16 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.35 + i * 0.1 }}
+                      transition={{ duration: 0.5, delay: 0.3 + i * 0.08 }}
                       onMouseEnter={() => setHoveredCard(card.id)}
                       onMouseLeave={() => setHoveredCard(null)}
                       onClick={() => navigate(card.action)}
-                      className={`relative group w-full text-left rounded-2xl border ${card.border} ${card.bg} p-6 transition-all duration-300 cursor-pointer overflow-hidden`}
+                      className={`relative group w-full text-left rounded-2xl border ${card.border} ${card.bg} p-5 transition-all duration-300 cursor-pointer overflow-hidden`}
                     >
-                      {/* Glow effect */}
-                      <div
-                        className={`absolute inset-0 bg-gradient-to-b ${card.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`}
-                      />
-                      {/* Orb */}
+                      {/* Hover glow */}
+                      <div className={`absolute inset-0 bg-gradient-to-b ${card.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none`} />
                       {isHovered && (
                         <motion.div
                           layoutId="gateway-orb"
-                          className="absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-20 pointer-events-none"
-                          style={{ background: `radial-gradient(circle, ${card.glow}, transparent 70%)` }}
+                          className="absolute -top-12 -right-12 w-28 h-28 rounded-full opacity-15 pointer-events-none"
+                          style={{ background: `radial-gradient(circle, ${glow}, transparent 70%)` }}
                           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
                         />
                       )}
 
-                      <div className="relative z-10 space-y-4">
-                        <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300"
-                          style={{ backgroundColor: `${card.glow}15` }}
-                        >
-                          <Icon className="w-5 h-5 transition-colors duration-300" style={{ color: card.glow }} />
+                      <div className="relative z-10 space-y-3.5">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300"
+                          style={{ backgroundColor: `${glow}12` }}>
+                          <Icon className="w-4.5 h-4.5 transition-colors duration-300" style={{ color: glow }} />
                         </div>
                         <div>
                           <h3 className="font-display font-bold text-white text-sm mb-1 group-hover:translate-x-0.5 transition-transform duration-300">
@@ -235,37 +250,38 @@ export default function AuthGateway() {
                 })}
               </div>
 
-              {/* Trust Tier — 6R Principles */}
+              {/* ── 6R Trust Tier ── */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.8 }}
+                transition={{ duration: 0.5, delay: 0.7 }}
                 className="flex flex-col items-center gap-3"
               >
                 <div className="flex items-center gap-1.5">
                   <Shield className="w-3 h-3 text-red-400/60" />
-                  <span className="text-[9px] tracking-[0.15em] uppercase text-slate-600 font-medium">Secured by the Orbitan Shield</span>
+                  <span className="text-[9px] tracking-[0.15em] uppercase text-slate-600 font-medium">
+                    Secured by the {SHIELD_BRAND.label}
+                  </span>
                 </div>
                 <div className="flex flex-wrap justify-center gap-1.5">
-                  {PRINCIPLES.map((p) => (
-                    <span
-                      key={p}
+                  {SIX_R_PRINCIPLES.map((p) => (
+                    <span key={p.key}
                       className="text-[9px] px-2 py-0.5 rounded-full bg-white/[0.02] border border-white/[0.04] text-slate-500 font-medium tracking-wide"
                     >
-                      {p}
+                      {p.label}
                     </span>
                   ))}
                 </div>
               </motion.div>
 
-              {/* Footer */}
+              {/* ── Footer ── */}
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 1 }}
+                transition={{ duration: 0.5, delay: 0.85 }}
                 className="text-[10px] text-slate-600 text-center"
               >
-                Run Your Business. Connect Everything.
+                {TAGLINES.primary}
               </motion.p>
             </motion.div>
           )}

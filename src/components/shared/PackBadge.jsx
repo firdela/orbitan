@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { PACK_BRAND } from '@/lib/orbitan-identity';
 import { INDUSTRY_PACKS } from '@/lib/orbitan-config';
 
 // ── Capability / Non-Industry Packs ─────────────────────────────────────────
@@ -13,20 +14,12 @@ const CAPABILITY_PACKS = {
   xero:       { label: 'Xero',       color: '#00A0D2', bg: '#EFF9FF', border: '#BAE6FD' },
 };
 
-// ── Industry Pack master colours (Orbitan Industry Pack Colour Framework) ───
-// These are authoritative — do not override elsewhere
-const INDUSTRY_PACK_COLOURS = {
-  fnb:          { label: 'F&B',            color: '#F97316', bg: '#FFF7ED', border: '#FED7AA' },
-  retail:       { label: 'Retail',          color: '#22C55E', bg: '#F0FDF4', border: '#BBF7D0' },
-  healthcare:   { label: 'Healthcare',      color: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC' },
-  education:    { label: 'Education',       color: '#8B5CF6', bg: '#F5F3FF', border: '#DDD6FE' },
-  logistics:    { label: 'Logistics',       color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
-  construction: { label: 'Construction',    color: '#EAB308', bg: '#FEFCE8', border: '#FEF08A' },
-  recycling:    { label: 'Sustainability',  color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
-  technology:   { label: 'Technology',      color: '#0F172A', bg: '#F8FAFC', border: '#E2E8F0' },
-  events:       { label: 'Events',          color: '#EC4899', bg: '#FDF2F8', border: '#FBCFE8' },
-  facilities:   { label: 'Facilities',      color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
-};
+// ── Industry Pack colours — resolved from orbitan-identity (single source of truth) ──
+function resolvePackColor(key) {
+  const entry = PACK_BRAND[key];
+  if (entry) return { label: entry.label, color: entry.color, bg: entry.color + '18', border: entry.color + '45' };
+  return null;
+}
 
 function resolvePackConfig(key) {
   const k = (key || '').toLowerCase().trim();
@@ -34,10 +27,11 @@ function resolvePackConfig(key) {
   // 1. Capability packs
   if (CAPABILITY_PACKS[k]) return CAPABILITY_PACKS[k];
 
-  // 2. Industry pack colour system (authoritative)
-  if (INDUSTRY_PACK_COLOURS[k]) return INDUSTRY_PACK_COLOURS[k];
+  // 2. Industry pack colour system — sourced from orbitan-identity (authoritative)
+  const packColor = resolvePackColor(k);
+  if (packColor) return packColor;
 
-  // 3. Resolve from master DNA config
+  // 3. Resolve from master DNA config as fallback
   const pack = INDUSTRY_PACKS?.[k];
   if (pack) {
     const c = pack.color_hex;
