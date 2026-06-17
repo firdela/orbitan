@@ -61,11 +61,18 @@ export default function Landing() {
               </Button>
             </Link> :
 
-          <Link to="/auth/gateway">
-              <Button className="bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A] text-xs font-bold px-5 h-9 rounded-lg">
-                Join Orbitan
+          <div className="flex items-center gap-2">
+            <Link to="/join">
+              <Button variant="outline" className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 text-xs font-bold px-4 h-9 rounded-lg">
+                Join Org
               </Button>
             </Link>
+            <Link to="/auth/gateway">
+              <Button className="bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A] text-xs font-bold px-5 h-9 rounded-lg">
+                Get Started
+              </Button>
+            </Link>
+          </div>
           }
         </div>
       </nav>
@@ -95,12 +102,18 @@ export default function Landing() {
                   Go to Workspace <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link> :
-
+            <>
             <Link to="/auth/gateway">
                 <Button className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-semibold px-8 h-12 rounded-xl gap-2">
                   Get Started <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
+              <Link to="/join">
+                <Button variant="outline" className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 text-sm font-semibold px-8 h-12 rounded-xl gap-2">
+                  Join Organisation <Shield className="w-4 h-4" />
+                </Button>
+              </Link>
+            </>
             }
             <a href="#plans" className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1.5">
               View Plans <ChevronRight className="w-3.5 h-3.5" />

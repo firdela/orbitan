@@ -422,50 +422,59 @@ Deno.serve(async (req) => {
         return Response.json({ error: "email and tenant_id are required" }, { status: 400 });
       }
 
+      // ── CANONICAL EMPLOYEE LIFECYCLE — Source of Truth ──
       // Check if Employee record already exists for this email + tenant
       const existingEmployees = await base44.asServiceRole.entities.Employee.filter({
         tenant_id,
         email,
       });
 
+      let employee;
+      let action = "created";
+
       if (existingEmployees.length > 0) {
-        return Response.json({
-          success: true,
-          already_exists: true,
-          employee_id: existingEmployees[0].id,
-          details: "Employee record already exists for this user. No duplicate created.",
+        // Canonical Sync: Update existing Employee record with new context
+        employee = await base44.asServiceRole.entities.Employee.update(existingEmployees[0].id, {
+          outlet_id: outlet_id || existingEmployees[0].outlet_id,
+          role: role_requested || existingEmployees[0].role,
+          status: "active",
+          employment_type: existingEmployees[0].employment_type || "full_time",
+        });
+        action = "synced";
+      } else {
+        // Create new canonical Employee record
+        employee = await base44.asServiceRole.entities.Employee.create({
+          tenant_id,
+          outlet_id: outlet_id || null,
+          full_name: workerName,
+          email,
+          role: role_requested || "worker",
+          status: "active",
+          employment_type: role_requested === "outlet_manager" ? "full_time" : "full_time",
+          hire_date: new Date().toISOString().split('T')[0],
         });
       }
 
-      // Create the Employee record
-      const employee = await base44.asServiceRole.entities.Employee.create({
-        tenant_id,
-        outlet_id: outlet_id || null,
-        full_name: workerName,
-        email,
-        role: role_requested || "worker",
-        status: "active",
-        employment_type: role_requested === "outlet_manager" ? "full_time" : "full_time",
-        hire_date: new Date().toISOString().split('T')[0],
-      });
-
-      // Audit log the approval
+      // Audit log the action (immutable trail — Regulate principle)
       await base44.asServiceRole.entities.AuditLog.create({
         tenant_id,
         actor_id: "system",
         actor_name: "OrbitanOS Onboarding Engine",
         actor_role: "system",
-        action_type: "worker_onboarded",
+        action_type: action === "synced" ? "employee_synced" : "worker_onboarded",
         module: "workforce",
         target_entity: "Employee",
         target_record_id: employee.id,
-        details: `Auto-provisioned Employee record for ${email} as ${(role_requested || "worker").replace(/_/g, " ")} at ${company_name || tenant_id}. AccessRequest approved. Powered by the Regulate principle.`,
+        details: action === "synced"
+          ? `Canonical sync: Updated Employee record for ${email} — role ${role_requested || "updated"}, outlet ${outlet_id || "unchanged"}. AccessRequest approved.`
+          : `Auto-provisioned Employee record for ${email} as ${(role_requested || "worker").replace(/_/g, " ")} at ${company_name || tenant_id}. AccessRequest approved. Powered by the Regulate principle.`,
         new_state: {
           employee_id: employee.id,
           email,
-          role: role_requested,
+          role: role_requested || employee.role,
           tenant_id,
-          outlet_id: outlet_id || null,
+          outlet_id: outlet_id || employee.outlet_id || null,
+          action,
         },
       });
 
@@ -473,8 +482,11 @@ Deno.serve(async (req) => {
         success: true,
         employee_id: employee.id,
         worker_name: workerName,
-        role: role_requested,
-        details: `Employee record created for ${email}. They can now access their OrbitanOS workspace.`,
+        role: role_requested || employee.role,
+        action,
+        details: action === "synced"
+          ? `Employee record synchronized for ${email}. Outlet and role updated. Ready for workspace access.`
+          : `Employee record created for ${email}. They can now access their OrbitanOS workspace.`,
       });
     }
 

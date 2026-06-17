@@ -6,7 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Building2, ArrowRight, Shield, Search, Loader2, CheckCircle2 } from 'lucide-react';
+import { Building2, ArrowRight, Shield, Search, Loader2, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
 
 export default function JoinGateway() {
@@ -51,23 +51,76 @@ export default function JoinGateway() {
     setCodeError('');
 
     try {
-      // Look up the invite/outlet/tenant by code
-      const outlets = await base44.entities.Outlet.filter({ invite_code: inviteCode.trim().toUpperCase() });
-      if (outlets.length > 0) {
-        const outlet = outlets[0];
+      const code = inviteCode.trim().toUpperCase();
+
+      // ── Step 1: Check formal Invitation entity (Enterprise Registry) ──
+      const invitations = await base44.entities.Invitation.filter({
+        invite_code: code,
+        status: 'active',
+      });
+
+      if (invitations.length > 0) {
+        const inv = invitations[0];
+
+        // Check expiry
+        if (inv.expiry_date && new Date(inv.expiry_date) < new Date()) {
+          setCodeError('This invitation has expired. Please contact your manager.');
+          setCheckingCode(false);
+          return;
+        }
+
+        // Check max uses
+        if (inv.max_uses && inv.use_count >= inv.max_uses) {
+          setCodeError('This invitation has already been used the maximum number of times.');
+          setCheckingCode(false);
+          return;
+        }
+
         const params = new URLSearchParams({
-          outlet_id: outlet.id,
-          outlet_name: outlet.name || '',
-          tenant_id: outlet.tenant_id || '',
+          tenant_id: inv.tenant_id || '',
+          outlet_id: inv.outlet_id || '',
+          company_name: inv.company_id || '',
         });
         navigate(`/request-access?${params.toString()}`);
         return;
       }
 
-      // Try tenant-level invite
-      const tenants = await base44.entities.Tenant.filter({ invite_code: inviteCode.trim().toUpperCase() });
+      // ── Step 2: Check Outlet-level invite codes ──
+      const outlets = await base44.entities.Outlet.filter({ invite_code: code });
+      if (outlets.length > 0) {
+        const outlet = outlets[0];
+
+        // Check outlet invite expiry
+        if (outlet.invite_code_expiry && new Date(outlet.invite_code_expiry) < new Date()) {
+          setCodeError('This outlet invitation has expired. Please contact your manager.');
+          setCheckingCode(false);
+          return;
+        }
+
+        const params = new URLSearchParams({
+          outlet_id: outlet.id,
+          outlet_name: outlet.name || '',
+          tenant_id: outlet.tenant_id || '',
+        });
+        // Pass role if outlet invite specifies one
+        if (outlet.invite_code_role) {
+          params.set('role', outlet.invite_code_role);
+        }
+        navigate(`/request-access?${params.toString()}`);
+        return;
+      }
+
+      // ── Step 3: Check Tenant-level invite codes ──
+      const tenants = await base44.entities.Tenant.filter({ invite_code: code });
       if (tenants.length > 0) {
         const tenant = tenants[0];
+
+        if (tenant.invite_code_expiry && new Date(tenant.invite_code_expiry) < new Date()) {
+          setCodeError('This organisation invitation has expired. Please contact your administrator.');
+          setCheckingCode(false);
+          return;
+        }
+
         const params = new URLSearchParams({
           tenant_id: tenant.id,
           company_name: tenant.name || '',
