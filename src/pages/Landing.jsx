@@ -166,7 +166,7 @@ export default function Landing() {
                   <p className="text-slate-500 text-xs leading-relaxed mb-4">{pack.description}</p>
                   <CapabilityStack packs={pack.modules.map((m) => ({ type: m.toLowerCase().replace(/\s+/g, '_'), label: m })).slice(0, 5)} />
                   {pack.modules.length > 5 &&
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.06] text-slate-500">+{pack.modules.length - 5} more</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.06] text-slate-500">+{pack.modules.length - 5} more</span>
                   }
                 </motion.div>);
 
@@ -320,7 +320,7 @@ export default function Landing() {
           {/* Integration Network Visual */}
           <motion.div {...fadeUp} className="relative flex items-center justify-center mb-12">
             <div className="w-20 h-20 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20 flex items-center justify-center z-10">
-              <img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png" alt="Orbitan" className="w-10 h-10 opacity-80" />
+              <img src={LOGO_ASSETS.mark} alt="Orbitan" className="w-10 h-10 opacity-80" />
             </div>
             {/* Connection lines with pulsing dots */}
             {[0, 72, 144, 216, 288].map((angle, i) =>
