@@ -14,9 +14,13 @@ import RoleGateway from '@/components/auth/RoleGateway';
 import AuthGateway from '@/components/auth/AuthGateway';
 
 // Page imports
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
 import Landing from '@/pages/Landing';
-import WelcomeGateway from '@/components/brand/WelcomeGateway';
-import AccessRequestView from '@/components/worker/AccessRequestView';
+import JoinGateway from '@/components/auth/JoinGateway';
+import RequestAccessPage from '@/pages/RequestAccess';
 import LeaderOrg from '@/pages/LeaderOrg';
 import CompanyDashboard from '@/pages/CompanyDashboard';
 import OutletDashboard from '@/pages/OutletDashboard';
@@ -96,18 +100,24 @@ const AuthenticatedApp = () => {
       {/* Orbitan Public Landing — Brand & Marketing Hub */}
       <Route path="/" element={<Landing />} />
 
+      {/* Auth Pages — Login, Register, Forgot Password, Reset Password */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
       {/* Orbitan Auth Gateway — Intelligent Entry Hub */}
       <Route path="/auth/gateway" element={<AuthGateway />} />
 
-      {/* Orbitan Brand Gateway — Access Portal */}
-      <Route path="/join" element={<WelcomeGateway />} />
+      {/* Orbitan Brand Gateway — Invitation Entry */}
+      <Route path="/join" element={<JoinGateway />} />
       <Route path="/welcome" element={<Navigate to="/join" replace />} />
 
       {/* RoleGateway resolves workspace dynamically for authenticated users */}
       <Route path="/workspace" element={<RoleGateway />} />
 
-      {/* Governed Onboarding — Access Request pipeline */}
-      <Route path="/request-access" element={<AccessRequestView />} />
+      {/* Governed Onboarding — Workplace Discovery & Access Request */}
+      <Route path="/request-access" element={<RequestAccessPage />} />
 
       {/* Platform Owner Console */}
       <Route path="/leader-org" element={<LeaderOrg />} />
