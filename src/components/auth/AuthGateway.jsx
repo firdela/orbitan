@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { LogIn, UserPlus, Search, Shield, ChevronRight } from 'lucide-react';
-import { SIX_R_PRINCIPLES, SHIELD_BRAND, TAGLINES, resolveTenantBrand, getTenantBackgroundTint } from '@/lib/orbitan-identity';
+import { SIX_R_PRINCIPLES, SHIELD_BRAND, TAGLINES, PACK_BRAND, PLAN_BRAND, resolveTenantBrand, getTenantBackgroundTint } from '@/lib/orbitan-identity';
+import { LAUNCH_TENANTS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
 import SixRSequence from '@/components/brand/SixRSequence';
 import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
 
@@ -66,7 +67,20 @@ export default function AuthGateway() {
     const org = params.get('org');
     if (org) {
       const ctx = resolveTenantBrand(org);
-      if (ctx) setTenantContext(ctx);
+      if (ctx) {
+        // Enrich with pack badges and plan info
+        const launchTenant = Object.values(LAUNCH_TENANTS).find(t => t.id_ref === org);
+        const packInfo = PACK_BRAND[ctx.pack];
+        const planInfo = PLAN_BRAND[ctx.plan];
+        const enabledPacks = launchTenant?.enabled_packs || [ctx.pack];
+        const packBadges = enabledPacks.map(pk => {
+          const pack = PACK_BRAND[pk];
+          if (pack) return { key: pk, label: pack.label, color: pack.color };
+          const META = { core: { label: 'Core', color: '#2563EB' }, finance: { label: 'Finance', color: '#0F172A' }, ai: { label: 'AI Suite', color: '#7C3AED' }, compliance: { label: 'Compliance', color: '#DC2626' } };
+          return META[pk] ? { key: pk, ...META[pk] } : { key: pk, label: pk, color: '#64748B' };
+        });
+        setTenantContext({ ...ctx, packInfo, planInfo, packBadges, launchTenant });
+      }
     }
   }, []);
 
@@ -182,19 +196,50 @@ export default function AuthGateway() {
                 >
                   Select your entry point to continue
                 </motion.p>
-                {/* Tenant context indicator */}
+                {/* Tenant context indicator — enriched with pack badges & plan */}
                 {tenantContext && (
                   <motion.div
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.25 }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full"
-                    style={{ backgroundColor: `${accentColor}12`, border: `1px solid ${accentColor}25` }}
+                    className="flex flex-col items-center gap-2"
                   >
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
-                    <span className="text-[10px] font-medium" style={{ color: accentColor }}>
-                      {tenantContext.brand}
-                    </span>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full"
+                      style={{ backgroundColor: `${accentColor}12`, border: `1px solid ${accentColor}25` }}>
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
+                      <span className="text-[10px] font-medium" style={{ color: accentColor }}>
+                        {tenantContext.brand}
+                      </span>
+                      {tenantContext.sub_brand && (
+                        <>
+                          <span className="text-[9px] text-slate-600">·</span>
+                          <span className="text-[10px] text-slate-500">{tenantContext.sub_brand}</span>
+                        </>
+                      )}
+                    </div>
+                    {/* Pack Badges */}
+                    {tenantContext.packBadges?.length > 0 && (
+                      <div className="flex flex-wrap justify-center gap-1">
+                        {tenantContext.packBadges.map(badge => (
+                          <span key={badge.key}
+                            className="text-[8px] font-bold tracking-wide px-2 py-0.5 rounded-full border"
+                            style={{ color: badge.color, backgroundColor: `${badge.color}12`, borderColor: `${badge.color}25` }}>
+                            {badge.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {/* Plan Tier */}
+                    {tenantContext.planInfo && (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full font-medium"
+                        style={{
+                          backgroundColor: `${tenantContext.planInfo.color}12`,
+                          color: tenantContext.planInfo.color,
+                          border: `1px solid ${tenantContext.planInfo.color}25`,
+                        }}>
+                        {tenantContext.planInfo.label} Plan
+                      </span>
+                    )}
                   </motion.div>
                 )}
               </div>
