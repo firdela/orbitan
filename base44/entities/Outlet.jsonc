@@ -27,6 +27,7 @@
         "event_site",
         "campus",
         "processing_facility",
+        "virtual",
         "other"
       ],
       "default": "other"
@@ -40,12 +41,36 @@
     "contact_phone": {
       "type": "string"
     },
+    "is_virtual": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for Home-Based Business (HBB) or pre-incorporation virtual operations. No physical commercial premises."
+    },
+    "invite_code": {
+      "type": "string",
+      "description": "Outlet-level invitation code for worker onboarding (e.g. LBT-NBR-001)"
+    },
+    "invite_code_expiry": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this invite code expires"
+    },
+    "invite_code_role": {
+      "type": "string",
+      "enum": [
+        "worker",
+        "supervisor",
+        "outlet_manager"
+      ],
+      "description": "Role this invite code grants on redemption"
+    },
     "status": {
       "type": "string",
       "enum": [
         "active",
         "inactive",
-        "temporarily_closed"
+        "temporarily_closed",
+        "onboarding"
       ],
       "default": "active"
     }
