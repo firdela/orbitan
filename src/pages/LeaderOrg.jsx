@@ -19,11 +19,12 @@ import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionP
 import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
 import AnnouncementsManager from '@/components/announcements/AnnouncementsManager';
 import PilotCommandCenter from '@/components/leader/PilotCommandCenter';
+import BlueprintAdvisor from '@/components/advisor/BlueprintAdvisor';
 import { Megaphone, Radar } from 'lucide-react';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
-  Rocket, Activity, Zap, Wallet, ShoppingBag } from 'lucide-react';
+  Rocket, Activity, Zap, Wallet, ShoppingBag, Target } from 'lucide-react';
 
 export default function LeaderOrg() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -31,6 +32,7 @@ export default function LeaderOrg() {
   const [manifests] = useState(() => getManifestList());
   const [activating, setActivating] = useState(null);
   const [reports, setReports] = useState({});
+  const [advisorOpen, setAdvisorOpen] = useState(false);
 
   const tenants = DEMO_TENANTS;
   const totalTenants = tenants.length;
@@ -74,6 +76,15 @@ export default function LeaderOrg() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <OrbitanLogo size="sm" showOS />
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAdvisorOpen(true)}
+              className="gap-1.5 text-xs border-orbitan-purple/30 text-orbitan-purple hover:bg-orbitan-purple-light hidden lg:flex"
+            >
+              <Target className="w-3.5 h-3.5" />
+              Blueprint Advisor
+            </Button>
             <div className="hidden lg:flex items-center gap-2 bg-orbitan-blue-light text-orbitan-blue px-3 py-1.5 rounded-lg text-xs font-semibold">
               <Shield className="w-3.5 h-3.5" />
               Platform Owner Console
@@ -369,6 +380,12 @@ export default function LeaderOrg() {
       </main>
 
       <PlatformFooter />
+
+      {/* Blueprint Advisor Slide-in Panel */}
+      <BlueprintAdvisor
+        open={advisorOpen}
+        onClose={() => setAdvisorOpen(false)}
+      />
     </div>);
 
 }
