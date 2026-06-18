@@ -5,7 +5,8 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
 
     // Public endpoint — no auth required. Query as service role to bypass RLS.
-    const outlets = await base44.asServiceRole.entities.Outlet.filter({ status: 'active' });
+    // Only return real physical outlets (exclude virtual/HBB and onboarding tenants)
+    const outlets = await base44.asServiceRole.entities.Outlet.filter({ status: 'active', is_virtual: false });
     const tenants = await base44.asServiceRole.entities.Tenant.filter({ status: 'active' });
 
     // Build a tenant lookup map
