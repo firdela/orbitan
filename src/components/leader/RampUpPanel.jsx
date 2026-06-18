@@ -4,12 +4,13 @@
 // Exit-Ready: reads manifests from onboardingService backend.
 // ============================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PackBadgeGroup, PlanBadge } from '@/components/shared/PackBadge';
 import { MODULES, INDUSTRY_LABELS } from '@/lib/orbitan-config';
+import { LAUNCH_MANIFESTS, getManifestList } from '@/lib/tenant-registry';
 import AIBlueprintPreviewModal from '@/components/leader/AIBlueprintPreviewModal';
 import {
   Rocket, CheckCircle2, AlertTriangle, Loader2, ChevronDown, ChevronUp,
@@ -257,36 +258,25 @@ function ManifestCard({ manifest, onActivate, onPreview, activating, report }) {
 }
 
 export default function RampUpPanel() {
-  const [manifests, setManifests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Manifests loaded directly from tenant-registry.js (no function call)
+  const [manifests] = useState(() => getManifestList());
   const [activating, setActivating] = useState(null); // tenant_ref | 'all' | null
   const [reports, setReports] = useState({}); // { tenant_ref: report }
-  const [error, setError] = useState(null);
   const [previewManifest, setPreviewManifest] = useState(null); // manifest object for modal
-
-  useEffect(() => { loadManifests(); }, []);
-
-  const loadManifests = async () => {
-    setLoading(true);
-    setError(null);
-    const res = await base44.functions.invoke('onboardingService', { action: 'get_manifests' });
-    setManifests(res.data.manifests || []);
-    setLoading(false);
-  };
 
   const handleActivate = async (tenantRef) => {
     setActivating(tenantRef);
-    const res = await base44.functions.invoke('onboardingService', {
-      action: 'activate_tenant',
-      tenant_ref: tenantRef,
-    });
+    const manifest = LAUNCH_MANIFESTS[tenantRef];
+    if (!manifest) return;
+    const res = await base44.functions.invoke('onboardingService', { action: 'activate_tenant', manifest });
     setReports(prev => ({ ...prev, [tenantRef]: res.data.report }));
     setActivating(null);
   };
 
   const handleActivateAll = async () => {
     setActivating('all');
-    const res = await base44.functions.invoke('onboardingService', { action: 'activate_all' });
+    const allManifests = Object.values(LAUNCH_MANIFESTS);
+    const res = await base44.functions.invoke('onboardingService', { action: 'activate_all', manifests: allManifests });
     const newReports = {};
     (res.data.reports || []).forEach(r => { newReports[r.tenant_ref] = r; });
     setReports(newReports);
@@ -295,18 +285,6 @@ export default function RampUpPanel() {
 
   const totalSeeds = manifests.reduce((acc, m) => acc + m.seed_counts.total, 0);
   const completedCount = Object.values(reports).filter(r => r.status === 'success').length;
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <div className="w-10 h-10 rounded-xl orbitan-gradient flex items-center justify-center">
-          <Rocket className="w-5 h-5 text-white" />
-        </div>
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading activation manifests...</p>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -361,11 +339,12 @@ export default function RampUpPanel() {
         <Shield className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
         <div className="text-xs text-muted-foreground leading-relaxed">
           <span className="font-semibold text-foreground">Exit-Ready Architecture:</span>{' '}
-          Each activation reads from a standardised JSON manifest in{' '}
-          <code className="bg-card px-1.5 py-0.5 rounded font-mono text-foreground">functions/onboardingService.js</code>.
-          The engine executes: <strong>Validate → Seed → Audit</strong>. Every action is written to the{' '}
+          Manifests live in the platform-side{' '}
+          <code className="bg-card px-1.5 py-0.5 rounded font-mono text-foreground">lib/tenant-registry.js</code>.
+          The <code className="bg-card px-1.5 py-0.5 rounded font-mono text-foreground">onboardingService</code> is a pure engine: it receives a manifest as input and executes{' '}
+          <strong>Validate → Seed → Audit</strong>. Every action is written to the{' '}
           <code className="bg-card px-1.5 py-0.5 rounded font-mono text-foreground">AuditLog</code> entity.
-          To port: export manifests as JSON, reimplement the loop in your target stack.
+          To add a tenant: add one object to the registry. The engine never changes.
         </div>
       </div>
 

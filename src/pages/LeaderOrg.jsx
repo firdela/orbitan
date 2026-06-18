@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { PLATFORM_IDENTITY, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, OPERATING_CYCLE } from '@/lib/orbitan-config';
 import { DEMO_TENANTS } from '@/lib/use-tenant.jsx';
+import { LAUNCH_MANIFESTS, getManifestList } from '@/lib/tenant-registry';
 import { getActivePacks, getFuturePacks } from '@/lib/orbitan-engine';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
@@ -26,7 +27,8 @@ import {
 
 export default function LeaderOrg() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [manifests, setManifests] = useState([]);
+  // Manifests loaded directly from tenant-registry.js (no function call)
+  const [manifests] = useState(() => getManifestList());
   const [activating, setActivating] = useState(null);
   const [reports, setReports] = useState({});
 
@@ -35,22 +37,19 @@ export default function LeaderOrg() {
   const activeTenants = tenants.filter((t) => t.status === 'active').length;
   const totalModuleUsage = tenants.reduce((acc, t) => acc + (t.enabled_modules?.length || 0), 0);
 
-  useEffect(() => {
-    base44.functions.invoke('onboardingService', { action: 'get_manifests' })
-      .then(res => setManifests(res.data?.manifests || []))
-      .catch(() => {});
-  }, []);
-
   const handleActivate = async (tenantRef) => {
     setActivating(tenantRef);
-    const res = await base44.functions.invoke('onboardingService', { action: 'activate_tenant', tenant_ref: tenantRef });
+    const manifest = LAUNCH_MANIFESTS[tenantRef];
+    if (!manifest) return;
+    const res = await base44.functions.invoke('onboardingService', { action: 'activate_tenant', manifest });
     setReports(prev => ({ ...prev, [tenantRef]: res.data?.report }));
     setActivating(null);
   };
 
   const handleActivateAll = async () => {
     setActivating('all');
-    const res = await base44.functions.invoke('onboardingService', { action: 'activate_all' });
+    const allManifests = Object.values(LAUNCH_MANIFESTS);
+    const res = await base44.functions.invoke('onboardingService', { action: 'activate_all', manifests: allManifests });
     const newReports = {};
     (res.data?.reports || []).forEach(r => { newReports[r.tenant_ref] = r; });
     setReports(newReports);

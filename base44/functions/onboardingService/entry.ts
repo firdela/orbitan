@@ -1,12 +1,12 @@
 // ============================================================
 // ORBITAN — OnboardingService Backend Function
-// Automated Tenant Activation via Pack Manifests
+// Pure Activation Engine — No Hardcoded Tenant Data
 // Created by Muhammad Firdaus Bin Ismail
 // © 2024–2026 Orbitan & OrbitanOS. All Rights Reserved.
 //
 // EXIT-READY ARCHITECTURE:
-// This function is the single automated provisioning engine.
-// It reads a standardised JSON manifest and executes:
+// This function is a pure execution engine. It receives a manifest
+// as input (from lib/tenant-registry.js on the frontend) and executes:
 //   1. subscriptionGate validation
 //   2. PARALLEL entity seeding (ComplianceRecord, Task)
 //   3. PARALLEL AI document generation (SOPs, Checklists)
@@ -16,154 +16,21 @@
 // Promise.allSettled is used throughout — a single failure
 // does NOT abort the entire activation. Every outcome is logged.
 //
-// To migrate stacks: reimplement the Parse → Validate → Seed
-// → AI → Audit loop in your target language. No other changes needed.
+// To add a new tenant: add it to lib/tenant-registry.js.
+// The engine never changes.
+//
+// To migrate stacks: reimplement this engine in your target language.
 // ============================================================
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 
-// ── MASTER LAUNCH MANIFEST REGISTRY ─────────────────────────
-const LAUNCH_MANIFESTS = {
-
-  taqueria_pte_ltd: {
-    tenant_ref: "taqueria_pte_ltd",
-    display_name: "Taqueria Pte Ltd",
-    pack: "fnb",
-    plan: "orbitan_enterprise",
-    industry: "food_beverage",
-    tenant_name: "Taqueria Pte Ltd",
-    outlet_name: "La Birria Tacos (North Bridge Rd)",
-    enabled_modules: ["inventory", "procurement", "sales_invoice", "reporting", "workforce", "task", "compliance", "finance_integration", "scheduling"],
-    enabled_packs: ["core", "fnb", "finance", "compliance"],
-    integrations: ["xero"],
-    gating: { require_audit_log: true, require_subscription_validation: true },
-    seed_data: {
-      ComplianceRecord: [
-        { title: "Daily Food Safety Audit",        type: "Food Safety Audit",    category: "food_safety",  status: "pending", due_date: new Date(Date.now() + 1 * 86400000).toISOString().split('T')[0] },
-        { title: "Weekly Kitchen Hygiene Check",   type: "Hygiene Inspection",   category: "food_safety",  status: "pending", due_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0] },
-        { title: "Monthly Fire Safety Inspection", type: "Fire Safety Audit",    category: "fire_safety",  status: "pending", due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0] },
-        { title: "F&B License Renewal Review",     type: "License Renewal",      category: "licensing",    status: "pending", due_date: new Date(Date.now() + 90 * 86400000).toISOString().split('T')[0] },
-      ],
-      Task: [
-        { title: "Configure Xero accounting integration",    module_context: "finance",     priority: "urgent",  status: "pending" },
-        { title: "Load opening ingredient inventory",        module_context: "inventory",   priority: "high",    status: "pending" },
-        { title: "Create supplier profiles",                 module_context: "procurement", priority: "high",    status: "pending" },
-        { title: "Set up COGS tracking for menu items",      module_context: "inventory",   priority: "high",    status: "pending" },
-        { title: "Run first daily sales reconciliation",     module_context: "finance",     priority: "medium",  status: "pending" },
-        { title: "Complete first payroll cycle setup",       module_context: "workforce",   priority: "medium",  status: "pending" },
-        { title: "Schedule first food safety audit",         module_context: "compliance",  priority: "medium",  status: "pending" },
-        { title: "Onboard outlet manager to OrbitanOS",      module_context: "workforce",   priority: "high",    status: "pending" },
-      ],
-    },
-    // AI documents generated in parallel on activation
-    ai_documents: [
-      { document_type: "sop",                  title: "Daily Food Safety & Kitchen Operations SOP" },
-      { document_type: "compliance_checklist", title: "Daily Food Safety Inspection Checklist" },
-      { document_type: "shift_brief",          title: "Opening Shift Brief — La Birria Tacos" },
-    ],
-  },
-
-  renewed_resources_pte_ltd: {
-    tenant_ref: "renewed_resources_pte_ltd",
-    display_name: "Renewed Resources Pte Ltd",
-    pack: "recycling",
-    plan: "orbitan_business",
-    industry: "recycling_sustainability",
-    tenant_name: "Renewed Resources Pte Ltd",
-    outlet_name: null,
-    enabled_modules: ["inventory", "procurement", "compliance", "reporting", "workforce", "task"],
-    enabled_packs: ["core", "recycling", "compliance"],
-    integrations: ["compliance_reporting_portal"],
-    gating: { require_audit_log: true, require_subscription_validation: true },
-    seed_data: {
-      ComplianceRecord: [
-        { title: "Monthly Environmental Impact Audit",    type: "Environmental Audit",      category: "environmental", status: "pending", due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0] },
-        { title: "Vehicle Maintenance & Safety Log",      type: "Vehicle Inspection",       category: "other",         status: "pending", due_date: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0] },
-        { title: "Disposal Certification Renewal",        type: "Disposal Certification",   category: "environmental", status: "pending", due_date: new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0] },
-        { title: "Recycling Partner Due Diligence",       type: "Partner Compliance Check", category: "other",         status: "pending", due_date: new Date(Date.now() + 45 * 86400000).toISOString().split('T')[0] },
-      ],
-      Task: [
-        { title: "Register collection vehicle fleet",              module_context: "workforce",    priority: "high",   status: "pending" },
-        { title: "Set up material category inventory",             module_context: "inventory",    priority: "high",   status: "pending" },
-        { title: "Configure sustainability KPI reporting",         module_context: "reporting",    priority: "high",   status: "pending" },
-        { title: "Onboard drivers and collection staff",           module_context: "workforce",    priority: "medium", status: "pending" },
-        { title: "Create first recycling partner supplier profile",module_context: "procurement",  priority: "medium", status: "pending" },
-        { title: "Log baseline CO2 impact metrics",                module_context: "reporting",    priority: "medium", status: "pending" },
-        { title: "Submit first monthly sustainability report",     module_context: "compliance",   priority: "medium", status: "pending" },
-      ],
-    },
-    ai_documents: [
-      { document_type: "sop",                  title: "Material Collection & Processing SOP" },
-      { document_type: "compliance_checklist", title: "Monthly Environmental Compliance Checklist" },
-    ],
-  },
-
-  izaliqa_bakes: {
-    tenant_ref: "izaliqa_bakes",
-    display_name: "Izaliqa Bakes",
-    pack: "fnb",
-    plan: "orbitan_starter",
-    industry: "food_beverage",
-    tenant_name: "Izaliqa Bakes",
-    outlet_name: "Primary Home Operation",
-    enabled_modules: ["task", "inventory", "sales_invoice"],
-    enabled_packs: ["core", "fnb"],
-    integrations: [],
-    gating: { require_audit_log: true, require_subscription_validation: true },
-    is_virtual: true,
-    status: "onboarding",
-    notes: "Home-Based Business (HBB). Operates from home — festive cookies, seasonal baked goods. Seamless migration path to standard F&B structure on growth.",
-    seed_data: {
-      ComplianceRecord: [
-        { title: "Home Kitchen Food Safety Check",    type: "Food Safety Audit",   category: "food_safety", status: "pending", due_date: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0] },
-        { title: "Monthly Hygiene & Cleanliness Log", type: "Hygiene Inspection",  category: "food_safety", status: "pending", due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0] },
-      ],
-      Task: [
-        { title: "Set up product menu & price list",        module_context: "inventory",    priority: "high",   status: "pending" },
-        { title: "Record opening inventory of ingredients", module_context: "inventory",    priority: "high",   status: "pending" },
-        { title: "Log first sales order",                  module_context: "sales_invoice", priority: "medium", status: "pending" },
-        { title: "Configure order tracking tasks",         module_context: "task",          priority: "medium", status: "pending" },
-        { title: "Onboard to OrbitanOS Starter Plan",      module_context: "workforce",     priority: "high",   status: "pending" },
-      ],
-    },
-    ai_documents: [
-      { document_type: "sop",       title: "Home Bakery Operations & Food Safety SOP" },
-      { document_type: "shift_brief", title: "Daily Baking Session Brief — Izaliqa Bakes" },
-    ],
-  },
-
-  renewed_fashion: {
-    tenant_ref: "renewed_fashion",
-    display_name: "Renewed Fashion",
-    pack: "retail",
-    plan: "orbitan_starter",
-    industry: "retail",
-    tenant_name: "Renewed Fashion",
-    outlet_name: null,
-    enabled_modules: ["inventory", "sales_invoice", "reporting", "procurement", "workforce", "task", "customer_management"],
-    enabled_packs: ["core", "retail"],
-    integrations: [],
-    gating: { require_audit_log: true, require_subscription_validation: true },
-    status: "onboarding",
-    notes: "Not yet incorporated. In planning & development. Future focus: upcycled & sustainable clothing.",
-    seed_data: {
-      ComplianceRecord: [],
-      Task: [
-        { title: "Define brand identity and target market",      module_context: "workforce", priority: "high",   status: "pending" },
-        { title: "Plan product sourcing & grading strategy",     module_context: "inventory", priority: "high",   status: "pending" },
-        { title: "Draft initial outlet concept and location",    module_context: "workforce", priority: "medium", status: "pending" },
-      ],
-    },
-    ai_documents: [],
-  },
-};
-
 // ── ACTIVATION ENGINE ────────────────────────────────────────
+// Receives a manifest object and executes the full provisioning.
 // Uses Promise.allSettled for parallel seeding and AI generation.
 // A single failure does NOT abort the activation — it is logged.
-async function activateTenant(base44, tenantRef, actorId, actorName) {
-  const manifest = LAUNCH_MANIFESTS[tenantRef];
-  if (!manifest) throw new Error(`No manifest found for tenant: ${tenantRef}`);
+async function activateTenant(base44, manifest, actorId, actorName) {
+  if (!manifest) throw new Error("No manifest provided");
+  const tenantRef = manifest.tenant_ref;
 
   const report = {
     tenant_ref: tenantRef,
@@ -197,7 +64,6 @@ async function activateTenant(base44, tenantRef, actorId, actorName) {
     }).then(created => ({ type: 'Task', data: created, title: task.title }))
   );
 
-  // Execute all entity seeding in parallel
   const seedResults = await Promise.allSettled([...complianceTasks, ...taskSeeds]);
 
   // Map seeded compliance records by title for AI doc linking
@@ -215,7 +81,6 @@ async function activateTenant(base44, tenantRef, actorId, actorName) {
   // ── Step 2: PARALLEL — Generate AI documents via sopGenerator ─
   if (manifest.ai_documents?.length > 0) {
     const aiTasks = manifest.ai_documents.map(doc => {
-      // Link to the most relevant seeded compliance record if applicable
       const linkedComplianceId = Object.entries(seededCompliance).find(
         ([title]) => title.toLowerCase().includes(doc.document_type === 'compliance_checklist' ? 'audit' : 'safety')
       )?.[1] || null;
@@ -295,60 +160,49 @@ Deno.serve(async (req) => {
     if (user.role !== "admin") return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
 
     const body = await req.json();
-    const { action, tenant_ref } = body;
-
-    // ── GET: Return all manifests (for UI rendering) ──────
-    if (action === "get_manifests") {
-      return Response.json({
-        manifests: Object.values(LAUNCH_MANIFESTS).map(m => ({
-          tenant_ref: m.tenant_ref,
-          display_name: m.display_name,
-          pack: m.pack,
-          plan: m.plan,
-          industry: m.industry,
-          tenant_name: m.tenant_name,
-          outlet_name: m.outlet_name,
-          enabled_modules: m.enabled_modules,
-          enabled_packs: m.enabled_packs,
-          seed_counts: {
-            compliance_records: m.seed_data.ComplianceRecord?.length || 0,
-            tasks: m.seed_data.Task?.length || 0,
-            ai_documents: m.ai_documents?.length || 0,
-            total: (m.seed_data.ComplianceRecord?.length || 0) + (m.seed_data.Task?.length || 0),
-          },
-          seed_preview: {
-            ComplianceRecord: m.seed_data.ComplianceRecord?.map(r => r.title) || [],
-            Task: m.seed_data.Task?.map(t => t.title) || [],
-            AIDocument: m.ai_documents?.map(d => ({ title: d.title, document_type: d.document_type })) || [],
-          },
-        })),
-      });
-    }
+    const { action } = body;
 
     // ── ACTIVATE: Run full provisioning for one tenant ────
+    // Manifest is passed as payload from lib/tenant-registry.js
     if (action === "activate_tenant") {
-      if (!tenant_ref) return Response.json({ error: "tenant_ref is required" }, { status: 400 });
-      const report = await activateTenant(base44, tenant_ref, user.id, user.full_name || "Platform Owner");
+      const { manifest } = body;
+      if (!manifest || !manifest.tenant_ref) {
+        return Response.json({ error: "manifest with tenant_ref is required" }, { status: 400 });
+      }
+      const report = await activateTenant(base44, manifest, user.id, user.full_name || "Platform Owner");
       return Response.json({ report });
     }
 
-    // ── ACTIVATE ALL: Parallel bulk activate all three tenants ──
+    // ── ACTIVATE ALL: Bulk parallel activation ──────────────
+    // Accepts an array of manifests from the frontend
     if (action === "activate_all") {
-      const allTenantRefs = Object.keys(LAUNCH_MANIFESTS);
+      const { manifests } = body;
+      if (!manifests || !Array.isArray(manifests) || manifests.length === 0) {
+        return Response.json({ error: "manifests array is required" }, { status: 400 });
+      }
       const allResults = await Promise.allSettled(
-        allTenantRefs.map(ref => activateTenant(base44, ref, user.id, user.full_name || "Platform Owner"))
+        manifests.map(m => activateTenant(base44, m, user.id, user.full_name || "Platform Owner"))
       );
       const reports = allResults.map((result, i) =>
         result.status === 'fulfilled'
           ? result.value
-          : { tenant_ref: allTenantRefs[i], status: 'failed', errors: [{ error: result.reason?.message }] }
+          : { tenant_ref: manifests[i]?.tenant_ref || 'unknown', status: 'failed', errors: [{ error: result.reason?.message }] }
       );
       return Response.json({ reports });
     }
 
-    // ── HANDLE ACCESS REQUEST — Send email notification to tenant managers ──
-    // Supports both direct API calls (action: "handle_access_request")
-    // AND entity automation triggers (where payload wraps data under "data")
+    // ── GET MANIFESTS — Compatibility shim ──────────────────
+    // Frontend should use lib/tenant-registry.js directly.
+    // Kept here for backward compatibility and as a fallback.
+    if (action === "get_manifests") {
+      return Response.json({
+        manifests: [],
+        note: "Manifests are now served from lib/tenant-registry.js on the frontend. This endpoint is deprecated for reading manifests."
+      });
+    }
+
+    // ── HANDLE ACCESS REQUEST — Send email notification ─────
+    // Supports both direct API calls and entity automation triggers
     const isEntityAutomation = !action && body.event?.entity_name === "AccessRequest";
     if (action === "handle_access_request" || isEntityAutomation) {
       const payload = isEntityAutomation ? (body.data || {}) : body;
@@ -358,7 +212,6 @@ Deno.serve(async (req) => {
         return Response.json({ error: "email and tenant_id are required" }, { status: 400 });
       }
 
-      // Find tenant admins and outlet managers for this tenant
       const managers = await base44.asServiceRole.entities.Employee.filter({
         tenant_id,
         role: { $in: ["tenant_admin", "outlet_manager"] },
@@ -367,7 +220,6 @@ Deno.serve(async (req) => {
 
       const managerEmails = managers.map(m => m.email).filter(Boolean);
 
-      // Send email to each manager (non-blocking — allSettled)
       const emailResults = await Promise.allSettled(
         managerEmails.map(to =>
           base44.integrations.Core.SendEmail({
@@ -403,10 +255,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── HANDLE ACCESS REQUEST APPROVAL — Auto-create Employee record ──
-    // Triggers when an AccessRequest status changes to "approved"
-    // Supports both direct API calls (action: "approve_access_request")
-    // AND entity automation triggers (where payload wraps data under "data")
+    // ── HANDLE ACCESS REQUEST APPROVAL — Auto-create Employee ─
     const isApprovalAutomation = !action && body.event?.entity_name === "AccessRequest" && body.event?.type === "update" && body.data?.status === "approved";
     if (action === "approve_access_request" || isApprovalAutomation) {
       const payload = isApprovalAutomation ? (body.data || {}) : body;
@@ -417,27 +266,23 @@ Deno.serve(async (req) => {
         return Response.json({ error: "email and tenant_id are required" }, { status: 400 });
       }
 
-      // ── CANONICAL EMPLOYEE LIFECYCLE — Source of Truth ──
-      // Check if Employee record already exists for this email + tenant
       const existingEmployees = await base44.asServiceRole.entities.Employee.filter({
         tenant_id,
         email,
       });
 
       let employee;
-      let action = "created";
+      let employeeAction = "created";
 
       if (existingEmployees.length > 0) {
-        // Canonical Sync: Update existing Employee record with new context
         employee = await base44.asServiceRole.entities.Employee.update(existingEmployees[0].id, {
           outlet_id: outlet_id || existingEmployees[0].outlet_id,
           role: role_requested || existingEmployees[0].role,
           status: "active",
           employment_type: existingEmployees[0].employment_type || "full_time",
         });
-        action = "synced";
+        employeeAction = "synced";
       } else {
-        // Create new canonical Employee record
         employee = await base44.asServiceRole.entities.Employee.create({
           tenant_id,
           outlet_id: outlet_id || null,
@@ -450,17 +295,16 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Audit log the action (immutable trail — Regulate principle)
       await base44.asServiceRole.entities.AuditLog.create({
         tenant_id,
         actor_id: "system",
         actor_name: "OrbitanOS Onboarding Engine",
         actor_role: "system",
-        action_type: action === "synced" ? "employee_synced" : "worker_onboarded",
+        action_type: employeeAction === "synced" ? "employee_synced" : "worker_onboarded",
         module: "workforce",
         target_entity: "Employee",
         target_record_id: employee.id,
-        details: action === "synced"
+        details: employeeAction === "synced"
           ? `Canonical sync: Updated Employee record for ${email} — role ${role_requested || "updated"}, outlet ${outlet_id || "unchanged"}. AccessRequest approved.`
           : `Auto-provisioned Employee record for ${email} as ${(role_requested || "worker").replace(/_/g, " ")} at ${company_name || tenant_id}. AccessRequest approved. Powered by the Regulate principle.`,
         new_state: {
@@ -469,7 +313,7 @@ Deno.serve(async (req) => {
           role: role_requested || employee.role,
           tenant_id,
           outlet_id: outlet_id || employee.outlet_id || null,
-          action,
+          action: employeeAction,
         },
       });
 
@@ -478,8 +322,8 @@ Deno.serve(async (req) => {
         employee_id: employee.id,
         worker_name: workerName,
         role: role_requested || employee.role,
-        action,
-        details: action === "synced"
+        action: employeeAction,
+        details: employeeAction === "synced"
           ? `Employee record synchronized for ${email}. Outlet and role updated. Ready for workspace access.`
           : `Employee record created for ${email}. They can now access their OrbitanOS workspace.`,
       });
