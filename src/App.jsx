@@ -21,6 +21,7 @@ import ResetPassword from '@/pages/ResetPassword';
 import Landing from '@/pages/Landing';
 import JoinGateway from '@/components/auth/JoinGateway';
 import RequestAccessPage from '@/pages/RequestAccess';
+import Onboarding from '@/pages/Onboarding';
 import LeaderOrg from '@/pages/LeaderOrg';
 import CompanyDashboard from '@/pages/CompanyDashboard';
 import OutletDashboard from '@/pages/OutletDashboard';
@@ -115,6 +116,9 @@ const AuthenticatedApp = () => {
 
       {/* RoleGateway resolves workspace dynamically for authenticated users */}
       <Route path="/workspace" element={<RoleGateway />} />
+
+      {/* Self-Serve Business Installation Wizard — Create Organisation */}
+      <Route path="/onboarding" element={<Onboarding />} />
 
       {/* Governed Onboarding — Workplace Discovery & Access Request */}
       <Route path="/request-access" element={<RequestAccessPage />} />

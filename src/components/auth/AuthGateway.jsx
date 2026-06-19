@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogIn, UserPlus, Search, Shield, ChevronRight } from 'lucide-react';
+import { LogIn, UserPlus, Search, Shield, ChevronRight, Rocket } from 'lucide-react';
 import { SIX_R_PRINCIPLES, SHIELD_BRAND, TAGLINES, PACK_BRAND, PLAN_BRAND, resolveTenantBrand, getTenantBackgroundTint } from '@/lib/orbitan-identity';
 import { LAUNCH_TENANTS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
 import SixRSequence from '@/components/brand/SixRSequence';
@@ -48,6 +48,18 @@ const GATEWAY_CARDS = [
     bg: 'bg-violet-500/[0.02] hover:bg-violet-500/[0.05]',
     action: '/request-access',
     badge: 'Open Registration',
+  },
+  {
+    id: 'create',
+    title: 'Create Organisation',
+    subtitle: 'Start a new business workspace on OrbitanOS.',
+    icon: Rocket,
+    defaultGlow: '#D4AF37',
+    gradient: 'from-amber-500/15 via-amber-500/5 to-transparent',
+    border: 'border-amber-500/15 hover:border-amber-400/30',
+    bg: 'bg-amber-500/[0.02] hover:bg-amber-500/[0.05]',
+    action: '/onboarding',
+    badge: 'Business Installation',
   },
 ];
 
@@ -245,7 +257,7 @@ export default function AuthGateway() {
               </div>
 
               {/* ── Gateway Cards ── */}
-              <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {GATEWAY_CARDS.map((card, i) => {
                   const Icon = card.icon;
                   const isHovered = hoveredCard === card.id;

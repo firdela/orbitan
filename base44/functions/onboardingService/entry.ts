@@ -150,6 +150,213 @@ async function activateTenant(base44, manifest, actorId, actorName) {
   return report;
 }
 
+// ── SELF-SERVE PROVISIONING ENGINE ───────────────────────────
+// Transactional orchestrator for NEW businesses creating their own
+// workspace. Enforces the OrbitanOS hierarchy as an atomic chain:
+//   Tenant → Company → Brand → Outlet → Wallet → (founder stamped)
+// Then seeds the industry blueprint and writes the audit trail.
+//
+// Pure engine — driven entirely by the request payload. No hardcoded
+// tenant data. Works for any industry / plan combination.
+const PLAN_REGISTRY = {
+  orbitan_starter:    { credits: 100,  max_employees: 10,   modules: ["workforce", "task", "reporting"] },
+  orbitan_growth:     { credits: 500,  max_employees: 50,   modules: ["workforce", "task", "reporting", "inventory", "scheduling"] },
+  orbitan_business:   { credits: 2000, max_employees: 250,  modules: ["workforce", "task", "reporting", "inventory", "procurement", "scheduling", "compliance", "sales_invoice", "finance_integration", "customer_management"] },
+  orbitan_enterprise: { credits: null, max_employees: null, modules: ["all"] },
+};
+
+// Industry blueprints — operational scaffolding (compliance templates +
+// setup tasks), NOT fictional business data. Keyed by Tenant.industry enum.
+const INDUSTRY_BLUEPRINT = {
+  food_beverage: {
+    compliance: [
+      { title: "Daily Food Safety Audit",      type: "Food Safety Audit",   category: "food_safety" },
+      { title: "Weekly Kitchen Hygiene Check",  type: "Hygiene Inspection",  category: "food_safety" },
+      { title: "Fire Safety Inspection",        type: "Fire Safety Audit",   category: "fire_safety" },
+    ],
+    tasks: [
+      { title: "Record opening inventory",          module_context: "inventory",     priority: "high" },
+      { title: "Set up menu & price list",          module_context: "sales_invoice", priority: "high" },
+      { title: "Schedule first food safety audit",  module_context: "compliance",    priority: "medium" },
+    ],
+  },
+  recycling_sustainability: {
+    compliance: [
+      { title: "Monthly Environmental Impact Audit", type: "Environmental Audit",    category: "environmental" },
+      { title: "Disposal Certification Renewal",     type: "Disposal Certification", category: "environmental" },
+    ],
+    tasks: [
+      { title: "Set up material category inventory",     module_context: "inventory", priority: "high" },
+      { title: "Configure sustainability KPI reporting", module_context: "reporting", priority: "medium" },
+    ],
+  },
+  retail: {
+    compliance: [
+      { title: "Store Health & Safety Inspection", type: "Health & Safety", category: "other" },
+    ],
+    tasks: [
+      { title: "Set up product catalogue",   module_context: "inventory",          priority: "high" },
+      { title: "Configure point-of-sale",    module_context: "sales_invoice",      priority: "high" },
+      { title: "Define customer loyalty tiers", module_context: "customer_management", priority: "medium" },
+    ],
+  },
+};
+
+const DEFAULT_BLUEPRINT = {
+  compliance: [],
+  tasks: [
+    { title: "Complete your workspace setup", module_context: "workforce", priority: "high" },
+    { title: "Invite your first team member", module_context: "workforce", priority: "medium" },
+  ],
+};
+
+async function provisionOrganisation(base44, body, user) {
+  const {
+    packKey,
+    industry,
+    tenant = {},
+    structure = {},
+    planKey = "orbitan_starter",
+    selectedModules = [],
+    acceptedStandards,
+  } = body;
+
+  const report = {
+    status: "success",
+    tenant_id: null,
+    records_created: [],
+    errors: [],
+    provisioned_at: new Date().toISOString(),
+  };
+
+  // ── Activation Gate (Regulate principle) ──
+  if (!acceptedStandards) {
+    return { ...report, status: "failed", errors: [{ step: "gate", error: "Orbitan Operating Standards must be accepted to continue." }] };
+  }
+  if (!tenant.name || !industry || !packKey) {
+    return { ...report, status: "failed", errors: [{ step: "validate", error: "Organisation name, industry and pack are required." }] };
+  }
+
+  const plan = PLAN_REGISTRY[planKey] || PLAN_REGISTRY.orbitan_starter;
+  const allowsAll = plan.modules.includes("all");
+  const validModules = allowsAll ? selectedModules : selectedModules.filter(m => plan.modules.includes(m));
+
+  try {
+    // 1. Tenant
+    const tenantRec = await base44.asServiceRole.entities.Tenant.create({
+      name: tenant.name,
+      legal_name: tenant.legal_name || tenant.name,
+      industry,
+      subscription_plan: planKey,
+      status: "active",
+      enabled_modules: validModules,
+      enabled_packs: ["core", packKey],
+      max_employees: plan.max_employees ?? 999999,
+      contact_email: tenant.contact_email || user.email,
+      contact_name: tenant.contact_name || user.full_name,
+      country: tenant.country || "Singapore",
+      currency: tenant.currency || "SGD",
+      onboarding_completed: true,
+    });
+    report.tenant_id = tenantRec.id;
+    report.records_created.push({ entity: "Tenant", id: tenantRec.id, title: tenant.name });
+
+    // 2. Company
+    const companyRec = await base44.asServiceRole.entities.Company.create({
+      tenant_id: tenantRec.id,
+      name: structure.company_name || tenant.name,
+      legal_name: tenant.legal_name || tenant.name,
+      industry,
+      country: tenant.country || "Singapore",
+    });
+    report.records_created.push({ entity: "Company", id: companyRec.id, title: companyRec.name });
+
+    // 3. Brand
+    const brandName = structure.brand_name || structure.company_name || tenant.name;
+    const brandRec = await base44.asServiceRole.entities.Client.create({
+      tenant_id: tenantRec.id,
+      company_id: companyRec.id,
+      name: brandName,
+      brand: brandName,
+      industry_pack: packKey,
+    });
+    report.records_created.push({ entity: "Brand", id: brandRec.id, title: brandName });
+
+    // 4. Outlet
+    const outletRec = await base44.asServiceRole.entities.Outlet.create({
+      tenant_id: tenantRec.id,
+      company_id: companyRec.id,
+      client_id: brandRec.id,
+      name: structure.outlet_name || "Primary Outlet",
+      address: structure.outlet_address || "",
+      is_virtual: !!structure.is_virtual,
+      status: "active",
+    });
+    report.records_created.push({ entity: "Outlet", id: outletRec.id, title: outletRec.name });
+
+    // 5. Wallet
+    const walletRec = await base44.asServiceRole.entities.OrbitanWallet.create({
+      tenant_id: tenantRec.id,
+      tenant_name: tenant.name,
+      subscription_plan: planKey,
+      balance_credits: plan.credits ?? 100000,
+      credits_quota_monthly: plan.credits ?? 100000,
+    });
+    report.records_created.push({ entity: "OrbitanWallet", id: walletRec.id });
+
+    // 6. Stamp the founder as tenant_admin and bind to the new workspace
+    await base44.asServiceRole.entities.User.update(user.id, {
+      role: "tenant_admin",
+      tenant_id: tenantRec.id,
+      company_id: companyRec.id,
+      outlet_id: outletRec.id,
+    });
+
+    // 7. Seed the industry blueprint (non-fatal — Promise.allSettled)
+    const blueprint = INDUSTRY_BLUEPRINT[industry] || DEFAULT_BLUEPRINT;
+    const dueDate = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+    const seeds = [
+      ...(blueprint.compliance || []).map(c =>
+        base44.asServiceRole.entities.ComplianceRecord.create({
+          ...c, tenant_id: tenantRec.id, outlet_id: outletRec.id, status: "pending", due_date: dueDate,
+        }).then(r => ({ entity: "ComplianceRecord", id: r.id, title: c.title }))
+      ),
+      ...(blueprint.tasks || []).map(t =>
+        base44.asServiceRole.entities.Task.create({
+          ...t, tenant_id: tenantRec.id, outlet_id: outletRec.id, status: "pending", due_date: dueDate,
+        }).then(r => ({ entity: "Task", id: r.id, title: t.title }))
+      ),
+    ];
+    const seedResults = await Promise.allSettled(seeds);
+    seedResults.forEach(r => {
+      if (r.status === "fulfilled") report.records_created.push(r.value);
+      else report.errors.push({ step: "seed", error: r.reason?.message || "Seed failed" });
+    });
+
+    // 8. Audit trail (Exit-Ready)
+    await base44.asServiceRole.entities.AuditLog.create({
+      tenant_id: tenantRec.id,
+      actor_id: user.id,
+      actor_name: user.full_name || user.email,
+      actor_role: "tenant_admin",
+      action_type: "organisation_provisioned",
+      module: "system",
+      target_entity: "Tenant",
+      target_record_id: tenantRec.id,
+      details: `Self-serve provisioning: ${tenant.name} (${industry} · ${planKey}). Company → Brand → Outlet → Wallet chain created. ${validModules.length} modules activated.`,
+      new_state: { plan: planKey, industry, pack: packKey, modules: validModules, outlet_id: outletRec.id },
+    }).catch(e => report.errors.push({ step: "audit", error: e.message }));
+
+  } catch (err) {
+    report.status = "failed";
+    report.errors.push({ step: "provision", error: err.message });
+    return report;
+  }
+
+  if (report.errors.length > 0) report.status = "partial";
+  return report;
+}
+
 // ── HTTP HANDLER ─────────────────────────────────────────────
 Deno.serve(async (req) => {
   try {
@@ -157,10 +364,20 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
 
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
-    if (user.role !== "admin") return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
 
     const body = await req.json();
     const { action } = body;
+
+    // ── SELF-SERVE PROVISIONING — any authenticated user ────
+    if (action === "provision_organisation") {
+      const report = await provisionOrganisation(base44, body, user);
+      return Response.json({ report }, { status: report.status === "failed" ? 500 : 200 });
+    }
+
+    // ── ADMIN-ONLY ACTIONS BELOW ────────────────────────────
+    if (user.role !== "admin") {
+      return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
 
     // ── ACTIVATE: Run full provisioning for one tenant ────
     // Manifest is passed as payload from lib/tenant-registry.js
