@@ -1,7 +1,7 @@
 {
   "name": "AuditLog",
   "type": "object",
-  "description": "Global, immutable audit trail registry for all high-value events across OrbitanOS. Exit-ready \u2014 portable to any stack.",
+  "description": "Global, immutable audit trail registry for all high-value events across OrbitanOS. Now captures evidence artifacts and override references for audit-bundle generation. Exit-ready \u2014 portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -19,7 +19,7 @@
     },
     "action_type": {
       "type": "string",
-      "description": "Standardised action key e.g. document_verified, stock_adjusted, status_changed, clock_out"
+      "description": "Standardised action key e.g. document_verified, stock_adjusted, status_changed, clock_out, override_approved"
     },
     "module": {
       "type": "string",
@@ -61,6 +61,38 @@
     },
     "outlet_id": {
       "type": "string"
+    },
+    "evidence_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Linked artifact URLs \u2014 uploaded documents, photos, certificates attached as evidence for this event. Powers the Audit Bundle."
+    },
+    "override_id": {
+      "type": "string",
+      "description": "If this event resulted from a manager override, links to the GovernanceOverride record"
+    },
+    "justification": {
+      "type": "string",
+      "description": "Human-readable reason for an override or exception \u2014 mandatory when an action bypasses a governance policy"
+    },
+    "policy_name": {
+      "type": "string",
+      "description": "If a Shield policy was evaluated for this action, the policy name that was considered"
+    },
+    "shield_outcome": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "blocked",
+        "override_requested",
+        "override_approved",
+        "override_denied",
+        "not_evaluated"
+      ],
+      "default": "not_evaluated",
+      "description": "Result of Shield evaluation for this event"
     }
   },
   "required": [
@@ -72,42 +104,54 @@
   ],
   "rls": {
     "create": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": "tenant_admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "outlet_manager"
-          }
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
         }
       ]
     },
     "read": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": "tenant_admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "outlet_manager"
-          }
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
         }
       ]
     },
