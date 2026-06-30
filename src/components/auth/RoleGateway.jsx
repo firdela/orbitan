@@ -38,18 +38,28 @@ export default function RoleGateway() {
     return <OrbitanLoader size="fullscreen" message="Loading OrbitanOS..." />;
   }
 
+  // ── Dynamic Workspace Resolver ──
+  // If the user has a tenant_id bound to their profile (stamped by
+  // the OnboardingService), route them into their isolated, dynamic
+  // workspace at /workspace/:tenantId. This is the scalable path —
+  // works for any future customer without route changes.
+  const userTenantId = user?.tenant_id || user?.data?.tenant_id || null;
+
+  if (userTenantId) {
+    return <Navigate to={`/workspace/${userTenantId}`} replace />;
+  }
+
   // Platform admin → Leader Org
   if (user?.role === 'admin') {
     return <Navigate to="/leader-org" replace />;
   }
 
-  // Employee record found — route by role
+  // Employee record found — route by role (pilot fallback)
   if (employee) {
     const role = employee.role;
 
     // Tenant-level leadership
     if (role === 'tenant_admin') {
-      // Route to their tenant-specific dashboard based on industry
       return <Navigate to="/company" replace />;
     }
 

@@ -1,15 +1,24 @@
 // ============================================================
-// ORBITANOS — Tenant Context
-// EXIT-READY: Pure React context. No Base44 dependency.
-// TenantProvider wraps the app and exposes the active tenant,
-// role, and a switcher. Swap DEMO_TENANTS for a real API call
-// on any stack.
+// ORBITANOS — Tenant Context (Dynamic Workspace Resolver)
+// EXIT-READY: Pure React context. No hardcoded tenant binding.
+//
+// TenantProvider resolves the active tenant DYNAMICALLY from the
+// authenticated user's profile (user.tenant_id stamped by the
+// OnboardingService). It fetches the Tenant record from the
+// database at runtime — works for any future customer without
+// code changes.
+//
+// DEMO_TENANTS is retained only as a fallback for pilot tenants
+// not yet persisted to the database, and to power the tenant
+// switcher in the platform console.
 // ============================================================
 
-import { useState, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
+import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { LAUNCH_TENANTS } from '@/lib/orbitan-config';
 
-// ── Canonical tenant roster (sourced from LAUNCH_TENANTS DNA) ─
+// ── Canonical pilot roster (fallback + console switcher) ───
 export const DEMO_TENANTS = [
   {
     id: "tenant_taqueria",
@@ -22,7 +31,6 @@ export const DEMO_TENANTS = [
     enabled_packs: LAUNCH_TENANTS.taqueria.enabled_packs,
     contact_email: "admin@taqueria.sg",
     max_employees: null,
-    // Dynamic Launchpad: slug drives tenant-specific routing
     slug: "t1",
     base_path: "/t1",
     brand: LAUNCH_TENANTS.taqueria.brands[0],
@@ -88,7 +96,9 @@ export const DEMO_TENANTS = [
 
 // ── Tenant ID → slug resolver (exit-ready utility) ────────────
 export function getTenantSlug(tenantId) {
-  return DEMO_TENANTS.find(t => t.id === tenantId)?.slug || null;
+  const demo = DEMO_TENANTS.find(t => t.id === tenantId);
+  if (demo) return demo.slug;
+  return null;
 }
 
 // ── Module guard (exit-ready utility) ─────────────────────────
@@ -102,10 +112,59 @@ export function hasModule(tenant, moduleKey) {
 const TenantContext = createContext(null);
 
 export function TenantProvider({ children }) {
-  const [currentTenant, setCurrentTenant] = useState(DEMO_TENANTS[0]);
-  const [currentRole, setCurrentRole] = useState('tenant_admin');
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
 
-  // Dynamic launchpad: switch tenant by slug or ID
+  // Resolve tenant_id from the authenticated user profile.
+  // onboardingService stamps tenant_id onto the User record at provisioning.
+  const userTenantId = user?.tenant_id || user?.data?.tenant_id || null;
+  const userRole = user?.role || null;
+
+  const [currentTenant, setCurrentTenant] = useState(null);
+  const [currentRole, setCurrentRole] = useState(userRole || 'tenant_admin');
+  const [isLoadingTenant, setIsLoadingTenant] = useState(false);
+
+  // ── Dynamic resolution: fetch Tenant record from DB ──────
+  useEffect(() => {
+    if (isLoadingAuth) return;
+    if (!isAuthenticated || !userTenantId) {
+      // Anonymous or no tenant bound yet — leave null; RoleGateway
+      // will route to onboarding / join flow.
+      setCurrentTenant(null);
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingTenant(true);
+
+    base44.entities.Tenant.get(userTenantId)
+      .then(record => {
+        if (cancelled) return;
+        if (record) {
+          setCurrentTenant(record);
+        } else {
+          // Not in DB — fall back to pilot roster if matched
+          const demo = DEMO_TENANTS.find(t => t.id === userTenantId);
+          setCurrentTenant(demo || null);
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        const demo = DEMO_TENANTS.find(t => t.id === userTenantId);
+        setCurrentTenant(demo || null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingTenant(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [isAuthenticated, isLoadingAuth, userTenantId]);
+
+  // Keep role in sync with auth profile
+  useEffect(() => {
+    if (userRole) setCurrentRole(userRole);
+  }, [userRole]);
+
+  // ── Manual switcher (console / pilot navigation) ───────
   const switchTenant = (slugOrId) => {
     const found = DEMO_TENANTS.find(
       t => t.slug === slugOrId || t.id === slugOrId
@@ -113,8 +172,11 @@ export function TenantProvider({ children }) {
     if (found) setCurrentTenant(found);
   };
 
-  // Resolve the dashboard path for the currently active tenant
-  const dashboardPath = `${currentTenant.base_path}/dashboard`;
+  // Resolve the dashboard path for the currently active tenant.
+  // Dynamic resolver: /workspace/:tenantId/dashboard
+  const dashboardPath = currentTenant
+    ? `/workspace/${currentTenant.id || currentTenant.slug}/dashboard`
+    : '/workspace';
 
   return (
     <TenantContext.Provider value={{
@@ -124,6 +186,7 @@ export function TenantProvider({ children }) {
       currentRole,
       setCurrentRole,
       dashboardPath,
+      isLoadingTenant,
       allTenants: DEMO_TENANTS,
     }}>
       {children}

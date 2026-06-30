@@ -1,0 +1,133 @@
+// ============================================================
+// ORBITANOS — WorkspaceLayout (Dynamic Workspace Resolver)
+//
+// Layout route for /workspace/:tenantId/*
+//
+// Responsibilities:
+//   1. Guard — verify the authenticated user belongs to the
+//      tenant in the URL (or is a platform admin).
+//   2. Resolve — fetch the Tenant record from the database by
+//      :tenantId at runtime (no hardcoded slugs).
+//   3. Scope — provide the resolved tenant + role into context.
+//   4. Shell — render the AppShell with a dynamic, tenant-scoped
+//      navigation and an <Outlet /> for module pages.
+//
+// This is the single entry for every customer workspace — pilot
+// or future — and scales to thousands of organisations without
+// route changes.
+// ============================================================
+
+import React, { useEffect } from 'react';
+import { useParams, Navigate, Outlet } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
+import { useTenant } from '@/lib/use-tenant';
+import AppShell from '@/components/layout/AppShell';
+import OrbitanLoader from '@/components/brand/OrbitanLoader';
+import {
+  Home, Package, ShoppingCart, FileText, Users, Calendar,
+  CheckSquare, BarChart2, Shield, Building2, Layers,
+} from 'lucide-react';
+
+// ── Dynamic nav factory — paths scoped to /workspace/:tenantId ─
+function buildWorkspaceNav(tenantId) {
+  const base = `/workspace/${tenantId}`;
+  return [
+    { type: 'section', label: 'Workspace' },
+    { href: base, icon: Home, label: 'Dashboard' },
+    { href: `${base}/inventory`, icon: Package, label: 'Inventory' },
+    { href: `${base}/procurement`, icon: ShoppingCart, label: 'Purchase Orders' },
+    { href: `${base}/sales`, icon: FileText, label: 'Sales & Reconciliation' },
+    { type: 'section', label: 'Team' },
+    { href: `${base}/workforce`, icon: Users, label: 'My Team' },
+    { href: `${base}/scheduling`, icon: Calendar, label: 'Shift Schedule' },
+    { href: `${base}/tasks`, icon: CheckSquare, label: 'Tasks' },
+    { type: 'section', label: 'Reports' },
+    { href: `${base}/reports`, icon: BarChart2, label: 'Reports' },
+    { href: `${base}/compliance`, icon: Shield, label: 'Compliance' },
+    { type: 'section', label: 'Navigation' },
+    { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
+  ];
+}
+
+export default function WorkspaceLayout() {
+  const { tenantId } = useParams();
+  const { user, isAuthenticated, isLoadingAuth } = useAuth();
+  const { switchTenant } = useTenant();
+
+  // ── Resolve the Tenant record from the database ─────────
+  const { data: tenantRecord, isLoading: tenantLoading } = useQuery({
+    queryKey: ['workspace-tenant', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return null;
+      try {
+        return await base44.entities.Tenant.get(tenantId);
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!tenantId && isAuthenticated,
+  });
+
+  // Sync the active tenant in context for downstream consumers.
+  // (Declared before any early return so hook order stays stable.)
+  useEffect(() => {
+    if (tenantRecord) switchTenant(tenantRecord.id);
+  }, [tenantRecord, switchTenant]);
+
+  // ── Boot: wait for auth ──────────────────────────────────
+  if (isLoadingAuth) {
+    return <OrbitanLoader size="fullscreen" message="Loading OrbitanOS..." />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth/gateway" replace />;
+  }
+
+  // ── Access control (Regulate principle) ─────────────────
+  // Platform admins may access any tenant workspace. All other
+  // users may only access the tenant they are bound to.
+  const userTenantId = user?.tenant_id || user?.data?.tenant_id || null;
+  const isPlatformAdmin = user?.role === 'admin';
+  const isAuthorized = isPlatformAdmin || userTenantId === tenantId;
+
+  if (!isAuthorized) {
+    // Redirect to the user's own workspace, or the gateway resolver.
+    if (userTenantId) {
+      return <Navigate to={`/workspace/${userTenantId}`} replace />;
+    }
+    return <Navigate to="/workspace" replace />;
+  }
+
+  // ── Resolve tenant (DB record → pilot fallback → unresolved) ─
+  if (tenantLoading) {
+    return <OrbitanLoader size="fullscreen" message="Resolving workspace..." />;
+  }
+
+  const effectiveTenant = tenantRecord || null;
+
+  if (!effectiveTenant) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background p-6">
+        <div className="text-center space-y-2 max-w-md">
+          <Building2 className="w-10 h-10 mx-auto text-muted-foreground" />
+          <h2 className="font-heading font-semibold text-lg">Workspace not found</h2>
+          <p className="text-sm text-muted-foreground">
+            This organisation could not be resolved. If you believe this is an error,
+            contact your administrator or return to the gateway.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const navigation = buildWorkspaceNav(tenantId);
+  const title = effectiveTenant.name || 'Workspace';
+
+  return (
+    <AppShell navigation={navigation} title={title} tenant={effectiveTenant}>
+      <Outlet context={{ tenant: effectiveTenant, tenantId }} />
+    </AppShell>
+  );
+}

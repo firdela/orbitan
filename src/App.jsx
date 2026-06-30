@@ -35,6 +35,10 @@ import WorkforcePage from '@/pages/outlet/WorkforcePage';
 import CompliancePage from '@/pages/outlet/CompliancePage';
 import ReportsPage from '@/pages/outlet/ReportsPage';
 
+// Dynamic Workspace — scalable, tenant-agnostic routing
+import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
+import WorkspaceDashboard from '@/pages/workspace/WorkspaceDashboard';
+
 // Tenant 1 — F&B Pack (Taqueria Pte Ltd / La Birria Tacos)
 import FnBDashboard from '@/pages/tenant1/FnBDashboard';
 import FnBInventory from '@/pages/tenant1/FnBInventory';
@@ -116,6 +120,12 @@ const AuthenticatedApp = () => {
 
       {/* RoleGateway resolves workspace dynamically for authenticated users */}
       <Route path="/workspace" element={<RoleGateway />} />
+
+      {/* Dynamic Workspace — /workspace/:tenantId/* (scales to any customer) */}
+      <Route path="/workspace/:tenantId" element={<WorkspaceLayout />}>
+        <Route index element={<WorkspaceDashboard />} />
+        <Route path="dashboard" element={<WorkspaceDashboard />} />
+      </Route>
 
       {/* Self-Serve Business Installation Wizard — Create Organisation */}
       <Route path="/onboarding" element={<Onboarding />} />
