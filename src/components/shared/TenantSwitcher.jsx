@@ -42,7 +42,7 @@ export default function TenantSwitcher({ className }) {
           className={cn('gap-2 text-xs max-w-[200px]', className)}
         >
           <Building2 className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
-          <span className="truncate font-medium">{currentTenant.name}</span>
+          <span className="truncate font-medium">{currentTenant?.name || 'No Tenant'}</span>
           <ChevronRight className="w-3 h-3 flex-shrink-0 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
@@ -53,8 +53,8 @@ export default function TenantSwitcher({ className }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {allTenants.map(tenant => {
-          const isActive = tenant.id === currentTenant.id;
+        {(allTenants || []).map(tenant => {
+          const isActive = currentTenant && tenant.id === currentTenant.id;
           return (
             <DropdownMenuItem
               key={tenant.id}
