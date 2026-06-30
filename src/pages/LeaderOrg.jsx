@@ -20,6 +20,7 @@ import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
 import AnnouncementsManager from '@/components/announcements/AnnouncementsManager';
 import PilotCommandCenter from '@/components/leader/PilotCommandCenter';
 import BlueprintAdvisor from '@/components/advisor/BlueprintAdvisor';
+import BlueprintStudio from '@/components/blueprint/BlueprintStudio';
 import { Megaphone, Radar } from 'lucide-react';
 import {
   Building2, Package, Shield, ChevronRight,
@@ -165,6 +166,9 @@ export default function LeaderOrg() {
             </TabsTrigger>
             <TabsTrigger value="broadcast" className="gap-1.5">
               <Megaphone className="w-3.5 h-3.5" />Broadcast
+            </TabsTrigger>
+            <TabsTrigger value="blueprint" className="gap-1.5">
+              <Layers className="w-3.5 h-3.5" />Blueprint Studio
             </TabsTrigger>
             <TabsTrigger value="pilot" className="gap-1.5">
               <Radar className="w-3.5 h-3.5" />Pilot Control
@@ -334,6 +338,11 @@ export default function LeaderOrg() {
               publisherRole="admin"
             />
           </TabsContent>
+          {/* Blueprint Studio Tab */}
+          <TabsContent value="blueprint">
+            <BlueprintStudio />
+          </TabsContent>
+
           <TabsContent value="pilot">
             <PilotCommandCenter />
           </TabsContent>
