@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import OverrideReviewQueue from '@/components/shield/OverrideReviewQueue';
 
 const SHIELD_NAV = [
   { href: '/platform/shield', label: 'Shield Command Center', icon: Shield },
@@ -170,6 +171,9 @@ export default function ShieldCommandCenter() {
             </div>
           ))}
         </div>
+
+        {/* Audit Vault — Override Review Queue */}
+        <OverrideReviewQueue />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
