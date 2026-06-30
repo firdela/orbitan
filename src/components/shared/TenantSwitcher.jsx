@@ -30,7 +30,7 @@ export default function TenantSwitcher({ className }) {
 
   const handleSwitch = (tenant) => {
     switchTenant(tenant.id);
-    navigate(tenant.base_path + '/dashboard');
+    navigate(`/workspace/${tenant.id}/dashboard`);
   };
 
   return (
