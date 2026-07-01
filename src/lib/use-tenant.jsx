@@ -21,7 +21,7 @@ import { LAUNCH_TENANTS } from '@/lib/orbitan-config';
 // ── Canonical pilot roster (fallback + console switcher) ───
 export const DEMO_TENANTS = [
   {
-    id: "tenant_taqueria",
+    id: "6a21598721243d26f81e0153",
     name: LAUNCH_TENANTS.taqueria.name,
     legal_name: LAUNCH_TENANTS.taqueria.legal_name,
     industry: LAUNCH_TENANTS.taqueria.industry,
@@ -39,7 +39,7 @@ export const DEMO_TENANTS = [
     currency: LAUNCH_TENANTS.taqueria.currency,
   },
   {
-    id: "tenant_renewed",
+    id: "6a21598721243d26f81e0154",
     name: LAUNCH_TENANTS.renewed_resources.name,
     legal_name: LAUNCH_TENANTS.renewed_resources.legal_name,
     industry: LAUNCH_TENANTS.renewed_resources.industry,
@@ -57,7 +57,7 @@ export const DEMO_TENANTS = [
     currency: LAUNCH_TENANTS.renewed_resources.currency,
   },
   {
-    id: "tenant_retail",
+    id: "6a21598721243d26f81e0155",
     name: LAUNCH_TENANTS.renewed_fashion.name,
     legal_name: LAUNCH_TENANTS.renewed_fashion.legal_name,
     industry: LAUNCH_TENANTS.renewed_fashion.industry,
@@ -75,7 +75,7 @@ export const DEMO_TENANTS = [
     currency: LAUNCH_TENANTS.renewed_fashion.currency,
   },
   {
-    id: "tenant_izaliqa",
+    id: "6a339b1fb498b8b935049f74",
     name: LAUNCH_TENANTS.izaliqa_bakes.name,
     legal_name: LAUNCH_TENANTS.izaliqa_bakes.legal_name,
     industry: LAUNCH_TENANTS.izaliqa_bakes.industry,
