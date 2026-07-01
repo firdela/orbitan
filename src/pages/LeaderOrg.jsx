@@ -23,6 +23,7 @@ import AnnouncementsManager from '@/components/announcements/AnnouncementsManage
 import PilotCommandCenter from '@/components/leader/PilotCommandCenter';
 import BlueprintAdvisor from '@/components/advisor/BlueprintAdvisor';
 import BlueprintStudio from '@/components/blueprint/BlueprintStudio';
+import SubscriptionPolicyManager from '@/components/platform/SubscriptionPolicyManager';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
@@ -274,6 +275,11 @@ export default function LeaderOrg() {
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions">
             <SubscriptionPlansAccordion tenants={tenants} />
+          </TabsContent>
+
+          {/* Subscription Policy Manager Tab */}
+          <TabsContent value="subscription-policy">
+            <SubscriptionPolicyManager />
           </TabsContent>
 
           {/* Platform Identity Tab */}

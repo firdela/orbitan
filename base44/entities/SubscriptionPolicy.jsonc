@@ -1,0 +1,151 @@
+{
+  "name": "SubscriptionPolicy",
+  "type": "object",
+  "description": "OrbitanOS Global Commercial Entitlement Registry. Defines access, limits, and module entitlements per subscription tier. Powers the SubscriptionPolicy-driven governance model.",
+  "properties": {
+    "plan_key": {
+      "type": "string",
+      "description": "Unique plan identifier (e.g., 'orbitan_starter', 'orbitan_growth', 'orbitan_business', 'orbitan_enterprise')"
+    },
+    "plan_name": {
+      "type": "string",
+      "description": "Human-readable plan name (e.g., 'Orbitan Starter', 'Orbitan Growth')"
+    },
+    "tier": {
+      "type": "number",
+      "description": "Hierarchy index for plan comparisons (1=Starter, 2=Growth, 3=Business, 4=Enterprise)"
+    },
+    "allowed_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of module keys entitled for this plan (e.g., ['workforce', 'inventory', 'sales_invoice'])"
+    },
+    "allowed_packs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of industry pack keys entitled for this plan (e.g., ['core', 'fnb', 'retail'])"
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "max_employees": {
+          "type": "number",
+          "nullable": true,
+          "description": "Maximum employees allowed (null = unlimited)"
+        },
+        "max_outlets": {
+          "type": "number",
+          "nullable": true,
+          "description": "Maximum outlets allowed (null = unlimited)"
+        },
+        "max_brands": {
+          "type": "number",
+          "nullable": true,
+          "description": "Maximum brands allowed (null = unlimited)"
+        },
+        "monthly_credit_quota": {
+          "type": "number",
+          "nullable": true,
+          "description": "Monthly AI credit quota (null = unlimited)"
+        },
+        "max_storage_mb": {
+          "type": "number",
+          "nullable": true,
+          "description": "Maximum file storage in MB (null = unlimited)"
+        }
+      }
+    },
+    "features": {
+      "type": "object",
+      "properties": {
+        "ai_suite_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "finance_xero_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "api_access_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "white_label_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "priority_support_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "custom_integrations_enabled": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "pricing": {
+      "type": "object",
+      "properties": {
+        "monthly_price_sgd": {
+          "type": "number",
+          "nullable": true
+        },
+        "annual_price_sgd": {
+          "type": "number",
+          "nullable": true
+        },
+        "trial_days": {
+          "type": "number",
+          "default": 14
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this policy is currently active for new subscriptions"
+    },
+    "is_legacy": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, existing tenants keep this plan but new subscriptions cannot select it"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "plan_key",
+    "plan_name",
+    "tier",
+    "allowed_modules",
+    "allowed_packs"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

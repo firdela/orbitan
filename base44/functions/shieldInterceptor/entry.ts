@@ -39,6 +39,13 @@ Deno.serve(async (req) => {
       return Response.json({ allowed: true, reason: 'No tenant context — pass-through' });
     }
 
+    // SUBSCRIPTION POLICY CHECK: Enforce resource limits before governance policies
+    // This blocks actions that exceed subscription tier limits (employees, outlets, brands)
+    const subscriptionCheck = await checkSubscriptionLimits(base44, resolvedTenantId, entity_name, action, data);
+    if (!subscriptionCheck.allowed) {
+      return Response.json(subscriptionCheck, { status: 403 });
+    }
+
     // Fetch active policies — BOTH tenant-specific AND platform-wide (tenant_id = 'orbitan_platform')
     // Domain-based resolution: if domain_id provided, prioritize that domain's policies
     const [tenantPolicies, platformPolicies] = await Promise.all([
@@ -177,4 +184,128 @@ function mapEntityToOverrideType(entityName: string): string {
     ComplianceRecord: 'compliance_gate'
   };
   return entityMap[entityName] || 'custom';
+}
+
+// Helper: Check subscription policy resource limits
+async function checkSubscriptionLimits(base44: any, tenantId: string, entityName: string, action: string, data: any) {
+  try {
+    // Fetch tenant and subscription policy
+    const [tenants, policies] = await Promise.all([
+      base44.asServiceRole.entities.Tenant.filter({ id: tenantId }),
+      base44.asServiceRole.entities.SubscriptionPolicy.filter({ is_active: true })
+    ]);
+
+    const tenant = tenants[0];
+    if (!tenant) return { allowed: true, reason: 'Tenant not found — pass-through' };
+
+    const plan = tenant.subscription_plan || 'orbitan_starter';
+    const policy = policies.find(p => p.plan_key === plan);
+
+    // If no policy exists, use hardcoded fallback (backward compatibility)
+    if (!policy) {
+      return { allowed: true, reason: 'No subscription policy — using fallback' };
+    }
+
+    const limits = policy.limits || {};
+    const planTier = policy.tier || 1;
+
+    // Enterprise plans have no limits
+    if (planTier === 4 || plan === 'orbitan_enterprise') {
+      return { allowed: true, reason: 'Enterprise plan — unlimited' };
+    }
+
+    // Check entity-specific limits
+    if (entityName === 'Employee' && action === 'create') {
+      const currentEmployees = await base44.asServiceRole.entities.Employee.filter({ tenant_id: tenantId, status: 'active' });
+      const maxEmployees = limits.max_employees ?? 999999;
+      
+      if (currentEmployees.length >= maxEmployees) {
+        return {
+          allowed: false,
+          effect: 'block',
+          policy_name: 'subscription_employee_limit',
+          severity: 'high',
+          reason: `Subscription limit reached: Maximum ${maxEmployees} employees allowed on ${policy.plan_name || plan}. Please upgrade your plan or deactivate inactive employees.`,
+          shield_mode: 'guardian',
+          limit_type: 'employee',
+          limit_value: maxEmployees,
+          current_value: currentEmployees.length,
+          override_context: {
+            target_entity: entityName,
+            target_record_id: data?.id || null,
+            block_reason: `Employee limit: ${currentEmployees.length}/${maxEmployees}`,
+            request_type: 'custom',
+            policy_effect: 'block',
+            upgrade_required: true,
+            current_plan: plan,
+            current_tier: planTier
+          }
+        };
+      }
+    }
+
+    if (entityName === 'Outlet' && action === 'create') {
+      const currentOutlets = await base44.asServiceRole.entities.Outlet.filter({ tenant_id: tenantId, status: 'active' });
+      const maxOutlets = limits.max_outlets ?? 999999;
+      
+      if (currentOutlets.length >= maxOutlets) {
+        return {
+          allowed: false,
+          effect: 'block',
+          policy_name: 'subscription_outlet_limit',
+          severity: 'high',
+          reason: `Subscription limit reached: Maximum ${maxOutlets} outlets allowed on ${policy.plan_name || plan}. Please upgrade your plan.`,
+          shield_mode: 'guardian',
+          limit_type: 'outlet',
+          limit_value: maxOutlets,
+          current_value: currentOutlets.length,
+          override_context: {
+            target_entity: entityName,
+            target_record_id: data?.id || null,
+            block_reason: `Outlet limit: ${currentOutlets.length}/${maxOutlets}`,
+            request_type: 'custom',
+            policy_effect: 'block',
+            upgrade_required: true,
+            current_plan: plan,
+            current_tier: planTier
+          }
+        };
+      }
+    }
+
+    if (entityName === 'Client' && action === 'create') {
+      const currentBrands = await base44.asServiceRole.entities.Client.filter({ tenant_id: tenantId, status: 'active' });
+      const maxBrands = limits.max_brands ?? 999999;
+      
+      if (currentBrands.length >= maxBrands) {
+        return {
+          allowed: false,
+          effect: 'block',
+          policy_name: 'subscription_brand_limit',
+          severity: 'high',
+          reason: `Subscription limit reached: Maximum ${maxBrands} brands allowed on ${policy.plan_name || plan}. Please upgrade your plan.`,
+          shield_mode: 'guardian',
+          limit_type: 'brand',
+          limit_value: maxBrands,
+          current_value: currentBrands.length,
+          override_context: {
+            target_entity: entityName,
+            target_record_id: data?.id || null,
+            block_reason: `Brand limit: ${currentBrands.length}/${maxBrands}`,
+            request_type: 'custom',
+            policy_effect: 'block',
+            upgrade_required: true,
+            current_plan: plan,
+            current_tier: planTier
+          }
+        };
+      }
+    }
+
+    return { allowed: true, reason: 'Within subscription limits' };
+
+  } catch (error) {
+    // Fail open — don't block operations if subscription check fails
+    return { allowed: true, reason: 'Subscription check error — pass-through', error: error.message };
+  }
 }

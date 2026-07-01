@@ -32,6 +32,13 @@ export const PLATFORM_NAVIGATION = {
           description: "Manage subscription plans and billing",
           permission: "admin",
         },
+        {
+          key: "subscription-policy",
+          label: "Subscription Policy",
+          route: "/leader-org?tab=subscription-policy",
+          description: "Define commercial entitlements and resource limits",
+          permission: "admin",
+        },
       ],
     },
     {
