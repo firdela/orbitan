@@ -5,6 +5,7 @@ import { PLATFORM_IDENTITY, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, OPERATING_
 import { DEMO_TENANTS } from '@/lib/use-tenant.jsx';
 import { LAUNCH_MANIFESTS, getManifestList } from '@/lib/tenant-registry';
 import { getActivePacks, getFuturePacks } from '@/lib/orbitan-engine';
+import { PLATFORM_NAVIGATION } from '@/lib/navigation-registry';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
 import StatCard from '@/components/shared/StatCard';
@@ -13,7 +14,8 @@ import { CapabilityBadge, CapabilityStack } from '@/components/shared/Capability
 import { Button } from '@/components/ui/button';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import CurrencyDropdown from '@/components/shared/CurrencyDropdown';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import PlatformNavigation from '@/components/platform/PlatformNavigation';
 import TenantCommandCard from '@/components/leader/TenantCommandCard';
 import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionPlansAccordion';
 import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
@@ -21,14 +23,13 @@ import AnnouncementsManager from '@/components/announcements/AnnouncementsManage
 import PilotCommandCenter from '@/components/leader/PilotCommandCenter';
 import BlueprintAdvisor from '@/components/advisor/BlueprintAdvisor';
 import BlueprintStudio from '@/components/blueprint/BlueprintStudio';
-import { Megaphone, Radar } from 'lucide-react';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
   Rocket, Activity, Zap, Wallet, ShoppingBag, Target } from 'lucide-react';
 
 export default function LeaderOrg() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('tenants');
   // Manifests loaded directly from tenant-registry.js (no function call)
   const [manifests] = useState(() => getManifestList());
   const [activating, setActivating] = useState(null);
@@ -154,30 +155,10 @@ export default function LeaderOrg() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 bg-muted flex-wrap h-auto gap-1">
-            <TabsTrigger value="overview" className="gap-1.5">
-              <Building2 className="w-3.5 h-3.5" />Tenants
-            </TabsTrigger>
-            <TabsTrigger value="modules">Modules &amp; Packs</TabsTrigger>
-            <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
-            <TabsTrigger value="cycle">Operating Cycle</TabsTrigger>
-            <TabsTrigger value="orchestrator" className="gap-1.5">
-              <Shield className="w-3.5 h-3.5" />Orchestrator
-            </TabsTrigger>
-            <TabsTrigger value="broadcast" className="gap-1.5">
-              <Megaphone className="w-3.5 h-3.5" />Broadcast
-            </TabsTrigger>
-            <TabsTrigger value="blueprint" className="gap-1.5">
-              <Layers className="w-3.5 h-3.5" />Blueprint Studio
-            </TabsTrigger>
-            <TabsTrigger value="pilot" className="gap-1.5">
-              <Radar className="w-3.5 h-3.5" />Pilot Control
-            </TabsTrigger>
-            <TabsTrigger value="about">About Platform</TabsTrigger>
-          </TabsList>
+          <PlatformNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
           {/* Tenants Command Center Tab */}
-          <TabsContent value="overview">
+          <TabsContent value="tenants">
             {/* Header row */}
             <div className="flex items-center justify-between mb-5">
               <div>
@@ -295,8 +276,8 @@ export default function LeaderOrg() {
             <SubscriptionPlansAccordion tenants={tenants} />
           </TabsContent>
 
-          {/* Operating Cycle Tab */}
-          <TabsContent value="cycle">
+          {/* Platform Identity Tab */}
+          <TabsContent value="platform-identity">
             <div className="mb-6">
               <h2 className="font-heading font-semibold text-lg mb-1">The OrbitanOS Operating Cycle</h2>
               <p className="text-sm text-muted-foreground">The 6 principles that power every module, workflow, and audit trail in OrbitanOS.</p>
@@ -325,29 +306,30 @@ export default function LeaderOrg() {
             </div>
           </TabsContent>
 
-          {/* Orchestrator Tab */}
-          <TabsContent value="orchestrator">
-            <OrchestratorTab />
+          {/* System Controls Tab — Orchestrator & Broadcast combined */}
+          <TabsContent value="system-controls">
+            <div className="space-y-6">
+              <OrchestratorTab />
+              <div className="pt-6 border-t border-border">
+                <AnnouncementsManager
+                  tenantId="taqueria_pte_ltd"
+                  publisherName="Firdaus"
+                  publisherRole="admin"
+                />
+              </div>
+            </div>
           </TabsContent>
 
-          {/* Broadcast Tab */}
-          <TabsContent value="broadcast">
-            <AnnouncementsManager
-              tenantId="taqueria_pte_ltd"
-              publisherName="Firdaus"
-              publisherRole="admin"
-            />
-          </TabsContent>
           {/* Blueprint Studio Tab */}
           <TabsContent value="blueprint">
             <BlueprintStudio />
           </TabsContent>
 
-          <TabsContent value="pilot">
+          <TabsContent value="pilot-control">
             <PilotCommandCenter />
           </TabsContent>
 
-          {/* About Tab */}
+          {/* Platform Identity (About) - Merged with Operating Cycle */}
           <TabsContent value="about">
             <div className="max-w-2xl">
               <div className="bg-card border border-border rounded-2xl p-8">
