@@ -6,6 +6,10 @@
     "tenant_id": {
       "type": "string"
     },
+    "domain_id": {
+      "type": "string",
+      "description": "Protection Domain identifier: 'Domain_A' (Financial Integrity), 'Domain_B' (Access & Identity), 'Domain_C' (Operational Trust). Enables domain-based policy resolution."
+    },
     "policy_name": {
       "type": "string",
       "description": "Unique human-readable identifier e.g. 'no_log_deletion', 'finance_threshold_gate'"
@@ -114,14 +118,16 @@
           }
         },
         {
-          "data.tenant_id": "{{user.data.tenant_id}}",
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin"
-              ]
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
             }
-          }
+          ]
         }
       ]
     },
