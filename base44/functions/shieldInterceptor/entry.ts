@@ -25,11 +25,14 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, entity_name, data, tenant_id } = body;
+    const { action, entity_name, data, tenant_id, domain_id } = body;
 
     if (!action || !entity_name) {
       return Response.json({ error: 'Missing required fields: action, entity_name' }, { status: 400 });
     }
+
+    // Domain-based policy resolution: if domain_id provided, fetch only that domain's policies first
+    // This enables hierarchical evaluation (Domain A → B → C priority)
 
     const resolvedTenantId = tenant_id || user.data?.tenant_id;
     if (!resolvedTenantId) {
@@ -37,6 +40,7 @@ Deno.serve(async (req) => {
     }
 
     // Fetch active policies — BOTH tenant-specific AND platform-wide (tenant_id = 'orbitan_platform')
+    // Domain-based resolution: if domain_id provided, prioritize that domain's policies
     const [tenantPolicies, platformPolicies] = await Promise.all([
       base44.asServiceRole.entities.GovernancePolicy.filter({
         tenant_id: resolvedTenantId,
@@ -50,10 +54,15 @@ Deno.serve(async (req) => {
 
     const policies = [...tenantPolicies, ...platformPolicies];
 
-    const applicablePolicies = policies.filter(p =>
+    let applicablePolicies = policies.filter(p =>
       p.target_entity === entity_name &&
       (p.trigger_action === 'all' || p.trigger_action === action)
     );
+
+    // If domain_id specified, filter to only that domain's policies (Domain-First architecture)
+    if (domain_id) {
+      applicablePolicies = applicablePolicies.filter(p => p.domain_id === domain_id);
+    }
 
     if (applicablePolicies.length === 0) {
       return Response.json({ allowed: true, reason: 'No applicable policies' });
@@ -115,7 +124,17 @@ Deno.serve(async (req) => {
         policy_name: critical.policy_name,
         severity: critical.severity,
         reason: critical.description || `Action blocked by Orbitan Shield™ policy: ${critical.policy_name}`,
-        shield_mode: critical.shield_mode
+        shield_mode: critical.shield_mode,
+        domain_id: critical.domain_id,
+        // Override-ready context: pre-filled data for GovernanceOverride creation
+        override_context: {
+          target_entity: entity_name,
+          target_record_id: data?.id || null,
+          block_reason: critical.description,
+          request_type: mapEntityToOverrideType(entity_name),
+          policy_effect: critical.effect,
+          condition_triggered: critical.condition_json
+        }
       }, { status: 403 });
     }
 
@@ -145,3 +164,17 @@ Deno.serve(async (req) => {
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
+
+// Helper: Map entity names to GovernanceOverride.request_type enum
+function mapEntityToOverrideType(entityName: string): string {
+  const entityMap: Record<string, string> = {
+    SalesInvoice: 'finance_threshold',
+    PurchaseOrder: 'finance_threshold',
+    WalletTransaction: 'finance_threshold',
+    ClockRecord: 'clock_in_compliance',
+    InventoryItem: 'stock_limit',
+    Shift: 'schedule_breach',
+    ComplianceRecord: 'compliance_gate'
+  };
+  return entityMap[entityName] || 'custom';
+}

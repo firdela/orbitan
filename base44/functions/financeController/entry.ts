@@ -70,6 +70,23 @@ Deno.serve(async (req) => {
 
       const record = await base44.entities[entityName].get(record_id);
 
+      // ── SHIELD-CERTIFIED GATE: Evaluate Shield policies before verification ──
+      const shieldCheck = await base44.functions.invoke('shieldInterceptor', {
+        action: 'update',
+        entity_name: entityName,
+        data: { ...record, processing_status: 'verified' },
+        tenant_id: record.tenant_id
+      });
+
+      if (shieldCheck.data?.allowed === false && shieldCheck.data?.effect === 'block') {
+        return Response.json({
+          error: 'Shield Blocked: This verification action is blocked by a governance policy.',
+          shield_response: shieldCheck.data,
+          governance_rule: shieldCheck.data.policy_name,
+          override_available: true
+        }, { status: 403 });
+      }
+
       // ── GOVERNANCE GATE: Document must be attached before verification ──
       if (!record.document_url) {
         return Response.json({
@@ -182,6 +199,23 @@ Deno.serve(async (req) => {
 
       const invoice = await base44.entities.SalesInvoice.get(record_id);
 
+      // ── SHIELD-CERTIFIED GATE: Evaluate Shield before Xero sync ──
+      const shieldCheck = await base44.functions.invoke('shieldInterceptor', {
+        action: 'update',
+        entity_name: 'SalesInvoice',
+        data: { ...invoice, xero_sync_status: 'syncing' },
+        tenant_id: invoice.tenant_id
+      });
+
+      if (shieldCheck.data?.allowed === false && shieldCheck.data?.effect === 'block') {
+        return Response.json({
+          error: 'Shield Blocked: Xero sync is blocked by a governance policy.',
+          shield_response: shieldCheck.data,
+          governance_rule: shieldCheck.data.policy_name,
+          override_available: true
+        }, { status: 403 });
+      }
+
       if (invoice.processing_status !== 'verified') {
         return Response.json({
           error: 'Invoice must be verified before syncing to Xero.',
@@ -266,6 +300,23 @@ Deno.serve(async (req) => {
       }
 
       const po = await base44.entities.PurchaseOrder.get(record_id);
+
+      // ── SHIELD-CERTIFIED GATE: Evaluate Shield before Xero sync ──
+      const shieldCheck = await base44.functions.invoke('shieldInterceptor', {
+        action: 'update',
+        entity_name: 'PurchaseOrder',
+        data: { ...po, xero_sync_status: 'syncing' },
+        tenant_id: po.tenant_id
+      });
+
+      if (shieldCheck.data?.allowed === false && shieldCheck.data?.effect === 'block') {
+        return Response.json({
+          error: 'Shield Blocked: PO sync is blocked by a governance policy.',
+          shield_response: shieldCheck.data,
+          governance_rule: shieldCheck.data.policy_name,
+          override_available: true
+        }, { status: 403 });
+      }
 
       if (po.processing_status !== 'verified') {
         return Response.json({
