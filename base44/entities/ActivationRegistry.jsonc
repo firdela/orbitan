@@ -1,7 +1,7 @@
 {
   "name": "ActivationRegistry",
   "type": "object",
-  "description": "OrbitanOS Activation Engine \u2014 Registry-Driven Provisioning. Versioned JSON manifests defining 'seeder pipelines' and industry blueprints for tenant onboarding across all industries. Replaces hardcoded INDUSTRY_BLUEPRINT logic. Powers the Manifest-Driven architecture. Exit-Ready: pure schema, portable to any stack.",
+  "description": "OrbitanOS Activation Engine \u2014 Registry-Driven Provisioning. Versioned JSON manifests defining 'seeder pipelines' and industry blueprints for tenant onboarding across all industries. Replaces hardcoded INDUSTRY_BLUEPRINT logic. Powers the Manifest-Driven architecture. Now includes trust_pillars capability manifest for registry-driven compliance scoring. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "pack_key": {
       "type": "string",
@@ -173,6 +173,169 @@
                 "type": "number",
                 "description": "Auto-approve below this SGD threshold, block above"
               }
+            }
+          }
+        }
+      }
+    },
+    "trust_pillars": {
+      "type": "object",
+      "description": "Registry-driven capability manifest for the complianceScoreboard aggregator. Defines which entities to monitor per pillar and weights for trust score synthesis. The aggregator reads this manifest dynamically \u2014 zero hardcoded industry logic. Adding a new industry = add trust_pillars to its ActivationRegistry record.",
+      "properties": {
+        "regulatory": {
+          "type": "object",
+          "description": "Regulatory compliance pillar \u2014 typically ComplianceRecord ratio of approved/submitted vs total.",
+          "properties": {
+            "target_entity": {
+              "type": "string",
+              "description": "Entity to query e.g. 'ComplianceRecord'"
+            },
+            "filter": {
+              "type": "object",
+              "description": "Additional filter beyond tenant_id e.g. {category: 'food_safety'}"
+            },
+            "weight": {
+              "type": "number",
+              "default": 0.4
+            },
+            "scoring_mode": {
+              "type": "string",
+              "enum": [
+                "ratio_healthy",
+                "violation_count",
+                "count_penalty"
+              ],
+              "default": "ratio_healthy"
+            },
+            "healthy_statuses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Statuses counted as healthy for ratio_healthy mode"
+            },
+            "penalty_per_unit": {
+              "type": "number",
+              "default": 10,
+              "description": "Penalty per unit for count_penalty / violation_count modes"
+            },
+            "label": {
+              "type": "string",
+              "description": "Display label for this pillar"
+            }
+          }
+        },
+        "governance": {
+          "type": "object",
+          "description": "Shield governance pillar \u2014 typically GovernancePolicy violation count.",
+          "properties": {
+            "target_entity": {
+              "type": "string"
+            },
+            "filter": {
+              "type": "object"
+            },
+            "weight": {
+              "type": "number",
+              "default": 0.3
+            },
+            "scoring_mode": {
+              "type": "string",
+              "enum": [
+                "ratio_healthy",
+                "violation_count",
+                "count_penalty"
+              ],
+              "default": "violation_count"
+            },
+            "healthy_statuses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "penalty_per_unit": {
+              "type": "number",
+              "default": 2
+            },
+            "label": {
+              "type": "string"
+            }
+          }
+        },
+        "integrity": {
+          "type": "object",
+          "description": "Audit integrity pillar \u2014 typically AuditLog blocked Shield outcomes.",
+          "properties": {
+            "target_entity": {
+              "type": "string"
+            },
+            "filter": {
+              "type": "object"
+            },
+            "weight": {
+              "type": "number",
+              "default": 0.2
+            },
+            "scoring_mode": {
+              "type": "string",
+              "enum": [
+                "ratio_healthy",
+                "violation_count",
+                "count_penalty"
+              ],
+              "default": "count_penalty"
+            },
+            "healthy_statuses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "penalty_per_unit": {
+              "type": "number",
+              "default": 10
+            },
+            "label": {
+              "type": "string"
+            }
+          }
+        },
+        "operational": {
+          "type": "object",
+          "description": "Operational velocity pillar \u2014 typically pending high-priority tasks.",
+          "properties": {
+            "target_entity": {
+              "type": "string"
+            },
+            "filter": {
+              "type": "object"
+            },
+            "weight": {
+              "type": "number",
+              "default": 0.1
+            },
+            "scoring_mode": {
+              "type": "string",
+              "enum": [
+                "ratio_healthy",
+                "violation_count",
+                "count_penalty"
+              ],
+              "default": "count_penalty"
+            },
+            "healthy_statuses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "penalty_per_unit": {
+              "type": "number",
+              "default": 10
+            },
+            "label": {
+              "type": "string"
             }
           }
         }
