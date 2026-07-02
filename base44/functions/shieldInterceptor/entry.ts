@@ -39,6 +39,23 @@ Deno.serve(async (req) => {
       return Response.json({ allowed: true, reason: 'No tenant context — pass-through' });
     }
 
+    // ── DOMAIN-AWARE RESOLUTION (Registry-Driven) ──────────────
+    // Auto-resolve governance_domain from the Tenant record if not
+    // explicitly passed. This binds the Shield to the industry pack
+    // the tenant was provisioned under (fnb_standard_ops, etc.)
+    // without requiring every caller to know the domain upfront.
+    let resolvedDomainId = domain_id;
+    if (!resolvedDomainId) {
+      try {
+        const tenants = await base44.asServiceRole.entities.Tenant.filter({ id: resolvedTenantId });
+        if (tenants[0]?.governance_domain) {
+          resolvedDomainId = tenants[0].governance_domain;
+        }
+      } catch {
+        // Fail-open: proceed without domain scoping if lookup fails
+      }
+    }
+
     // SUBSCRIPTION POLICY CHECK: Enforce resource limits before governance policies
     // This blocks actions that exceed subscription tier limits (employees, outlets, brands)
     const subscriptionCheck = await checkSubscriptionLimits(base44, resolvedTenantId, entity_name, action, data);
@@ -66,9 +83,10 @@ Deno.serve(async (req) => {
       (p.trigger_action === 'all' || p.trigger_action === action)
     );
 
-    // If domain_id specified, filter to only that domain's policies (Domain-First architecture)
-    if (domain_id) {
-      applicablePolicies = applicablePolicies.filter(p => p.domain_id === domain_id);
+    // If domain_id resolved (explicit OR from tenant.governance_domain), filter to
+    // only that domain's policies (Domain-First architecture).
+    if (resolvedDomainId) {
+      applicablePolicies = applicablePolicies.filter(p => p.domain_id === resolvedDomainId);
     }
 
     if (applicablePolicies.length === 0) {

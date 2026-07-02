@@ -237,7 +237,11 @@ async function provisionOrganisation(base44, body, user) {
   const validModules = allowsAll ? selectedModules : selectedModules.filter(m => plan.modules.includes(m));
 
   try {
-    // 1. Tenant
+    // 0. Resolve industry blueprint from ActivationRegistry (Registry-Driven)
+    const { blueprint, governance_domain } = await resolveIndustryBlueprint(base44, industry);
+    report.governance_domain = governance_domain;
+
+    // 1. Tenant — stamped with governance_domain for Shield binding
     const tenantRec = await base44.asServiceRole.entities.Tenant.create({
       name: tenant.name,
       legal_name: tenant.legal_name || tenant.name,
@@ -255,7 +259,6 @@ async function provisionOrganisation(base44, body, user) {
       governance_domain: governance_domain || null,
     });
     report.tenant_id = tenantRec.id;
-    report.governance_domain = governance_domain;
     report.records_created.push({ entity: "Tenant", id: tenantRec.id, title: tenant.name });
 
     // 2. Company
@@ -309,8 +312,7 @@ async function provisionOrganisation(base44, body, user) {
       outlet_id: outletRec.id,
     });
 
-    // 7. Seed the industry blueprint from ActivationRegistry (Registry-Driven)
-    const { blueprint, governance_domain } = await resolveIndustryBlueprint(base44, industry);
+    // 7. Seed the industry blueprint (resolved in step 0 from ActivationRegistry)
     const dueDate = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
     const seeds = [
       ...(blueprint.compliance || []).map(c =>
