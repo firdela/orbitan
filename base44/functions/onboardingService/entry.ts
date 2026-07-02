@@ -165,42 +165,14 @@ const PLAN_REGISTRY = {
   orbitan_enterprise: { credits: null, max_employees: null, modules: ["all"] },
 };
 
-// Industry blueprints — operational scaffolding (compliance templates +
-// setup tasks), NOT fictional business data. Keyed by Tenant.industry enum.
-const INDUSTRY_BLUEPRINT = {
-  food_beverage: {
-    compliance: [
-      { title: "Daily Food Safety Audit",      type: "Food Safety Audit",   category: "food_safety" },
-      { title: "Weekly Kitchen Hygiene Check",  type: "Hygiene Inspection",  category: "food_safety" },
-      { title: "Fire Safety Inspection",        type: "Fire Safety Audit",   category: "fire_safety" },
-    ],
-    tasks: [
-      { title: "Record opening inventory",          module_context: "inventory",     priority: "high" },
-      { title: "Set up menu & price list",          module_context: "sales_invoice", priority: "high" },
-      { title: "Schedule first food safety audit",  module_context: "compliance",    priority: "medium" },
-    ],
-  },
-  recycling_sustainability: {
-    compliance: [
-      { title: "Monthly Environmental Impact Audit", type: "Environmental Audit",    category: "environmental" },
-      { title: "Disposal Certification Renewal",     type: "Disposal Certification", category: "environmental" },
-    ],
-    tasks: [
-      { title: "Set up material category inventory",     module_context: "inventory", priority: "high" },
-      { title: "Configure sustainability KPI reporting", module_context: "reporting", priority: "medium" },
-    ],
-  },
-  retail: {
-    compliance: [
-      { title: "Store Health & Safety Inspection", type: "Health & Safety", category: "other" },
-    ],
-    tasks: [
-      { title: "Set up product catalogue",   module_context: "inventory",          priority: "high" },
-      { title: "Configure point-of-sale",    module_context: "sales_invoice",      priority: "high" },
-      { title: "Define customer loyalty tiers", module_context: "customer_management", priority: "medium" },
-    ],
-  },
-};
+// ── REGISTRY-DRIVEN PROVISIONING ──────────────────────────────
+// Industry blueprints are now served from the ActivationRegistry entity,
+// NOT hardcoded constants. This is the "Manifest-Driven" architecture:
+//   - Adding a new industry = create one ActivationRegistry record
+//   - The provisioning engine never changes
+//   - Packs are versioned and governance-domain bound
+//
+// Fallback DEFAULT_BLUEPRINT is kept only for unregistered industries.
 
 const DEFAULT_BLUEPRINT = {
   compliance: [],
@@ -209,6 +181,29 @@ const DEFAULT_BLUEPRINT = {
     { title: "Invite your first team member", module_context: "workforce", priority: "medium" },
   ],
 };
+
+// Resolve industry blueprint from ActivationRegistry (Registry-Driven).
+// Falls back to DEFAULT_BLUEPRINT only if no active pack is registered.
+async function resolveIndustryBlueprint(base44, industry) {
+  try {
+    const registries = await base44.asServiceRole.entities.ActivationRegistry.filter({
+      industry,
+      is_active: true,
+    });
+    if (registries.length === 0) return { blueprint: DEFAULT_BLUEPRINT, governance_domain: null, pack_record: null };
+    // Use the first active pack (sorted by sort_order is ideal, but filter returns insertion order)
+    const pack = registries[0];
+    return {
+      blueprint: pack.blueprint || DEFAULT_BLUEPRINT,
+      governance_domain: pack.governance_domain || null,
+      pack_record: pack,
+    };
+  } catch (err) {
+    // Fail-open: provisioning continues with default blueprint
+    console.log(`[onboardingService] Registry lookup failed for ${industry}: ${err.message}`);
+    return { blueprint: DEFAULT_BLUEPRINT, governance_domain: null, pack_record: null };
+  }
+}
 
 async function provisionOrganisation(base44, body, user) {
   const {
@@ -257,8 +252,10 @@ async function provisionOrganisation(base44, body, user) {
       country: tenant.country || "Singapore",
       currency: tenant.currency || "SGD",
       onboarding_completed: true,
+      governance_domain: governance_domain || null,
     });
     report.tenant_id = tenantRec.id;
+    report.governance_domain = governance_domain;
     report.records_created.push({ entity: "Tenant", id: tenantRec.id, title: tenant.name });
 
     // 2. Company
@@ -312,8 +309,8 @@ async function provisionOrganisation(base44, body, user) {
       outlet_id: outletRec.id,
     });
 
-    // 7. Seed the industry blueprint (non-fatal — Promise.allSettled)
-    const blueprint = INDUSTRY_BLUEPRINT[industry] || DEFAULT_BLUEPRINT;
+    // 7. Seed the industry blueprint from ActivationRegistry (Registry-Driven)
+    const { blueprint, governance_domain } = await resolveIndustryBlueprint(base44, industry);
     const dueDate = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
     const seeds = [
       ...(blueprint.compliance || []).map(c =>
