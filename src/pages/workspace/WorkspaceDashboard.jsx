@@ -14,6 +14,7 @@ import { base44 } from '@/api/base44Client';
 import StatCard from '@/components/shared/StatCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EditableDashboardGrid from '@/components/dashboard/EditableDashboardGrid';
+import TrustScoreWidget from '@/components/dashboard/TrustScoreWidget';
 import { hasModule } from '@/lib/use-tenant';
 import {
   Package, ShoppingCart, FileText, CheckSquare, Users,
@@ -70,6 +71,8 @@ export default function WorkspaceDashboard() {
       icon: m.icon,
       render: () => <ModuleCard mod={m} />,
     })),
+    { id: 'trust_score', title: 'Operational Trust Score', icon: Shield,
+      render: () => <TrustScoreWidget tenantId={tenantId} /> },
     { id: 'alert_lowstock', title: 'Low Stock Detail', icon: AlertTriangle,
       render: () => <LowStockCard items={lowStockItems} loading={loading} /> },
   ];
