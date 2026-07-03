@@ -11,6 +11,15 @@ Deno.serve(async (req) => {
 
     if (!tenant_id) return Response.json({ error: 'tenant_id is required' }, { status: 400 });
 
+    // ── Tenant Authorization Boundary (IDOR Fix) ──
+    // Prevent cross-tenant data access. Only platform admins may
+    // export arbitrary tenants; everyone else is scoped to their own.
+    const isPlatformAdmin = user.role === 'admin';
+    const isTenantMember = user.data?.tenant_id === tenant_id;
+    if (!isPlatformAdmin && !isTenantMember) {
+      return Response.json({ error: 'Forbidden: You do not have access to this tenant.' }, { status: 403 });
+    }
+
     let csvContent = '';
     let filename = '';
 

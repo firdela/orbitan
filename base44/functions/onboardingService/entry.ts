@@ -158,6 +158,10 @@ async function activateTenant(base44, manifest, actorId, actorName) {
 //
 // Pure engine — driven entirely by the request payload. No hardcoded
 // tenant data. Works for any industry / plan combination.
+// Self-serve provisioning may only assign these entry tiers.
+// Premium tiers require payment validation or admin override.
+const ALLOWED_SELF_SERVE_PLANS = ["orbitan_free", "orbitan_starter"];
+
 const PLAN_REGISTRY = {
   orbitan_starter:    { credits: 100,  max_employees: 10,   modules: ["workforce", "task", "reporting"] },
   orbitan_growth:     { credits: 500,  max_employees: 50,   modules: ["workforce", "task", "reporting", "inventory", "scheduling"] },
@@ -232,7 +236,15 @@ async function provisionOrganisation(base44, body, user) {
     return { ...report, status: "failed", errors: [{ step: "validate", error: "Organisation name, industry and pack are required." }] };
   }
 
-  const plan = PLAN_REGISTRY[planKey] || PLAN_REGISTRY.orbitan_starter;
+  // ── Premium Bypass Fix ──
+  // On the self-serve path, restrict the plan to entry tiers unless the
+  // actor is a platform admin. Prevents unpaid upgrades to enterprise.
+  const isPlatformAdmin = user.role === 'admin';
+  const safePlanKey = isPlatformAdmin
+    ? (planKey || 'orbitan_starter')
+    : (ALLOWED_SELF_SERVE_PLANS.includes(planKey) ? planKey : 'orbitan_starter');
+
+  const plan = PLAN_REGISTRY[safePlanKey] || PLAN_REGISTRY.orbitan_starter;
   const allowsAll = plan.modules.includes("all");
   const validModules = allowsAll ? selectedModules : selectedModules.filter(m => plan.modules.includes(m));
 
@@ -246,7 +258,7 @@ async function provisionOrganisation(base44, body, user) {
       name: tenant.name,
       legal_name: tenant.legal_name || tenant.name,
       industry,
-      subscription_plan: planKey,
+      subscription_plan: safePlanKey,
       status: "active",
       enabled_modules: validModules,
       enabled_packs: ["core", packKey],
@@ -298,7 +310,7 @@ async function provisionOrganisation(base44, body, user) {
     const walletRec = await base44.asServiceRole.entities.OrbitanWallet.create({
       tenant_id: tenantRec.id,
       tenant_name: tenant.name,
-      subscription_plan: planKey,
+      subscription_plan: safePlanKey,
       balance_credits: plan.credits ?? 100000,
       credits_quota_monthly: plan.credits ?? 100000,
     });
@@ -342,8 +354,8 @@ async function provisionOrganisation(base44, body, user) {
       module: "system",
       target_entity: "Tenant",
       target_record_id: tenantRec.id,
-      details: `Self-serve provisioning: ${tenant.name} (${industry} · ${planKey}). Company → Brand → Outlet → Wallet chain created. ${validModules.length} modules activated.`,
-      new_state: { plan: planKey, industry, pack: packKey, modules: validModules, outlet_id: outletRec.id },
+      details: `Self-serve provisioning: ${tenant.name} (${industry} · ${safePlanKey}). Company → Brand → Outlet → Wallet chain created. ${validModules.length} modules activated.`,
+      new_state: { plan: safePlanKey, industry, pack: packKey, modules: validModules, outlet_id: outletRec.id },
     }).catch(e => report.errors.push({ step: "audit", error: e.message }));
 
   } catch (err) {
