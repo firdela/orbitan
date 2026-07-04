@@ -45,6 +45,10 @@
       ],
       "default": "onboarding"
     },
+    "manifest_key": {
+      "type": "string",
+      "description": "PlatformManifest.manifest_key this tenant uses for UI/navigation rendering. Null = legacy fallback nav. Set during provisioning (e.g. 'core_ops_v1')."
+    },
     "enabled_modules": {
       "type": "array",
       "items": {

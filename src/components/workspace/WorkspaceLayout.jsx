@@ -17,7 +17,7 @@
 // route changes.
 // ============================================================
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Navigate, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -25,31 +25,9 @@ import { useAuth } from '@/lib/AuthContext';
 import { useTenant, DEMO_TENANTS } from '@/lib/use-tenant';
 import AppShell from '@/components/layout/AppShell';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
-import {
-  Home, Package, ShoppingCart, FileText, Users, Calendar,
-  CheckSquare, BarChart2, Shield, Building2, Layers,
-} from 'lucide-react';
-
-// ── Dynamic nav factory — paths scoped to /workspace/:tenantId ─
-function buildWorkspaceNav(tenantId) {
-  const base = `/workspace/${tenantId}`;
-  return [
-    { type: 'section', label: 'Workspace' },
-    { href: base, icon: Home, label: 'Dashboard' },
-    { href: `${base}/inventory`, icon: Package, label: 'Inventory' },
-    { href: `${base}/procurement`, icon: ShoppingCart, label: 'Purchase Orders' },
-    { href: `${base}/sales`, icon: FileText, label: 'Sales & Reconciliation' },
-    { type: 'section', label: 'Team' },
-    { href: `${base}/workforce`, icon: Users, label: 'My Team' },
-    { href: `${base}/scheduling`, icon: Calendar, label: 'Shift Schedule' },
-    { href: `${base}/tasks`, icon: CheckSquare, label: 'Tasks' },
-    { type: 'section', label: 'Reports' },
-    { href: `${base}/reports`, icon: BarChart2, label: 'Reports' },
-    { href: `${base}/compliance`, icon: Shield, label: 'Compliance' },
-    { type: 'section', label: 'Navigation' },
-    { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
-  ];
-}
+import ManifestNav from '@/components/workspace/ManifestNav';
+import { hydrateManifest } from '@/lib/registry/ManifestHydrator';
+import { Building2 } from 'lucide-react';
 
 export default function WorkspaceLayout() {
   const { tenantId } = useParams();
@@ -70,6 +48,10 @@ export default function WorkspaceLayout() {
     enabled: !!tenantId && isAuthenticated,
   });
 
+  // ── HYDRATE: Fetch manifest + subscription policy ────────
+  // Runs as soon as the tenant record is resolved.
+  const { navigation, source, isLoading: navLoading } = useManifestHydration(tenantId, tenantRecord);
+
   // Sync the active tenant in context for downstream consumers.
   // (Declared before any early return so hook order stays stable.)
   useEffect(() => {
@@ -86,14 +68,11 @@ export default function WorkspaceLayout() {
   }
 
   // ── Access control (Regulate principle) ─────────────────
-  // Platform admins may access any tenant workspace. All other
-  // users may only access the tenant they are bound to.
   const userTenantId = user?.tenant_id || user?.data?.tenant_id || null;
   const isPlatformAdmin = user?.role === 'admin';
   const isAuthorized = isPlatformAdmin || userTenantId === tenantId;
 
   if (!isAuthorized) {
-    // Redirect to the user's own workspace, or the gateway resolver.
     if (userTenantId) {
       return <Navigate to={`/workspace/${userTenantId}`} replace />;
     }
@@ -101,11 +80,10 @@ export default function WorkspaceLayout() {
   }
 
   // ── Resolve tenant (DB record → pilot fallback → unresolved) ─
-  if (tenantLoading) {
+  if (tenantLoading || navLoading) {
     return <OrbitanLoader size="fullscreen" message="Resolving workspace..." />;
   }
 
-  // Resolve tenant: DB record → pilot roster fallback → unresolved
   const effectiveTenant = tenantRecord || DEMO_TENANTS.find(t => t.id === tenantId) || null;
 
   if (!effectiveTenant) {
@@ -123,12 +101,74 @@ export default function WorkspaceLayout() {
     );
   }
 
-  const navigation = buildWorkspaceNav(tenantId);
   const title = effectiveTenant.name || 'Workspace';
 
   return (
-    <AppShell navigation={navigation} title={title} tenant={effectiveTenant}>
+    <AppShell
+      navigation={[]}
+      title={title}
+      tenant={effectiveTenant}
+      manifestNav={<ManifestNav navigation={navigation} />}
+      manifestSource={source}
+    >
       <Outlet context={{ tenant: effectiveTenant, tenantId }} />
     </AppShell>
   );
+}
+
+// ── Manifest Hydration Hook ─────────────────────────────────
+// Wraps the async hydrateManifest call in React state.
+function useManifestHydration(tenantId, tenantRecord) {
+  const [state, setState] = useState({ navigation: [], source: 'fallback', isLoading: true });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!tenantId) {
+      setState({ navigation: [], source: 'fallback', isLoading: false });
+      return;
+    }
+
+    // If tenant record exists in DB, hydrate from manifest.
+    // If not yet resolved, show fallback (pilot roster) — still functional.
+    if (tenantRecord) {
+      hydrateManifest(tenantId, tenantRecord).then(result => {
+        if (!cancelled) {
+          setState({ navigation: result.navigation, source: result.source, isLoading: false });
+        }
+      }).catch(() => {
+        if (!cancelled) {
+          setState({ navigation: [], source: 'fallback', isLoading: false });
+        }
+      });
+    } else {
+      // Tenant not yet resolved from DB — minimal fallback nav
+      // so the pilot roster tenants still render.
+      const base = `/workspace/${tenantId}`;
+      setState({
+        navigation: [
+          { type: 'section', label: 'Workspace' },
+          { id: 'dashboard', label: 'Dashboard', icon: 'Home', route: base, module_key: 'dashboard', isLocked: false },
+          { id: 'inventory', label: 'Inventory', icon: 'Package', route: `${base}/inventory`, module_key: 'inventory', isLocked: false },
+          { id: 'procurement', label: 'Purchase Orders', icon: 'ShoppingCart', route: `${base}/procurement`, module_key: 'procurement', isLocked: false },
+          { id: 'sales', label: 'Sales & Reconciliation', icon: 'FileText', route: `${base}/sales`, module_key: 'sales_invoice', isLocked: false },
+          { type: 'section', label: 'Team' },
+          { id: 'workforce', label: 'My Team', icon: 'Users', route: `${base}/workforce`, module_key: 'workforce', isLocked: false },
+          { id: 'scheduling', label: 'Shift Schedule', icon: 'Calendar', route: `${base}/scheduling`, module_key: 'scheduling', isLocked: false },
+          { id: 'tasks', label: 'Tasks', icon: 'CheckSquare', route: `${base}/tasks`, module_key: 'task', isLocked: false },
+          { type: 'section', label: 'Reports' },
+          { id: 'reports', label: 'Reports', icon: 'BarChart2', route: `${base}/reports`, module_key: 'reporting', isLocked: false },
+          { id: 'compliance', label: 'Compliance', icon: 'Shield', route: `${base}/compliance`, module_key: 'compliance', isLocked: false },
+          { type: 'section', label: 'Navigation' },
+          { id: 'leader_org', label: 'OrbitanOS Console', icon: 'Layers', route: '/leader-org', module_key: 'leader_org', isLocked: false },
+        ],
+        source: 'fallback',
+        isLoading: false,
+      });
+    }
+
+    return () => { cancelled = true; };
+  }, [tenantId, tenantRecord]);
+
+  return state;
 }

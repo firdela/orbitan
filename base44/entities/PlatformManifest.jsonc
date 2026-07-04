@@ -1,0 +1,142 @@
+{
+  "name": "PlatformManifest",
+  "type": "object",
+  "description": "OrbitanOS UI/Navigation Registry \u2014 Defines the navigation tree, widget layout, and module routing for tenant workspaces. The ManifestHydrator reads this at runtime to render a dynamic 'thin client' frontend. Versioned for safe rollbacks. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "manifest_key": {
+      "type": "string",
+      "description": "Unique manifest identifier e.g. 'core_ops_v1', 'fnb_ops_v1'"
+    },
+    "version": {
+      "type": "string",
+      "default": "1.0.0",
+      "description": "Semantic version of this manifest. Bump on navigation changes to enable rollback."
+    },
+    "industry_pack": {
+      "type": "string",
+      "description": "Industry pack this manifest serves e.g. 'core', 'fnb', 'retail', 'recycling'"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable name e.g. 'Core Operations Manifest'"
+    },
+    "description": {
+      "type": "string"
+    },
+    "ui_config": {
+      "type": "object",
+      "description": "Frontend rendering configuration consumed by the ManifestHydrator",
+      "properties": {
+        "navigation_blueprint": {
+          "type": "array",
+          "description": "Recursive navigation tree. Each section groups modules; each module has a route, icon, and module_key for entitlement checks.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Section identifier e.g. 'workspace', 'revenue', 'team'"
+              },
+              "label": {
+                "type": "string",
+                "description": "Section header label shown in sidebar"
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Module key \u2014 matched against SubscriptionPolicy.allowed_modules for entitlement"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "icon": {
+                      "type": "string",
+                      "description": "lucide-react icon name e.g. 'Home', 'Package', 'ShoppingCart'"
+                    },
+                    "route": {
+                      "type": "string",
+                      "description": "Route path with :tenantId placeholder e.g. '/workspace/:tenantId/inventory'"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "default_widgets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Default widget IDs for dashboard layout"
+        }
+      }
+    },
+    "provisioning_pipeline": {
+      "type": "array",
+      "description": "Ordered provisioning steps executed during tenant activation",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "string",
+            "description": "Step type: 'create_entity', 'invoke_hook', 'seed_data'"
+          },
+          "config": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "min_plan_required": {
+      "type": "string",
+      "enum": [
+        "orbitan_free",
+        "orbitan_starter",
+        "orbitan_growth",
+        "orbitan_business",
+        "orbitan_enterprise"
+      ],
+      "default": "orbitan_starter"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 0
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "manifest_key",
+    "version",
+    "industry_pack",
+    "ui_config"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

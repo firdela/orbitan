@@ -269,6 +269,7 @@ async function provisionOrganisation(base44, body, user) {
       currency: tenant.currency || "SGD",
       onboarding_completed: true,
       governance_domain: governance_domain || null,
+      manifest_key: "core_ops_v1",
     });
     report.tenant_id = tenantRec.id;
     report.records_created.push({ entity: "Tenant", id: tenantRec.id, title: tenant.name });
