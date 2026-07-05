@@ -1,0 +1,133 @@
+{
+  "name": "OrbitUsageTracker",
+  "type": "object",
+  "description": "Orbit Nexus \u2014 AI Usage & Cost Tracking Registry. Tracks every intelligence request routed through the NexusGateway: credits consumed, model used, latency, success/failure. Powers the Orbitan Wallet debit engine and provides per-tenant AI cost analytics. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant that initiated this AI request"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "Outlet context (null = tenant-wide)"
+    },
+    "service_key": {
+      "type": "string",
+      "description": "NexusGateway service key e.g. 'ocr_receipt', 'sop_gen', 'biz_advisor'"
+    },
+    "routed_function": {
+      "type": "string",
+      "description": "Actual backend function the gateway routed to e.g. 'nexusOCRProcessor', 'sopGenerator'"
+    },
+    "model_used": {
+      "type": "string",
+      "description": "AI model identifier e.g. gemini_3_flash, claude_sonnet_4_6, gpt_5_4"
+    },
+    "credits_consumed": {
+      "type": "number",
+      "default": 1,
+      "description": "Orbitan Credits debited for this request"
+    },
+    "request_size_bytes": {
+      "type": "number",
+      "description": "Payload size in bytes (for metering large document uploads)"
+    },
+    "latency_ms": {
+      "type": "number",
+      "description": "End-to-end gateway latency in milliseconds"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "timeout",
+        "shield_blocked",
+        "insufficient_credits"
+      ],
+      "default": "success",
+      "description": "Outcome of the intelligence request"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error details if status is not success"
+    },
+    "actor_id": {
+      "type": "string",
+      "description": "User ID who triggered the request"
+    },
+    "actor_name": {
+      "type": "string"
+    },
+    "shield_policy_evaluated": {
+      "type": "string",
+      "description": "Policy name if Shield was evaluated, null if bypassed"
+    },
+    "shield_outcome": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "blocked",
+        "notify",
+        "not_evaluated"
+      ],
+      "default": "not_evaluated"
+    },
+    "correction_applied": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if a human correction was later applied to this AI output (links to CorrectionRegistry)"
+    },
+    "correction_id": {
+      "type": "string",
+      "description": "Linked CorrectionRegistry record if a correction was applied"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional service-specific metadata (e.g. line_items_extracted, document_type, word_count)"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "service_key",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
