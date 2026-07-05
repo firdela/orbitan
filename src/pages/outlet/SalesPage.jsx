@@ -5,13 +5,15 @@ import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import StatCard from '@/components/shared/StatCard';
+import FinanceReviewQueue from '@/components/finance/FinanceReviewQueue';
+import { useTenant } from '@/lib/use-tenant';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   FileText, TrendingUp, DollarSign, Package, CheckCircle2,
   Plus, Home, Users, Calendar, ShoppingCart, CheckSquare,
-  BarChart2, Shield, Layers, Building2, RefreshCw
+  BarChart2, Shield, Layers, Building2, RefreshCw, Inbox
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -34,6 +36,7 @@ const NAV = [
 ];
 
 export default function SalesPage() {
+  const { currentTenant } = useTenant();
   const [reconciliations, setReconciliations] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '' });
@@ -78,11 +81,27 @@ export default function SalesPage() {
           }
         />
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard title="Total Revenue" value={`S$${totalRevenue.toLocaleString()}`} subtitle="All records" icon={TrendingUp} color="green" />
           <StatCard title="Avg Gross Margin" value={`${avgMargin}%`} subtitle="F&B target: 65-75%" icon={BarChart2} color="blue" />
           <StatCard title="Xero Synced" value={reconciliations.filter(r => r.xero_sync_status === 'synced').length} subtitle={`of ${reconciliations.length} records`} icon={RefreshCw} color="purple" />
           <StatCard title="Approved" value={reconciliations.filter(r => r.status === 'approved').length} subtitle="Days reconciled" icon={CheckCircle2} color="green" />
+        </div>
+
+        {/* ── Reconciliation Inbox ─────────────────────────────────── */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <Inbox className="w-4 h-4 text-[#F97316]" />
+            <h2 className="font-heading font-semibold text-sm text-foreground">Reconciliation Inbox</h2>
+            <span className="text-xs text-muted-foreground">— AI-extracted documents awaiting human verification before Xero sync</span>
+          </div>
+          {currentTenant?.id ? (
+            <FinanceReviewQueue tenantId={currentTenant.id} />
+          ) : (
+            <div className="bg-card border border-dashed border-border rounded-xl p-8 text-center">
+              <p className="text-sm text-muted-foreground">No tenant context available. Please complete onboarding to access the Reconciliation Inbox.</p>
+            </div>
+          )}
         </div>
 
         <div className="bg-card border border-border rounded-xl overflow-hidden">

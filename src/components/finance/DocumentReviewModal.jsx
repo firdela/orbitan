@@ -4,65 +4,105 @@ import { Button } from '@/components/ui/button';
 import {
   X, CheckCircle2, XCircle, AlertTriangle, FileText,
   ExternalLink, ShoppingCart, Receipt, User, Calendar,
-  DollarSign, Shield, Clock
+  DollarSign, Shield, Clock, Loader2
 } from 'lucide-react';
 import { format } from 'date-fns';
-
-const VERIFIER_NAME = 'Hamka Ariffin';
+import { toast } from '@/components/ui/use-toast';
 
 export default function DocumentReviewModal({ record, type, onClose }) {
   const [loading, setLoading] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
+  const [shieldError, setShieldError] = useState(null);
 
   const isInvoice = type === 'invoice';
   const hasDoc = !!record.document_url;
   const aiScore = record.ai_confidence_score;
   const isLowConfidence = aiScore != null && aiScore < 85;
+  const entityType = isInvoice ? 'sales_invoice' : 'purchase_order';
 
+  // ── GOVERNANCE-GATED VERIFY ──────────────────────────────────
+  // Routes through financeController → shieldInterceptor → AuditLog.
+  // The backend resolves the authenticated user via auth.me() —
+  // no hardcoded verifier names on the client.
   async function handleVerify() {
     setLoading(true);
-    const timestamp = new Date().toISOString();
-    const entityName = isInvoice ? 'SalesInvoice' : 'PurchaseOrder';
-    const existingTrail = record.audit_trail || [];
+    setShieldError(null);
+    try {
+      const response = await base44.functions.invoke('financeController', {
+        action_type: 'verify_document',
+        record_id: record.id,
+        entity_type: entityType,
+      });
 
-    await base44.entities[entityName].update(record.id, {
-      processing_status: 'verified',
-      verified_by: 'hamka_ariffin',
-      verified_by_name: VERIFIER_NAME,
-      verified_date: timestamp,
-      audit_trail: [...existingTrail, {
-        action: 'verified',
-        user_id: 'hamka_ariffin',
-        user_name: VERIFIER_NAME,
-        timestamp,
-        details: `Document verified and approved by ${VERIFIER_NAME}. Ready for Xero sync.`
-      }]
-    });
-    setLoading(false);
-    onClose();
+      if (response.data?.success) {
+        toast({
+          title: 'Document Verified',
+          description: response.data.message || 'Ready for Xero sync.',
+        });
+        onClose();
+      } else {
+        throw new Error(response.data?.message || 'Verification failed');
+      }
+    } catch (err) {
+      const errData = err?.response?.data || {};
+      // Shield block or governance gate violation
+      if (errData.shield_response || errData.governance_rule) {
+        setShieldError({
+          rule: errData.governance_rule || errData.shield_response?.policy_name,
+          message: errData.error || 'Action blocked by governance policy.',
+          overrideAvailable: errData.override_available,
+        });
+      } else {
+        setShieldError({
+          message: errData.error || err.message || 'Failed to verify document.',
+        });
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Verification Failed',
+        description: errData.error || err.message,
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
+  // ── GOVERNANCE-GATED REJECT ──────────────────────────────────
   async function handleReject() {
     if (!rejectReason.trim()) return;
     setLoading(true);
-    const timestamp = new Date().toISOString();
-    const entityName = isInvoice ? 'SalesInvoice' : 'PurchaseOrder';
-    const existingTrail = record.audit_trail || [];
+    setShieldError(null);
+    try {
+      const response = await base44.functions.invoke('financeController', {
+        action_type: 'reject_document',
+        record_id: record.id,
+        entity_type: entityType,
+        data: { rejection_reason: rejectReason },
+      });
 
-    await base44.entities[entityName].update(record.id, {
-      processing_status: 'rejected',
-      rejection_reason: rejectReason,
-      audit_trail: [...existingTrail, {
-        action: 'rejected',
-        user_id: 'hamka_ariffin',
-        user_name: VERIFIER_NAME,
-        timestamp,
-        details: `Document rejected by ${VERIFIER_NAME}. Reason: ${rejectReason}`
-      }]
-    });
-    setLoading(false);
-    onClose();
+      if (response.data?.success) {
+        toast({
+          title: 'Document Rejected',
+          description: 'Record returned to staff for correction.',
+        });
+        onClose();
+      } else {
+        throw new Error(response.data?.message || 'Rejection failed');
+      }
+    } catch (err) {
+      const errData = err?.response?.data || {};
+      setShieldError({
+        message: errData.error || err.message || 'Failed to reject document.',
+      });
+      toast({
+        variant: 'destructive',
+        title: 'Rejection Failed',
+        description: errData.error || err.message,
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   const amount = isInvoice ? record.total : record.total_amount;
@@ -96,6 +136,24 @@ export default function DocumentReviewModal({ record, type, onClose }) {
         </div>
 
         <div className="p-6 space-y-5">
+
+          {/* Shield / Governance Error */}
+          {shieldError && (
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-red-50 border border-red-200">
+              <Shield className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-700">
+                  {shieldError.rule ? `Shield Block: ${shieldError.rule}` : 'Action Failed'}
+                </p>
+                <p className="text-xs text-red-600 mt-0.5">{shieldError.message}</p>
+                {shieldError.overrideAvailable && (
+                  <p className="text-[10px] text-red-500 mt-1 font-medium">
+                    A manager override can be requested from the Shield Command Center.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Alerts */}
           {!hasDoc && (
@@ -259,7 +317,7 @@ export default function DocumentReviewModal({ record, type, onClose }) {
                 disabled={!hasDoc || loading}
                 onClick={handleVerify}
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                 {loading ? 'Verifying…' : `Verify & Approve`}
               </Button>
             </div>

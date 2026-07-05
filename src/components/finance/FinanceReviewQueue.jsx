@@ -112,23 +112,27 @@ export default function FinanceReviewQueue({ tenantId, outletId }) {
   const [reviewTarget, setReviewTarget] = useState(null);
   const queryClient = useQueryClient();
 
+  // Build filter — outlet_id is optional so tenant_admins can see
+  // ALL outlets' pending reviews, not just one. This makes the inbox
+  // work at both outlet-manager and tenant_admin scope.
+  const buildReviewFilter = () => {
+    const filter = {
+      tenant_id: tenantId,
+      processing_status: { $in: ['awaiting_evidence', 'raw', 'needs_review', 'ai_processing'] }
+    };
+    if (outletId) filter.outlet_id = outletId;
+    return filter;
+  };
+
   const { data: purchaseOrders = [], isLoading: loadingPOs } = useQuery({
     queryKey: ['po-review', tenantId, outletId],
-    queryFn: () => base44.entities.PurchaseOrder.filter({
-      tenant_id: tenantId,
-      outlet_id: outletId,
-      processing_status: { $in: ['awaiting_evidence', 'raw', 'needs_review', 'ai_processing'] }
-    }, '-created_date', 50),
+    queryFn: () => base44.entities.PurchaseOrder.filter(buildReviewFilter(), '-created_date', 50),
     enabled: !!tenantId,
   });
 
   const { data: salesInvoices = [], isLoading: loadingInvoices } = useQuery({
     queryKey: ['invoice-review', tenantId, outletId],
-    queryFn: () => base44.entities.SalesInvoice.filter({
-      tenant_id: tenantId,
-      outlet_id: outletId,
-      processing_status: { $in: ['awaiting_evidence', 'raw', 'needs_review', 'ai_processing'] }
-    }, '-created_date', 50),
+    queryFn: () => base44.entities.SalesInvoice.filter(buildReviewFilter(), '-created_date', 50),
     enabled: !!tenantId,
   });
 
