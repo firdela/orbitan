@@ -4,6 +4,7 @@ import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
+import StatCard from '@/components/shared/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,8 @@ import {
 import {
   Package, Plus, Search, AlertTriangle, CheckCircle2, MoreHorizontal,
   Filter, ShoppingCart, Home, Users, Calendar, FileText,
-  CheckSquare, BarChart2, Shield, Layers, Building2, Pencil
+  CheckSquare, BarChart2, Shield, Layers, Building2, Pencil,
+  Loader2, Boxes, DollarSign, Tags
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -60,6 +62,8 @@ export default function InventoryPage() {
   }, []);
 
   const lowStock = items.filter(i => i.par_level && i.current_stock < i.par_level);
+  const totalValue = items.reduce((s, i) => s + (i.current_stock || 0) * (i.cost_per_unit || 0), 0);
+  const categories = [...new Set(items.map(i => i.category).filter(Boolean))];
   const filtered = items.filter(i => {
     const matchSearch = !search || i.name.toLowerCase().includes(search.toLowerCase()) || i.category?.toLowerCase().includes(search.toLowerCase());
     const matchLow = !filterLow || (i.par_level && i.current_stock < i.par_level);
@@ -150,11 +154,26 @@ export default function InventoryPage() {
           }
         />
 
+        {/* KPI Stats */}
+        {!loading && items.length > 0 && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <StatCard title="Total Items" value={items.length} subtitle="In catalog" icon={Boxes} color="blue" />
+            <StatCard title="Low Stock" value={lowStock.length} subtitle="Below par level" icon={AlertTriangle} color={lowStock.length > 0 ? 'amber' : 'green'} />
+            <StatCard title="Categories" value={categories.length} subtitle="Item groupings" icon={Tags} color="purple" />
+            <StatCard title="Stock Value" value={`S$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} subtitle="Total inventory cost" icon={DollarSign} color="green" />
+          </div>
+        )}
+
         {/* Low Stock Banner */}
         {lowStock.length > 0 && (
-          <div className="bg-orbitan-amber-light border border-amber-200 rounded-xl p-3 mb-5 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-orbitan-amber flex-shrink-0" />
-            <p className="text-xs font-medium text-amber-800">{lowStock.length} item(s) below par level: {lowStock.map(i => i.name).join(', ')}</p>
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3.5 mb-5 flex items-start gap-2.5 card-elevated">
+            <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-4 h-4 text-orbitan-amber" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-900">{lowStock.length} item(s) below par level</p>
+              <p className="text-xs text-amber-700 mt-0.5 truncate">{lowStock.map(i => i.name).join(', ')}</p>
+            </div>
           </div>
         )}
 
@@ -181,8 +200,15 @@ export default function InventoryPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-xl overflow-hidden card-elevated">
           <div className="overflow-x-auto">
+            {loading ? (
+              <div className="flex items-center justify-center py-20 gap-2.5">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Loading inventory…</span>
+              </div>
+            ) : (
+            <>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
@@ -213,12 +239,20 @@ export default function InventoryPage() {
                       </td>
                       <td className="px-4 py-3.5 text-muted-foreground hidden sm:table-cell">{item.category}</td>
                       <td className="px-4 py-3.5 text-right">
-                        <span className={`font-semibold ${isLow ? 'text-orbitan-amber' : 'text-foreground'}`}>
+                        <span className={`font-semibold tabular-nums ${isLow ? 'text-orbitan-amber' : 'text-foreground'}`}>
                           {item.current_stock}
                         </span>
                         <span className="text-xs text-muted-foreground ml-1">{item.unit}</span>
+                        {item.par_level > 0 && (
+                          <div className="mt-1 h-1 w-16 ml-auto rounded-full bg-muted overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${isLow ? 'bg-orbitan-amber' : 'bg-orbitan-green'}`}
+                              style={{ width: `${Math.min(100, (item.current_stock / item.par_level) * 100)}%` }}
+                            />
+                          </div>
+                        )}
                       </td>
-                      <td className="px-4 py-3.5 text-right text-muted-foreground hidden md:table-cell">{item.par_level} {item.unit}</td>
+                      <td className="px-4 py-3.5 text-right text-muted-foreground hidden md:table-cell tabular-nums">{item.par_level} {item.unit}</td>
                       <td className="px-4 py-3.5 text-right text-muted-foreground hidden md:table-cell">S${item.cost_per_unit?.toFixed(2)}</td>
                       <td className="px-4 py-3.5 text-center">
                         {isLow ? (
@@ -257,6 +291,8 @@ export default function InventoryPage() {
             </table>
             {filtered.length === 0 && (
               <EmptyState icon={Package} title="No items found" description="Try adjusting your search or add a new item." />
+            )}
+            </>
             )}
           </div>
         </div>
