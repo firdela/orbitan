@@ -99,6 +99,13 @@ export const PLATFORM_NAVIGATION = {
           permission: "admin",
         },
         {
+          key: "feedback-intelligence",
+          label: "Feedback Intelligence",
+          route: "/leader-org?tab=feedback-intelligence",
+          description: "AI-analysed pilot feedback and product backlog",
+          permission: "admin",
+        },
+        {
           key: "shield-command",
           label: "Shield Command",
           route: "/platform/shield",

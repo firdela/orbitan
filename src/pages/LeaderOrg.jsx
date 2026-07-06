@@ -21,6 +21,7 @@ import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionP
 import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
 import AnnouncementsManager from '@/components/announcements/AnnouncementsManager';
 import PilotCommandCenter from '@/components/leader/PilotCommandCenter';
+import FeedbackIntelligenceDashboard from '@/components/leader/FeedbackIntelligenceDashboard';
 import BlueprintAdvisor from '@/components/advisor/BlueprintAdvisor';
 import BlueprintStudio from '@/components/blueprint/BlueprintStudio';
 import SubscriptionPolicyManager from '@/components/platform/SubscriptionPolicyManager';
@@ -333,6 +334,11 @@ export default function LeaderOrg() {
 
           <TabsContent value="pilot-control">
             <PilotCommandCenter />
+          </TabsContent>
+
+          {/* Feedback Intelligence — AI-analysed pilot feedback */}
+          <TabsContent value="feedback-intelligence">
+            <FeedbackIntelligenceDashboard />
           </TabsContent>
 
           {/* Platform Identity (About) - Merged with Operating Cycle */}
