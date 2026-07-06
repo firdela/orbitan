@@ -10,9 +10,10 @@ import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/components/ui/use-toast';
 import {
   ShoppingCart, Plus, Package, Home, Users, Calendar, FileText,
-  CheckSquare, BarChart2, Shield, Layers, Building2, Trash2, ChevronDown
+  CheckSquare, BarChart2, Shield, Layers, Building2, Trash2, ChevronDown, Loader2
 } from 'lucide-react';
 
 const NAV = [
@@ -37,8 +38,10 @@ const DEMO_SUPPLIERS = [];
 const DEMO_ITEMS = [];
 
 export default function ProcurementPage() {
+  const { toast } = useToast();
   const [pos, setPos] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [receivingId, setReceivingId] = useState(null);
   const [newPO, setNewPO] = useState({ supplier_name: '', items: [{ item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] });
 
   const updateLine = (idx, field, value) => {
@@ -51,6 +54,12 @@ export default function ProcurementPage() {
       return { ...prev, items };
     });
   };
+
+  useEffect(() => {
+    base44.entities.PurchaseOrder.list('-created_date', 50)
+      .then(data => setPos(data || []))
+      .catch(() => setPos([]));
+  }, []);
 
   const addLine = () => setNewPO(prev => ({ ...prev, items: [...prev.items, { item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] }));
   const removeLine = (idx) => setNewPO(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));
@@ -75,8 +84,54 @@ export default function ProcurementPage() {
     setNewPO({ supplier_name: '', items: [{ item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] });
   };
 
-  const updateStatus = (id, status) => {
+  const updateStatus = async (id, status) => {
+    // Persist status change to database
+    await base44.entities.PurchaseOrder.update(id, { status });
     setPos(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+
+    // When a PO is received, post the procurement debit to the Wallet-Native Ledger
+    if (status === 'received') {
+      const po = pos.find(p => p.id === id);
+      if (!po) return;
+      setReceivingId(id);
+      try {
+        const res = await base44.functions.invoke('walletEngine', {
+          action: 'debit_procurement_sgd',
+          tenant_id: po.tenant_id,
+          outlet_id: po.outlet_id,
+          amount: po.total_amount || 0,
+          reference_id: po.id,
+          reference_type: 'PurchaseOrder',
+          metadata: {
+            po_number: po.po_number,
+            supplier_name: po.supplier_name,
+            supplier_id: po.supplier_id,
+            items: po.items,
+          },
+        });
+        const data = res.data || res;
+        if (data.above_threshold) {
+          toast({
+            title: 'Governance Threshold Exceeded',
+            description: `PO SGD ${po.total_amount?.toFixed(2)} exceeds threshold (SGD ${data.threshold_applied}). Manager approval required.`,
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Goods Received — Wallet Debited',
+            description: `SGD ${po.total_amount?.toFixed(2)} posted to wallet ledger. Threshold: SGD ${data.threshold_applied}.`,
+          });
+        }
+      } catch (err) {
+        toast({
+          title: 'Wallet Debit Failed',
+          description: err?.response?.data?.error || err?.message || 'Could not post procurement debit to wallet.',
+          variant: 'destructive',
+        });
+      } finally {
+        setReceivingId(null);
+      }
+    }
   };
 
   return (
@@ -127,8 +182,14 @@ export default function ProcurementPage() {
                       </Button>
                     )}
                     {po.status === 'approved' && (
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(po.id, 'received')}>
-                        Receive
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                        disabled={receivingId === po.id}
+                        onClick={() => updateStatus(po.id, 'received')}
+                      >
+                        {receivingId === po.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Receive'}
                       </Button>
                     )}
                   </div>

@@ -227,6 +227,154 @@ Deno.serve(async (req) => {
       return Response.json({ wallet, message: 'Wallet provisioned successfully' });
     }
 
+    // --- DEBIT PROCUREMENT (SGD) — Wallet-Native Ledger ---
+    // Called when a PurchaseOrder is marked "received". Posts an immutable
+    // WalletTransaction (procurement_debit_sgd) and creates a FinanceSyncQueue
+    // entry for future ERP bridging. Evaluates the Dynamic Trust governance
+    // threshold from the tenant's ActivationRegistry:
+    //   - PO total <= threshold → auto-approve (status=completed)
+    //   - PO total > threshold  → pending_approval + GovernanceOverride created
+    if (action === 'debit_procurement_sgd') {
+      if (!amount || amount <= 0) {
+        return Response.json({ error: 'Invalid amount' }, { status: 400 });
+      }
+      if (!reference_id) {
+        return Response.json({ error: 'reference_id (PurchaseOrder ID) is required' }, { status: 400 });
+      }
+
+      const wallets = await base44.asServiceRole.entities.OrbitanWallet.filter({ tenant_id: targetTenantId });
+      if (!wallets || wallets.length === 0) {
+        return Response.json({ error: 'Wallet not found' }, { status: 404 });
+      }
+      const wallet = wallets[0];
+
+      // ── Resolve governance threshold from ActivationRegistry ──
+      // Fetch the tenant's industry pack to resolve the registry manifest
+      const tenants = await base44.asServiceRole.entities.Tenant.filter({ id: targetTenantId });
+      const tenant = tenants && tenants.length > 0 ? tenants[0] : null;
+      const tenantIndustry = tenant?.industry || 'other';
+
+      // Find the ActivationRegistry record matching this tenant's industry
+      const registries = await base44.asServiceRole.entities.ActivationRegistry.filter({ industry: tenantIndustry });
+      const registry = registries && registries.length > 0 ? registries[0] : null;
+
+      const threshold = registry?.governance_threshold_sgd ?? 200;
+      const ledgerMode = registry?.ledger_sync_mode ?? 'internal';
+      const aboveThreshold = amount > threshold;
+
+      // ── Create FinanceSyncQueue entry (ERP bridge — always, even in internal mode) ──
+      const syncQueueEntry = await base44.asServiceRole.entities.FinanceSyncQueue.create({
+        tenant_id: targetTenantId,
+        outlet_id: outlet_id || null,
+        queue_type: 'po_sync',
+        source_entity: 'PurchaseOrder',
+        source_record_id: reference_id,
+        erp_target: 'xero',
+        payload: {
+          po_id: reference_id,
+          total_amount_sgd: amount,
+          supplier_id: metadata?.supplier_id || null,
+          supplier_name: metadata?.supplier_name || null,
+          items: metadata?.items || [],
+        },
+        financial_impact_sgd: amount,
+        impact_category: 'expense',
+        threshold_applied: aboveThreshold,
+        threshold_value_sgd: threshold,
+        status: 'pending',
+        priority: aboveThreshold ? 'immediate' : 'end_of_shift',
+        created_by_id: user.id,
+        notes: aboveThreshold
+          ? `PO SGD ${amount.toFixed(2)} exceeds governance threshold (SGD ${threshold}). Pending manager approval.`
+          : `PO SGD ${amount.toFixed(2)} within governance threshold (SGD ${threshold}). Auto-approved.`,
+      });
+
+      // ── Create WalletTransaction (immutable ledger entry) ──
+      const txnStatus = aboveThreshold ? 'pending_approval' : 'completed';
+      const txn = await base44.asServiceRole.entities.WalletTransaction.create({
+        tenant_id: targetTenantId,
+        outlet_id: outlet_id || null,
+        wallet_id: wallet.id,
+        transaction_type: 'procurement_debit_sgd',
+        amount: -amount,
+        currency: 'sgd',
+        balance_after: aboveThreshold ? null : amount, // No aggregate SGD balance field on wallet yet; track via transactions
+        description: `Procurement: PO ${metadata?.po_number || reference_id} — ${metadata?.supplier_name || 'Supplier'} (SGD ${amount.toFixed(2)})`,
+        reference_id,
+        reference_type: 'PurchaseOrder',
+        triggered_by: user.id,
+        triggered_by_name: user.full_name,
+        module_used: 'procurement',
+        governance_threshold_applied: true,
+        threshold_value_sgd: threshold,
+        finance_sync_queue_id: syncQueueEntry.id,
+        status: txnStatus,
+        metadata,
+      });
+
+      // ── If above threshold, create a GovernanceOverride request ──
+      let overrideId = null;
+      if (aboveThreshold) {
+        const override = await base44.asServiceRole.entities.GovernanceOverride.create({
+          tenant_id: targetTenantId,
+          outlet_id: outlet_id || null,
+          request_type: 'finance_threshold',
+          target_entity: 'PurchaseOrder',
+          target_record_id: reference_id,
+          policy_name: 'procurement_spend_threshold',
+          block_reason: `PO total (SGD ${amount.toFixed(2)}) exceeds governance threshold (SGD ${threshold}) for industry "${tenantIndustry}".`,
+          requested_by_id: user.id,
+          requested_by_name: user.full_name,
+          requested_by_role: user.role,
+          requested_date: new Date().toISOString(),
+          status: 'pending',
+          shield_mode: 'auditor',
+          severity: amount > threshold * 3 ? 'high' : 'medium',
+          notes: `Auto-generated by Wallet-Native Ledger. Linked WalletTransaction: ${txn.id}`,
+        });
+        overrideId = override.id;
+
+        // Link override back to the transaction
+        await base44.asServiceRole.entities.WalletTransaction.update(txn.id, {
+          governance_override_id: overrideId,
+        });
+      }
+
+      // ── Audit log ──
+      try {
+        await base44.asServiceRole.entities.AuditLog.create({
+          tenant_id: targetTenantId,
+          outlet_id: outlet_id || null,
+          actor_id: user.id,
+          actor_name: user.full_name,
+          actor_role: user.role,
+          action_type: 'PROCUREMENT_WALLET_DEBIT',
+          module: 'procurement',
+          target_entity: 'PurchaseOrder',
+          target_record_id: reference_id,
+          new_state: { amount_sgd: amount, threshold, above_threshold: aboveThreshold, status: txnStatus, wallet_transaction_id: txn.id },
+          details: `Procurement debit posted to wallet: SGD ${amount.toFixed(2)} for PO ${metadata?.po_number || reference_id}. Threshold: SGD ${threshold}. Status: ${txnStatus}.`,
+          shield_outcome: aboveThreshold ? 'override_requested' : 'pass',
+        });
+      } catch (auditErr) {
+        console.error('[walletEngine] AuditLog write failed:', auditErr?.message);
+      }
+
+      return Response.json({
+        success: true,
+        wallet_transaction_id: txn.id,
+        finance_sync_queue_id: syncQueueEntry.id,
+        governance_override_id: overrideId,
+        status: txnStatus,
+        threshold_applied: threshold,
+        above_threshold: aboveThreshold,
+        ledger_sync_mode: ledgerMode,
+        message: aboveThreshold
+          ? `PO exceeds governance threshold (SGD ${threshold}). Manager approval required.`
+          : `Procurement debit posted successfully (SGD ${amount.toFixed(2)}).`,
+      });
+    }
+
     return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
 
   } catch (error) {
