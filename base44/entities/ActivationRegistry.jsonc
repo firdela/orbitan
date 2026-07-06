@@ -1,11 +1,11 @@
 {
   "name": "ActivationRegistry",
   "type": "object",
-  "description": "OrbitanOS Activation Engine \u2014 Registry-Driven Provisioning. Versioned JSON manifests defining 'seeder pipelines' and industry blueprints for tenant onboarding across all industries. Replaces hardcoded INDUSTRY_BLUEPRINT logic. Powers the Manifest-Driven architecture. Now includes trust_pillars capability manifest for registry-driven compliance scoring. Exit-Ready: pure schema, portable to any stack.",
+  "description": "OrbitanOS Activation Engine \u2014 Registry-Driven Provisioning. Versioned JSON manifests defining 'seeder pipelines' and industry blueprints for tenant onboarding across all industries. Replaces hardcoded INDUSTRY_BLUEPRINT logic. Powers the Manifest-Driven architecture. Now includes trust_pillars capability manifest and registry-driven financial governance (Dynamic Trust thresholds + ledger sync mode). Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "pack_key": {
       "type": "string",
-      "description": "Industry pack identifier e.g. 'fnb', 'retail', 'recycling', 'logistics'"
+      "description": "Industry pack identifier e.g. 'fnb', 'retail', 'recycling', 'logistics', 'hbb'"
     },
     "pack_name": {
       "type": "string",
@@ -23,6 +23,20 @@
     "governance_domain": {
       "type": "string",
       "description": "Shield domain identifier for policy resolution e.g. 'fnb_standard_ops', 'retail_standard_ops'. The shieldInterceptor resolves GovernancePolicy records matching this domain."
+    },
+    "governance_threshold_sgd": {
+      "type": "number",
+      "default": 200,
+      "description": "Dynamic Trust threshold \u2014 procurement transactions (PurchaseOrder totals) above this SGD amount require manager approval via GovernanceOverride before posting to OrbitanWallet. Industry-specific: HBB=50, F&B=200, Retail=300, Enterprise=configurable."
+    },
+    "ledger_sync_mode": {
+      "type": "string",
+      "enum": [
+        "internal",
+        "erp_integrated"
+      ],
+      "default": "internal",
+      "description": "Wallet-Native ledger mode. 'internal' = OrbitanWallet is the master ledger, FinanceSyncQueue only stores events (no ERP push). 'erp_integrated' = OrbitanWallet is master + FinanceSyncQueue pushes to external ERP (Xero/QuickBooks). MVP pilot tenants use 'internal'."
     },
     "description": {
       "type": "string"

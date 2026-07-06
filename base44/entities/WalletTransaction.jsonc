@@ -1,10 +1,14 @@
 {
   "name": "WalletTransaction",
   "type": "object",
-  "description": "OrbitanOS \u2014 Immutable transaction ledger for all wallet events (credits debited, points earned, cashback, marketplace purchases). Linked to AuditLog for governance. Exit-Ready.",
+  "description": "OrbitanOS \u2014 Immutable transaction ledger for all wallet events (credits debited, points earned, cashback, marketplace purchases, procurement spending). The single source of truth for all financial movements. Linked to AuditLog for governance and FinanceSyncQueue for ERP bridging. Exit-Ready.",
   "properties": {
     "tenant_id": {
       "type": "string"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "Outlet context for procurement transactions (null = tenant-wide)"
     },
     "wallet_id": {
       "type": "string",
@@ -17,6 +21,7 @@
         "credit_debit_ai",
         "credit_debit_module",
         "credit_debit_marketplace",
+        "credit_debit_procurement",
         "points_earned_referral",
         "points_earned_training",
         "points_earned_renewal",
@@ -26,12 +31,14 @@
         "cashback_redeemed",
         "subscription_renewal",
         "module_unlock",
+        "procurement_debit_sgd",
         "system_adjustment"
-      ]
+      ],
+      "description": "Type of wallet event. procurement_debit_sgd = SGD spent on PurchaseOrder goods receipt."
     },
     "amount": {
       "type": "number",
-      "description": "Positive = credit/earn, Negative = debit/spend"
+      "description": "Positive = credit/earn, Negative = debit/spend. For SGD procurement, this is the PO total in SGD."
     },
     "currency": {
       "type": "string",
@@ -44,18 +51,18 @@
     },
     "balance_after": {
       "type": "number",
-      "description": "Balance snapshot after this transaction"
+      "description": "Balance snapshot after this transaction (for credits/points). For SGD, this is cumulative SGD spent this period."
     },
     "description": {
       "type": "string"
     },
     "reference_id": {
       "type": "string",
-      "description": "Linked record ID (AI doc ID, module ID, etc.)"
+      "description": "Linked record ID (PO ID, AI doc ID, module ID, etc.)"
     },
     "reference_type": {
       "type": "string",
-      "description": "e.g. AIDocument, ModuleUnlock, SubscriptionRenewal"
+      "description": "e.g. PurchaseOrder, AIDocument, ModuleUnlock, SubscriptionRenewal"
     },
     "triggered_by": {
       "type": "string",
@@ -72,19 +79,38 @@
       "type": "string",
       "description": "AI model if credit_debit_ai"
     },
+    "governance_threshold_applied": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if this transaction was evaluated against a Dynamic Trust governance threshold"
+    },
+    "threshold_value_sgd": {
+      "type": "number",
+      "description": "The governance threshold value at time of transaction (from ActivationRegistry)"
+    },
+    "governance_override_id": {
+      "type": "string",
+      "description": "If above threshold, links to the GovernanceOverride record for manager approval"
+    },
+    "finance_sync_queue_id": {
+      "type": "string",
+      "description": "Linked FinanceSyncQueue entry for ERP bridging (future Xero/QuickBooks sync)"
+    },
     "status": {
       "type": "string",
       "enum": [
         "completed",
         "pending",
         "reversed",
-        "failed"
+        "failed",
+        "pending_approval"
       ],
-      "default": "completed"
+      "default": "completed",
+      "description": "pending_approval = above governance threshold, awaiting manager override decision"
     },
     "metadata": {
       "type": "object",
-      "description": "Any extra data for audit trail"
+      "description": "Any extra data for audit trail (PO items, supplier info, etc.)"
     }
   },
   "required": [
@@ -107,14 +133,28 @@
           }
         },
         {
-          "data.tenant_id": "{{user.data.tenant_id}}",
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin"
-              ]
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
             }
-          }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
         }
       ]
     },
