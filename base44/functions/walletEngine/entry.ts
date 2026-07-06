@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const { action, tenant_id, amount, currency, reason, reference_id, reference_type, metadata } = body;
+    const { action, tenant_id, amount, currency, reason, reference_id, reference_type, metadata, outlet_id } = body;
 
     const targetTenantId = tenant_id || user.data?.tenant_id;
 
