@@ -9,6 +9,7 @@ import { useTenant } from '@/lib/use-tenant.jsx';
 import { MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, SUBSCRIPTION_PLANS } from '@/lib/orbitan-config';
 import { Button } from '@/components/ui/button';
 import StatusBadge from '@/components/shared/StatusBadge';
+import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import {
   Building2, Users, Package, BarChart2, ShoppingCart, FileText,
   CheckSquare, Shield, Link as LinkIcon, Calendar, ChevronRight,
@@ -50,6 +51,11 @@ const MODULE_CARDS = [
 
 export default function CompanyDashboard() {
   const { currentTenant: tenant } = useTenant();
+
+  if (!tenant) {
+    return <OrbitanLoader size="fullscreen" message="Loading workspace..." />;
+  }
+
   const plan = SUBSCRIPTION_PLANS[tenant.subscription_plan];
 
   const enabledModules = tenant.enabled_modules || [];
