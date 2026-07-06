@@ -1,7 +1,7 @@
 {
   "name": "IssueLog",
   "type": "object",
-  "description": "OrbitanOS Pilot Feedback Engine \u2014 captures bugs, improvement suggestions, and compliance queries from all tenants during the pilot phase. Feeds into the Refine & Regulate principles. Exit-Ready.",
+  "description": "OrbitanOS Pilot Feedback & Product Intelligence Engine \u2014 captures bugs, improvement suggestions, feature requests, and compliance queries from all tenants. Feeds into the Refine & Regulate principles. AI-analysed by nexusFeedbackAnalyst for sentiment, priority, and duplicate detection. Exit-Ready.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -25,6 +25,29 @@
         "data_issue"
       ],
       "default": "bug"
+    },
+    "feedback_category": {
+      "type": "string",
+      "enum": [
+        "bug_report",
+        "feature_request",
+        "improvement_suggestion",
+        "ui_ux_feedback",
+        "ai_feedback",
+        "inventory",
+        "procurement",
+        "employees",
+        "shifts",
+        "sales_invoicing",
+        "aireceipts",
+        "xero_integration",
+        "performance",
+        "security",
+        "compliment",
+        "general_feedback"
+      ],
+      "default": "general_feedback",
+      "description": "Broader product feedback category for backlog routing"
     },
     "module": {
       "type": "string",
@@ -69,6 +92,76 @@
       "type": "object",
       "description": "Auto-snapshot: tenant, outlet, user role, current page at time of submission"
     },
+    "attachment_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Uploaded screenshots, images, or documents attached as evidence"
+    },
+    "workflow_status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "under_review",
+        "accepted",
+        "planned",
+        "in_development",
+        "testing",
+        "released",
+        "closed"
+      ],
+      "default": "new",
+      "description": "Product backlog lifecycle: New to Under Review to Accepted to Planned to In Development to Testing to Released to Closed"
+    },
+    "ai_analyzed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True after nexusFeedbackAnalyst has processed this record"
+    },
+    "ai_analyzed_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ai_sentiment": {
+      "type": "string",
+      "enum": [
+        "positive",
+        "neutral",
+        "negative",
+        "frustrated"
+      ],
+      "description": "AI-detected sentiment of the feedback"
+    },
+    "ai_priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "AI-recommended priority for product backlog routing"
+    },
+    "ai_summary": {
+      "type": "string",
+      "description": "AI-generated one-line summary of the feedback for dashboard display"
+    },
+    "ai_duplicate_group_id": {
+      "type": "string",
+      "description": "Grouping key assigned by AI to cluster similar feedback reports"
+    },
+    "ai_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "AI-extracted topic tags"
+    },
+    "backlog_task_id": {
+      "type": "string",
+      "description": "Linked Task record ID if this feedback was converted into a product backlog task"
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -78,7 +171,8 @@
         "wont_fix",
         "duplicate"
       ],
-      "default": "new"
+      "default": "new",
+      "description": "Legacy resolution status (kept for backward compatibility with PilotCommandCenter)"
     },
     "resolved_by": {
       "type": "string"
@@ -99,7 +193,16 @@
   ],
   "rls": {
     "create": {
-      "data.tenant_id": "{{user.data.tenant_id}}"
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        }
+      ]
     },
     "read": {
       "$or": [
@@ -109,15 +212,28 @@
           }
         },
         {
-          "data.tenant_id": "{{user.data.tenant_id}}",
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager"
-              ]
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
             }
-          }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
         },
         {
           "data.reported_by_id": "{{user.id}}"
@@ -132,10 +248,19 @@
           }
         },
         {
-          "data.tenant_id": "{{user.data.tenant_id}}",
-          "user_condition": {
-            "role": "tenant_admin"
-          }
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        },
+        {
+          "data.reported_by_id": "{{user.id}}"
         }
       ]
     },
