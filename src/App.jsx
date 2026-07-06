@@ -28,6 +28,7 @@ import OutletDashboard from '@/pages/OutletDashboard';
 import WorkerPortal from '@/pages/WorkerPortal';
 import InventoryPage from '@/pages/outlet/InventoryPage';
 import ProcurementPage from '@/pages/outlet/ProcurementPage';
+import HBBPage from '@/pages/outlet/HBBPage';
 import SchedulingPage from '@/pages/outlet/SchedulingPage';
 import SalesPage from '@/pages/outlet/SalesPage';
 import TasksPage from '@/pages/outlet/TasksPage';
@@ -87,6 +88,7 @@ const AuthenticatedApp = () => {
         <Route path="dashboard" element={<WorkspaceDashboard />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="procurement" element={<ProcurementPage />} />
+        <Route path="hbb" element={<HBBPage />} />
         <Route path="sales" element={<SalesPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="workforce" element={<WorkforcePage />} />
@@ -111,6 +113,7 @@ const AuthenticatedApp = () => {
       <Route path="/outlet" element={<OutletDashboard />} />
       <Route path="/outlet/inventory" element={<InventoryPage />} />
       <Route path="/outlet/procurement" element={<ProcurementPage />} />
+      <Route path="/outlet/hbb" element={<HBBPage />} />
       <Route path="/outlet/scheduling" element={<SchedulingPage />} />
       <Route path="/outlet/sales" element={<SalesPage />} />
       <Route path="/outlet/tasks" element={<TasksPage />} />

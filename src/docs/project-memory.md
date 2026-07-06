@@ -107,12 +107,12 @@ Supported industries: F&B, Retail, Recycling & Sustainability, Education, Logist
 - Auth page flows (Login → OTP → verify → token → redirect; never shortcut)
 
 ## Known Bugs / Gaps (as of 2026-07-06)
-1. **ProcurementPage hardcoded tenant:** `tenant_id: "tenant_taqueria"`, `outlet_id: "outlet_nb"` in PO creation — must use authenticated user's tenant/outlet context.
-2. **DEMO_SUPPLIERS = [] / DEMO_ITEMS = []** in ProcurementPage — Supplier select dropdown is empty; needs to load from Supplier entity.
-3. **Tenant1/2/3 duplicate pages** — architectural violation; need migration plan to generic workspace routes.
-4. **Xero connector not authorised** — all finance sync is simulated.
-5. **No HBB-specific pack pages** — CustomerProfile + ProductCatalog entities exist but no HBB order/production workflow UI.
-6. **No payment integration** — subscription billing not yet wired (Stripe available in SG region).
+1. ~~**ProcurementPage hardcoded tenant**~~ ✅ FIXED — now uses `useAuth()` to resolve `tenant_id` and `outlet_id` from the authenticated user profile. Also added error handling (try/catch + toast) on PO creation.
+2. ~~**DEMO_SUPPLIERS = []**~~ ✅ FIXED — Supplier dropdown now loads from `base44.entities.Supplier.list()`. Selecting a supplier stores both `supplier_id` and `supplier_name`. Preferred suppliers show a ★ marker.
+3. ~~**Tenant1/2/3 duplicate pages**~~ ✅ FIXED — all 28 orphaned files deleted (zero imports confirmed via grep). Generic `/workspace/:tenantId/*` routes are the sole path.
+4. **Xero connector not authorised** — all finance sync is simulated. Deferred to post-MVP per Product Owner decision.
+5. ~~**No HBB-specific pack pages**~~ ✅ FIXED — `HBBPage.jsx` created at `/outlet/hbb` and `/workspace/:tenantId/hbb`. Combines Customer Orders (via SalesInvoice) + Production Planning (via Task with `module_context: 'hbb_production'`). Minimal MVP scope; no delivery tracking.
+6. **No payment integration** — subscription billing not yet wired (Stripe available in SG region). Deferred to post-MVP per Product Owner decision.
 
 ## Future Features (POST-MVP — do not build now)
 - Orbit Marketplace (module marketplace)
@@ -137,6 +137,7 @@ Supported industries: F&B, Retail, Recycling & Sustainability, Education, Logist
 - **Dynamic Trust governance:** governance_threshold_sgd added to ActivationRegistry (replaces fixed thresholds). Industry-specific: HBB=50, F&B=200, Retail=300.
 - **Procurement → Wallet wiring (2026-07-06):** ProcurementPage "Receive" button now persists PO status + calls walletEngine.debit_procurement_sgd. Governance threshold check creates GovernanceOverride if exceeded. Toast feedback for auto-approve vs pending-approval.
 - **ProcurementPage data loading (2026-07-06):** Added useEffect to load POs from database on mount (was previously empty).
+- **Client-readiness sprint (2026-07-06):** (1) Fixed multi-tenancy violation — ProcurementPage now uses `useAuth()` for tenant/outlet IDs instead of hardcoded strings. (2) Wired Supplier dropdown to real Supplier entity. (3) Added error handling + loading states to PO creation. (4) Deleted 28 orphaned tenant1/2/3 page files (zero cross-imports confirmed). (5) Built HBBPage — Customer Orders (SalesInvoice) + Production Planning (Task with `module_context: 'hbb_production'`) at `/outlet/hbb` and `/workspace/:tenantId/hbb`. (6) Deferred Stripe + Xero to post-MVP per Product Owner decision.
 
 ## MVP Timeline Status
 - **Start:** 30 May 2026

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -34,15 +35,18 @@ const NAV = [
   { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
 ];
 
-const DEMO_SUPPLIERS = [];
-const DEMO_ITEMS = [];
-
 export default function ProcurementPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [pos, setPos] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [receivingId, setReceivingId] = useState(null);
-  const [newPO, setNewPO] = useState({ supplier_name: '', items: [{ item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] });
+  const [creating, setCreating] = useState(false);
+  const [newPO, setNewPO] = useState({ supplier_id: '', supplier_name: '', items: [{ item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] });
+
+  const tenantId = user?.data?.tenant_id || user?.tenant_id || null;
+  const outletId = user?.data?.outlet_id || user?.outlet_id || null;
 
   const updateLine = (idx, field, value) => {
     setNewPO(prev => {
@@ -59,6 +63,9 @@ export default function ProcurementPage() {
     base44.entities.PurchaseOrder.list('-created_date', 50)
       .then(data => setPos(data || []))
       .catch(() => setPos([]));
+    base44.entities.Supplier.list('-created_date', 50)
+      .then(data => setSuppliers(data || []))
+      .catch(() => setSuppliers([]));
   }, []);
 
   const addLine = () => setNewPO(prev => ({ ...prev, items: [...prev.items, { item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] }));
@@ -67,21 +74,34 @@ export default function ProcurementPage() {
   const subtotal = newPO.items.reduce((s, i) => s + (i.total || 0), 0);
 
   const handleCreate = async () => {
-    const po = {
-      tenant_id: "tenant_taqueria",
-      outlet_id: "outlet_nb",
-      po_number: `PO-2024-${String(pos.length + 4).padStart(3, '0')}`,
-      supplier_name: newPO.supplier_name,
-      supplier_id: "supplier_demo",
-      status: 'draft',
-      items: newPO.items.map(i => ({ ...i, quantity: parseFloat(i.quantity) || 0, unit_price: parseFloat(i.unit_price) || 0 })),
-      total_amount: subtotal,
-      created_date: new Date().toISOString().split('T')[0],
-    };
-    const created = await base44.entities.PurchaseOrder.create(po);
-    setPos(prev => [created, ...prev]);
-    setShowCreate(false);
-    setNewPO({ supplier_name: '', items: [{ item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] });
+    if (!tenantId || !outletId) {
+      toast({ title: 'Cannot create PO', description: 'Your user profile is missing tenant or outlet assignment.', variant: 'destructive' });
+      return;
+    }
+    setCreating(true);
+    try {
+      const po = {
+        tenant_id: tenantId,
+        outlet_id: outletId,
+        po_number: `PO-${new Date().getFullYear()}-${String(pos.length + 1).padStart(3, '0')}`,
+        supplier_name: newPO.supplier_name,
+        supplier_id: newPO.supplier_id,
+        status: 'draft',
+        items: newPO.items.map(i => ({ ...i, quantity: parseFloat(i.quantity) || 0, unit_price: parseFloat(i.unit_price) || 0 })),
+        subtotal,
+        total_amount: subtotal,
+        requested_date: new Date().toISOString().split('T')[0],
+      };
+      const created = await base44.entities.PurchaseOrder.create(po);
+      setPos(prev => [created, ...prev]);
+      setShowCreate(false);
+      setNewPO({ supplier_id: '', supplier_name: '', items: [{ item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] });
+      toast({ title: 'Purchase Order Created', description: `${po.po_number} saved as draft.` });
+    } catch (err) {
+      toast({ title: 'Failed to create PO', description: err?.response?.data?.error || err?.message || 'An error occurred.', variant: 'destructive' });
+    } finally {
+      setCreating(false);
+    }
   };
 
   const updateStatus = async (id, status) => {
@@ -209,12 +229,16 @@ export default function ProcurementPage() {
           <div className="space-y-4 py-2">
             <div>
               <Label className="text-xs mb-1 block">Supplier</Label>
-              <Select value={newPO.supplier_name} onValueChange={v => setNewPO(p => ({ ...p, supplier_name: v }))}>
+              <Select value={newPO.supplier_id} onValueChange={v => {
+                const s = suppliers.find(sup => sup.id === v);
+                setNewPO(p => ({ ...p, supplier_id: v, supplier_name: s?.name || v }));
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select supplier..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {DEMO_SUPPLIERS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}{s.is_preferred ? ' ★' : ''}</SelectItem>)}
+                  {suppliers.length === 0 && <p className="text-xs text-muted-foreground px-2 py-1.5">No suppliers yet — add them in the Supplier directory.</p>}
                 </SelectContent>
               </Select>
             </div>
@@ -255,7 +279,9 @@ export default function ProcurementPage() {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={!newPO.supplier_name}>Create PO</Button>
+            <Button onClick={handleCreate} disabled={!newPO.supplier_id || creating}>
+              {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create PO'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
