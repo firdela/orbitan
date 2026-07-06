@@ -106,6 +106,14 @@ Supported industries: F&B, Retail, Recycling & Sustainability, Education, Logist
 - Token-based theming in `src/index.css` + `tailwind.config.js`
 - Auth page flows (Login → OTP → verify → token → redirect; never shortcut)
 
+## JoinGateway Redemption Flow (2026-07-06)
+- **Deep-link auto-detection:** `/join?code=LBT-NBR-001` now auto-fills and auto-validates the code on mount via `useEffect`.
+- **Invite code passthrough:** JoinGateway now passes `invite_code` + `role` URL params to `/request-access`, so the system knows which Invitation was used.
+- **AccessRequest entity:** Added `invite_code` field to track which invitation initiated the request.
+- **RequestAccess:** Reads `invite_code` and `role` from URL; pre-selects role from invitation; stores `invite_code` on the AccessRequest record.
+- **AccessRequestQueue approval:** If the AccessRequest has an `invite_code`, the original Invitation is marked `redeemed` (status → redeemed, use_count incremented, redeemed_by_email/date set) instead of generating a duplicate invitation. If no `invite_code` (workplace search path), a new invitation is generated as before.
+- **Result:** No more duplicate invitations when a worker uses a pre-issued code. The full chain is: Manager issues code → Worker enters code (or uses deep link) → AccessRequest created with `invite_code` → Manager approves → Original Invitation redeemed → Employee gains access.
+
 ## Known Bugs / Gaps (as of 2026-07-06)
 1. ~~**ProcurementPage hardcoded tenant**~~ ✅ FIXED — now uses `useAuth()` to resolve `tenant_id` and `outlet_id` from the authenticated user profile. Also added error handling (try/catch + toast) on PO creation.
 2. ~~**DEMO_SUPPLIERS = []**~~ ✅ FIXED — Supplier dropdown now loads from `base44.entities.Supplier.list()`. Selecting a supplier stores both `supplier_id` and `supplier_name`. Preferred suppliers show a ★ marker.

@@ -35,24 +35,13 @@ export default function JoinGateway() {
     }
   }, [employee, isAuthenticated, navigate]);
 
-  if (isLoadingAuth || empLoading) {
-    return (
-      <div className="min-h-screen bg-[#0A0F1A] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#3B82F6]" />
-      </div>
-    );
-  }
-
-  if (employee) return null;
-
-  const handleInviteCheck = async () => {
-    if (!inviteCode.trim()) return;
+  const validateAndNavigate = async (codeInput) => {
+    const code = (codeInput || inviteCode).trim().toUpperCase();
+    if (!code) return;
     setCheckingCode(true);
     setCodeError('');
 
     try {
-      const code = inviteCode.trim().toUpperCase();
-
       // ── Step 1: Check formal Invitation entity (Enterprise Registry) ──
       const invitations = await base44.entities.Invitation.filter({
         invite_code: code,
@@ -62,17 +51,13 @@ export default function JoinGateway() {
       if (invitations.length > 0) {
         const inv = invitations[0];
 
-        // Check expiry
         if (inv.expiry_date && new Date(inv.expiry_date) < new Date()) {
           setCodeError('This invitation has expired. Please contact your manager.');
-          setCheckingCode(false);
           return;
         }
 
-        // Check max uses
         if (inv.max_uses && inv.use_count >= inv.max_uses) {
           setCodeError('This invitation has already been used the maximum number of times.');
-          setCheckingCode(false);
           return;
         }
 
@@ -80,7 +65,11 @@ export default function JoinGateway() {
           tenant_id: inv.tenant_id || '',
           outlet_id: inv.outlet_id || '',
           company_name: inv.company_id || '',
+          invite_code: code,
         });
+        if (inv.invited_role) {
+          params.set('role', inv.invited_role);
+        }
         navigate(`/request-access?${params.toString()}`);
         return;
       }
@@ -90,10 +79,8 @@ export default function JoinGateway() {
       if (outlets.length > 0) {
         const outlet = outlets[0];
 
-        // Check outlet invite expiry
         if (outlet.invite_code_expiry && new Date(outlet.invite_code_expiry) < new Date()) {
           setCodeError('This outlet invitation has expired. Please contact your manager.');
-          setCheckingCode(false);
           return;
         }
 
@@ -101,8 +88,8 @@ export default function JoinGateway() {
           outlet_id: outlet.id,
           outlet_name: outlet.name || '',
           tenant_id: outlet.tenant_id || '',
+          invite_code: code,
         });
-        // Pass role if outlet invite specifies one
         if (outlet.invite_code_role) {
           params.set('role', outlet.invite_code_role);
         }
@@ -117,13 +104,13 @@ export default function JoinGateway() {
 
         if (tenant.invite_code_expiry && new Date(tenant.invite_code_expiry) < new Date()) {
           setCodeError('This organisation invitation has expired. Please contact your administrator.');
-          setCheckingCode(false);
           return;
         }
 
         const params = new URLSearchParams({
           tenant_id: tenant.id,
           company_name: tenant.name || '',
+          invite_code: code,
         });
         navigate(`/request-access?${params.toString()}`);
         return;
@@ -136,6 +123,29 @@ export default function JoinGateway() {
       setCheckingCode(false);
     }
   };
+
+  const handleInviteCheck = () => validateAndNavigate();
+
+  // Auto-detect ?code= from deep links (e.g. orbitan.sg/join?code=LBT-NBR-001)
+  // Must run before early returns to satisfy React Hooks rules.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const codeFromUrl = params.get('code');
+    if (codeFromUrl) {
+      setInviteCode(codeFromUrl);
+      validateAndNavigate(codeFromUrl);
+    }
+  }, []);
+
+  if (isLoadingAuth || empLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0F1A] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#3B82F6]" />
+      </div>
+    );
+  }
+
+  if (employee) return null;
 
   return (
     <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center relative overflow-hidden">

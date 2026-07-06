@@ -7,6 +7,10 @@
       "type": "string",
       "description": "Email of the worker requesting access"
     },
+    "invite_code": {
+      "type": "string",
+      "description": "Invitation code used to initiate this request (if the worker entered a code rather than searching). Links to the Invitation entity for redemption tracking."
+    },
     "tenant_id": {
       "type": "string",
       "description": "Target tenant/company the worker wants to join"

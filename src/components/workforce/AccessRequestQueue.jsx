@@ -38,30 +38,51 @@ export default function AccessRequestQueue({ tenantId, outletId }) {
         reviewed_date: new Date().toISOString(),
       });
 
-      // 2. Generate an invitation code
-      const code = generateInviteCode();
+      // 2. If this request came from an invitation code, redeem it.
+      //    Otherwise, generate a new invitation code (original behaviour).
+      let code = null;
+      let redeemed = false;
+      if (req.invite_code) {
+        const existing = await base44.entities.Invitation.filter({
+          invite_code: req.invite_code,
+          status: 'active',
+        });
+        if (existing.length > 0) {
+          const inv = existing[0];
+          await base44.entities.Invitation.update(inv.id, {
+            status: 'redeemed',
+            redeemed_by_email: req.email,
+            redeemed_date: new Date().toISOString(),
+            use_count: (inv.use_count || 0) + 1,
+          });
+          code = inv.invite_code;
+          redeemed = true;
+        }
+      }
 
-      // 3. Create an Invitation record linked to this request
-      const expiry = new Date();
-      expiry.setDate(expiry.getDate() + 7);
+      if (!code) {
+        // No prior invitation — create a new one
+        code = generateInviteCode();
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + 7);
+        await base44.entities.Invitation.create({
+          tenant_id: tenantId,
+          outlet_id: req.outlet_id || null,
+          invite_code: code,
+          invited_role: req.role_requested || 'worker',
+          invited_email: req.email,
+          status: 'active',
+          issued_by_id: user.id,
+          issued_by_name: user.full_name,
+          issued_by_role: user.role,
+          issued_date: new Date().toISOString(),
+          expiry_date: expiry.toISOString(),
+          max_uses: 1,
+          use_count: 0,
+        });
+      }
 
-      await base44.entities.Invitation.create({
-        tenant_id: tenantId,
-        outlet_id: req.outlet_id || null,
-        invite_code: code,
-        invited_role: req.role_requested || 'worker',
-        invited_email: req.email,
-        status: 'active',
-        issued_by_id: user.id,
-        issued_by_name: user.full_name,
-        issued_by_role: user.role,
-        issued_date: new Date().toISOString(),
-        expiry_date: expiry.toISOString(),
-        max_uses: 1,
-        use_count: 0,
-      });
-
-      // 4. Audit log
+      // 3. Audit log
       await auditFrontend({
         tenant_id: tenantId,
         actor_id: user.id,
@@ -71,10 +92,10 @@ export default function AccessRequestQueue({ tenantId, outletId }) {
         module: 'workforce',
         target_entity: 'AccessRequest',
         target_record_id: req.id,
-        details: `Approved access request for ${req.email} as ${ROLE_LABELS[req.role_requested] || req.role_requested}. Invitation code ${code} issued.`,
+        details: `Approved access request for ${req.email} as ${ROLE_LABELS[req.role_requested] || req.role_requested}. Invitation ${code} ${redeemed ? 'redeemed' : 'issued'}.`,
       });
 
-      return { code, email: req.email };
+      return { code, email: req.email, redeemed };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -206,7 +227,7 @@ export default function AccessRequestQueue({ tenantId, outletId }) {
           {/* Success feedback for approved request */}
           {approveMutation.isSuccess && approveMutation.variables?.id === req.id && (
             <div className="text-xs text-orbitan-green font-medium flex items-center gap-1.5 sm:absolute">
-              <Check className="w-3 h-3" /> Invitation sent to {approveMutation.data.email}
+              <Check className="w-3 h-3" /> {approveMutation.data.redeemed ? 'Access approved' : 'Invitation sent'} — {approveMutation.data.email}
             </div>
           )}
         </div>

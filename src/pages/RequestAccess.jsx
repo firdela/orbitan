@@ -118,9 +118,9 @@ function WorkplaceSearch({ onSelect }) {
 }
 
 // ── Phase 2: Role & Outlet Selection ──
-function RoleSelection({ workplace, onBack, onConfirm }) {
+function RoleSelection({ workplace, onBack, onConfirm, initialRole }) {
   const [selectedOutlet, setSelectedOutlet] = useState(null);
-  const [selectedRole, setSelectedRole] = useState('worker');
+  const [selectedRole, setSelectedRole] = useState(initialRole || 'worker');
   const [step, setStep] = useState(1); // 1=outlet+role, 2=confirm
 
   const { data: outlets = [] } = useQuery({
@@ -282,6 +282,8 @@ export default function RequestAccessPage() {
   const urlOutletId = urlParams.get('outlet_id');
   const urlOutletName = urlParams.get('outlet_name');
   const urlCompanyName = urlParams.get('company_name');
+  const urlInviteCode = urlParams.get('invite_code');
+  const urlRole = urlParams.get('role');
 
   const initialWorkplace = urlTenantId ? {
     tenant_id: urlTenantId,
@@ -335,6 +337,7 @@ export default function RequestAccessPage() {
       company_name: workplace.tenant_name || workplace.name,
       outlet_name: selectedOutlet?.name || workplace.name || null,
       role_requested: selectedRole,
+      invite_code: urlInviteCode || null,
       status: 'pending',
     });
   };
@@ -439,6 +442,7 @@ export default function RequestAccessPage() {
                 workplace={selectedWorkplace}
                 onBack={() => setPhase('search')}
                 onConfirm={handleConfirm}
+                initialRole={urlRole}
               />
             </motion.div>
           )}
