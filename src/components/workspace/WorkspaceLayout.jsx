@@ -129,43 +129,19 @@ function useManifestHydration(tenantId, tenantRecord) {
       return;
     }
 
-    // If tenant record exists in DB, hydrate from manifest.
-    // If not yet resolved, show fallback (pilot roster) — still functional.
-    if (tenantRecord) {
-      hydrateManifest(tenantId, tenantRecord).then(result => {
-        if (!cancelled) {
-          setState({ navigation: result.navigation, source: result.source, isLoading: false });
-        }
-      }).catch(() => {
-        if (!cancelled) {
-          setState({ navigation: [], source: 'fallback', isLoading: false });
-        }
-      });
-    } else {
-      // Tenant not yet resolved from DB — minimal fallback nav
-      // so the pilot roster tenants still render.
-      const base = `/workspace/${tenantId}`;
-      setState({
-        navigation: [
-          { type: 'section', label: 'Workspace' },
-          { id: 'dashboard', label: 'Dashboard', icon: 'Home', route: base, module_key: 'dashboard', isLocked: false },
-          { id: 'inventory', label: 'Inventory', icon: 'Package', route: `${base}/inventory`, module_key: 'inventory', isLocked: false },
-          { id: 'procurement', label: 'Purchase Orders', icon: 'ShoppingCart', route: `${base}/procurement`, module_key: 'procurement', isLocked: false },
-          { id: 'sales', label: 'Sales & Reconciliation', icon: 'FileText', route: `${base}/sales`, module_key: 'sales_invoice', isLocked: false },
-          { type: 'section', label: 'Team' },
-          { id: 'workforce', label: 'My Team', icon: 'Users', route: `${base}/workforce`, module_key: 'workforce', isLocked: false },
-          { id: 'scheduling', label: 'Shift Schedule', icon: 'Calendar', route: `${base}/scheduling`, module_key: 'scheduling', isLocked: false },
-          { id: 'tasks', label: 'Tasks', icon: 'CheckSquare', route: `${base}/tasks`, module_key: 'task', isLocked: false },
-          { type: 'section', label: 'Reports' },
-          { id: 'reports', label: 'Reports', icon: 'BarChart2', route: `${base}/reports`, module_key: 'reporting', isLocked: false },
-          { id: 'compliance', label: 'Compliance', icon: 'Shield', route: `${base}/compliance`, module_key: 'compliance', isLocked: false },
-          { type: 'section', label: 'Navigation' },
-          { id: 'leader_org', label: 'OrbitanOS Console', icon: 'Layers', route: '/leader-org', module_key: 'leader_org', isLocked: false },
-        ],
-        source: 'fallback',
-        isLoading: false,
-      });
-    }
+    // Always delegate to hydrateManifest — it handles null tenantRecord
+    // internally by returning the safety-net FALLBACK_NAV. This eliminates
+    // duplicate hardcoded navigation and makes the hydrator the single
+    // source of truth for workspace navigation.
+    hydrateManifest(tenantId, tenantRecord).then(result => {
+      if (!cancelled) {
+        setState({ navigation: result.navigation, source: result.source, isLoading: false });
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setState({ navigation: [], source: 'fallback', isLoading: false });
+      }
+    });
 
     return () => { cancelled = true; };
   }, [tenantId, tenantRecord]);

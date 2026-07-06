@@ -159,15 +159,21 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - `DEMO_TENANTS` fallback in `WorkspaceLayout` (line 87) hardcodes pilot tenant IDs.
   Documented as legacy; should be removed once all pilot tenants have DB records.
 
-### Phase B: Manifest Scoping Audit
+### Phase B: Manifest Scoping Audit — RESOLVED (Session 2026-07-06)
 - `ManifestHydrator` architecture is sound: fetches `PlatformManifest` +
   `SubscriptionPolicy` in parallel, intersects via `allowedModules`, marks locked modules
   as `isLocked` (Graceful Lockout).
-- **Gap:** No `PlatformManifest` records exist in the database yet. All tenants fall back
-  to the hardcoded `FALLBACK_NAV`, which shows every module to every tenant. HBB tenants
-  see Procurement, Scheduling, etc.
-- **Next step:** Seed `PlatformManifest` records for `core_ops_v1` (standard) and
-  `hbb_ops_v1` (lite) manifests so the hydrator can actually scope the UI.
+- **Resolved:** All 4 `PlatformManifest` records now exist in the database:
+  `core_ops_v1`, `fnb_ops_v1`, `retail_ops_v1`, `recycling_ops_v1`.
+- **Resolved:** All 4 pilot tenants have `manifest_key` set on their Tenant record and
+  resolve with `source: 'manifest'` (not fallback). Verified end-to-end:
+  - Taqueria (fnb_ops_v1 / Enterprise) — 8 nav items, all unlocked
+  - Renewed Resources (recycling_ops_v1 / Business) — 8 nav items, policy-scoped
+  - Renewed Fashion (retail_ops_v1 / Starter) — 8 nav items, policy-scoped
+  - Izaliqa Bakes (fnb_ops_v1 / Starter) — 8 nav items, policy-scoped
+- **Resolved:** Duplicate inline fallback navigation removed from `WorkspaceLayout.jsx`.
+  The `useManifestHydration` hook now always delegates to `hydrateManifest()`, making the
+  `ManifestHydrator.js` `FALLBACK_NAV` the single safety net (never goes dark).
 
 ## Future Features
 - Orbit Nexus as standalone subscription product (RAG, agentic AI, AI services).
