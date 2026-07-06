@@ -16,6 +16,8 @@ import {
   ShoppingCart, Plus, Package, Home, Users, Calendar, FileText,
   CheckSquare, BarChart2, Shield, Layers, Building2, Trash2, ChevronDown, Loader2
 } from 'lucide-react';
+import { ShieldGuard } from '@/lib/ShieldGuard';
+import GovernanceOverrideModal from '@/components/shield/GovernanceOverrideModal';
 
 const NAV = [
   { type: 'section', label: 'Outlet' },
@@ -44,6 +46,8 @@ export default function ProcurementPage() {
   const [receivingId, setReceivingId] = useState(null);
   const [creating, setCreating] = useState(false);
   const [newPO, setNewPO] = useState({ supplier_id: '', supplier_name: '', items: [{ item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] });
+  const [overrideContext, setOverrideContext] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const tenantId = user?.data?.tenant_id || user?.tenant_id || null;
   const outletId = user?.data?.outlet_id || user?.outlet_id || null;
@@ -60,12 +64,19 @@ export default function ProcurementPage() {
   };
 
   useEffect(() => {
-    base44.entities.PurchaseOrder.list('-created_date', 50)
-      .then(data => setPos(data || []))
-      .catch(() => setPos([]));
-    base44.entities.Supplier.list('-created_date', 50)
-      .then(data => setSuppliers(data || []))
-      .catch(() => setSuppliers([]));
+    Promise.all([
+      base44.entities.PurchaseOrder.list('-created_date', 50),
+      base44.entities.Supplier.list('-created_date', 50),
+    ])
+      .then(([poData, supData]) => {
+        setPos(poData || []);
+        setSuppliers(supData || []);
+      })
+      .catch(() => {
+        setPos([]);
+        setSuppliers([]);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const addLine = () => setNewPO(prev => ({ ...prev, items: [...prev.items, { item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] }));
@@ -80,6 +91,24 @@ export default function ProcurementPage() {
     }
     setCreating(true);
     try {
+      // ── Shield evaluation before creating the PO ──
+      const shieldResult = await ShieldGuard.check(base44, {
+        entity_name: 'PurchaseOrder',
+        action: 'create',
+        data: { ...newPO, total_amount: subtotal, tenant_id: tenantId, outlet_id: outletId },
+        tenant_id: tenantId,
+      });
+
+      if (!shieldResult.allowed) {
+        setOverrideContext(shieldResult.override_context);
+        toast({
+          title: 'Action Blocked by Shield',
+          description: shieldResult.reason || 'This action requires manager approval.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const po = {
         tenant_id: tenantId,
         outlet_id: outletId,
@@ -105,6 +134,27 @@ export default function ProcurementPage() {
   };
 
   const updateStatus = async (id, status) => {
+    // ── Shield evaluation for governance-sensitive status transitions ──
+    if (status === 'received' || status === 'approved') {
+      const poRecord = pos.find(p => p.id === id);
+      const shieldResult = await ShieldGuard.check(base44, {
+        entity_name: 'PurchaseOrder',
+        action: 'update',
+        data: { id, status, total_amount: poRecord?.total_amount, tenant_id: poRecord?.tenant_id },
+        tenant_id: poRecord?.tenant_id || tenantId,
+      });
+
+      if (!shieldResult.allowed) {
+        setOverrideContext(shieldResult.override_context);
+        toast({
+          title: 'Governance Threshold Exceeded',
+          description: shieldResult.reason || 'This action requires manager approval.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     // Persist status change to database
     await base44.entities.PurchaseOrder.update(id, { status });
     setPos(prev => prev.map(p => p.id === id ? { ...p, status } : p));
@@ -156,6 +206,12 @@ export default function ProcurementPage() {
 
   return (
     <AppShell navigation={NAV} title="">
+      <GovernanceOverrideModal
+        open={!!overrideContext}
+        onOpenChange={(open) => { if (!open) setOverrideContext(null); }}
+        overrideContext={overrideContext}
+        onSuccess={() => setOverrideContext(null)}
+      />
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
         <PageHeader
           title="Purchase Orders"
@@ -169,6 +225,11 @@ export default function ProcurementPage() {
         />
 
         <div className="space-y-3">
+          {loading && (
+            <div className="flex justify-center py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
           {pos.map(po => (
             <div key={po.id} className="bg-card border border-border rounded-xl overflow-hidden hover:shadow-md transition-shadow">
               <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -196,7 +257,7 @@ export default function ProcurementPage() {
                         Submit
                       </Button>
                     )}
-                    {po.status === 'pending_approval' && (
+                    {po.status === 'pending_approval' && ['admin', 'tenant_admin', 'outlet_manager'].includes(user?.role) && (
                       <Button size="sm" className="text-xs" onClick={() => updateStatus(po.id, 'approved')}>
                         Approve
                       </Button>
@@ -217,7 +278,7 @@ export default function ProcurementPage() {
               </div>
             </div>
           ))}
-          {pos.length === 0 && <EmptyState icon={ShoppingCart} title="No purchase orders" description="Create your first purchase order to get started." action={() => setShowCreate(true)} actionLabel="Create PO" />}
+          {!loading && pos.length === 0 && <EmptyState icon={ShoppingCart} title="No purchase orders" description="Create your first purchase order to get started." action={() => setShowCreate(true)} actionLabel="Create PO" />}
         </div>
       </div>
 

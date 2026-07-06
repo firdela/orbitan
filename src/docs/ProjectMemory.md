@@ -138,6 +138,37 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 ## Known Bugs
 - _(none confirmed this session)_
 
+## Audit Findings — Sprint 5 (Session 2026-07-06)
+
+### Phase A: Security & Governance Audit
+**CRITICAL — Fixed:**
+- `ProcurementPage.jsx` was creating Purchase Orders and updating statuses **directly via
+  SDK**, completely bypassing the `shieldInterceptor`. Governance policies were defined
+  but never enforced. — **Fixed:** Wired `ShieldGuard.check()` into PO creation and
+  status transitions (`received`, `approved`). Blocked actions now surface the
+  `GovernanceOverrideModal` for manager override workflow.
+- PO "Approve" button was visible to ALL users regardless of role. — **Fixed:** Now
+  restricted to `admin`, `tenant_admin`, `outlet_manager` only.
+
+**Identified — Not yet fixed:**
+- `AccessRequestQueue.jsx` creates `Invitation` records without Shield evaluation
+  (subscription employee-limit check is bypassed for invitation-driven onboarding).
+- `ProcurementPage.jsx` renders its own hardcoded `NAV` inside `AppShell`, duplicating
+  the `WorkspaceLayout` manifest navigation. This is a nesting issue but not a security
+  risk — deferred to avoid page redesign.
+- `DEMO_TENANTS` fallback in `WorkspaceLayout` (line 87) hardcodes pilot tenant IDs.
+  Documented as legacy; should be removed once all pilot tenants have DB records.
+
+### Phase B: Manifest Scoping Audit
+- `ManifestHydrator` architecture is sound: fetches `PlatformManifest` +
+  `SubscriptionPolicy` in parallel, intersects via `allowedModules`, marks locked modules
+  as `isLocked` (Graceful Lockout).
+- **Gap:** No `PlatformManifest` records exist in the database yet. All tenants fall back
+  to the hardcoded `FALLBACK_NAV`, which shows every module to every tenant. HBB tenants
+  see Procurement, Scheduling, etc.
+- **Next step:** Seed `PlatformManifest` records for `core_ops_v1` (standard) and
+  `hbb_ops_v1` (lite) manifests so the hydrator can actually scope the UI.
+
 ## Future Features
 - Orbit Nexus as standalone subscription product (RAG, agentic AI, AI services).
 - Marketplace for module/pack distribution.
