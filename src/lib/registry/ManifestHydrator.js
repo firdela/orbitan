@@ -74,7 +74,7 @@ export async function hydrateManifest(tenantId, tenant) {
     // Permitted modules come from SubscriptionPolicy.allowed_modules.
     // If no policy exists, treat all modules as permitted (fail-open).
     const allowedModules = policy?.allowed_modules || [];
-    const isEnterprise = allowedModules.includes('all');
+    const isEnterprise = allowedModules.includes('all') || allowedModules.includes('*');
 
     const navigation = buildManifestNav(manifest, tenantId, allowedModules, isEnterprise);
 
