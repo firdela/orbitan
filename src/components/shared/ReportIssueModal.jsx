@@ -1,6 +1,6 @@
-// OrbitanOS — Report an Issue Modal
-// Regulate + Refine Principle: pilot feedback capture with auto session snapshot
-// Floats as a fixed button on all pages
+// OrbitanOS — Pilot Feedback & Product Intelligence Modal
+// Refine + Regulate Principle: structured feedback intake with
+// auto session snapshot, attachment upload, and AI analysis trigger.
 
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
@@ -22,15 +22,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MessageSquarePlus, CheckCircle2, Loader2, Bug, Lightbulb, Shield, MousePointerClick, Database } from 'lucide-react';
+import {
+  MessageSquarePlus, CheckCircle2, Loader2, Bug, Lightbulb, Shield,
+  MousePointerClick, Database, Upload, X, Sparkles, Heart, Zap
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/use-toast';
 
 const ISSUE_TYPES = [
   { value: 'bug',              label: 'Bug / Error',           icon: Bug,               color: 'text-red-500' },
   { value: 'improvement',      label: 'Improvement Idea',      icon: Lightbulb,         color: 'text-amber-500' },
   { value: 'usability',        label: 'Usability Issue',       icon: MousePointerClick, color: 'text-purple-500' },
   { value: 'compliance_query', label: 'Compliance Query',      icon: Shield,            color: 'text-blue-500' },
-  { value: 'data_issue',       label: 'Data Issue',            icon: Database,          color: 'text-slate-500' },
+  { value: 'data_issue',       label: 'Data Issue',            icon: Database,         color: 'text-slate-500' },
+];
+
+const FEEDBACK_CATEGORIES = [
+  { value: 'bug_report',          label: 'Bug Report' },
+  { value: 'feature_request',     label: 'Feature Request' },
+  { value: 'improvement_suggestion', label: 'Improvement Suggestion' },
+  { value: 'ui_ux_feedback',      label: 'UI / UX Feedback' },
+  { value: 'ai_feedback',         label: 'AI Feedback' },
+  { value: 'inventory',           label: 'Inventory' },
+  { value: 'procurement',         label: 'Procurement' },
+  { value: 'employees',           label: 'Employees' },
+  { value: 'shifts',              label: 'Shifts' },
+  { value: 'sales_invoicing',     label: 'Sales & Invoicing' },
+  { value: 'aireceipts',          label: 'AIReceipts' },
+  { value: 'xero_integration',    label: 'Xero Integration' },
+  { value: 'performance',         label: 'Performance' },
+  { value: 'security',            label: 'Security' },
+  { value: 'compliment',          label: 'Compliment / Success Story' },
+  { value: 'general_feedback',    label: 'General Feedback' },
 ];
 
 const MODULES = [
@@ -47,18 +70,21 @@ const SEVERITIES = [
 ];
 
 export default function ReportIssueModal({ hideFloatingButton = false, externalOpen, onExternalClose }) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [attachments, setAttachments] = useState([]);
   const [form, setForm] = useState({
     issue_type: 'bug',
+    feedback_category: 'bug_report',
     module: 'general',
     severity: 'medium',
     title: '',
     description: '',
   });
 
-  // Support external open control
   const isOpen = externalOpen !== undefined ? externalOpen : open;
   const handleClose = () => {
     if (onExternalClose) onExternalClose();
@@ -67,40 +93,78 @@ export default function ReportIssueModal({ hideFloatingButton = false, externalO
 
   const handleOpen = () => {
     setSubmitted(false);
-    setForm({ issue_type: 'bug', module: 'general', severity: 'medium', title: '', description: '' });
+    setAttachments([]);
+    setForm({
+      issue_type: 'bug',
+      feedback_category: 'bug_report',
+      module: 'general',
+      severity: 'medium',
+      title: '',
+      description: '',
+    });
     setOpen(true);
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFile(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setAttachments((prev) => [...prev, file_url]);
+      toast({ title: 'Attachment uploaded', description: file.name });
+    } catch (err) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setUploadingFile(false);
+      e.target.value = '';
+    }
+  };
+
+  const removeAttachment = (idx) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Auto-capture session context snapshot
     const sessionContext = {
       page_url: window.location.pathname,
       timestamp: new Date().toISOString(),
       user_agent: navigator.userAgent,
+      viewport: `${window.innerWidth}x${window.innerHeight}`,
     };
 
-    await base44.entities.IssueLog.create({
-      ...form,
-      page_url: window.location.pathname,
-      session_context: sessionContext,
-      // tenant_id auto-populated by RLS from user context
-    });
+    try {
+      await base44.entities.IssueLog.create({
+        ...form,
+        page_url: window.location.pathname,
+        session_context: sessionContext,
+        attachment_urls: attachments.length > 0 ? attachments : undefined,
+        workflow_status: 'new',
+      });
 
-    setLoading(false);
-    setSubmitted(true);
+      setLoading(false);
+      setSubmitted(true);
+    } catch (err) {
+      setLoading(false);
+      toast({
+        title: 'Failed to submit feedback',
+        description: err.message,
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
     <>
-      {/* Floating Trigger Button — hidden when embedded */}
       {!hideFloatingButton && (
         <button
           onClick={handleOpen}
           className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-orbitan-slate text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg hover:bg-orbitan-blue transition-all duration-200 hover:shadow-xl group"
-          title="Report an Issue"
+          title="Report an Issue / Send Feedback"
         >
           <MessageSquarePlus className="w-4 h-4" />
           <span className="hidden sm:inline">Feedback</span>
@@ -108,24 +172,44 @@ export default function ReportIssueModal({ hideFloatingButton = false, externalO
       )}
 
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           {!submitted ? (
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 font-heading">
-                  <MessageSquarePlus className="w-5 h-5 text-orbitan-blue" />
-                  Report an Issue
+                  <Sparkles className="w-5 h-5 text-orbitan-blue" />
+                  Pilot Feedback Centre
                 </DialogTitle>
                 <DialogDescription className="text-xs">
-                  Pilot Feedback — your input helps refine OrbitanOS. Session context is auto-captured.
+                  Help us refine OrbitanOS. Your feedback is analysed by Orbit Nexus AI and routed to our product backlog. Session context is auto-captured.
                 </DialogDescription>
               </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+                {/* Feedback Category */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</Label>
+                  <Select
+                    value={form.feedback_category}
+                    onValueChange={(v) => setForm(f => ({ ...f, feedback_category: v }))}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {FEEDBACK_CATEGORIES.map(c => (
+                        <SelectItem key={c.value} value={c.value} className="text-xs">
+                          {c.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Issue Type */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Issue Type</Label>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                     {ISSUE_TYPES.map((t) => {
                       const Icon = t.icon;
                       return (
@@ -134,14 +218,14 @@ export default function ReportIssueModal({ hideFloatingButton = false, externalO
                           type="button"
                           onClick={() => setForm(f => ({ ...f, issue_type: t.value }))}
                           className={cn(
-                            'flex flex-col items-center gap-1 rounded-lg border p-2.5 text-[11px] font-medium transition-all',
+                            'flex flex-col items-center gap-1 rounded-lg border p-2 text-[10px] font-medium transition-all',
                             form.issue_type === t.value
                               ? 'border-orbitan-blue bg-orbitan-blue-light text-orbitan-blue'
                               : 'border-border bg-background text-muted-foreground hover:border-border hover:bg-muted'
                           )}
                         >
-                          <Icon className={cn('w-4 h-4', form.issue_type === t.value ? 'text-orbitan-blue' : t.color)} />
-                          {t.label}
+                          <Icon className={cn('w-3.5 h-3.5', form.issue_type === t.value ? 'text-orbitan-blue' : t.color)} />
+                          {t.label.split(' / ')[0]}
                         </button>
                       );
                     })}
@@ -176,7 +260,7 @@ export default function ReportIssueModal({ hideFloatingButton = false, externalO
                           <SelectItem key={s.value} value={s.value} className="text-xs">
                             <span className="flex items-center gap-2">
                               <span className={cn('w-2 h-2 rounded-full inline-block', s.dot)} />
-                              {s.label}
+                              {s.label.split(' — ')[0]}
                             </span>
                           </SelectItem>
                         ))}
@@ -189,7 +273,7 @@ export default function ReportIssueModal({ hideFloatingButton = false, externalO
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Title</Label>
                   <Input
-                    placeholder="Brief description of the issue..."
+                    placeholder="Brief description of the feedback..."
                     value={form.title}
                     onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
                     required
@@ -209,18 +293,54 @@ export default function ReportIssueModal({ hideFloatingButton = false, externalO
                   />
                 </div>
 
+                {/* Attachments */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Attachments (optional)</Label>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground border border-dashed border-border rounded-lg px-3 py-2 cursor-pointer hover:bg-muted transition-colors">
+                      <Upload className="w-3.5 h-3.5" />
+                      {uploadingFile ? 'Uploading...' : 'Upload screenshot'}
+                      <input
+                        type="file"
+                        accept="image/*,.pdf,.doc,.docx"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        disabled={uploadingFile}
+                      />
+                    </label>
+                    {attachments.length > 0 && (
+                      <span className="text-xs text-muted-foreground">{attachments.length} file(s)</span>
+                    )}
+                  </div>
+                  {attachments.length > 0 && (
+                    <div className="space-y-1.5">
+                      {attachments.map((url, idx) => (
+                        <div key={idx} className="flex items-center justify-between bg-muted rounded-lg px-3 py-1.5">
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-orbitan-blue hover:underline truncate flex-1">
+                            Attachment {idx + 1}
+                          </a>
+                          <button type="button" onClick={() => removeAttachment(idx)} className="text-muted-foreground hover:text-destructive">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Auto-capture notice */}
-                <p className="text-[10px] text-muted-foreground bg-muted rounded-lg px-3 py-2">
-                  📍 Auto-captured: <span className="font-mono">{window.location.pathname}</span> — session context will be attached.
+                <p className="text-[10px] text-muted-foreground bg-muted rounded-lg px-3 py-2 flex items-center gap-1.5">
+                  <Heart className="w-3 h-3 text-orbitan-red flex-shrink-0" />
+                  Auto-captured: <span className="font-mono">{window.location.pathname}</span> — session context attached. AI analysis runs automatically after submission.
                 </p>
 
                 <div className="flex gap-2 pt-1">
-                  <Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => setOpen(false)}>
+                  <Button type="button" variant="outline" size="sm" className="flex-1" onClick={handleClose}>
                     Cancel
                   </Button>
                   <Button type="submit" size="sm" className="flex-1 gap-1.5" disabled={loading}>
-                    {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquarePlus className="w-3.5 h-3.5" />}
-                    Submit Report
+                    {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                    Submit Feedback
                   </Button>
                 </div>
               </form>
@@ -231,9 +351,9 @@ export default function ReportIssueModal({ hideFloatingButton = false, externalO
                 <CheckCircle2 className="w-7 h-7 text-orbitan-green" />
               </div>
               <div>
-                <h3 className="font-heading font-semibold text-foreground">Report Submitted</h3>
+                <h3 className="font-heading font-semibold text-foreground">Feedback Submitted</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Thank you — your feedback has been logged and will be reviewed by the Orbitan team.
+                  Thank you — your feedback has been logged. Orbit Nexus AI will analyse it for sentiment, priority, and duplicate detection. The Orbitan team reviews all feedback in the Product Intelligence dashboard.
                 </p>
               </div>
               <Button size="sm" onClick={handleClose} className="mt-2">
