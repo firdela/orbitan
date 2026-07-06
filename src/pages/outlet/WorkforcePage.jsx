@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useTenant } from '@/lib/use-tenant';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import StatCard from '@/components/shared/StatCard';
 import EmptyState from '@/components/shared/EmptyState';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import AccessRequestQueue from '@/components/workforce/AccessRequestQueue';
+import InvitationPanel from '@/components/workforce/InvitationPanel';
 import {
-  Users, Plus, Search, Home, Package, ShoppingCart, FileText,
+  Users, Search, Home, Package, ShoppingCart, FileText,
   Calendar, CheckSquare, BarChart2, Shield, Layers, Building2,
-  Phone, Mail, Briefcase, UserCheck, UserX, Clock
+  Mail, Briefcase, UserCheck, Clock, UserPlus, UserCog
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 const NAV = [
   { type: 'section', label: 'Outlet' },
@@ -47,27 +48,24 @@ const AVATAR_COLORS = [
 ];
 
 export default function WorkforcePage() {
-  const queryClient = useQueryClient();
+  const { currentTenant } = useTenant();
+  const tenantId = currentTenant?.id;
   const [search, setSearch] = useState('');
-  const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [newEmp, setNewEmp] = useState({
-    full_name: '', email: '', phone: '', role: 'worker',
-    position: '', employment_type: 'full_time',
-  });
+  const [activeTab, setActiveTab] = useState('directory');
 
+  // Tenant-scoped query — prevents cross-tenant data exposure
   const { data: employees = [], isLoading } = useQuery({
-    queryKey: ['outlet-employees'],
-    queryFn: () => base44.entities.Employee.list('-created_date', 100),
+    queryKey: ['outlet-employees', tenantId],
+    queryFn: () => base44.entities.Employee.filter({ tenant_id: tenantId }),
+    enabled: !!tenantId,
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Employee.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['outlet-employees'] });
-      setShowAdd(false);
-      setNewEmp({ full_name: '', email: '', phone: '', role: 'worker', position: '', employment_type: 'full_time' });
-    },
+  // Pending access requests count for the badge
+  const { data: pendingRequests = [] } = useQuery({
+    queryKey: ['access-requests-count', tenantId],
+    queryFn: () => base44.entities.AccessRequest.filter({ tenant_id: tenantId, status: 'pending' }),
+    enabled: !!tenantId,
   });
 
   const filtered = employees.filter(e =>
@@ -80,78 +78,110 @@ export default function WorkforcePage() {
   const onLeave = employees.filter(e => e.status === 'on_leave').length;
 
   return (
-    <AppShell navigation={NAV} title="">
+    <AppShell navigation={NAV} title="" tenant={currentTenant}>
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
         <PageHeader
-          title="My Team"
+          title="Workforce Control Room"
           subtitle={`${employees.length} members · ${active} active`}
-          actions={
-            <Button size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
-              <Plus className="w-4 h-4" />
-              Add Member
-            </Button>
-          }
         />
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard title="Total Staff" value={employees.length} icon={Users} color="blue" />
           <StatCard title="Active" value={active} icon={UserCheck} color="green" />
           <StatCard title="On Leave" value={onLeave} icon={Clock} color="amber" />
-          <StatCard title="Roles" value={new Set(employees.map(e => e.role)).size} icon={Briefcase} color="purple" />
+          <StatCard title="Pending Requests" value={pendingRequests.length} icon={UserCog} color="purple" />
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-xs mb-5">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search team..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-5">
+            <TabsTrigger value="directory" className="gap-1.5">
+              <Users className="w-3.5 h-3.5" /> Directory
+            </TabsTrigger>
+            <TabsTrigger value="requests" className="gap-1.5">
+              <UserCog className="w-3.5 h-3.5" />
+              Access Requests
+              {pendingRequests.length > 0 && (
+                <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 font-bold">
+                  {pendingRequests.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="invitations" className="gap-1.5">
+              <UserPlus className="w-3.5 h-3.5" /> Invitations
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Team grid */}
-        {isLoading ? (
-          <div className="text-center py-16 text-muted-foreground text-sm">Loading team...</div>
-        ) : filtered.length === 0 ? (
-          <EmptyState icon={Users} title="No team members" description="Add your first team member to get started." action={() => setShowAdd(true)} actionLabel="Add Member" />
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filtered.map((emp, i) => (
-              <div
-                key={emp.id}
-                onClick={() => setSelected(emp)}
-                className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:shadow-md hover:border-primary/20 transition-all"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${AVATAR_COLORS[i % 4]}`}>
-                    {emp.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+          {/* Directory tab */}
+          <TabsContent value="directory">
+            {/* Search */}
+            <div className="relative max-w-xs mb-5">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search team..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {isLoading ? (
+              <div className="text-center py-16 text-muted-foreground text-sm">Loading team...</div>
+            ) : filtered.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No team members yet"
+                description="Your team directory will appear here once members accept their invitations. Use the Invitations tab to invite your first team member."
+                color="slate"
+              />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filtered.map((emp, i) => (
+                  <div
+                    key={emp.id}
+                    onClick={() => setSelected(emp)}
+                    className="bg-card border border-border rounded-xl p-5 cursor-pointer hover:shadow-md hover:border-primary/20 transition-all"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0 ${AVATAR_COLORS[i % 4]}`}>
+                        {emp.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-heading font-semibold text-sm text-foreground truncate">{emp.full_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{emp.position || 'Staff'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${ROLE_COLORS[emp.role] || 'bg-secondary text-muted-foreground'}`}>
+                        {emp.role?.replace('_', ' ')}
+                      </span>
+                      <StatusBadge status={emp.status || 'active'} size="sm" />
+                    </div>
+                    {emp.email && (
+                      <p className="text-[10px] text-muted-foreground mt-2 truncate flex items-center gap-1">
+                        <Mail className="w-2.5 h-2.5" />{emp.email}
+                      </p>
+                    )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-heading font-semibold text-sm text-foreground truncate">{emp.full_name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{emp.position || 'Staff'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${ROLE_COLORS[emp.role] || 'bg-secondary text-muted-foreground'}`}>
-                    {emp.role?.replace('_', ' ')}
-                  </span>
-                  <StatusBadge status={emp.status || 'active'} size="sm" />
-                </div>
-                {emp.email && (
-                  <p className="text-[10px] text-muted-foreground mt-2 truncate flex items-center gap-1">
-                    <Mail className="w-2.5 h-2.5" />{emp.email}
-                  </p>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            )}
+          </TabsContent>
+
+          {/* Access Requests tab */}
+          <TabsContent value="requests">
+            <AccessRequestQueue tenantId={tenantId} />
+          </TabsContent>
+
+          {/* Invitations tab */}
+          <TabsContent value="invitations">
+            <InvitationPanel tenantId={tenantId} />
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* Detail modal */}
+      {/* Employee detail modal */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
         <DialogContent>
           <DialogHeader>
@@ -179,66 +209,6 @@ export default function WorkforcePage() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Add member modal */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Add Team Member</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <div>
-              <Label className="text-xs mb-1 block">Full Name *</Label>
-              <Input value={newEmp.full_name} onChange={e => setNewEmp(p => ({ ...p, full_name: e.target.value }))} placeholder="e.g. Ahmad Rizal" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs mb-1 block">Email</Label>
-                <Input value={newEmp.email} onChange={e => setNewEmp(p => ({ ...p, email: e.target.value }))} placeholder="email@example.com" />
-              </div>
-              <div>
-                <Label className="text-xs mb-1 block">Phone</Label>
-                <Input value={newEmp.phone} onChange={e => setNewEmp(p => ({ ...p, phone: e.target.value }))} placeholder="+65 9123 4567" />
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs mb-1 block">Position</Label>
-              <Input value={newEmp.position} onChange={e => setNewEmp(p => ({ ...p, position: e.target.value }))} placeholder="e.g. Kitchen Staff" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs mb-1 block">Role</Label>
-                <Select value={newEmp.role} onValueChange={v => setNewEmp(p => ({ ...p, role: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="worker">Worker</SelectItem>
-                    <SelectItem value="supervisor">Supervisor</SelectItem>
-                    <SelectItem value="outlet_manager">Outlet Manager</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs mb-1 block">Employment Type</Label>
-                <Select value={newEmp.employment_type} onValueChange={v => setNewEmp(p => ({ ...p, employment_type: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="full_time">Full Time</SelectItem>
-                    <SelectItem value="part_time">Part Time</SelectItem>
-                    <SelectItem value="contract">Contract</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button
-              onClick={() => createMutation.mutate({ ...newEmp, status: 'active' })}
-              disabled={!newEmp.full_name || createMutation.isPending}
-            >
-              {createMutation.isPending ? 'Adding...' : 'Add Member'}
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
     </AppShell>
