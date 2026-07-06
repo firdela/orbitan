@@ -222,9 +222,15 @@ function ShiftsScreen({ shifts, clockedIn, clockInTime, elapsed, onClockIn, onCl
         </div>
         <div className="divide-y divide-border">
           {shifts.length === 0 && (
-            <div className="px-5 py-10 text-center">
-              <Calendar className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
-              <p className="text-sm text-muted-foreground">No shifts scheduled yet</p>
+            <div className="px-5 py-12 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3">
+                <Calendar className="w-7 h-7 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">No shifts scheduled</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-[16rem] mx-auto">
+                Your manager hasn't assigned any shifts yet. Contact your supervisor if you
+                believe this is an error.
+              </p>
             </div>
           )}
           {shifts.map(shift => {
@@ -433,6 +439,9 @@ export default function WorkerPortal() {
     onSuccess: () => queryClient.invalidateQueries(['worker-tasks', tenantId, workerId]),
   });
 
+  // ── Compliance Gate: check if any clock record needs manager verification ──
+  const pendingVerification = clockRecords.filter(r => r.status === 'pending_verification');
+
   const todayShift = liveShifts.find(s => isToday(new Date(s.date)));
   const completedTasks = liveTasks.filter(t => t.status === 'completed').length;
   const totalTasks = liveTasks.length;
@@ -502,6 +511,22 @@ export default function WorkerPortal() {
                 <MapPin className="w-3 h-3" />{employee?.position || 'Team Member'}
               </p>
             </div>
+
+            {/* Compliance Gate Alert */}
+            {pendingVerification.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 animate-fade-in">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-amber-900">Attendance Verification Required</p>
+                  <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                    {pendingVerification.length} clock record{pendingVerification.length > 1 ? 's are' : ' is'} pending
+                    manager verification — likely due to a missing Food Safety Log. Please contact your supervisor.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Progress */}
             {totalTasks > 0 && (

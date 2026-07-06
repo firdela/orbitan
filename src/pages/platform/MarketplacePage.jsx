@@ -94,156 +94,36 @@ export default function MarketplacePage() {
     >
       <div className="p-6 max-w-7xl mx-auto">
 
-        {/* Hero */}
-        <div className="relative bg-gradient-to-br from-[#111827] via-[#1D4ED8] to-[#111827] rounded-2xl p-8 mb-8 overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="absolute rounded-full border border-white"
-                style={{ width: (i + 1) * 160, height: (i + 1) * 160, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
+        {/* ── Coming Soon — Marketplace is post-MVP ───────────────────
+            Per the Orbitan MVP Build Philosophy: "Build less. Validate more."
+            The Marketplace is explicitly in the "Avoid" list for Phase 1.
+            This page will be activated after pilot validation.
+        */}
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#1D4ED8] to-[#111827] flex items-center justify-center mb-6 shadow-lg">
+            <Star className="w-10 h-10 text-white" />
+          </div>
+          <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">Coming Soon</Badge>
+          <h1 className="text-2xl font-display font-bold text-foreground mb-2">Orbitan Marketplace</h1>
+          <p className="text-sm text-muted-foreground max-w-md leading-relaxed mb-6">
+            We're focused on delivering a rock-solid MVP for our pilot tenants first.
+            The Marketplace — with industry packs, AI features, integrations, and premium
+            add-ons — will open after pilot validation.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-2 max-w-sm">
+            {['Industry Packs', 'AI Features', 'Integrations', 'Premium Tools'].map((tag) => (
+              <span key={tag} className="text-[11px] font-medium bg-secondary text-secondary-foreground px-3 py-1 rounded-full">
+                {tag}
+              </span>
             ))}
           </div>
-          <div className="relative max-w-2xl">
-            <Badge className="bg-white/10 text-white border-white/20 mb-3">Orbitan Marketplace</Badge>
-            <h1 className="text-3xl font-display font-bold text-white mb-2">Extend Your Platform</h1>
-            <p className="text-blue-200 text-sm leading-relaxed mb-5">
-              Unlock industry packs, AI features, integrations, and premium tools using Orbitan Credits.
-              Every module is built on the 6R Framework — plug in what you need, when you need it.
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search modules..."
-                  className="w-full bg-white/10 border border-white/20 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white/50"
-                />
-              </div>
-              <Link to="/platform/wallet">
-                <Button variant="outline" size="sm" className="border-white/30 text-white hover:bg-white/10 gap-1.5">
-                  <Wallet className="w-4 h-4" />
-                  My Wallet
-                </Button>
-              </Link>
-            </div>
-          </div>
+          <Link to="/platform/wallet">
+            <Button variant="outline" size="sm" className="mt-6 gap-1.5">
+              <Wallet className="w-4 h-4" />
+              View My Wallet
+            </Button>
+          </Link>
         </div>
-
-        {/* Categories */}
-        <div className="flex items-center gap-2 flex-wrap mb-6">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.key}
-              onClick={() => setCategory(cat.key)}
-              className={cn(
-                'text-xs font-medium px-3 py-1.5 rounded-full border transition-all',
-                category === cat.key
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-secondary text-secondary-foreground border-border hover:bg-accent'
-              )}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Module Detail Panel */}
-        {featured && (
-          <div className="mb-6 bg-card border border-primary/30 rounded-2xl p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: featured.color + '20' }}>
-                <featured.icon className="w-7 h-7" style={{ color: featured.color }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <h2 className="font-heading font-bold text-foreground text-lg">{featured.name}</h2>
-                  {featured.is_new && <Badge className="text-[10px] bg-green-100 text-green-700">New</Badge>}
-                  {featured.is_featured && <Badge className="text-[10px] bg-blue-100 text-blue-700">Featured</Badge>}
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">{featured.description}</p>
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {(featured.feature_list || []).map((f) => (
-                    <span key={f} className="flex items-center gap-1 text-[11px] bg-secondary text-secondary-foreground px-2 py-1 rounded-md">
-                      <CheckCircle2 className="w-3 h-3 text-green-500" />{f}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex items-center gap-3">
-                  <Button size="sm" className="gap-2" style={{ background: featured.color }}>
-                    <Zap className="w-4 h-4" />
-                    {featured.is_free ? 'Activate Free' : `Activate for ${featured.price_credits} Credits`}
-                  </Button>
-                  <button onClick={() => setFeatured(null)} className="text-xs text-muted-foreground hover:text-foreground">
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Module Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((mod) => {
-            const principleColor = PRINCIPLE_COLORS[mod.principle] || '#2563EB';
-            return (
-              <div
-                key={mod.slug}
-                onClick={() => setFeatured(featured?.slug === mod.slug ? null : mod)}
-                className={cn(
-                  'bg-card border rounded-xl p-5 cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5',
-                  featured?.slug === mod.slug ? 'border-primary shadow-md' : 'border-border'
-                )}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: mod.color + '15' }}>
-                    <mod.icon className="w-5 h-5" style={{ color: mod.color }} />
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {mod.is_new && <Badge className="text-[9px] px-1.5 py-0.5 bg-green-100 text-green-700">New</Badge>}
-                    {mod.is_featured && <Star className="w-3.5 h-3.5 text-yellow-500" />}
-                    {mod.is_free
-                      ? <span className="text-[11px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Free</span>
-                      : <span className="text-[11px] font-bold text-foreground bg-secondary px-2 py-0.5 rounded-full">{mod.price_credits}cr</span>
-                    }
-                  </div>
-                </div>
-
-                <h3 className="font-heading font-semibold text-sm text-foreground mb-1">{mod.name}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-2">{mod.description}</p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                      style={{ color: principleColor, background: principleColor + '15' }}>
-                      {mod.principle}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      ★ {mod.rating} · {mod.installs} installs
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Lock className="w-3 h-3" />
-                    {PLAN_LABELS[mod.min_plan] || 'Starter'}+
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
-                  <span className="text-[10px] text-muted-foreground capitalize">{mod.category.replace('_', ' ')}</span>
-                  <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {filtered.length === 0 && (
-          <div className="py-16 text-center">
-            <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
-            <p className="text-sm text-muted-foreground">No modules match your search.</p>
-          </div>
-        )}
       </div>
     </AppShell>
   );
