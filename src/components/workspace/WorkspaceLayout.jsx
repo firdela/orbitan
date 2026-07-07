@@ -22,7 +22,7 @@ import { useParams, Navigate, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { useTenant, DEMO_TENANTS } from '@/lib/use-tenant';
+import { useTenant } from '@/lib/use-tenant';
 import AppShell from '@/components/layout/AppShell';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import ManifestNav from '@/components/workspace/ManifestNav';
@@ -79,12 +79,12 @@ export default function WorkspaceLayout() {
     return <Navigate to="/workspace" replace />;
   }
 
-  // ── Resolve tenant (DB record → pilot fallback → unresolved) ─
+  // ── Resolve tenant (DB record → unresolved) ─────────────
   if (tenantLoading || navLoading) {
     return <OrbitanLoader size="fullscreen" message="Resolving workspace..." />;
   }
 
-  const effectiveTenant = tenantRecord || DEMO_TENANTS.find(t => t.id === tenantId) || null;
+  const effectiveTenant = tenantRecord || null;
 
   if (!effectiveTenant) {
     return (

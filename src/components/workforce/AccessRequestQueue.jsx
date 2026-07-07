@@ -3,10 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
+import { ShieldGuard } from '@/lib/ShieldGuard';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import EmptyState from '@/components/shared/EmptyState';
-import { Check, X, Mail, Clock, UserCog, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { Check, X, Mail, Clock, UserCog, Loader2, ShieldAlert } from 'lucide-react';
 
 const ROLE_LABELS = {
   worker: 'Team Member',
@@ -17,6 +19,7 @@ const ROLE_LABELS = {
 export default function AccessRequestQueue({ tenantId, outletId }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [denyTarget, setDenyTarget] = useState(null);
   const [denyNotes, setDenyNotes] = useState('');
 
@@ -30,6 +33,21 @@ export default function AccessRequestQueue({ tenantId, outletId }) {
 
   const approveMutation = useMutation({
     mutationFn: async (req) => {
+      // 0. Shield evaluation — check subscription employee limits
+      const shieldResult = await ShieldGuard.check(base44, {
+        entity_name: 'Employee',
+        action: 'create',
+        data: { tenant_id: tenantId, role: req.role_requested || 'worker' },
+        tenant_id: tenantId,
+      });
+
+      if (!shieldResult.allowed) {
+        throw new Error(
+          shieldResult.reason ||
+          'Subscription employee limit reached. Upgrade your plan or request an override.'
+        );
+      }
+
       // 1. Update the access request status
       await base44.entities.AccessRequest.update(req.id, {
         status: 'approved',
@@ -100,6 +118,13 @@ export default function AccessRequestQueue({ tenantId, outletId }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ['invitations', tenantId] });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Approval blocked',
+        description: error.message,
+      });
     },
   });
 

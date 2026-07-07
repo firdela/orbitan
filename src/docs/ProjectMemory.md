@@ -152,16 +152,16 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - Sprint 5 — Pilot Preparation (dashboards, reports, bug fixes, permissions
   validation, mobile optimisation, test data, export functions) ← **current**
 
-## Known Bugs / Gaps (as of 2026-07-06)
+## Known Bugs / Gaps (as of 2026-07-07)
 1. ~~**ProcurementPage hardcoded tenant**~~ ✅ FIXED — now uses `useAuth()` to resolve `tenant_id` and `outlet_id` from the authenticated user profile. Also added error handling (try/catch + toast) on PO creation.
 2. ~~**DEMO_SUPPLIERS = []**~~ ✅ FIXED — Supplier dropdown now loads from `base44.entities.Supplier.list()`. Selecting a supplier stores both `supplier_id` and `supplier_name`. Preferred suppliers show a ★ marker.
 3. ~~**Tenant1/2/3 duplicate pages**~~ ✅ FIXED — all 28 orphaned files deleted (zero imports confirmed). Generic `/workspace/:tenantId/*` routes are the sole path.
 4. **Xero integration — ACTIVATING (2026-07-07):** Escalated to MVP must-have by Product Owner. Xero is NOT a supported Base44 connector, so integration uses OAuth secrets (XERO_CLIENT_ID, XERO_CLIENT_SECRET) + backend function. The `financeController` already has the Xero payload builder (`buildXeroInvoicePayload`) and simulated sync — will swap to live API calls once secrets are set. Finance team signs into their own Xero account (per-tenant OAuth).
 5. ~~**No HBB-specific pack pages**~~ ✅ FIXED — `HBBPage.jsx` created at `/outlet/hbb` and `/workspace/:tenantId/hbb`. Combines Customer Orders (via SalesInvoice) + Production Planning (via Task with `module_context: 'hbb_production'`). Minimal MVP scope; no delivery tracking.
 6. ~~**No payment integration**~~ ✅ FIXED — Stripe checkout is now live in test mode. Two subscription products created (Growth S$79/mo, Business S$299/mo). `stripeCheckout` backend function creates Stripe Checkout Sessions. `stripeWebhook` backend function handles `checkout.session.completed` (activates tenant subscription + audit log), `customer.subscription.deleted` (cancels tenant). Checkout page at `/checkout`, success at `/checkout/success`, cancelled at `/checkout/cancelled`. Test card: 4242 4242 4242 4242.
-7. **`AccessRequestQueue.jsx`** creates `Invitation` records without Shield evaluation (subscription employee-limit check is bypassed for invitation-driven onboarding).
+7. ~~**`AccessRequestQueue.jsx` Shield bypass**~~ ✅ FIXED (2026-07-07) — `ShieldGuard.check()` now called before approval logic. Checks subscription employee limits via `shieldInterceptor`. If blocked, throws error → `onError` toast notifies manager. Subscription limit bypass is no longer possible.
 8. **`ProcurementPage.jsx`** renders its own hardcoded `NAV` inside `AppShell`, duplicating the `WorkspaceLayout` manifest navigation. Nesting issue, not security risk — deferred to avoid page redesign.
-9. **`DEMO_TENANTS` fallback** in `WorkspaceLayout` (line 87) hardcodes pilot tenant IDs. Harmless now that all pilot tenants exist in DB, but should be removed once confirmed no edge cases rely on it.
+9. ~~**`DEMO_TENANTS` fallback**~~ ✅ FIXED (2026-07-07) — Removed `DEMO_TENANTS` import and fallback from `WorkspaceLayout.jsx`. Tenant resolution is now purely DB-driven (`tenantRecord || null`). All pilot tenants confirmed in DB.
 
 ## Audit Findings — Sprint 5 (Session 2026-07-06)
 
@@ -212,10 +212,11 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - **Manifest migration complete (2026-07-06):** All 4 pilot tenants now resolve navigation from `PlatformManifest` DB records. Duplicate inline fallback nav removed from `WorkspaceLayout.jsx`. `ManifestHydrator.js` is the single source of truth.
 - **HBB Industry Pack provisioned (2026-07-07):** Created `hbb` ActivationRegistry + `hbb_ops_v1` PlatformManifest. SGD 50 governance threshold. `ChefHat` icon added to ManifestNav. Transition-ready to F&B/Retail pack when HBB scales to physical premises.
 - **Finance-First Integration Audit (2026-07-07):** Audited `FinanceSyncQueue`, `FinanceMapping`, `AccountMapping`, `financeController`, `walletEngine`. Finding: Integration Hub infrastructure is ALREADY BUILT and aligned with the Hub-and-Spoke strategy. `FinanceSyncQueue.erp_target` enum includes `xero`, `quickbooks`, `myob`, `manual_export`. `financeController` has `buildXeroInvoicePayload()` + simulated sync with clear TODO for live API swap. `walletEngine.debit_procurement_sgd` already creates FinanceSyncQueue entries, WalletTransaction ledger entries, GovernanceOverride requests (when above threshold), and AuditLog entries. No schema changes needed. No new entity needed. Only missing piece: actual external service connections (Stripe via payment provider + Xero via OAuth secrets).
+- **Sprint 5 Cleanup (2026-07-07):** (1) Removed `DEMO_TENANTS` fallback from `WorkspaceLayout.jsx` — tenant resolution is now purely DB-driven. (2) Fixed `AccessRequestQueue.jsx` Shield bypass — `ShieldGuard.check()` now evaluates subscription employee limits before invitation creation; blocked approvals surface a destructive toast. (3) Re-enabled `complianceAlertEngine` scheduled automation — function tested healthy (`success: true`), automation had been auto-disabled after 5 stale failures from an earlier version. (4) Confirmed dead code purge from prior sessions — `tenant-nav.js`, `orbitan-plans.js`, `AIOrchestrator.js`, `ModuleDataAdapter.js`, `subscription-registry.js` all already deleted.
 
 ## MVP Timeline Status
 - **Start:** 30 May 2026
-- **Today:** 6 July 2026 (Day 37)
+- **Today:** 7 July 2026 (Day 38)
 - **Target end:** ~30 July 2026 (Day 60)
 - **Remaining:** ~3 weeks
 - **Status:** Architecture is strong. Core operational modules largely exist. Biggest remaining risk is the dead-code files from the pre-manifest era (see audit below), NOT missing features.
