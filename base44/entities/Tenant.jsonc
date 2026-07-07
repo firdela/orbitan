@@ -56,6 +56,13 @@
       },
       "description": "Module keys enabled for this tenant"
     },
+    "hidden_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Module keys hidden from this tenant's navigation (e.g. ['procurement'] for HBB tenants who don't need PO management). Applied by ManifestHydrator after subscription-policy intersection. Use for lightweight per-tenant UI simplification without creating a new manifest variant."
+    },
     "enabled_packs": {
       "type": "array",
       "items": {

@@ -45,7 +45,7 @@ const FALLBACK_NAV = [
  */
 export async function hydrateManifest(tenantId, tenant) {
   if (!tenantId || !tenant) {
-    return { navigation: buildFallbackNav(tenantId), policy: null, manifest: null, source: 'fallback' };
+    return { navigation: buildFallbackNav(tenantId, tenant?.hidden_modules), policy: null, manifest: null, source: 'fallback' };
   }
 
   // ── Resolve the manifest key ──
@@ -53,7 +53,7 @@ export async function hydrateManifest(tenantId, tenant) {
   const manifestKey = tenant.manifest_key || tenant.feature_flags?.manifest_key || null;
 
   if (!manifestKey) {
-    return { navigation: buildFallbackNav(tenantId), policy: null, manifest: null, source: 'fallback' };
+    return { navigation: buildFallbackNav(tenantId, tenant?.hidden_modules), policy: null, manifest: null, source: 'fallback' };
   }
 
   try {
@@ -67,7 +67,7 @@ export async function hydrateManifest(tenantId, tenant) {
     const policy = policyRecords?.[0] || null;
 
     if (!manifest) {
-      return { navigation: buildFallbackNav(tenantId), policy: null, manifest: null, source: 'fallback' };
+      return { navigation: buildFallbackNav(tenantId, tenant?.hidden_modules), policy: null, manifest: null, source: 'fallback' };
     }
 
     // ── INTERSECTION LOGIC (Graceful Lockout) ──
@@ -76,7 +76,11 @@ export async function hydrateManifest(tenantId, tenant) {
     const allowedModules = policy?.allowed_modules || [];
     const isEnterprise = allowedModules.includes('all') || allowedModules.includes('*');
 
-    const navigation = buildManifestNav(manifest, tenantId, allowedModules, isEnterprise);
+    const hiddenModules = tenant.hidden_modules || [];
+    const navigation = filterHiddenModules(
+      buildManifestNav(manifest, tenantId, allowedModules, isEnterprise),
+      hiddenModules
+    );
 
     return {
       navigation,
@@ -87,8 +91,23 @@ export async function hydrateManifest(tenantId, tenant) {
   } catch (err) {
     // Fail-open: use fallback nav on any error
     console.error('[ManifestHydrator] Hydration failed, using fallback:', err.message);
-    return { navigation: buildFallbackNav(tenantId), policy: null, manifest: null, source: 'fallback' };
+    return { navigation: buildFallbackNav(tenantId, tenant?.hidden_modules), policy: null, manifest: null, source: 'fallback' };
   }
+}
+
+// ── Filter out hidden modules + clean up empty sections ────
+function filterHiddenModules(navItems, hiddenModules) {
+  if (!hiddenModules || hiddenModules.length === 0) return navItems;
+  const filtered = navItems.filter(item => {
+    if (item.type === 'section') return true;
+    return !hiddenModules.includes(item.module_key);
+  });
+  // Remove section headers that have no items following them
+  return filtered.filter((item, idx) => {
+    if (item.type !== 'section') return true;
+    const next = filtered[idx + 1];
+    return next && next.type !== 'section';
+  });
 }
 
 // ── Build navigation from a PlatformManifest record ─────────
@@ -131,12 +150,13 @@ function buildManifestNav(manifest, tenantId, allowedModules, isEnterprise) {
 }
 
 // ── Build legacy fallback navigation ───────────────────────
-function buildFallbackNav(tenantId) {
+function buildFallbackNav(tenantId, hiddenModules) {
   const base = `/workspace/${tenantId}`;
-  return FALLBACK_NAV.map(item => {
+  const nav = FALLBACK_NAV.map(item => {
     if (item.type === 'section') return item;
     return { ...item, route: `${base}${item.route}` };
   });
+  return filterHiddenModules(nav, hiddenModules || []);
 }
 
 // ── Helper: Check if a module is entitled ───────────────────
