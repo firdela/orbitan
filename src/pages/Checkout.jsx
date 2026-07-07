@@ -1,0 +1,209 @@
+import React, { useState } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { base44 } from '@/api/base44Client';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
+import { Check, Loader2, ArrowLeft, Shield, Zap, Building2 } from 'lucide-react';
+
+const PLANS = [
+  {
+    key: 'orbitan_growth',
+    name: 'Orbitan Growth',
+    price: 'S$79',
+    period: '/month',
+    description: 'For growing SMEs — multi-outlet, inventory, procurement, AI Suite.',
+    features: [
+      'Up to 50 employees & 3 outlets',
+      'Inventory & Procurement modules',
+      'Compliance management',
+      'Standard AI Suite (SOPs, insights)',
+      '1 Industry Pack included',
+      '14-day free trial',
+    ],
+    gradient: 'from-[#34D399] to-[#059669]',
+    icon: Zap,
+  },
+  {
+    key: 'orbitan_business',
+    name: 'Orbitan Business',
+    price: 'S$299',
+    period: '/month',
+    description: 'For established businesses — Xero, API access, priority support.',
+    features: [
+      'Up to 250 employees & 10 outlets',
+      'Xero Finance Integration',
+      'Full AI Suite + advanced analytics',
+      'API access & custom integrations',
+      'Multiple Industry Packs',
+      'Dedicated account manager',
+      '14-day free trial',
+    ],
+    gradient: 'from-[#8B5CF6] to-[#6D28D9]',
+    icon: Building2,
+    highlighted: true,
+  },
+];
+
+export default function Checkout() {
+  const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(null);
+  const [error, setError] = useState(null);
+
+  const preselectedPlan = searchParams.get('plan');
+  const tenantId = searchParams.get('tenant_id') || '';
+  const tenantName = searchParams.get('tenant_name') || '';
+
+  const handleCheckout = async (planKey) => {
+    setError(null);
+
+    // Block checkout if running inside an iframe (Stripe requires full-page redirect)
+    if (window.self !== window.top) {
+      setError('Checkout only works from a published app. Please open Orbitan in a new tab to subscribe.');
+      return;
+    }
+
+    setLoading(planKey);
+    try {
+      const response = await base44.functions.invoke('stripeCheckout', {
+        plan_key: planKey,
+        tenant_id: tenantId,
+        tenant_name: tenantName,
+      });
+      const checkoutUrl = response.data?.url;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err) {
+      console.error('[Checkout] Error:', err);
+      setError(err.response?.data?.error || err.message || 'Unable to start checkout. Please try again.');
+      setLoading(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+      {/* Header */}
+      <header className="border-b border-border/60 bg-white/80 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+          <OrbitanWordmark size="sm" variant="dark" showOS />
+          <Link to="/">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Back to Home
+            </Button>
+          </Link>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-6 py-12">
+        {/* Page heading */}
+        <div className="text-center mb-12">
+          <h1 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+            Choose Your Orbitan Plan
+          </h1>
+          <p className="mt-3 text-muted-foreground text-lg max-w-2xl mx-auto">
+            Start your 14-day free trial. No charge until the trial ends. Cancel anytime.
+          </p>
+        </div>
+
+        {error && (
+          <div className="max-w-2xl mx-auto mb-8 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm text-center">
+            {error}
+          </div>
+        )}
+
+        {/* Plan cards */}
+        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          {PLANS.map((plan) => {
+            const Icon = plan.icon;
+            const isLoading = loading === plan.key;
+            const isPreselected = preselectedPlan === plan.key;
+
+            return (
+              <Card
+                key={plan.key}
+                className={`relative overflow-hidden card-elevated ${
+                  plan.highlighted ? 'ring-2 ring-primary shadow-lg' : ''
+                } ${isPreselected ? 'ring-2 ring-emerald-500' : ''}`}
+              >
+                {plan.highlighted && (
+                  <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-bl-lg">
+                    Most Popular
+                  </div>
+                )}
+
+                {/* Gradient header */}
+                <div className={`bg-gradient-to-br ${plan.gradient} p-6 text-white`}>
+                  <Icon className="w-8 h-8 mb-3 opacity-90" />
+                  <h2 className="font-heading text-xl font-bold">{plan.name}</h2>
+                  <p className="text-sm text-white/80 mt-1">{plan.description}</p>
+                  <div className="mt-4 flex items-baseline gap-1">
+                    <span className="font-display text-3xl font-bold">{plan.price}</span>
+                    <span className="text-sm text-white/70">{plan.period}</span>
+                  </div>
+                </div>
+
+                {/* Features */}
+                <div className="p-6">
+                  <ul className="space-y-3">
+                    {plan.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-sm">
+                        <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-foreground/80">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button
+                    onClick={() => handleCheckout(plan.key)}
+                    disabled={loading !== null}
+                    className={`w-full mt-6 h-11 ${
+                      plan.highlighted
+                        ? 'bg-primary hover:bg-primary/90'
+                        : 'bg-foreground hover:bg-foreground/90'
+                    }`}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Redirecting to checkout...
+                      </>
+                    ) : (
+                      'Start Free Trial'
+                    )}
+                  </Button>
+
+                  <p className="text-xs text-muted-foreground text-center mt-3">
+                    <Shield className="w-3 h-3 inline mr-1" />
+                    Secure payment via Stripe. Cancel anytime.
+                  </p>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Enterprise CTA */}
+        <div className="max-w-3xl mx-auto mt-8 p-6 rounded-xl bg-slate-900 text-white text-center">
+          <h3 className="font-heading text-lg font-semibold">Orbitan Enterprise</h3>
+          <p className="text-sm text-white/70 mt-1 mb-4">
+            Unlimited scale, custom SLAs, white-labelling, and dedicated support.
+          </p>
+          <a href="mailto:sales@orbitan.com">
+            <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+              Contact Sales
+            </Button>
+          </a>
+        </div>
+
+        {/* Trust indicators */}
+        <div className="text-center mt-12 text-xs text-muted-foreground">
+          <p>Prices in SGD. Billed monthly. 14-day free trial — no charge until trial ends.</p>
+        </div>
+      </main>
+    </div>
+  );
+}

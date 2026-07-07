@@ -18,6 +18,9 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
+import Checkout from '@/pages/Checkout';
+import CheckoutSuccess from '@/pages/CheckoutSuccess';
+import CheckoutCancelled from '@/pages/CheckoutCancelled';
 import Landing from '@/pages/Landing';
 import JoinGateway from '@/components/auth/JoinGateway';
 import RequestAccessPage from '@/pages/RequestAccess';
@@ -65,6 +68,11 @@ const AuthenticatedApp = () => {
     <Routes>
       {/* Orbitan Public Landing — Brand & Marketing Hub */}
       <Route path="/" element={<Landing />} />
+
+      {/* Stripe Checkout — Subscription Billing */}
+      <Route path="/checkout" element={<Checkout />} />
+      <Route path="/checkout/success" element={<CheckoutSuccess />} />
+      <Route path="/checkout/cancelled" element={<CheckoutCancelled />} />
 
       {/* Auth Pages — Login, Register, Forgot Password, Reset Password */}
       <Route path="/login" element={<Login />} />
