@@ -209,6 +209,7 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - **ProcurementPage data loading (2026-07-06):** Added useEffect to load POs from database on mount.
 - **Client-readiness sprint (2026-07-06):** (1) Fixed multi-tenancy violation in ProcurementPage. (2) Wired Supplier dropdown to real Supplier entity. (3) Added error handling + loading states. (4) Deleted 28 orphaned tenant1/2/3 page files. (5) Built HBBPage. (6) Deferred Stripe + Xero to post-MVP.
 - **Manifest migration complete (2026-07-06):** All 4 pilot tenants now resolve navigation from `PlatformManifest` DB records. Duplicate inline fallback nav removed from `WorkspaceLayout.jsx`. `ManifestHydrator.js` is the single source of truth.
+- **HBB Industry Pack provisioned (2026-07-07):** Created `hbb` ActivationRegistry + `hbb_ops_v1` PlatformManifest. SGD 50 governance threshold. `ChefHat` icon added to ManifestNav. Transition-ready to F&B/Retail pack when HBB scales to physical premises.
 
 ## MVP Timeline Status
 - **Start:** 30 May 2026
@@ -216,6 +217,12 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - **Target end:** ~30 July 2026 (Day 60)
 - **Remaining:** ~3 weeks
 - **Status:** Architecture is strong. Core operational modules largely exist. Biggest remaining risk is the dead-code files from the pre-manifest era (see audit below), NOT missing features.
+
+## HBB Industry Pack Provisioned (2026-07-07)
+- **ActivationRegistry `hbb` pack** created: `governance_domain: 'hbb_standard_ops'`, `governance_threshold_sgd: 50` (per Master Vision — HBB-specific). AI governance trust level = `low` (agent requires approval for all writes). Trust pillars configured: Food Safety (30%), Shield Governance (30%), Audit Integrity (20%), Production Velocity (20%).
+- **PlatformManifest `hbb_ops_v1`** created: Navigation blueprint with HBB-specific labels — "Customer Orders" (sales), "Production Planner" (hbb), "Ingredients & Stock" (inventory), "Suppliers & Purchases" (procurement). Uses `ChefHat` icon for Production Planner (added to `ManifestNav.jsx` ICON_MAP).
+- **Transition Path:** When an HBB tenant (e.g. Izaliqa Bakes) grows to a physical premises, update their `manifest_key` from `hbb_ops_v1` to `fnb_ops_v1` or `retail_ops_v1`. Core entities (InventoryItem, SalesInvoice, Task, Supplier) are shared across packs — zero data migration required.
+- **Industry field:** Set to `other` on the ActivationRegistry (HBB is a business model, not an industry). The actual industry — e.g. `food_beverage` for a home bakery — is set on the Tenant entity.
 
 ## Dead Code Audit (2026-07-06)
 Files that exist but are **not imported anywhere** — leftovers from the pre-manifest hardcoded navigation era:
