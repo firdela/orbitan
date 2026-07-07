@@ -1,41 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import {
-  ShoppingCart, Plus, Package, Home, Users, Calendar, FileText,
-  CheckSquare, BarChart2, Shield, Layers, Building2, Trash2, ChevronDown, Loader2
+  ShoppingCart, Plus, Trash2, Loader2
 } from 'lucide-react';
 import { ShieldGuard } from '@/lib/ShieldGuard';
 import GovernanceOverrideModal from '@/components/shield/GovernanceOverrideModal';
-
-const NAV = [
-  { type: 'section', label: 'Outlet' },
-  { href: '/outlet', icon: Home, label: 'Dashboard' },
-  { href: '/outlet/inventory', icon: Package, label: 'Inventory' },
-  { href: '/outlet/procurement', icon: ShoppingCart, label: 'Purchase Orders' },
-  { href: '/outlet/sales', icon: FileText, label: 'Sales & Reconciliation' },
-  { type: 'section', label: 'Team' },
-  { href: '/outlet/workforce', icon: Users, label: 'My Team' },
-  { href: '/outlet/scheduling', icon: Calendar, label: 'Shift Schedule' },
-  { href: '/outlet/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Reports' },
-  { href: '/outlet/reports', icon: BarChart2, label: 'Reports' },
-  { href: '/outlet/compliance', icon: Shield, label: 'Compliance' },
-  { type: 'section', label: 'Navigation' },
-  { href: '/company', icon: Building2, label: 'Company Dashboard' },
-  { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
-];
 
 export default function ProcurementPage() {
   const { toast } = useToast();
@@ -205,7 +184,7 @@ export default function ProcurementPage() {
   };
 
   return (
-    <AppShell navigation={NAV} title="">
+    <>
       <GovernanceOverrideModal
         open={!!overrideContext}
         onOpenChange={(open) => { if (!open) setOverrideContext(null); }}
@@ -346,6 +325,6 @@ export default function ProcurementPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </AppShell>
+    </>
   );
 }
