@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import OrbitanLogo from './OrbitanLogo';
 import PlatformFooter from './PlatformFooter';
 import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
+import ReportIssueModal from '@/components/shared/ReportIssueModal';
 import { Menu, X } from 'lucide-react';
 
 export default function AppShell({ navigation, manifestNav, children, headerRight, title, tenant }) {
@@ -136,6 +137,9 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
 
         <PlatformFooter variant="minimal" />
       </div>
+
+      {/* Pilot Feedback Centre — floating button available on all workspace pages */}
+      <ReportIssueModal />
     </div>
   );
 }

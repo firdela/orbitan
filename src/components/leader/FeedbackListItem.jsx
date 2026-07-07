@@ -11,8 +11,9 @@ import {
 } from '@/components/ui/select';
 import {
   ChevronDown, ChevronUp, Sparkles, Loader2,
-  Paperclip
+  Paperclip, CheckSquare, ExternalLink
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const SEVERITY_STYLES = {
   low: 'bg-green-100 text-green-700',
@@ -73,6 +74,33 @@ export default function FeedbackListItem({ issue, onUpdate }) {
       console.error('Status update failed:', err);
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const [converting, setConverting] = useState(false);
+
+  const handleConvertToTask = async () => {
+    setConverting(true);
+    try {
+      const priorityMap = { critical: 'urgent', high: 'high', medium: 'medium', low: 'low' };
+      const task = await base44.entities.Task.create({
+        tenant_id: issue.tenant_id,
+        title: `[Feedback] ${issue.title}`,
+        description: `Converted from pilot feedback.\n\nOriginal:\n${issue.description || 'N/A'}\n\nSource: ${issue.feedback_category || issue.issue_type} — Module: ${issue.module}\nReported by: ${issue.reported_by_name || 'Unknown'}`,
+        priority: priorityMap[issue.severity] || priorityMap[issue.ai_priority] || 'medium',
+        status: 'pending',
+        module_context: issue.module || 'general',
+        category: issue.feedback_category || issue.issue_type,
+      });
+      await base44.entities.IssueLog.update(issue.id, {
+        backlog_task_id: task.id,
+        workflow_status: 'accepted',
+      });
+      await onUpdate();
+    } catch (err) {
+      console.error('Convert to task failed:', err);
+    } finally {
+      setConverting(false);
     }
   };
 
@@ -224,6 +252,19 @@ export default function FeedbackListItem({ issue, onUpdate }) {
               {analyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
               {analyzing ? 'Analyzing...' : 'Re-analyze'}
             </Button>
+            {issue.backlog_task_id ? (
+              <Link to={`/workspace/${issue.tenant_id}/tasks`}>
+                <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-orbitan-green border-orbitan-green/30 hover:bg-orbitan-green-light">
+                  <ExternalLink className="w-3 h-3" />
+                  Task Linked
+                </Button>
+              </Link>
+            ) : (
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-orbitan-blue border-orbitan-blue/30 hover:bg-orbitan-blue-light" onClick={handleConvertToTask} disabled={converting}>
+                {converting ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckSquare className="w-3 h-3" />}
+                {converting ? 'Converting...' : 'Convert to Task'}
+              </Button>
+            )}
           </div>
         </div>
       )}
