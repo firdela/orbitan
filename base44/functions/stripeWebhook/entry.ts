@@ -86,6 +86,40 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── customer.subscription.updated → Plan changes (upgrade/downgrade) ──
+    if (event.type === 'customer.subscription.updated') {
+      const subscription = event.data.object;
+      const { tenant_id, plan_key } = subscription.metadata || {};
+
+      if (tenant_id && plan_key) {
+        await base44.asServiceRole.entities.Tenant.update(tenant_id, {
+          subscription_plan: plan_key,
+        });
+
+        const wallets = await base44.asServiceRole.entities.OrbitanWallet.filter({ tenant_id });
+        if (wallets && wallets.length > 0) {
+          await base44.asServiceRole.entities.OrbitanWallet.update(wallets[0].id, {
+            subscription_plan: plan_key,
+          });
+        }
+
+        await base44.asServiceRole.entities.AuditLog.create({
+          tenant_id,
+          actor_id: 'stripe_webhook',
+          actor_name: 'Stripe Billing',
+          actor_role: 'system',
+          action_type: 'SUBSCRIPTION_UPDATED',
+          module: 'finance',
+          target_entity: 'Tenant',
+          target_record_id: tenant_id,
+          details: `Subscription updated via Stripe. Plan: ${plan_key}. Subscription ID: ${subscription.id}.`,
+          shield_outcome: 'not_evaluated',
+        });
+
+        console.log(`[stripeWebhook] Tenant ${tenant_id} subscription updated to ${plan_key}`);
+      }
+    }
+
     // ── customer.subscription.deleted → Mark subscription cancelled ──
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object;

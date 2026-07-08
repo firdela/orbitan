@@ -245,51 +245,39 @@ Deno.serve(async (req) => {
       // Build Xero-compatible payload
       const xeroPayload = buildXeroInvoicePayload(invoice);
 
-      // NOTE: Actual Xero API call requires OAuth token from the app connector.
-      // Once Xero connector is authorised, this section will call:
-      //   const { accessToken } = await base44.asServiceRole.connectors.getWorkspaceConnection('xero');
-      //   const xeroResponse = await fetch('https://api.xero.com/api.xro/2.0/Invoices', {
-      //     method: 'POST',
-      //     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'xero-tenant-id': xeroTenantId },
-      //     body: JSON.stringify({ Invoices: [xeroPayload] })
-      //   });
-
-      // Simulate a pending sync for now (will be live once Xero connector is connected)
-      const simulatedXeroGuid = `XERO-INV-${Date.now()}`;
+      // ── Queue the sync via FinanceSyncQueue (async broker) ──
+      // If Xero is connected, the integrationSync function will process this entry.
+      // If not connected, it stays pending until the finance team connects Xero.
+      const queueEntry = await base44.entities.FinanceSyncQueue.create({
+        tenant_id: invoice.tenant_id,
+        outlet_id: invoice.outlet_id,
+        queue_type: 'invoice_sync',
+        source_entity: 'SalesInvoice',
+        source_record_id: record_id,
+        erp_target: 'xero',
+        payload: { Invoices: [xeroPayload] },
+        financial_impact_sgd: invoice.total_amount || 0,
+        impact_category: 'revenue',
+        status: 'pending',
+        priority: (invoice.total_amount || 0) >= 200 ? 'immediate' : 'end_of_shift',
+        created_by_id: user.id,
+        notes: `Invoice ${invoice.invoice_number} queued by ${user.full_name}`,
+      });
 
       const finalTrail = invoice.audit_trail || [];
       await base44.entities.SalesInvoice.update(record_id, {
-        xero_sync_status: 'synced',
-        xero_guid: simulatedXeroGuid,
-        xero_sync_timestamp: timestamp,
-        last_sync_error: null,
         audit_trail: [...finalTrail, {
           ...auditEntry,
-          action: 'xero_sync_completed',
-          details: `Synced to Xero. GUID: ${simulatedXeroGuid}`
+          action: 'xero_sync_queued',
+          details: `Invoice queued for Xero sync via FinanceSyncQueue (entry: ${queueEntry.id})`
         }]
-      });
-
-      // Create FinanceMapping record
-      await base44.entities.FinanceMapping.create({
-        tenant_id: invoice.tenant_id,
-        outlet_id: invoice.outlet_id,
-        entity_type: 'sales_invoice',
-        orbitan_record_id: record_id,
-        xero_guid: simulatedXeroGuid,
-        xero_entity_type: 'Invoice',
-        xero_status: 'AUTHORISED',
-        sync_direction: 'orbitan_to_xero',
-        last_synced_at: timestamp,
-        sync_attempts: 1,
-        is_active: true
       });
 
       return Response.json({
         success: true,
         message: 'Invoice queued for Xero sync.',
-        xero_guid: simulatedXeroGuid,
-        note: 'Live sync will activate once Xero connector is authorised.'
+        queue_entry_id: queueEntry.id,
+        note: 'Sync will complete automatically once Xero is connected. Use the Integration Hub to check status.'
       });
     }
 
@@ -343,41 +331,39 @@ Deno.serve(async (req) => {
         }]
       });
 
-      // Simulate pending sync
-      const simulatedXeroBillGuid = `XERO-BILL-${Date.now()}`;
+      // ── Queue the PO sync via FinanceSyncQueue (async broker) ──
+      const xeroBillPayload = buildXeroBillPayload(po);
+
+      const queueEntry = await base44.entities.FinanceSyncQueue.create({
+        tenant_id: po.tenant_id,
+        outlet_id: po.outlet_id,
+        queue_type: 'po_sync',
+        source_entity: 'PurchaseOrder',
+        source_record_id: record_id,
+        erp_target: 'xero',
+        payload: { Invoices: [xeroBillPayload] },
+        financial_impact_sgd: po.total_amount || 0,
+        impact_category: 'expense',
+        status: 'pending',
+        priority: (po.total_amount || 0) >= 200 ? 'immediate' : 'end_of_shift',
+        created_by_id: user.id,
+        notes: `PO ${po.po_number} queued by ${user.full_name}`,
+      });
 
       const finalTrail = po.audit_trail || [];
       await base44.entities.PurchaseOrder.update(record_id, {
-        xero_sync_status: 'synced',
-        xero_bill_guid: simulatedXeroBillGuid,
-        xero_sync_timestamp: timestamp,
-        last_sync_error: null,
         audit_trail: [...finalTrail, {
           ...auditEntry,
-          action: 'xero_sync_completed',
-          details: `Synced to Xero as Bill. GUID: ${simulatedXeroBillGuid}`
+          action: 'xero_sync_queued',
+          details: `PO queued for Xero sync as Bill (entry: ${queueEntry.id})`
         }]
-      });
-
-      await base44.entities.FinanceMapping.create({
-        tenant_id: po.tenant_id,
-        outlet_id: po.outlet_id,
-        entity_type: 'purchase_order',
-        orbitan_record_id: record_id,
-        xero_guid: simulatedXeroBillGuid,
-        xero_entity_type: 'Bill',
-        xero_status: 'AUTHORISED',
-        sync_direction: 'orbitan_to_xero',
-        last_synced_at: timestamp,
-        sync_attempts: 1,
-        is_active: true
       });
 
       return Response.json({
         success: true,
         message: 'Purchase Order queued for Xero sync as Bill.',
-        xero_bill_guid: simulatedXeroBillGuid,
-        note: 'Live sync will activate once Xero connector is authorised.'
+        queue_entry_id: queueEntry.id,
+        note: 'Sync will complete automatically once Xero is connected.'
       });
     }
 
@@ -446,11 +432,25 @@ Deno.serve(async (req) => {
         xero_account_name: labourMapping.xero_account_name,
       }));
 
-      // Simulate Xero manual journal creation
-      // When Xero connector is live:
-      //   const { accessToken } = await base44.asServiceRole.connectors.getWorkspaceConnection('xero');
-      //   POST to https://api.xero.com/api.xro/2.0/ManualJournals with lines
-      const simulatedJournalGuid = `XERO-JNL-LABOUR-${Date.now()}`;
+      // ── Queue labour cost journal via FinanceSyncQueue ──
+      const journalPayload = buildXeroLabourJournalPayload(journalLines, totalLabourCost, labourMapping);
+      const queueEntry = await base44.entities.FinanceSyncQueue.create({
+        tenant_id,
+        outlet_id,
+        queue_type: 'labour_cost',
+        source_entity: 'ClockRecord',
+        source_record_id: `batch_${date_from}_${date_to}`,
+        erp_target: 'xero',
+        payload: { ManualJournals: [journalPayload] },
+        financial_impact_sgd: totalLabourCost,
+        impact_category: 'labour',
+        status: 'pending',
+        priority: 'end_of_day',
+        created_by_id: user.id,
+        notes: `Labour costs ${date_from} → ${date_to} queued by ${user.full_name}`,
+      });
+
+      const simulatedJournalGuid = `QUEUED-${queueEntry.id}`;
 
       await logAudit(base44, {
         tenant_id,
@@ -477,9 +477,10 @@ Deno.serve(async (req) => {
           total_labour_cost_sgd: totalLabourCost.toFixed(2),
           xero_account: `${labourMapping.xero_account_code} — ${labourMapping.xero_account_name}`,
           journal_guid: simulatedJournalGuid,
+          queue_entry_id: queueEntry.id,
         },
         journal_lines: journalLines,
-        note: 'Live Xero journal posting will activate once the Xero connector is authorised.',
+        note: 'Journal queued via FinanceSyncQueue. Syncs to Xero automatically when connected.',
       });
     }
 
@@ -565,5 +566,49 @@ function buildXeroInvoicePayload(invoice) {
     })),
     Status: 'AUTHORISED',
     CurrencyCode: 'SGD'
+  };
+}
+
+// ── Build a Xero-compatible Bill payload from a PurchaseOrder ──
+function buildXeroBillPayload(po) {
+  return {
+    Type: 'ACCPAY',
+    Reference: po.po_number,
+    Date: po.requested_date || new Date().toISOString().split('T')[0],
+    DueDate: po.expected_delivery_date || po.requested_date || new Date().toISOString().split('T')[0],
+    Contact: {
+      Name: po.supplier_name || 'Unknown Supplier'
+    },
+    LineItems: (po.items || []).map(item => ({
+      Description: item.item_name,
+      Quantity: item.quantity,
+      UnitAmount: item.unit_price,
+      AccountCode: '300'
+    })),
+    Status: 'AUTHORISED',
+    CurrencyCode: 'SGD'
+  };
+}
+
+// ── Build a Xero Manual Journal payload for labour costs ──
+function buildXeroLabourJournalPayload(journalLines, totalCost, accountMapping) {
+  return {
+    Narration: `Labour costs — OrbitanOS payroll sync`,
+    Date: new Date().toISOString().split('T')[0],
+    Status: 'POSTED',
+    JournalLines: [
+      {
+        Description: `Wages & Salaries — ${journalLines.length} records`,
+        LineAmount: totalCost,
+        AccountCode: accountMapping.xero_account_code || '477',
+        TaxType: accountMapping.tax_type || 'NONE',
+      },
+      {
+        Description: 'Labour cost offset',
+        LineAmount: -totalCost,
+        AccountCode: '630',
+        TaxType: 'NONE',
+      },
+    ],
   };
 }

@@ -112,6 +112,13 @@ export const PLATFORM_NAVIGATION = {
           description: "Governance policies and security oversight",
           permission: "admin",
         },
+        {
+          key: "integration-hub",
+          label: "Integration Hub",
+          route: "/platform/integrations",
+          description: "Connect Xero, Stripe, and external services",
+          permission: "admin",
+        },
       ],
     },
   ],

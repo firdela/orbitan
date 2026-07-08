@@ -13,13 +13,14 @@
 import React from 'react';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PLATFORM_NAVIGATION } from '@/lib/navigation-registry';
-import { Building2, LayoutGrid, Settings, Shield } from 'lucide-react';
+import { Building2, LayoutGrid, Settings, Shield, Plug } from 'lucide-react';
 
 const ICON_MAP = {
   Building2: Building2,
   LayoutGrid: LayoutGrid,
   Settings: Settings,
   Shield: Shield,
+  Plug: Plug,
 };
 
 /**
