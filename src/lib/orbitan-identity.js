@@ -99,7 +99,7 @@ export function getTenantBackgroundTint(tenantRef) {
 // ─────────────────────────────────────────────────────────────
 export const SHIELD_BRAND = {
   color: '#DC2626',
-  label: 'Orbitan Shield™',
+  label: 'Orbit Shield™',
   poweredBy: 'Regulate',
   description: 'Enterprise-grade security, governance, and compliance. Every record, every action, auditable.',
 };

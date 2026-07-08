@@ -92,6 +92,15 @@ module.exports = {
           construction: '#EAB308',
           recycling:    '#16A34A',
           technology:   '#0F172A',
+        },
+        // Marketing dark surfaces — public-facing pages
+        marketing: {
+          bg: 'hsl(var(--marketing-bg))',
+          surface: 'hsl(var(--marketing-surface))',
+          'surface-dark': 'hsl(var(--marketing-surface-dark))',
+          blue: 'hsl(var(--marketing-blue))',
+          gold: 'hsl(var(--marketing-gold))',
+          red: 'hsl(var(--marketing-red))',
         }
   		},
   		fontFamily: {

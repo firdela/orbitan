@@ -72,6 +72,14 @@
     --orbitan-purple: 263 70% 50%;
     --orbitan-purple-light: 263 70% 96%;
 
+    /* ── Marketing Dark Surfaces — public-facing pages (Landing, Auth Gateway) ── */
+    --marketing-bg: 222 47% 5%;           /* #0A0F1A — main marketing dark background */
+    --marketing-surface: 222 40% 8%;      /* #0F172A — card / phone surface */
+    --marketing-surface-dark: 222 47% 3%; /* #060B14 — darker section background */
+    --marketing-blue: 221 83% 60%;        /* #3B82F6 — marketing blue accent */
+    --marketing-gold: 43 74% 51%;         /* #D4AF37 — marketing gold accent */
+    --marketing-red: 0 72% 51%;           /* #DC2626 — marketing red accent */
+
     /* ── Typography ── */
     --font-heading: 'Sora', ui-sans-serif, system-ui, sans-serif;
     --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;

@@ -47,16 +47,16 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A0F1A] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-marketing-bg text-white overflow-x-hidden">
       {/* ── Navigation ── */}
-      <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0A0F1A]/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'}`}>
+      <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-marketing-bg/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <OrbitanWordmark size="sm" variant="light" showOS={false} />
           </div>
           {isAuthenticated ?
           <Link to="/workspace">
-              <Button variant="outline" className="border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10 text-xs font-bold px-5 h-9 rounded-lg">
+              <Button variant="outline" className="border-marketing-gold/30 text-marketing-gold hover:bg-marketing-gold/10 text-xs font-bold px-5 h-9 rounded-lg">
                 Workspace
               </Button>
             </Link> :
@@ -68,7 +68,7 @@ export default function Landing() {
               </Button>
             </Link>
             <Link to="/auth/gateway">
-              <Button className="bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A] text-xs font-bold px-5 h-9 rounded-lg">
+              <Button className="bg-marketing-gold hover:bg-marketing-gold/90 text-marketing-bg text-xs font-bold px-5 h-9 rounded-lg">
                 Get Started
               </Button>
             </Link>
@@ -88,23 +88,23 @@ export default function Landing() {
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3 }}
           className="text-4xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight leading-[1.08] mb-5">
             Run Your Business.<br />
-            <span className="text-[#3B82F6]">Connect Everything.</span>
+            <span className="text-marketing-blue">Connect Everything.</span>
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }}
           className="text-base md:text-lg text-slate-400 max-w-xl mx-auto mb-9 leading-relaxed">
-            The Workforce Plexus — connecting people, operations, knowledge, compliance, communication, and growth.
+            The Workforce Operating System for Modern Organisations — connecting people, operations, knowledge, compliance, and growth.
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.8 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-3">
             {isAuthenticated ?
             <Link to="/workspace">
-                <Button className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-semibold px-8 h-12 rounded-xl gap-2">
+                <Button className="bg-marketing-blue hover:bg-marketing-blue/90 text-white text-sm font-semibold px-8 h-12 rounded-xl gap-2">
                   Go to Workspace <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link> :
             <>
             <Link to="/auth/gateway">
-                <Button className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-semibold px-8 h-12 rounded-xl gap-2">
+                <Button className="bg-marketing-blue hover:bg-marketing-blue/90 text-white text-sm font-semibold px-8 h-12 rounded-xl gap-2">
                   Get Started <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
@@ -123,10 +123,10 @@ export default function Landing() {
       </section>
 
       {/* ── 6R Framework ── */}
-      <section id="framework" className="py-20 md:py-28 px-6 bg-[#060B14]">
+      <section id="framework" className="py-20 md:py-28 px-6 bg-marketing-surface-dark">
         <div className="max-w-6xl mx-auto">
           <motion.div {...fadeUp} className="text-center mb-14">
-            <p className="text-xs tracking-[0.2em] uppercase text-[#D4AF37] font-bold mb-3">The Operating Cycle</p>
+            <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">The Operating Cycle</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Six Principles. One Platform.</h2>
             <p className="text-slate-400 max-w-lg mx-auto text-sm">
               The six interconnected "R" elements represent the continuous cycle powering every Orbitan tenant.
@@ -157,7 +157,7 @@ export default function Landing() {
       <section id="packs" className="py-20 md:py-28 px-6">
         <div className="max-w-6xl mx-auto">
           <motion.div {...fadeUp} className="text-center mb-14">
-            <p className="text-xs tracking-[0.2em] uppercase text-[#D4AF37] font-bold mb-3">Industry Packs</p>
+            <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Industry Packs</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Built for Your Industry</h2>
             <p className="text-slate-400 max-w-lg mx-auto text-sm">
               Self-aware capability blueprints. Every pack ships with the right modules, workflows, and compliance templates.
@@ -192,7 +192,7 @@ export default function Landing() {
       <section id="stories" className="py-20 md:py-28 px-6">
         <div className="max-w-6xl mx-auto">
           <motion.div {...fadeUp} className="text-center mb-14">
-            <p className="text-xs tracking-[0.2em] uppercase text-[#D4AF37] font-bold mb-3">Customer Stories</p>
+            <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Customer Stories</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Trusted by Industry Leaders</h2>
             <p className="text-slate-400 max-w-lg mx-auto text-sm">
               See how businesses across F&B, sustainability, and retail are transforming with OrbitanOS.
@@ -235,10 +235,10 @@ export default function Landing() {
       </section>
 
       {/* ── Subscription Plans ── */}
-      <section id="plans" className="py-20 md:py-28 px-6 bg-[#060B14]">
+      <section id="plans" className="py-20 md:py-28 px-6 bg-marketing-surface-dark">
         <div className="max-w-6xl mx-auto">
           <motion.div {...fadeUp} className="text-center mb-14">
-            <p className="text-xs tracking-[0.2em] uppercase text-[#D4AF37] font-bold mb-3">Pricing</p>
+            <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Pricing</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Scale With Confidence</h2>
             <p className="text-slate-400 max-w-lg mx-auto text-sm">
               From single-outlet startups to multi-entity enterprises. Every plan scales with your growth.
@@ -251,7 +251,7 @@ export default function Landing() {
               const isEnterprise = key === 'orbitan_enterprise';
               return (
                 <motion.div key={key} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
-                className={`rounded-2xl border p-6 flex flex-col ${isEnterprise ? 'bg-[#111827] border-[#D4AF37]/30 ring-1 ring-[#D4AF37]/20' : 'bg-white/[0.03] border-white/[0.06]'}`}>
+                className={`rounded-2xl border p-6 flex flex-col ${isEnterprise ? 'bg-marketing-surface border-marketing-gold/30 ring-1 ring-marketing-gold/20' : 'bg-white/[0.03] border-white/[0.06]'}`}>
                   <div>
                     <span className="text-[10px] tracking-[0.15em] uppercase font-bold px-2 py-0.5 rounded-full mb-3 inline-block"
                     style={{ backgroundColor: `${plan.color_hex}18`, color: isEnterprise ? plan.accent_hex : plan.color_hex }}>
@@ -275,7 +275,7 @@ export default function Landing() {
                     )}
                   </ul>
                   <Link to="/auth/gateway">
-                    <Button className={`w-full h-10 rounded-xl text-xs font-bold ${isEnterprise ? 'bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A]' : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'}`}>
+                    <Button className={`w-full h-10 rounded-xl text-xs font-bold ${isEnterprise ? 'bg-marketing-gold hover:bg-marketing-gold/90 text-marketing-bg' : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'}`}>
                       {isEnterprise ? 'Contact Sales' : 'Get Started'}
                     </Button>
                   </Link>
@@ -286,16 +286,16 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Orbitan Shield™ ── */}
+      {/* ── Orbit Shield™ ── */}
       <section id="shield" className="py-20 md:py-28 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div {...fadeUp}>
-            <div className="w-14 h-14 rounded-2xl bg-[#DC2626]/10 flex items-center justify-center mx-auto mb-6">
-              <Shield className="w-7 h-7 text-[#DC2626]" />
+            <div className="w-14 h-14 rounded-2xl bg-marketing-red/10 flex items-center justify-center mx-auto mb-6">
+              <Shield className="w-7 h-7 text-marketing-red" />
             </div>
-            <span className="text-xs tracking-[0.2em] uppercase text-[#DC2626] font-bold">Powered by Regulate</span>
+            <span className="text-xs tracking-[0.2em] uppercase text-marketing-red font-bold">Powered by Regulate</span>
             <h2 className="text-3xl md:text-4xl font-display font-bold mt-3 mb-4">
-              Orbitan Shield<span className="text-white/30">™</span>
+              Orbit Shield<span className="text-white/30">™</span>
             </h2>
             <p className="text-slate-400 max-w-xl mx-auto text-sm mb-10 leading-relaxed">
               Enterprise-grade security, compliance, and governance. Auditable, portable, and exit-ready — every record, every action, every time.
@@ -310,7 +310,7 @@ export default function Landing() {
             map((item, i) =>
             <motion.div key={i} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5, delay: i * 0.1 }}
             className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
-                <item.icon className="w-5 h-5 text-[#DC2626] mb-3" />
+                <item.icon className="w-5 h-5 text-marketing-red mb-3" />
                 <h4 className="font-display font-semibold text-white text-sm mb-1.5">{item.title}</h4>
                 <p className="text-slate-500 text-xs leading-relaxed">{item.desc}</p>
               </motion.div>
@@ -320,10 +320,10 @@ export default function Landing() {
       </section>
 
       {/* ── Connected Ecosystem ── */}
-      <section id="ecosystem" className="py-20 md:py-28 px-6 bg-[#060B14]">
+      <section id="ecosystem" className="py-20 md:py-28 px-6 bg-marketing-surface-dark">
         <div className="max-w-5xl mx-auto">
           <motion.div {...fadeUp} className="text-center mb-14">
-            <p className="text-xs tracking-[0.2em] uppercase text-[#D4AF37] font-bold mb-3">Connected Ecosystem</p>
+            <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Connected Ecosystem</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Integrate Everything</h2>
             <p className="text-slate-400 max-w-lg mx-auto text-sm">
               OrbitanOS connects with the tools you already use. Finance, workforce, compliance — all in one operating system.
@@ -332,14 +332,14 @@ export default function Landing() {
 
           {/* Integration Network Visual */}
           <motion.div {...fadeUp} className="relative flex items-center justify-center mb-12">
-            <div className="w-20 h-20 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20 flex items-center justify-center z-10">
+            <div className="w-20 h-20 rounded-full bg-marketing-blue/10 border border-[#3B82F6]/20 flex items-center justify-center z-10">
               <img src={LOGO_ASSETS.mark} alt="Orbitan" className="w-10 h-10 opacity-80" />
             </div>
             {/* Connection lines with pulsing dots */}
             {[0, 72, 144, 216, 288].map((angle, i) =>
             <div key={i} className="absolute top-1/2 left-1/2 origin-left h-px"
             style={{ width: '140px', transform: `rotate(${angle}deg)`, background: `linear-gradient(90deg, rgba(59,130,246,0.3), transparent)` }}>
-                <div className="absolute right-0 -top-1 w-2 h-2 rounded-full bg-[#3B82F6]/60 animate-pulse" />
+                <div className="absolute right-0 -top-1 w-2 h-2 rounded-full bg-marketing-blue/60 animate-pulse" />
               </div>
             )}
             {/* Satellite nodes */}
@@ -352,7 +352,7 @@ export default function Landing() {
                 <div key={label} className="absolute flex flex-col items-center gap-1"
                 style={{ transform: `translate(${x}px, ${y}px)` }}>
                   <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-[#3B82F6]/60" />
+                    <Zap className="w-4 h-4 text-marketing-blue/60" />
                   </div>
                   <span className="text-[9px] text-slate-500 font-medium">{label}</span>
                 </div>);
@@ -380,7 +380,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <motion.div {...fadeUp} className="space-y-6">
               <div>
-                <p className="text-xs tracking-[0.2em] uppercase text-[#D4AF37] font-bold mb-3">Coming Soon</p>
+                <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Coming Soon</p>
                 <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">OrbitanOS in Your Pocket</h2>
                 <p className="text-slate-400 text-sm leading-relaxed max-w-md">
                   Clock in, manage tasks, and stay connected — all from your phone. The full OrbitanOS experience, optimised for mobile.
@@ -399,12 +399,12 @@ export default function Landing() {
             </motion.div>
             <motion.div {...fadeUp} className="flex justify-center">
               <div className="relative">
-                <div className="w-56 h-96 rounded-[2rem] border-2 border-white/[0.08] bg-[#0F172A] overflow-hidden shadow-2xl">
+                <div className="w-56 h-96 rounded-[2rem] border-2 border-white/[0.08] bg-marketing-surface overflow-hidden shadow-2xl">
                   <div className="h-8 border-b border-white/[0.05] flex items-center justify-center">
                     <div className="w-16 h-1 rounded-full bg-white/[0.1]" />
                   </div>
                   <div className="p-4 space-y-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/10 flex items-center justify-center mx-auto">
+                    <div className="w-10 h-10 rounded-xl bg-marketing-blue/10 flex items-center justify-center mx-auto">
                       <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-6 h-6 opacity-60" />
                     </div>
                     <div className="space-y-2">
@@ -426,20 +426,20 @@ export default function Landing() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-20 md:py-28 px-6 bg-[#060B14]">
+      <section className="py-20 md:py-28 px-6 bg-marketing-surface-dark">
         <div className="max-w-3xl mx-auto text-center">
           <motion.div {...fadeUp}>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Ready to Build Momentum?</h2>
             <p className="text-slate-400 text-sm mb-8">Join the operating system that connects your workforce, operations, and growth.</p>
             {isAuthenticated ?
             <Link to="/workspace">
-                <Button className="bg-[#D4AF37] hover:bg-[#C09C2E] text-[#0A0F1A] text-sm font-semibold px-10 h-12 rounded-xl gap-2">
+                <Button className="bg-marketing-gold hover:bg-marketing-gold/90 text-marketing-bg text-sm font-semibold px-10 h-12 rounded-xl gap-2">
                   Go to Workspace <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link> :
 
             <Link to="/auth/gateway">
-                <Button className="bg-[#3B82F6] hover:bg-[#2563EB] text-white text-sm font-semibold px-10 h-12 rounded-xl gap-2">
+                <Button className="bg-marketing-blue hover:bg-marketing-blue/90 text-white text-sm font-semibold px-10 h-12 rounded-xl gap-2">
                   Join Orbitan <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
@@ -453,7 +453,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-5 h-5 opacity-50" />
-            <span className="text-xs text-slate-600">Orbitan & OrbitanOS © {new Date().getFullYear()} Muhammad Firdaus Bin Ismail</span>
+            <span className="text-xs text-slate-600">OrbitanOS by Orbitan © {new Date().getFullYear()} Muhammad Firdaus Bin Ismail</span>
           </div>
           <div className="flex items-center gap-6">
             <a href="#framework" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Framework</a>
