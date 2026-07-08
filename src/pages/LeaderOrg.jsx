@@ -25,6 +25,8 @@ import FeedbackIntelligenceDashboard from '@/components/leader/FeedbackIntellige
 import BlueprintAdvisor from '@/components/advisor/BlueprintAdvisor';
 import BlueprintStudio from '@/components/blueprint/BlueprintStudio';
 import SubscriptionPolicyManager from '@/components/platform/SubscriptionPolicyManager';
+import ShieldCommandCenter from '@/pages/platform/ShieldCommandCenter';
+import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
@@ -339,6 +341,16 @@ export default function LeaderOrg() {
           {/* Feedback Intelligence — AI-analysed pilot feedback */}
           <TabsContent value="feedback-intelligence">
             <FeedbackIntelligenceDashboard />
+          </TabsContent>
+
+          {/* Shield Command — Governance policies and security oversight */}
+          <TabsContent value="shield-command">
+            <ShieldCommandCenter />
+          </TabsContent>
+
+          {/* Integration Hub — Xero, Stripe, and external service connections */}
+          <TabsContent value="integration-hub">
+            <IntegrationHubPage />
           </TabsContent>
 
           {/* Platform Identity (About) - Merged with Operating Cycle */}
