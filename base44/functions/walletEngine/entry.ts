@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
 
     // Only admin or tenant_admin can operate on wallet
     const isAdmin = user.role === 'admin';
-    const isTenantAdmin = user.data?.role === 'tenant_admin' && user.data?.tenant_id === targetTenantId;
+    const isTenantAdmin = user.role === 'tenant_admin' && user.data?.tenant_id === targetTenantId;
     if (!isAdmin && !isTenantAdmin) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
