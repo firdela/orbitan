@@ -275,14 +275,20 @@ export default function LeaderOrg() {
             </div>
           </TabsContent>
 
-          {/* Subscriptions Tab */}
+          {/* Subscriptions & Policy — Merged commercial tab */}
           <TabsContent value="subscriptions">
-            <SubscriptionPlansAccordion tenants={tenants} />
-          </TabsContent>
-
-          {/* Subscription Policy Manager Tab */}
-          <TabsContent value="subscription-policy">
-            <SubscriptionPolicyManager />
+            <div className="space-y-8">
+              <div>
+                <h3 className="font-heading font-semibold text-base mb-1">Active Subscriptions</h3>
+                <p className="text-xs text-muted-foreground mb-4">Manage tenant subscription plans and billing.</p>
+                <SubscriptionPlansAccordion tenants={tenants} />
+              </div>
+              <div className="pt-6 border-t border-border">
+                <h3 className="font-heading font-semibold text-base mb-1">Subscription Policies</h3>
+                <p className="text-xs text-muted-foreground mb-4">Define commercial entitlements and resource limits per plan tier.</p>
+                <SubscriptionPolicyManager />
+              </div>
+            </div>
           </TabsContent>
 
           {/* Platform Identity Tab */}
