@@ -26,7 +26,11 @@ knowledge-hub/
 │   ├── 0003-shield-governance-interceptor.md
 │   ├── 0004-dynamic-workspace-routing.md
 │   ├── 0005-manifest-driven-navigation.md
-│   └── 0006-orbit-nexus-intelligence-platform.md
+│   ├── 0006-orbit-nexus-intelligence-platform.md
+│   ├── 0007-delegated-integration-hub.md
+│   ├── 0008-orbit-naming-standards.md
+│   ├── 0009-orbit-core-boundary.md
+│   └── 0010-independent-deployability.md
 ```
 
 ## How to Use
@@ -79,4 +83,4 @@ Until then, these documents serve as human-readable institutional memory.
 ---
 
 **Product Owner:** Muhammad Firdaus Bin Ismail
-**Last Updated:** 2026-07-07
+**Last Updated:** 2026-07-08
