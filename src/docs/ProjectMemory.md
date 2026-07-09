@@ -165,6 +165,35 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - Sprint 5 — Pilot Preparation (dashboards, reports, bug fixes, permissions
   validation, mobile optimisation, test data, export functions) ← **current**
 
+## Sprint 5 Integrity Sweep (2026-07-09)
+
+### walletEngine RBAC Hardening — FIXED
+- **Root cause:** The top-level role gate in `walletEngine` only allowed `admin` and `tenant_admin`. When an `outlet_manager` clicked "Receive" on a PurchaseOrder, the ProcurementPage called `walletEngine.debit_procurement_sgd` — which returned 403 Forbidden. This blocked the entire procurement → wallet ledger flow for outlet-level managers.
+- **Fix applied (4 surgical edits):**
+  1. Added `isOutletManager` to the top-level role gate — outlet managers can now call wallet read actions and `debit_procurement_sgd`.
+  2. Added `admin/tenant_admin` guard inside `debit_credits` — AI credit management remains restricted.
+  3. Added `admin/tenant_admin` guard inside `earn_points` — points management remains restricted.
+  4. Added outlet-scoping check inside `debit_procurement_sgd` — outlet managers can only debit procurement for their OWN outlet (`outlet_id === user.data.outlet_id`), preventing cross-outlet spending.
+- **Admin-only actions** (`topup_credits`, `provision_wallet`) already had `!isAdmin` guards — no change needed.
+
+### Shadow Tenant (TEST_LAB_001) Provisioned
+- **Purpose:** Destructive testing and governance validation sandbox. Bound to `fnb_standard_ops` governance domain so Shield policies match real F&B pilot tenants.
+- **Records created:**
+  - Tenant: `6a4eeb6992cc657b66ec24cc` (Orbitan Test Lab, food_beverage, orbitan_growth)
+  - Company: `6a4eeb69fc5cc1a0cb338e2b` (Test Lab F&B Co)
+  - Outlet: `6a4eeb692e8382bd9ce85611` (Test Lab Outlet)
+  - Wallet: `6a4eeb6ccf174e98c6bc1a70` (500 credits, bronze tier)
+- **Usage:** Test procurement governance thresholds, GovernanceOverride flows, and Shield block/notify outcomes without polluting pilot tenant data.
+
+### Backend Function Role-Logic Audit — COMPLETE
+- `walletEngine` — **Fixed** (see above). Uses `user.role` correctly; was missing `outlet_manager` from allowed roles.
+- `financeController` — **Clean.** Uses `user.role` with `['admin', 'tenant_admin', 'outlet_manager']` allowed roles.
+- `shieldInterceptor` — **Clean.** Admin bypass via `user.role === 'admin'`. Tenant scoping via `user.data?.tenant_id`. Domain-aware resolution from `Tenant.governance_domain`.
+- `clockController` — **Clean.** Uses `user.role` for manager/supervisor checks. Tenant/outlet scoping via `user.data?.tenant_id` / `user.data?.outlet_id`.
+- `onboardingService` — **Clean.** Uses `user.role === 'admin'` for admin-only actions. Self-serve provisioning is open to all authenticated users with plan restriction.
+- `auditEngine` — **Clean.** System automation function (no `auth.me()`). Uses `base44.asServiceRole` throughout, triggered by entity events.
+- **Conclusion:** No `user.data?.role` vulnerability found. All functions use `user.role` from the authenticated session as the source of truth for authorization.
+
 ## Known Bugs / Gaps (as of 2026-07-07)
 1. ~~**ProcurementPage hardcoded tenant**~~ ✅ FIXED — now uses `useAuth()` to resolve `tenant_id` and `outlet_id` from the authenticated user profile. Also added error handling (try/catch + toast) on PO creation.
 2. ~~**DEMO_SUPPLIERS = []**~~ ✅ FIXED — Supplier dropdown now loads from `base44.entities.Supplier.list()`. Selecting a supplier stores both `supplier_id` and `supplier_name`. Preferred suppliers show a ★ marker.

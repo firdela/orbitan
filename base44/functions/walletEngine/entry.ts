@@ -65,7 +65,8 @@ Deno.serve(async (req) => {
     // Only admin or tenant_admin can operate on wallet
     const isAdmin = user.role === 'admin';
     const isTenantAdmin = user.role === 'tenant_admin' && user.data?.tenant_id === targetTenantId;
-    if (!isAdmin && !isTenantAdmin) {
+    const isOutletManager = user.role === 'outlet_manager' && user.data?.tenant_id === targetTenantId;
+    if (!isAdmin && !isTenantAdmin && !isOutletManager) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -93,6 +94,9 @@ Deno.serve(async (req) => {
 
     // --- DEBIT CREDITS ---
     if (action === 'debit_credits') {
+      if (!isAdmin && !isTenantAdmin) {
+        return Response.json({ error: 'Forbidden: Credit management requires tenant admin or above' }, { status: 403 });
+      }
       if (!amount || amount <= 0) return Response.json({ error: 'Invalid amount' }, { status: 400 });
 
       const wallets = await base44.asServiceRole.entities.OrbitanWallet.filter({ tenant_id: targetTenantId });
@@ -171,6 +175,9 @@ Deno.serve(async (req) => {
 
     // --- EARN POINTS ---
     if (action === 'earn_points') {
+      if (!isAdmin && !isTenantAdmin) {
+        return Response.json({ error: 'Forbidden: Points management requires tenant admin or above' }, { status: 403 });
+      }
       const pointEvent = reason || 'training_complete';
       const pointsToAdd = POINTS_RULES[pointEvent] || 50;
 
@@ -235,6 +242,10 @@ Deno.serve(async (req) => {
     //   - PO total <= threshold → auto-approve (status=completed)
     //   - PO total > threshold  → pending_approval + GovernanceOverride created
     if (action === 'debit_procurement_sgd') {
+      // Outlet managers can only debit procurement for their own outlet
+      if (isOutletManager && outlet_id && outlet_id !== user.data?.outlet_id) {
+        return Response.json({ error: 'Forbidden: Outlet managers can only debit procurement for their own outlet' }, { status: 403 });
+      }
       if (!amount || amount <= 0) {
         return Response.json({ error: 'Invalid amount' }, { status: 400 });
       }
