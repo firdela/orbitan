@@ -177,6 +177,18 @@ export default function InventoryPage() {
           </div>
         )}
 
+        {!loading && items.length === 0 ? (
+          <EmptyState
+            icon={Package}
+            title="Your inventory is empty"
+            description="Add your first item to start tracking stock levels, par levels, and costs."
+            actionLabel="Add First Item"
+            onAction={() => { setFormMode('add'); setShowForm(true); }}
+            color="blue"
+            size="large"
+          />
+        ) : (
+        <>
         {/* Filters */}
         <div className="flex items-center gap-3 mb-5">
           <div className="relative flex-1 max-w-xs">
@@ -296,6 +308,8 @@ export default function InventoryPage() {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {/* Add / Edit Item Dialog */}

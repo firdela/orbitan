@@ -257,7 +257,7 @@ export default function ProcurementPage() {
               </div>
             </div>
           ))}
-          {!loading && pos.length === 0 && <EmptyState icon={ShoppingCart} title="No purchase orders" description="Create your first purchase order to get started." action={() => setShowCreate(true)} actionLabel="Create PO" />}
+          {!loading && pos.length === 0 && <EmptyState icon={ShoppingCart} title="No purchase orders" description="Create your first purchase order to get started." onAction={() => setShowCreate(true)} actionLabel="Create PO" />}
         </div>
       </div>
 

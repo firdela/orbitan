@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
 import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import StatCard from '@/components/shared/StatCard';
+import EmptyState from '@/components/shared/EmptyState';
 import FinanceReviewQueue from '@/components/finance/FinanceReviewQueue';
 import { useTenant } from '@/lib/use-tenant';
+import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   FileText, TrendingUp, DollarSign, Package, CheckCircle2,
   Plus, Home, Users, Calendar, ShoppingCart, CheckSquare,
-  BarChart2, Shield, Layers, Building2, RefreshCw, Inbox
+  BarChart2, Shield, Layers, Building2, RefreshCw, Inbox, Loader2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -37,17 +39,29 @@ const NAV = [
 
 export default function SalesPage() {
   const { currentTenant } = useTenant();
+  const { user } = useAuth();
   const [reconciliations, setReconciliations] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '' });
+
+  const tenantId = user?.data?.tenant_id || user?.tenant_id || currentTenant?.id || null;
+  const outletId = user?.data?.outlet_id || user?.outlet_id || null;
+
+  useEffect(() => {
+    base44.entities.DailyReconciliation.list('-created_date', 50)
+      .then(data => setReconciliations(data || []))
+      .catch(() => setReconciliations([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const grossProfit = (parseFloat(form.total_revenue) || 0) - (parseFloat(form.total_cogs) || 0);
   const margin = form.total_revenue ? ((grossProfit / parseFloat(form.total_revenue)) * 100).toFixed(1) : 0;
 
   const handleCreate = async () => {
     const rec = {
-      tenant_id: "tenant_taqueria",
-      outlet_id: "outlet_nb",
+      tenant_id: tenantId,
+      outlet_id: outletId,
       date: form.date,
       total_revenue: parseFloat(form.total_revenue) || 0,
       total_cogs: parseFloat(form.total_cogs) || 0,
@@ -122,6 +136,30 @@ export default function SalesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
+                {loading && (
+                  <tr>
+                    <td colSpan={7} className="py-16">
+                      <div className="flex items-center justify-center gap-2.5">
+                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Loading reconciliations…</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {!loading && reconciliations.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-4">
+                      <EmptyState
+                        icon={FileText}
+                        title="No reconciliations yet"
+                        description="Create your first daily reconciliation to start tracking sales and profit."
+                        actionLabel="New Reconciliation"
+                        onAction={() => setShowCreate(true)}
+                        color="blue"
+                      />
+                    </td>
+                  </tr>
+                )}
                 {reconciliations.map(rec => (
                   <tr key={rec.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3.5 font-medium text-foreground">
