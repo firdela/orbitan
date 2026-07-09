@@ -9,7 +9,7 @@ import { Check, Loader2, ArrowLeft, Shield, Zap, Building2 } from 'lucide-react'
 const PLANS = [
   {
     key: 'orbitan_growth',
-    name: 'Orbitan Growth',
+    name: 'OrbitanOS Growth',
     price: 'S$79',
     period: '/month',
     description: 'For growing SMEs — multi-outlet, inventory, procurement, AI Suite.',
@@ -26,7 +26,7 @@ const PLANS = [
   },
   {
     key: 'orbitan_business',
-    name: 'Orbitan Business',
+    name: 'OrbitanOS Business',
     price: 'S$299',
     period: '/month',
     description: 'For established businesses — Xero, API access, priority support.',
@@ -188,7 +188,7 @@ export default function Checkout() {
 
         {/* Enterprise CTA */}
         <div className="max-w-3xl mx-auto mt-8 p-6 rounded-xl bg-slate-900 text-white text-center">
-          <h3 className="font-heading text-lg font-semibold">Orbitan Enterprise</h3>
+          <h3 className="font-heading text-lg font-semibold">OrbitanOS Enterprise</h3>
           <p className="text-sm text-white/70 mt-1 mb-4">
             Unlimited scale, custom SLAs, white-labelling, and dedicated support.
           </p>

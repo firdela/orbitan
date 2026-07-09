@@ -131,7 +131,7 @@ export default function LeaderOrg() {
               <Wallet className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Orbitan Wallet</p>
+              <p className="text-sm font-semibold text-white">Orbit Wallet</p>
               <p className="text-[11px] text-blue-300">Credits · Rewards · Cashback</p>
             </div>
             <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
@@ -141,7 +141,7 @@ export default function LeaderOrg() {
               <ShoppingBag className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Orbitan Marketplace</p>
+              <p className="text-sm font-semibold text-white">Orbit Marketplace</p>
               <p className="text-[11px] text-purple-300">Modules · Packs · Integrations</p>
             </div>
             <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
@@ -151,7 +151,7 @@ export default function LeaderOrg() {
               <Shield className="w-5 h-5 text-[#D4AF37]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Orbitan Shield™</p>
+              <p className="text-sm font-semibold text-white">Orbit Shield™</p>
               <p className="text-[11px] text-[#D4AF37]/70">Regulate · Govern · Protect</p>
             </div>
             <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />

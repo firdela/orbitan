@@ -23,7 +23,7 @@ const GATEWAY_CARDS = [
     border: 'border-blue-500/15 hover:border-blue-400/30',
     bg: 'bg-blue-500/[0.02] hover:bg-blue-500/[0.05]',
     action: '/login',
-    badge: 'Orbitan Shield™ Verified',
+    badge: 'Orbit Shield™ Verified',
   },
   {
     id: 'join',

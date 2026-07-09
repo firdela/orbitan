@@ -72,7 +72,7 @@ export default function PlanStep({ data, update }) {
               }
               <span className="text-[9px] tracking-[0.12em] uppercase font-bold"
               style={{ color: isEnterprise ? plan.accent_hex : plan.color_hex }}>
-                {plan.name.replace('Orbitan ', '')}
+                {plan.name.replace('OrbitanOS ', '')}
               </span>
               <p className="text-lg font-display font-bold text-white mt-1">{plan.price_label}</p>
               <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">{plan.suitable_for}</p>

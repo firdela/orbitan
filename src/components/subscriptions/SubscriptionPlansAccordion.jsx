@@ -43,7 +43,7 @@ const PLAN_META = {
       'Standard AI features',
       'Priority email support',
     ],
-    locked_features: ['Multiple Packs', 'AI Studio', 'Finance Integration (Xero)', 'Orbitan Shield™ Guardian'],
+    locked_features: ['Multiple Packs', 'AI Studio', 'Finance Integration (Xero)', 'Orbit Shield™ Guardian'],
   },
   orbitan_business: {
     price: 'S$399',
@@ -59,7 +59,7 @@ const PLAN_META = {
       'Xero / Finance Integration',
       'Dedicated account manager',
     ],
-    locked_features: ['Unlimited employees', 'Orbitan Shield™ Guardian Mode', 'SSO / MFA', 'Custom SLAs'],
+    locked_features: ['Unlimited employees', 'Orbit Shield™ Guardian Mode', 'SSO / MFA', 'Custom SLAs'],
   },
   orbitan_enterprise: {
     price: 'Custom',
@@ -72,7 +72,7 @@ const PLAN_META = {
       'Unlimited outlets & employees',
       'All Industry Packs',
       'All modules — current & future',
-      'Orbitan Shield™ Guardian Mode',
+      'Orbit Shield™ Guardian Mode',
       'SSO, MFA & RBAC',
       'Custom SLAs & dedicated CSM',
       'Investor-grade audit reports',

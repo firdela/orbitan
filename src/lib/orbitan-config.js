@@ -39,7 +39,7 @@ export const OPERATING_CYCLE = {
 export const SUBSCRIPTION_PLANS = {
   orbitan_starter: {
     key: "orbitan_starter",
-    name: "Orbitan Starter",
+    name: "OrbitanOS Starter",
     price_sgd: 49,
     price_label: "S$49/month",
     max_employees: 10,
@@ -57,7 +57,7 @@ export const SUBSCRIPTION_PLANS = {
   },
   orbitan_growth: {
     key: "orbitan_growth",
-    name: "Orbitan Growth",
+    name: "OrbitanOS Growth",
     price_sgd: 149,
     price_label: "S$149/month",
     max_employees: 50,
@@ -75,7 +75,7 @@ export const SUBSCRIPTION_PLANS = {
   },
   orbitan_business: {
     key: "orbitan_business",
-    name: "Orbitan Business",
+    name: "OrbitanOS Business",
     price_sgd: 399,
     price_label: "S$399/month",
     max_employees: 250,
@@ -93,7 +93,7 @@ export const SUBSCRIPTION_PLANS = {
   },
   orbitan_enterprise: {
     key: "orbitan_enterprise",
-    name: "Orbitan Enterprise",
+    name: "OrbitanOS Enterprise",
     price_sgd: null,
     price_label: "Custom Pricing",
     max_employees: null,

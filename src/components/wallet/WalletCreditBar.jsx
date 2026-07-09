@@ -1,4 +1,4 @@
-// Orbitan Credits — compact usage bar for dashboards & sidebars
+// Orbit Credits — compact usage bar for dashboards & sidebars
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Zap } from 'lucide-react';

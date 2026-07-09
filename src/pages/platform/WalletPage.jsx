@@ -1,5 +1,5 @@
 // ============================================================
-// ORBITAN WALLET — Platform Wallet & Credits Dashboard
+// ORBIT WALLET — Platform Wallet & Credits Dashboard
 // Shows: credit balance, loyalty points, reward tier,
 // transaction history, and top-up controls.
 // ============================================================

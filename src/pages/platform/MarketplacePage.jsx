@@ -1,5 +1,5 @@
 // ============================================================
-// ORBITAN MARKETPLACE — Module & Pack Store
+// ORBIT MARKETPLACE — Module & Pack Store
 // The "Reach" principle of the 6R Framework.
 // Browse and activate modules, industry packs, integrations.
 // ============================================================
