@@ -26,6 +26,10 @@ export default function WorkspaceDashboard() {
   const [inventoryItems, setInventoryItems] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [salesInvoices, setSalesInvoices] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [shifts, setShifts] = useState([]);
+  const [complianceRecords, setComplianceRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -39,10 +43,18 @@ export default function WorkspaceDashboard() {
       base44.entities.InventoryItem.list('-created_date', 50),
       base44.entities.PurchaseOrder.list('-created_date', 20),
       base44.entities.Task.list('-created_date', 50),
-    ]).then(([inv, po, t]) => {
+      base44.entities.SalesInvoice.list('-created_date', 20),
+      base44.entities.Employee.list('-created_date', 50),
+      base44.entities.Shift.list('-date', 30),
+      base44.entities.ComplianceRecord.list('-created_date', 30),
+    ]).then(([inv, po, t, sales, emp, shft, comp]) => {
       setInventoryItems(inv || []);
       setPurchaseOrders(po || []);
       setTasks(t || []);
+      setSalesInvoices(sales || []);
+      setEmployees(emp || []);
+      setShifts(shft || []);
+      setComplianceRecords(comp || []);
     }).catch((err) => {
       setError(err?.message || 'Unable to load dashboard data. Please try again.');
     }).finally(() => setLoading(false));
@@ -51,26 +63,38 @@ export default function WorkspaceDashboard() {
   const lowStockItems = inventoryItems.filter(i => i.par_level && i.current_stock < i.par_level);
   const pendingPOs = purchaseOrders.filter(p => ['draft', 'pending_approval'].includes(p.status));
   const pendingTasks = tasks.filter(t => ['pending', 'in_progress'].includes(t.status));
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todaysSales = salesInvoices.filter(s => s.date === todayStr && s.payment_status !== 'cancelled');
+  const todaysRevenue = todaysSales.reduce((sum, s) => sum + (s.total || 0), 0);
+  const activeEmployees = employees.filter(e => e.status === 'active');
+  const shiftsToday = shifts.filter(s => s.date === todayStr);
+  const pendingCompliance = complianceRecords.filter(c => ['pending', 'in_review', 'submitted', 'overdue'].includes(c.status));
 
   const navModules = [
     { key: 'inventory', label: 'Inventory', icon: Package, href: `${base}/inventory`, count: inventoryItems.length, enabled: hasModule(tenant, 'inventory') },
     { key: 'procurement', label: 'Purchase Orders', icon: ShoppingCart, href: `${base}/procurement`, count: pendingPOs.length, enabled: hasModule(tenant, 'procurement') || hasModule(tenant, 'inventory') },
-    { key: 'sales', label: 'Sales & Reconciliation', icon: FileText, href: `${base}/sales`, count: 0, enabled: hasModule(tenant, 'sales_invoice') },
+    { key: 'sales', label: 'Sales & Reconciliation', icon: FileText, href: `${base}/sales`, count: salesInvoices.length, enabled: hasModule(tenant, 'sales_invoice') },
     { key: 'tasks', label: 'Tasks', icon: CheckSquare, href: `${base}/tasks`, count: pendingTasks.length, enabled: hasModule(tenant, 'task') },
-    { key: 'workforce', label: 'My Team', icon: Users, href: `${base}/workforce`, count: 0, enabled: hasModule(tenant, 'workforce') },
-    { key: 'compliance', label: 'Compliance', icon: Shield, href: `${base}/compliance`, count: 0, enabled: hasModule(tenant, 'compliance') },
+    { key: 'workforce', label: 'My Team', icon: Users, href: `${base}/workforce`, count: activeEmployees.length, enabled: hasModule(tenant, 'workforce') },
+    { key: 'compliance', label: 'Compliance', icon: Shield, href: `${base}/compliance`, count: pendingCompliance.length, enabled: hasModule(tenant, 'compliance') },
   ].filter(m => m.enabled);
 
   // ── Widget registry — each team can reorder / toggle these ──
   const widgets = [
     { id: 'kpi_inventory', title: 'Inventory Items', icon: Package,
-      render: () => <StatCard title="Inventory Items" value={loading ? '—' : inventoryItems.length} icon={Package} accent="blue" /> },
+      render: () => <StatCard title="Inventory Items" value={loading ? '—' : inventoryItems.length} icon={Package} color="blue" /> },
+    { id: 'kpi_sales', title: "Today's Sales", icon: FileText,
+      render: () => <StatCard title="Today's Sales" value={loading ? '—' : todaysSales.length} subtitle={`S$${todaysRevenue.toFixed(2)} revenue`} icon={FileText} color="green" /> },
     { id: 'kpi_pos', title: 'Open Purchase Orders', icon: ShoppingCart,
-      render: () => <StatCard title="Open Purchase Orders" value={loading ? '—' : pendingPOs.length} icon={ShoppingCart} accent="amber" /> },
+      render: () => <StatCard title="Open Purchase Orders" value={loading ? '—' : pendingPOs.length} icon={ShoppingCart} color="amber" /> },
     { id: 'kpi_tasks', title: 'Pending Tasks', icon: CheckSquare,
-      render: () => <StatCard title="Pending Tasks" value={loading ? '—' : pendingTasks.length} icon={CheckSquare} accent="violet" /> },
+      render: () => <StatCard title="Pending Tasks" value={loading ? '—' : pendingTasks.length} icon={CheckSquare} color="purple" /> },
+    { id: 'kpi_team', title: 'Active Team', icon: Users,
+      render: () => <StatCard title="Active Team Members" value={loading ? '—' : activeEmployees.length} subtitle={`${shiftsToday.length} shifts today`} icon={Users} color="blue" /> },
+    { id: 'kpi_compliance', title: 'Pending Compliance', icon: Shield,
+      render: () => <StatCard title="Pending Compliance" value={loading ? '—' : pendingCompliance.length} subtitle={pendingCompliance.length === 0 ? 'All clear' : 'Needs attention'} icon={Shield} color="amber" /> },
     { id: 'kpi_lowstock', title: 'Low Stock Alerts', icon: AlertTriangle,
-      render: () => <StatCard title="Low Stock Alerts" value={loading ? '—' : lowStockItems.length} icon={AlertTriangle} accent="red" /> },
+      render: () => <StatCard title="Low Stock Alerts" value={loading ? '—' : lowStockItems.length} icon={AlertTriangle} color="red" /> },
     ...navModules.map(m => ({
       id: `mod_${m.key}`,
       title: m.label,
