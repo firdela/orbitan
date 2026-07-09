@@ -4,13 +4,13 @@ import Stripe from 'npm:stripe@17.7.0';
 // ── Stripe Price Map: plan_key → Stripe Price ID ─────────────────────────────
 // Starter is free (no Stripe checkout). Enterprise is custom (contact sales).
 const PRICE_MAP = {
-  orbitan_growth: 'price_1TqW4xDUJ83WgUtz2VibOera',
-  orbitan_business: 'price_1TqW4xDUJ83WgUtzqjOVsw3G',
+  orbitan_growth: 'price_1TqdJoDap39FEFGJwNccaO12',
+  orbitan_business: 'price_1TqdJoDap39FEFGJDYVJYLDR',
 };
 
 const PLAN_NAMES = {
-  orbitan_growth: 'Orbitan Growth',
-  orbitan_business: 'Orbitan Business',
+  orbitan_growth: 'OrbitanOS Growth',
+  orbitan_business: 'OrbitanOS Business',
 };
 
 /**
