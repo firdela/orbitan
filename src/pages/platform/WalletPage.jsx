@@ -97,7 +97,7 @@ export default function WalletPage() {
   return (
     <AppShell
       navigation={NAV}
-      title="Orbitan Wallet"
+      title="Orbit Wallet"
       headerRight={
         <div className="flex items-center gap-2">
           <select
@@ -125,7 +125,7 @@ export default function WalletPage() {
             <div className="text-center">
               <h3 className="font-heading font-bold text-lg text-foreground mb-2">No Wallet Found</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                This tenant doesn't have an Orbitan Wallet yet. Provision one to enable Credits and Rewards.
+                This tenant doesn't have an Orbit Wallet yet. Provision one to enable Credits and Rewards.
               </p>
               <Button
                 onClick={() => provisionMutation.mutate(DEMO_TENANTS.find((t) => t.id === selectedTenant))}
@@ -160,7 +160,7 @@ export default function WalletPage() {
                       <span>{tier.label}</span>
                     </div>
                   </div>
-                  <p className="text-blue-200 text-xs mb-1 uppercase tracking-widest">Orbitan Credits Balance</p>
+                  <p className="text-blue-200 text-xs mb-1 uppercase tracking-widest">Orbit Credits Balance</p>
                   <p className="text-5xl font-display font-bold mb-1">{wallet.balance_credits?.toLocaleString()}</p>
                   <p className="text-blue-300 text-sm">{wallet.credits_used_this_month} used this month · {wallet.credits_quota_monthly} monthly quota</p>
 
@@ -246,7 +246,7 @@ export default function WalletPage() {
             <div className="bg-card border border-border rounded-xl p-5 mb-6">
               <h3 className="font-heading font-semibold text-sm mb-3 flex items-center gap-2">
                 <Gift className="w-4 h-4 text-primary" />
-                Orbitan Rewards — Tier Progress
+                Orbit Rewards — Tier Progress
               </h3>
               <div className="flex items-center gap-3 flex-wrap">
                 {['bronze', 'silver', 'gold', 'platinum', 'orbitan_elite'].map((t, i) => {

@@ -65,7 +65,7 @@ const MODULES_CATALOG = [
   // Analytics
   { slug: 'advanced_reporting', name: 'Advanced Reporting', category: 'analytics', principle: 'refine', icon: BarChart2, color: '#8B5CF6', price_credits: 10, is_free: false, min_plan: 'orbitan_growth', description: 'Executive dashboards, custom reports, and scheduled exports.', installs: 2, rating: 4.6, feature_list: ['Executive dashboards', 'Custom date ranges', 'CSV & PDF exports', 'Scheduled reports'] },
   // Premium
-  { slug: 'orbitan_shield', name: 'Orbitan Shield™', category: 'premium_add_on', principle: 'regulate', icon: Shield, color: '#D4AF37', price_credits: 50, is_free: false, is_featured: true, is_new: true, min_plan: 'orbitan_enterprise', description: 'Enterprise-grade security: SSO, MFA, audit logs, data retention controls.', installs: 0, rating: 5.0, feature_list: ['SSO / SAML', 'MFA enforcement', 'Full audit logs', 'Data retention policies', 'Security dashboard', 'IP whitelisting'] },
+  { slug: 'orbitan_shield', name: 'Orbit Shield™', category: 'premium_add_on', principle: 'regulate', icon: Shield, color: '#D4AF37', price_credits: 50, is_free: false, is_featured: true, is_new: true, min_plan: 'orbitan_enterprise', description: 'Enterprise-grade security: SSO, MFA, audit logs, data retention controls.', installs: 0, rating: 5.0, feature_list: ['SSO / SAML', 'MFA enforcement', 'Full audit logs', 'Data retention policies', 'Security dashboard', 'IP whitelisting'] },
   { slug: 'knowledge_base', name: 'Knowledge Base', category: 'core_module', principle: 'renew', icon: BookOpen, color: '#3B82F6', price_credits: 10, is_free: false, is_new: true, min_plan: 'orbitan_growth', description: 'Centralised SOP library and team knowledge repository.', installs: 0, rating: 4.7, feature_list: ['SOP library', 'Version control', 'Role-based access', 'Full-text search'] },
   { slug: 'announcements', name: 'Team Announcements', category: 'core_module', principle: 'relate', icon: MessageSquare, color: '#10B981', price_credits: 5, is_free: false, min_plan: 'orbitan_starter', description: 'Push announcements and updates to your entire workforce.', installs: 0, rating: 4.5, feature_list: ['Targeted broadcasts', 'Read receipts', 'Priority levels', 'Mobile-ready'] },
 ];
@@ -90,7 +90,7 @@ export default function MarketplacePage() {
   return (
     <AppShell
       navigation={NAV}
-      title="Orbitan Marketplace"
+      title="Orbit Marketplace"
     >
       <div className="p-6 max-w-7xl mx-auto">
 
@@ -104,7 +104,7 @@ export default function MarketplacePage() {
             <Star className="w-10 h-10 text-white" />
           </div>
           <Badge className="bg-primary/10 text-primary border-primary/20 mb-4">Coming Soon</Badge>
-          <h1 className="text-2xl font-display font-bold text-foreground mb-2">Orbitan Marketplace</h1>
+          <h1 className="text-2xl font-display font-bold text-foreground mb-2">Orbit Marketplace</h1>
           <p className="text-sm text-muted-foreground max-w-md leading-relaxed mb-6">
             We're focused on delivering a rock-solid MVP for our pilot tenants first.
             The Marketplace — with industry packs, AI features, integrations, and premium

@@ -145,7 +145,7 @@ export default function ShieldCommandCenter() {
         <div className="mb-8">
           <div className="inline-flex items-center gap-2 bg-orbitan-blue-light text-orbitan-blue px-3 py-1.5 rounded-full text-xs font-semibold mb-3">
             <Shield className="w-3.5 h-3.5" />
-            Orbitan Shield™ — Governance Override Registry
+            Orbit Shield™ — Governance Override Registry
           </div>
           <h1 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-2">
             Override Management

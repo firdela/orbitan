@@ -57,7 +57,7 @@ export default function WalletCreditBar({ wallet, compact = false }) {
             <Zap className="w-4 h-4 text-primary" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">Orbitan Credits</p>
+            <p className="text-sm font-semibold text-foreground">Orbit Credits</p>
             <p className="text-[10px] text-muted-foreground">Monthly quota</p>
           </div>
         </div>
