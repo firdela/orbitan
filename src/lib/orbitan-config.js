@@ -54,6 +54,8 @@ export const SUBSCRIPTION_PLANS = {
     integrations: false,
     description: "For small businesses, single outlet",
     suitable_for: "Small businesses — single outlet",
+    stripe_product_id: "prod_UqxyqWSPqzbmUU",
+    stripe_price_id: "price_1TrG2gDap39FEFGJZXTY5or7",
   },
   orbitan_growth: {
     key: "orbitan_growth",
@@ -72,6 +74,8 @@ export const SUBSCRIPTION_PLANS = {
     integrations: false,
     description: "For growing businesses, multiple outlets",
     suitable_for: "Growing businesses — multiple outlets",
+    stripe_product_id: "prod_UqCTflVC5RIRyA",
+    stripe_price_id: "price_1TqdJoDap39FEFGJwNccaO12",
   },
   orbitan_business: {
     key: "orbitan_business",
@@ -90,6 +94,8 @@ export const SUBSCRIPTION_PLANS = {
     integrations: true,
     description: "For established organisations, multi-site",
     suitable_for: "Established organisations — multi-site operations",
+    stripe_product_id: "prod_UqCTbi0NRW3noE",
+    stripe_price_id: "price_1TqdJoDap39FEFGJDYVJYLDR",
   },
   orbitan_enterprise: {
     key: "orbitan_enterprise",
@@ -109,6 +115,9 @@ export const SUBSCRIPTION_PLANS = {
     integrations: true,
     description: "Custom pricing — large organisations",
     suitable_for: "Large organisations, multi-entity enterprises, regulated industries",
+    stripe_product_id: "prod_UqzfnTh7fdnvTs",
+    stripe_price_id: "price_1TrHfjDap39FEFGJNYT7xu5I",
+    checkout_mode: "contact_sales",
   },
 };
 

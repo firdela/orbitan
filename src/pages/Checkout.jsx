@@ -8,6 +8,23 @@ import { Check, Loader2, ArrowLeft, Shield, Zap, Building2 } from 'lucide-react'
 
 const PLANS = [
   {
+    key: 'orbitan_starter',
+    name: 'OrbitanOS Starter',
+    price: 'S$49',
+    period: '/month',
+    description: 'Small businesses — single outlet',
+    features: [
+      'Up to 10 employees',
+      'Core Workforce Package',
+      'Single outlet',
+      'Standard modules',
+      'Community support',
+      '14-day free trial',
+    ],
+    gradient: 'from-[#3B82F6] to-[#1D4ED8]',
+    icon: Shield,
+  },
+  {
     key: 'orbitan_growth',
     name: 'OrbitanOS Growth',
     price: 'S$149',
@@ -15,10 +32,10 @@ const PLANS = [
     description: 'Growing businesses — multiple outlets',
     features: [
       'Up to 50 employees',
-      'Core features',
-      'Basic reporting',
-      'Standard modules',
-      'Community support',
+      'Core Workforce Package',
+      'One Industry Pack',
+      'Standard AI features',
+      'Multiple outlets',
       '14-day free trial',
     ],
     gradient: 'from-[#34D399] to-[#059669]',
@@ -32,10 +49,11 @@ const PLANS = [
     description: 'Established organisations — multi-site operations',
     features: [
       'Up to 250 employees',
-      'AI-powered features',
+      'Core Workforce Package',
+      'Multiple Industry Packs',
       'Advanced reporting',
-      'External integrations',
-      'Community support',
+      'AI Suite access',
+      'Priority support',
       '14-day free trial',
     ],
     gradient: 'from-[#8B5CF6] to-[#6D28D9]',
@@ -115,7 +133,7 @@ export default function Checkout() {
         )}
 
         {/* Plan cards */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {PLANS.map((plan) => {
             const Icon = plan.icon;
             const isLoading = loading === plan.key;

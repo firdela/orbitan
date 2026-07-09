@@ -2,13 +2,17 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import Stripe from 'npm:stripe@17.7.0';
 
 // ── Stripe Price Map: plan_key → Stripe Price ID ─────────────────────────────
-// Starter is free (no Stripe checkout). Enterprise is custom (contact sales).
+// Starter, Growth, and Business are self-service checkout plans.
+// Enterprise is custom pricing — handled via "Contact Sales" in the Checkout UI.
+// Source of truth: src/lib/orbitan-config.js → SUBSCRIPTION_PLANS.*.stripe_price_id
 const PRICE_MAP = {
+  orbitan_starter: 'price_1TrG2gDap39FEFGJZXTY5or7',
   orbitan_growth: 'price_1TqdJoDap39FEFGJwNccaO12',
   orbitan_business: 'price_1TqdJoDap39FEFGJDYVJYLDR',
 };
 
 const PLAN_NAMES = {
+  orbitan_starter: 'OrbitanOS Starter',
   orbitan_growth: 'OrbitanOS Growth',
   orbitan_business: 'OrbitanOS Business',
 };
@@ -20,7 +24,7 @@ const PLAN_NAMES = {
  * Public endpoint (no auth required) — tenant context is passed as parameters.
  *
  * Payload:
- *   - plan_key: 'orbitan_growth' | 'orbitan_business'
+ *   - plan_key: 'orbitan_starter' | 'orbitan_growth' | 'orbitan_business'
  *   - tenant_id: (optional) existing tenant to link subscription to
  *   - tenant_name: (optional) org name for display
  */
