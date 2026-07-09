@@ -91,7 +91,7 @@ export default function Landing() {
             <span className="text-marketing-blue">Connect Everything.</span>
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }}
-          className="text-base md:text-lg text-slate-400 max-w-xl mx-auto mb-9 leading-relaxed">
+          className="text-base md:text-lg text-slate-300 max-w-xl mx-auto mb-9 leading-relaxed">
             The Workforce Operating System for Modern Organisations — connecting people, operations, knowledge, compliance, and growth.
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.8 }}
@@ -128,7 +128,7 @@ export default function Landing() {
           <motion.div {...fadeUp} className="text-center mb-14">
             <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">The Operating Cycle</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Six Principles. One Platform.</h2>
-            <p className="text-slate-400 max-w-lg mx-auto text-sm">
+            <p className="text-slate-300 max-w-lg mx-auto text-sm">
               The six interconnected "R" elements represent the continuous cycle powering every Orbitan tenant.
             </p>
           </motion.div>
@@ -145,7 +145,7 @@ export default function Landing() {
                     <Icon className="w-5 h-5" style={{ color }} />
                   </div>
                   <h3 className="font-display font-bold text-white mb-1.5">{p}</h3>
-                  <p className="text-slate-500 text-xs leading-relaxed">{config?.description || ''}</p>
+                  <p className="text-slate-400 text-xs leading-relaxed">{config?.description || ''}</p>
                 </motion.div>);
 
             })}
@@ -159,7 +159,7 @@ export default function Landing() {
           <motion.div {...fadeUp} className="text-center mb-14">
             <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Industry Packs</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Built for Your Industry</h2>
-            <p className="text-slate-400 max-w-lg mx-auto text-sm">
+            <p className="text-slate-300 max-w-lg mx-auto text-sm">
               Self-aware capability blueprints. Every pack ships with the right modules, workflows, and compliance templates.
             </p>
           </motion.div>
@@ -176,10 +176,10 @@ export default function Landing() {
                     <Icon className="w-5 h-5" style={{ color: pack.color_hex }} />
                   </div>
                   <h3 className="font-display font-bold text-white text-lg mb-1">{pack.name}</h3>
-                  <p className="text-slate-500 text-xs leading-relaxed mb-4">{pack.description}</p>
+                  <p className="text-slate-400 text-xs leading-relaxed mb-4">{pack.description}</p>
                   <CapabilityStack packs={pack.modules.map((m) => ({ type: m.toLowerCase().replace(/\s+/g, '_'), label: m })).slice(0, 5)} />
                   {pack.modules.length > 5 &&
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.06] text-slate-500">+{pack.modules.length - 5} more</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.06] text-slate-400">+{pack.modules.length - 5} more</span>
                   }
                 </motion.div>);
 
@@ -194,7 +194,7 @@ export default function Landing() {
           <motion.div {...fadeUp} className="text-center mb-14">
             <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Customer Stories</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Trusted by Industry Leaders</h2>
-            <p className="text-slate-400 max-w-lg mx-auto text-sm">
+            <p className="text-slate-300 max-w-lg mx-auto text-sm">
               See how businesses across F&B, sustainability, and retail are transforming with OrbitanOS.
             </p>
           </motion.div>
@@ -223,7 +223,7 @@ export default function Landing() {
                       </p>
                     </div>
                     <div className="h-px bg-gradient-to-r from-white/[0.06] to-transparent" />
-                    <p className="text-[10px] text-slate-600 italic">
+                    <p className="text-[10px] text-slate-400 italic">
                       "How {story.industry} businesses achieved operational excellence with OrbitanOS."
                     </p>
                   </div>
@@ -240,7 +240,7 @@ export default function Landing() {
           <motion.div {...fadeUp} className="text-center mb-14">
             <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Pricing</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Scale With Confidence</h2>
-            <p className="text-slate-400 max-w-lg mx-auto text-sm">
+            <p className="text-slate-300 max-w-lg mx-auto text-sm">
               From single-outlet startups to multi-entity enterprises. Every plan scales with your growth.
             </p>
           </motion.div>
@@ -258,7 +258,7 @@ export default function Landing() {
                       {plan.name}
                     </span>
                     <p className="text-3xl font-display font-bold text-white mt-2 mb-0.5">{plan.price_label}</p>
-                    <p className="text-xs text-slate-500 mb-5">{plan.suitable_for}</p>
+                    <p className="text-xs text-slate-400 mb-5">{plan.suitable_for}</p>
                   </div>
                   <ul className="space-y-2.5 flex-1 mb-6">
                     {[
@@ -297,7 +297,7 @@ export default function Landing() {
             <h2 className="text-3xl md:text-4xl font-display font-bold mt-3 mb-4">
               Orbit Shield<span className="text-white/30">™</span>
             </h2>
-            <p className="text-slate-400 max-w-xl mx-auto text-sm mb-10 leading-relaxed">
+            <p className="text-slate-300 max-w-xl mx-auto text-sm mb-10 leading-relaxed">
               Enterprise-grade security, compliance, and governance. Auditable, portable, and exit-ready — every record, every action, every time.
             </p>
           </motion.div>
@@ -312,7 +312,7 @@ export default function Landing() {
             className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
                 <item.icon className="w-5 h-5 text-marketing-red mb-3" />
                 <h4 className="font-display font-semibold text-white text-sm mb-1.5">{item.title}</h4>
-                <p className="text-slate-500 text-xs leading-relaxed">{item.desc}</p>
+                <p className="text-slate-400 text-xs leading-relaxed">{item.desc}</p>
               </motion.div>
             )}
           </div>
@@ -325,7 +325,7 @@ export default function Landing() {
           <motion.div {...fadeUp} className="text-center mb-14">
             <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Connected Ecosystem</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Integrate Everything</h2>
-            <p className="text-slate-400 max-w-lg mx-auto text-sm">
+            <p className="text-slate-300 max-w-lg mx-auto text-sm">
               OrbitanOS connects with the tools you already use. Finance, workforce, compliance — all in one operating system.
             </p>
           </motion.div>
@@ -354,7 +354,7 @@ export default function Landing() {
                   <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
                     <Zap className="w-4 h-4 text-marketing-blue/60" />
                   </div>
-                  <span className="text-[9px] text-slate-500 font-medium">{label}</span>
+                  <span className="text-[9px] text-slate-400 font-medium">{label}</span>
                 </div>);
 
             })}
@@ -365,9 +365,9 @@ export default function Landing() {
             {['Xero', 'Google', 'Slack', 'Stripe', 'WhatsApp'].map((partner, i) =>
             <div key={i} className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 flex flex-col items-center gap-2 hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-300 group">
                 <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <span className="text-[10px] font-bold text-slate-500 group-hover:text-white transition-colors">{partner[0]}</span>
+                  <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors">{partner[0]}</span>
                 </div>
-                <span className="text-[9px] text-slate-600 group-hover:text-slate-400 transition-colors">{partner}</span>
+                <span className="text-[9px] text-slate-400 group-hover:text-slate-200 transition-colors">{partner}</span>
               </div>
             )}
           </motion.div>
@@ -382,18 +382,18 @@ export default function Landing() {
               <div>
                 <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Coming Soon</p>
                 <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">OrbitanOS in Your Pocket</h2>
-                <p className="text-slate-400 text-sm leading-relaxed max-w-md">
+                <p className="text-slate-300 text-sm leading-relaxed max-w-md">
                   Clock in, manage tasks, and stay connected — all from your phone. The full OrbitanOS experience, optimised for mobile.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
                 <div className="h-11 px-5 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center gap-2 cursor-not-allowed opacity-60">
                   <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.37 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" /></svg>
-                  <span className="text-xs text-slate-500 font-medium">App Store</span>
+                  <span className="text-xs text-slate-400 font-medium">App Store</span>
                 </div>
                 <div className="h-11 px-5 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center gap-2 cursor-not-allowed opacity-60">
                   <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.807 1.626a1 1 0 010 1.732l-2.807 1.626L15.206 12l2.492-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z" /></svg>
-                  <span className="text-xs text-slate-500 font-medium">Google Play</span>
+                  <span className="text-xs text-slate-400 font-medium">Google Play</span>
                 </div>
               </div>
             </motion.div>
@@ -430,7 +430,7 @@ export default function Landing() {
         <div className="max-w-3xl mx-auto text-center">
           <motion.div {...fadeUp}>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Ready to Build Momentum?</h2>
-            <p className="text-slate-400 text-sm mb-8">Join the operating system that connects your workforce, operations, and growth.</p>
+            <p className="text-slate-300 text-sm mb-8">Join the operating system that connects your workforce, operations, and growth.</p>
             {isAuthenticated ?
             <Link to="/workspace">
                 <Button className="bg-marketing-gold hover:bg-marketing-gold/90 text-marketing-bg text-sm font-semibold px-10 h-12 rounded-xl gap-2">
@@ -453,14 +453,14 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-5 h-5 opacity-50" />
-            <span className="text-xs text-slate-600">OrbitanOS by Orbitan © {new Date().getFullYear()} Muhammad Firdaus Bin Ismail</span>
+            <span className="text-xs text-slate-400">OrbitanOS by Orbitan © {new Date().getFullYear()} Muhammad Firdaus Bin Ismail</span>
           </div>
           <div className="flex items-center gap-6">
-            <a href="#framework" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Framework</a>
-            <a href="#packs" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Packs</a>
-            <a href="#stories" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Stories</a>
-            <a href="#plans" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Plans</a>
-            <a href="#shield" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">Security</a>
+            <a href="#framework" className="text-xs text-slate-400 hover:text-white transition-colors">Framework</a>
+            <a href="#packs" className="text-xs text-slate-400 hover:text-white transition-colors">Packs</a>
+            <a href="#stories" className="text-xs text-slate-400 hover:text-white transition-colors">Stories</a>
+            <a href="#plans" className="text-xs text-slate-400 hover:text-white transition-colors">Plans</a>
+            <a href="#shield" className="text-xs text-slate-400 hover:text-white transition-colors">Security</a>
           </div>
         </div>
       </footer>
