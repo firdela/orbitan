@@ -37,6 +37,24 @@ export const OPERATING_CYCLE = {
 // SUBSCRIPTION PLANS
 // ============================================================
 export const SUBSCRIPTION_PLANS = {
+  orbitan_free: {
+    key: "orbitan_free",
+    name: "Orbitan Free",
+    price_sgd: 0,
+    price_label: "Free",
+    max_employees: 3,
+    tier_level: 0,
+    gradient: "linear-gradient(135deg, #94A3B8, #475569)",
+    color_hex: "#64748B",
+    allowed_modules: ["workforce", "task", "training"],
+    allowed_packs: [],
+    pack_limit: 0,
+    ai_access: false,
+    advanced_reporting: false,
+    integrations: false,
+    description: "For small businesses, startups, side hustles",
+    suitable_for: "Small businesses, startups, single-owner businesses, side hustles",
+  },
   orbitan_starter: {
     key: "orbitan_starter",
     name: "OrbitanOS Starter",
@@ -56,6 +74,7 @@ export const SUBSCRIPTION_PLANS = {
     suitable_for: "Small businesses — single outlet",
     stripe_product_id: "prod_UqxyqWSPqzbmUU",
     stripe_price_id: "price_1TrG2gDap39FEFGJZXTY5or7",
+    checkout_mode: "stripe",
   },
   orbitan_growth: {
     key: "orbitan_growth",
@@ -76,6 +95,7 @@ export const SUBSCRIPTION_PLANS = {
     suitable_for: "Growing businesses — multiple outlets",
     stripe_product_id: "prod_UqCTflVC5RIRyA",
     stripe_price_id: "price_1TqdJoDap39FEFGJwNccaO12",
+    checkout_mode: "stripe",
   },
   orbitan_business: {
     key: "orbitan_business",
@@ -96,6 +116,7 @@ export const SUBSCRIPTION_PLANS = {
     suitable_for: "Established organisations — multi-site operations",
     stripe_product_id: "prod_UqCTbi0NRW3noE",
     stripe_price_id: "price_1TqdJoDap39FEFGJDYVJYLDR",
+    checkout_mode: "stripe",
   },
   orbitan_enterprise: {
     key: "orbitan_enterprise",

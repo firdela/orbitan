@@ -27,6 +27,7 @@
     "subscription_plan": {
       "type": "string",
       "enum": [
+        "orbitan_free",
         "orbitan_starter",
         "orbitan_growth",
         "orbitan_business",

@@ -1,12 +1,30 @@
 import React, { useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
-import { Check, Loader2, ArrowLeft, Shield, Zap, Building2 } from 'lucide-react';
+import { Check, Loader2, ArrowLeft, Shield, Zap, Building2, Rocket } from 'lucide-react';
 
 const PLANS = [
+  {
+    key: 'orbitan_free',
+    name: 'Orbitan Free',
+    price: 'Free',
+    period: 'forever',
+    description: 'Small businesses, startups, side hustles',
+    features: [
+      'Up to 3 employees',
+      'Basic attendance',
+      'Basic tasks',
+      'Basic training',
+      '1 outlet',
+      'Limited storage',
+    ],
+    gradient: 'from-[#94A3B8] to-[#475569]',
+    icon: Rocket,
+    isFree: true,
+  },
   {
     key: 'orbitan_starter',
     name: 'OrbitanOS Starter',
@@ -64,6 +82,7 @@ const PLANS = [
 
 export default function Checkout() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(null);
   const [error, setError] = useState(null);
 
@@ -73,6 +92,13 @@ export default function Checkout() {
 
   const handleCheckout = async (planKey) => {
     setError(null);
+
+    // Free plan — no Stripe checkout, redirect to onboarding
+    const plan = PLANS.find(p => p.key === planKey);
+    if (plan?.isFree) {
+      navigate('/onboarding');
+      return;
+    }
 
     // Block checkout if running inside an iframe (Stripe requires full-page redirect)
     if (window.self !== window.top) {
@@ -133,7 +159,7 @@ export default function Checkout() {
         )}
 
         {/* Plan cards */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {PLANS.map((plan) => {
             const Icon = plan.icon;
             const isLoading = loading === plan.key;
@@ -186,8 +212,10 @@ export default function Checkout() {
                     {isLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Redirecting to checkout...
+                        {plan.isFree ? 'Starting...' : 'Redirecting to checkout...'}
                       </>
+                    ) : plan.isFree ? (
+                      'Get Started Free'
                     ) : (
                       'Start Free Trial'
                     )}

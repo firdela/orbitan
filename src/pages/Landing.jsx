@@ -32,7 +32,7 @@ const PRINCIPLE_COLORS = {
 
 const FEATURED_PACKS = ['fnb', 'recycling', 'retail'];
 
-const PLAN_ORDER = ['orbitan_starter', 'orbitan_growth', 'orbitan_business', 'orbitan_enterprise'];
+const PLAN_ORDER = ['orbitan_free', 'orbitan_starter', 'orbitan_growth', 'orbitan_business', 'orbitan_enterprise'];
 
 const fadeUp = { initial: { opacity: 0, y: 24 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: '-60px' }, transition: { duration: 0.6 } };
 
@@ -245,7 +245,7 @@ export default function Landing() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
             {PLAN_ORDER.map((key, i) => {
               const plan = SUBSCRIPTION_PLANS[key];
               const isEnterprise = key === 'orbitan_enterprise';
