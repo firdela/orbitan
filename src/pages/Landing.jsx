@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   ArrowRight, Shield, Store, Leaf, ShoppingBag,
-  ChevronRight, Check, Sparkles, Zap, Lock, Globe, Server } from
+  ChevronRight, Check, Sparkles, Zap, Lock, Globe, Server, Plug } from
 'lucide-react';
 import { CapabilityBadge, CapabilityStack } from '@/components/shared/CapabilityBadge';
 import { OPERATING_CYCLE, SUBSCRIPTION_PLANS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
@@ -115,7 +115,7 @@ export default function Landing() {
               </Link>
             </>
             }
-            <a href="#plans" className="text-sm text-slate-400 hover:text-white transition-colors flex items-center gap-1.5">
+            <a href="#plans" className="text-sm text-slate-300 hover:text-white transition-colors flex items-center gap-1.5">
               View Plans <ChevronRight className="w-3.5 h-3.5" />
             </a>
           </motion.div>
@@ -145,7 +145,7 @@ export default function Landing() {
                     <Icon className="w-5 h-5" style={{ color }} />
                   </div>
                   <h3 className="font-display font-bold text-white mb-1.5">{p}</h3>
-                  <p className="text-slate-400 text-xs leading-relaxed">{config?.description || ''}</p>
+                  <p className="text-slate-300 text-xs leading-relaxed">{config?.description || ''}</p>
                 </motion.div>);
 
             })}
@@ -176,10 +176,10 @@ export default function Landing() {
                     <Icon className="w-5 h-5" style={{ color: pack.color_hex }} />
                   </div>
                   <h3 className="font-display font-bold text-white text-lg mb-1">{pack.name}</h3>
-                  <p className="text-slate-400 text-xs leading-relaxed mb-4">{pack.description}</p>
+                  <p className="text-slate-300 text-xs leading-relaxed mb-4">{pack.description}</p>
                   <CapabilityStack packs={pack.modules.map((m) => ({ type: m.toLowerCase().replace(/\s+/g, '_'), label: m })).slice(0, 5)} />
                   {pack.modules.length > 5 &&
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.06] text-slate-400">+{pack.modules.length - 5} more</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.06] text-slate-300">+{pack.modules.length - 5} more</span>
                   }
                 </motion.div>);
 
@@ -218,12 +218,12 @@ export default function Landing() {
                     <div>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-bold mb-2 inline-block"
                       style={{ backgroundColor: `${story.color}15`, color: story.color }}>{story.pack}</span>
-                      <p className="text-slate-400 text-xs leading-relaxed mt-2">
+                      <p className="text-slate-300 text-xs leading-relaxed mt-2">
                         Success Story: <span className="text-white font-medium">{story.industry}</span> — Coming Soon
                       </p>
                     </div>
                     <div className="h-px bg-gradient-to-r from-white/[0.06] to-transparent" />
-                    <p className="text-[10px] text-slate-400 italic">
+                    <p className="text-[10px] text-slate-300 italic">
                       "How {story.industry} businesses achieved operational excellence with OrbitanOS."
                     </p>
                   </div>
@@ -257,8 +257,13 @@ export default function Landing() {
                     style={{ backgroundColor: `${plan.color_hex}18`, color: isEnterprise ? plan.accent_hex : plan.color_hex }}>
                       {plan.name}
                     </span>
-                    <p className="text-3xl font-display font-bold text-white mt-2 mb-0.5">{plan.price_label}</p>
-                    <p className="text-xs text-slate-400 mb-5">{plan.suitable_for}</p>
+                    <div className="mt-2 mb-0.5">
+                      <p className="text-2xl md:text-3xl font-display font-bold text-white whitespace-nowrap">{plan.price_label}</p>
+                      {isEnterprise && plan.starting_price_label && (
+                        <p className="text-[11px] text-marketing-gold font-semibold mt-1">{plan.starting_price_label}</p>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-300 mb-5">{plan.suitable_for}</p>
                   </div>
                   <ul className="space-y-2.5 flex-1 mb-6">
                     {[
@@ -268,7 +273,7 @@ export default function Landing() {
                     plan.integrations ? 'External integrations' : 'Standard modules',
                     isEnterprise ? 'Dedicated support' : 'Community support'].
                     map((feat, j) =>
-                    <li key={j} className="flex items-start gap-2 text-xs text-slate-400">
+                    <li key={j} className="flex items-start gap-2 text-xs text-slate-300">
                         <Check className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: isEnterprise ? '#D4AF37' : '#3B82F6' }} />
                         {feat}
                       </li>
@@ -312,7 +317,7 @@ export default function Landing() {
             className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5">
                 <item.icon className="w-5 h-5 text-marketing-red mb-3" />
                 <h4 className="font-display font-semibold text-white text-sm mb-1.5">{item.title}</h4>
-                <p className="text-slate-400 text-xs leading-relaxed">{item.desc}</p>
+                <p className="text-slate-300 text-xs leading-relaxed">{item.desc}</p>
               </motion.div>
             )}
           </div>
@@ -323,52 +328,41 @@ export default function Landing() {
       <section id="ecosystem" className="py-20 md:py-28 px-6 bg-marketing-surface-dark">
         <div className="max-w-5xl mx-auto">
           <motion.div {...fadeUp} className="text-center mb-14">
+            <div className="w-14 h-14 rounded-2xl bg-marketing-blue/10 flex items-center justify-center mx-auto mb-6">
+              <Plug className="w-7 h-7 text-marketing-blue" />
+            </div>
             <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Connected Ecosystem</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Integrate Everything</h2>
-            <p className="text-slate-300 max-w-lg mx-auto text-sm">
-              OrbitanOS connects with the tools you already use. Finance, workforce, compliance — all in one operating system.
+            <p className="text-slate-200 max-w-lg mx-auto text-sm leading-relaxed">
+              OrbitanOS connects with the tools you already use. Finance, workforce, compliance — all in one operating system, powered by Orbit Nexus.
             </p>
           </motion.div>
 
-          {/* Integration Network Visual */}
-          <motion.div {...fadeUp} className="relative flex items-center justify-center mb-12">
-            <div className="w-20 h-20 rounded-full bg-marketing-blue/10 border border-[#3B82F6]/20 flex items-center justify-center z-10">
-              <img src={LOGO_ASSETS.mark} alt="Orbitan" className="w-10 h-10 opacity-80" />
-            </div>
-            {/* Connection lines with pulsing dots */}
-            {[0, 72, 144, 216, 288].map((angle, i) =>
-            <div key={i} className="absolute top-1/2 left-1/2 origin-left h-px"
-            style={{ width: '140px', transform: `rotate(${angle}deg)`, background: `linear-gradient(90deg, rgba(59,130,246,0.3), transparent)` }}>
-                <div className="absolute right-0 -top-1 w-2 h-2 rounded-full bg-marketing-blue/60 animate-pulse" />
+          {/* Integration Partners Grid — Clean Static Layout */}
+          <motion.div {...fadeUp} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+            {[
+              { name: 'Xero', icon: 'X', color: '#13B5EA' },
+              { name: 'Google', icon: 'G', color: '#4285F4' },
+              { name: 'Slack', icon: 'S', color: '#E01E5A' },
+              { name: 'Stripe', icon: '$', color: '#635BFF' },
+              { name: 'WhatsApp', icon: 'W', color: '#25D366' },
+            ].map((partner, i) =>
+            <div key={i} className="bg-white/[0.04] border border-white/[0.08] rounded-xl p-5 flex flex-col items-center gap-3 hover:bg-white/[0.07] hover:border-white/[0.15] transition-all duration-300 group">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform duration-300"
+                style={{ backgroundColor: `${partner.color}18` }}>
+                  <span className="text-lg font-bold transition-colors" style={{ color: partner.color }}>{partner.icon}</span>
+                </div>
+                <span className="text-sm text-slate-200 group-hover:text-white transition-colors font-medium">{partner.name}</span>
               </div>
             )}
-            {/* Satellite nodes */}
-            {['Finance', 'Workforce', 'Inventory', 'Compliance', 'AI'].map((label, i) => {
-              const angles = [0, 72, 144, 216, 288];
-              const rad = angles[i] * Math.PI / 180;
-              const x = Math.cos(rad) * 140;
-              const y = Math.sin(rad) * 140;
-              return (
-                <div key={label} className="absolute flex flex-col items-center gap-1"
-                style={{ transform: `translate(${x}px, ${y}px)` }}>
-                  <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-marketing-blue/60" />
-                  </div>
-                  <span className="text-[9px] text-slate-400 font-medium">{label}</span>
-                </div>);
-
-            })}
           </motion.div>
 
-          {/* Integration Partners Grid */}
-          <motion.div {...fadeUp} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {['Xero', 'Google', 'Slack', 'Stripe', 'WhatsApp'].map((partner, i) =>
-            <div key={i} className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-4 flex flex-col items-center gap-2 hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-300 group">
-                <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors">{partner[0]}</span>
-                </div>
-                <span className="text-[9px] text-slate-400 group-hover:text-slate-200 transition-colors">{partner}</span>
-              </div>
+          {/* Orbit Nexus Ecosystem Pills */}
+          <motion.div {...fadeUp} className="flex flex-wrap items-center justify-center gap-3 mt-10">
+            {['Orbit Nexus', 'Orbit Shield', 'Orbit Connect', 'Orbit Wallet', 'Orbit Builder', 'Orbit Flow'].map((service, i) =>
+            <span key={i} className="px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs text-slate-200 font-medium">
+              {service}
+            </span>
             )}
           </motion.div>
         </div>
@@ -388,12 +382,12 @@ export default function Landing() {
               </div>
               <div className="flex flex-wrap gap-3">
                 <div className="h-11 px-5 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center gap-2 cursor-not-allowed opacity-60">
-                  <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.37 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" /></svg>
-                  <span className="text-xs text-slate-400 font-medium">App Store</span>
+                  <svg className="w-4 h-4 text-slate-300" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.37 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" /></svg>
+                  <span className="text-xs text-slate-300 font-medium">App Store</span>
                 </div>
                 <div className="h-11 px-5 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center gap-2 cursor-not-allowed opacity-60">
-                  <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.807 1.626a1 1 0 010 1.732l-2.807 1.626L15.206 12l2.492-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z" /></svg>
-                  <span className="text-xs text-slate-400 font-medium">Google Play</span>
+                  <svg className="w-4 h-4 text-slate-300" viewBox="0 0 24 24" fill="currentColor"><path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92zm10.89 10.893l2.302 2.302-10.937 6.333 8.635-8.635zm3.199-3.199l2.807 1.626a1 1 0 010 1.732l-2.807 1.626L15.206 12l2.492-2.492zM5.864 2.658L16.8 8.99l-2.302 2.302-8.634-8.634z" /></svg>
+                  <span className="text-xs text-slate-300 font-medium">Google Play</span>
                 </div>
               </div>
             </motion.div>
@@ -453,14 +447,14 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-5 h-5 opacity-50" />
-            <span className="text-xs text-slate-400">OrbitanOS by Orbitan © {new Date().getFullYear()} Muhammad Firdaus Bin Ismail</span>
+            <span className="text-xs text-slate-300">OrbitanOS by Orbitan © {new Date().getFullYear()} Muhammad Firdaus Bin Ismail</span>
           </div>
           <div className="flex items-center gap-6">
-            <a href="#framework" className="text-xs text-slate-400 hover:text-white transition-colors">Framework</a>
-            <a href="#packs" className="text-xs text-slate-400 hover:text-white transition-colors">Packs</a>
-            <a href="#stories" className="text-xs text-slate-400 hover:text-white transition-colors">Stories</a>
-            <a href="#plans" className="text-xs text-slate-400 hover:text-white transition-colors">Plans</a>
-            <a href="#shield" className="text-xs text-slate-400 hover:text-white transition-colors">Security</a>
+            <a href="#framework" className="text-xs text-slate-300 hover:text-white transition-colors">Framework</a>
+            <a href="#packs" className="text-xs text-slate-300 hover:text-white transition-colors">Packs</a>
+            <a href="#stories" className="text-xs text-slate-300 hover:text-white transition-colors">Stories</a>
+            <a href="#plans" className="text-xs text-slate-300 hover:text-white transition-colors">Plans</a>
+            <a href="#shield" className="text-xs text-slate-300 hover:text-white transition-colors">Security</a>
           </div>
         </div>
       </footer>

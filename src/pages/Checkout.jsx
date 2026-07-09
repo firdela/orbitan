@@ -234,11 +234,12 @@ export default function Checkout() {
         {/* Enterprise CTA */}
         <div className="max-w-3xl mx-auto mt-8 p-6 rounded-xl bg-slate-900 text-white text-center">
           <h3 className="font-heading text-lg font-semibold">OrbitanOS Enterprise</h3>
-          <p className="text-sm text-white/70 mt-1 mb-4">
+          <p className="text-sm text-white/70 mt-1 mb-2">
             Unlimited scale, custom SLAs, white-labelling, and dedicated support.
           </p>
+          <p className="text-sm text-marketing-gold font-semibold mb-4">Starting from S$1,999/month</p>
           <a href="mailto:sales@orbitan.com">
-            <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+            <Button variant="outline" className="border-marketing-gold/40 text-marketing-gold hover:bg-marketing-gold/10">
               Contact Sales
             </Button>
           </a>

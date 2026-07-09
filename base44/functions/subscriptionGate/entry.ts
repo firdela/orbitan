@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
 
     // Hardcoded fallback for backward compatibility during migration
     const PLAN_HIERARCHY = {
+      orbitan_free: 0,
       orbitan_starter: 1,
       orbitan_growth: 2,
       orbitan_business: 3,
@@ -51,6 +52,7 @@ Deno.serve(async (req) => {
     };
 
     const PLAN_MODULE_ACCESS = {
+      orbitan_free:        ['workforce', 'tasks', 'training'],
       orbitan_starter:    ['workforce', 'scheduling', 'tasks', 'clock'],
       orbitan_growth:     ['workforce', 'scheduling', 'tasks', 'clock', 'inventory', 'procurement', 'compliance', 'reporting'],
       orbitan_business:   ['workforce', 'scheduling', 'tasks', 'clock', 'inventory', 'procurement', 'compliance', 'reporting', 'sales_invoice', 'finance_xero', 'ai_suite', 'customer_management'],
@@ -58,6 +60,7 @@ Deno.serve(async (req) => {
     };
 
     const PLAN_PACK_ACCESS = {
+      orbitan_free:        [],
       orbitan_starter:    ['core'],
       orbitan_growth:     ['core', 'fnb', 'retail', 'recycling'],
       orbitan_business:   ['core', 'fnb', 'retail', 'recycling', 'healthcare', 'education', 'logistics'],
@@ -88,7 +91,7 @@ Deno.serve(async (req) => {
     }
 
     // Determine employee limit: policy > tenant override > hardcoded fallback
-    const hardcodedLimits = { orbitan_starter: 10, orbitan_growth: 50, orbitan_business: 250, orbitan_enterprise: null };
+    const hardcodedLimits = { orbitan_free: 3, orbitan_starter: 10, orbitan_growth: 50, orbitan_business: 250, orbitan_enterprise: null };
     const employee_limit = limits?.max_employees ?? tenant.max_employees ?? hardcodedLimits[plan] ?? null;
 
     return Response.json({

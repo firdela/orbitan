@@ -48,6 +48,7 @@ import WalletPage from '@/pages/platform/WalletPage';
 import MarketplacePage from '@/pages/platform/MarketplacePage';
 import ShieldCommandCenter from '@/pages/platform/ShieldCommandCenter';
 import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
+import AuditLogPage from '@/pages/platform/AuditLogPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -135,6 +136,7 @@ const AuthenticatedApp = () => {
       <Route path="/platform/marketplace" element={<MarketplacePage />} />
       <Route path="/platform/shield" element={<ShieldCommandCenter />} />
       <Route path="/platform/integrations" element={<IntegrationHubPage />} />
+      <Route path="/platform/audit-logs" element={<AuditLogPage />} />
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />

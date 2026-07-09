@@ -136,6 +136,7 @@ export const SUBSCRIPTION_PLANS = {
     integrations: true,
     description: "Custom pricing — large organisations",
     suitable_for: "Large organisations, multi-entity enterprises, regulated industries",
+    starting_price_label: "From S$1,999/mo",
     stripe_product_id: "prod_UqzfnTh7fdnvTs",
     stripe_price_id: "price_1TrHfjDap39FEFGJNYT7xu5I",
     checkout_mode: "contact_sales",

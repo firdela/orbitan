@@ -30,7 +30,7 @@ import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
-  Rocket, Activity, Zap, Wallet, ShoppingBag, Target } from 'lucide-react';
+  Rocket, Activity, Zap, Wallet, ShoppingBag, Target, FileText } from 'lucide-react';
 
 export default function LeaderOrg() {
   const [activeTab, setActiveTab] = useState('tenants');
@@ -125,7 +125,7 @@ export default function LeaderOrg() {
         </div>
 
         {/* Revenue Engine Quick Links */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           <Link to="/platform/wallet" className="group bg-gradient-to-br from-[#1D4ED8] to-[#111827] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
             <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
               <Wallet className="w-5 h-5 text-white" />
@@ -153,6 +153,16 @@ export default function LeaderOrg() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white">Orbit Shield™</p>
               <p className="text-[11px] text-[#D4AF37]/70">Regulate · Govern · Protect</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
+          </Link>
+          <Link to="/platform/audit-logs" className="group bg-gradient-to-br from-[#0F766E] to-[#111827] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
+            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <FileText className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Audit Logs</p>
+              <p className="text-[11px] text-teal-300">Compliance · Traceability</p>
             </div>
             <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
           </Link>
