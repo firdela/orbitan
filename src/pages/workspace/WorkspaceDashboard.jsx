@@ -27,10 +27,14 @@ export default function WorkspaceDashboard() {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const base = `/workspace/${tenantId}`;
 
   useEffect(() => {
+    if (!tenantId) return;
+    setLoading(true);
+    setError(null);
     Promise.all([
       base44.entities.InventoryItem.list('-created_date', 50),
       base44.entities.PurchaseOrder.list('-created_date', 20),
@@ -39,8 +43,10 @@ export default function WorkspaceDashboard() {
       setInventoryItems(inv || []);
       setPurchaseOrders(po || []);
       setTasks(t || []);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+    }).catch((err) => {
+      setError(err?.message || 'Unable to load dashboard data. Please try again.');
+    }).finally(() => setLoading(false));
+  }, [tenantId]);
 
   const lowStockItems = inventoryItems.filter(i => i.par_level && i.current_stock < i.par_level);
   const pendingPOs = purchaseOrders.filter(p => ['draft', 'pending_approval'].includes(p.status));
@@ -89,6 +95,17 @@ export default function WorkspaceDashboard() {
         </div>
         <StatusBadge status={tenant?.status || 'active'} />
       </div>
+
+      {/* ── Error State ── */}
+      {error && (
+        <div className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+          <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-destructive">Dashboard data unavailable</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Editable Widget Grid ── */}
       <EditableDashboardGrid
