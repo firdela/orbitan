@@ -1,7 +1,7 @@
 {
   "name": "ActivationRegistry",
   "type": "object",
-  "description": "OrbitanOS Activation Engine \u2014 Registry-Driven Provisioning. Versioned JSON manifests defining 'seeder pipelines' and industry blueprints for tenant onboarding across all industries. Replaces hardcoded INDUSTRY_BLUEPRINT logic. Powers the Manifest-Driven architecture. Now includes trust_pillars capability manifest and registry-driven financial governance (Dynamic Trust thresholds + ledger sync mode). Exit-Ready: pure schema, portable to any stack.",
+  "description": "OrbitanOS Activation Engine \u2014 Registry-Driven Provisioning. Versioned JSON manifests defining 'seeder pipelines' and industry blueprints for tenant onboarding across all industries. Replaces hardcoded INDUSTRY_BLUEPRINT logic. Powers the Manifest-Driven architecture. Now includes trust_pillars capability manifest, registry-driven financial governance (Dynamic Trust thresholds + ledger sync mode), and advisory_config for BlueprintAdvisor rule resolution. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "pack_key": {
       "type": "string",
@@ -113,6 +113,124 @@
                   "urgent"
                 ],
                 "default": "medium"
+              }
+            }
+          }
+        }
+      }
+    },
+    "advisory_config": {
+      "type": "object",
+      "description": "Registry-driven advisory rules consumed by the BlueprintAdvisor. Replaces the hardcoded INDUSTRY_ADVISOR_RULES in blueprint-registry.js. Adding a new industry = add advisory_config to its ActivationRegistry record \u2014 the frontend evaluation engine reads it dynamically.",
+      "properties": {
+        "color_hex": {
+          "type": "string",
+          "description": "Brand colour for this industry e.g. '#F97316' for F&B"
+        },
+        "recommended_path": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordered list of module keys representing the recommended activation path"
+        },
+        "critical_modules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Module keys considered must-have for this industry"
+        },
+        "rules": {
+          "type": "array",
+          "description": "Advisory rules evaluated by the BlueprintAdvisor evaluation engine",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique rule identifier"
+              },
+              "condition": {
+                "type": "object",
+                "description": "Primary condition { field, operator, value }",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "operator": {
+                    "type": "string"
+                  },
+                  "value": {}
+                }
+              },
+              "additional_condition": {
+                "type": "object",
+                "description": "Optional secondary condition that must also be met",
+                "properties": {
+                  "field": {
+                    "type": "string"
+                  },
+                  "operator": {
+                    "type": "string"
+                  },
+                  "value": {}
+                }
+              },
+              "message": {
+                "type": "string",
+                "description": "User-facing advisory message"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "soft_gate",
+                  "governance_gate"
+                ],
+                "default": "soft_gate"
+              },
+              "blocking": {
+                "type": "boolean",
+                "default": false
+              },
+              "principle": {
+                "type": "string",
+                "enum": [
+                  "regulate",
+                  "refine",
+                  "respond",
+                  "renew",
+                  "relate",
+                  "reach"
+                ]
+              },
+              "category": {
+                "type": "string"
+              },
+              "applies_to_plans": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Optional: restricts this rule to specific plan tiers"
+              }
+            }
+          }
+        },
+        "module_recommendations": {
+          "type": "object",
+          "description": "Per-module setup tips keyed by module key",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "link_to": {
+                "type": "string"
               }
             }
           }

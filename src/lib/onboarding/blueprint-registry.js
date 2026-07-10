@@ -810,8 +810,8 @@ export function evaluateCondition(condition, state) {
  * @param {object} state — { industry, plan, enabled_modules, is_virtual }
  * @returns {array} — array of triggered rule objects with evaluated flag
  */
-export function getActiveAdvisoryRules(state) {
-  const industryRules = INDUSTRY_ADVISOR_RULES[state.industry];
+export function getActiveAdvisoryRules(state, industryRulesOverride) {
+  const industryRules = industryRulesOverride || INDUSTRY_ADVISOR_RULES[state.industry];
   if (!industryRules) return [];
 
   return industryRules.rules
@@ -853,8 +853,8 @@ export function getActiveAdvisoryRules(state) {
  * @param {object} state — { industry, plan, enabled_modules, is_virtual }
  * @returns {number} — 0-100 score
  */
-export function calculateBlueprintScore(state) {
-  const industryRules = INDUSTRY_ADVISOR_RULES[state.industry];
+export function calculateBlueprintScore(state, industryRulesOverride) {
+  const industryRules = industryRulesOverride || INDUSTRY_ADVISOR_RULES[state.industry];
   if (!industryRules) return 50; // Unknown industry — neutral score
 
   let score = 0;

@@ -20,9 +20,9 @@ import {
   calculateBlueprintScore,
   getPlanGatingViolations,
   getDependencyViolations,
-  INDUSTRY_ADVISOR_RULES,
   MODULE_DEPENDENCY_MAP,
 } from '@/lib/onboarding/blueprint-registry';
+import { useAdvisoryConfig } from '@/lib/hooks/useAdvisoryConfig';
 import { MODULES, INDUSTRY_LABELS } from '@/lib/orbitan-config';
 import { LAUNCH_MANIFESTS } from '@/lib/tenant-registry';
 import {
@@ -32,8 +32,7 @@ import {
 } from 'lucide-react';
 
 // ── Score Breakdown Sub-component ────────────────────────────
-function ScoreBreakdown({ state }) {
-  const industryRules = INDUSTRY_ADVISOR_RULES[state.industry];
+function ScoreBreakdown({ state, industryRules }) {
   if (!industryRules) return null;
 
   const criticalCount = industryRules.critical_modules.length;
@@ -164,8 +163,7 @@ export default function BlueprintAdvisor({ open, onClose }) {
   const governanceGates = activeRules.filter(r => r.severity === 'governance_gate');
   const softGates = activeRules.filter(r => r.severity === 'soft_gate');
 
-  const industryRules = state ? INDUSTRY_ADVISOR_RULES[state.industry] : null;
-  const industryColor = industryRules?.color_hex || '#2563EB';
+const industryColor = industryRules?.color_hex || '#2563EB';
 
   if (!open) return null;
 
@@ -227,7 +225,7 @@ export default function BlueprintAdvisor({ open, onClose }) {
                       <p className="text-xs text-muted-foreground mb-3">
                         {INDUSTRY_LABELS[selectedTenant.industry]} · {selectedTenant.plan.replace('orbitan_', '').replace('_', ' ')}
                       </p>
-                      <ScoreBreakdown state={state} />
+                      <ScoreBreakdown state={state} industryRules={industryRules} />
                     </div>
                   </div>
 
