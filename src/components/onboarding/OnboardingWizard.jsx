@@ -13,8 +13,10 @@ import IndustryStep from '@/components/onboarding/steps/IndustryStep';
 import StructureStep from '@/components/onboarding/steps/StructureStep';
 import PlanStep from '@/components/onboarding/steps/PlanStep';
 import ActivationGateStep from '@/components/onboarding/steps/ActivationGateStep';
+import FindMySolutionWizard from '@/components/onboarding/FindMySolutionWizard';
 
 const STEPS = [
+{ key: 'diagnose', label: 'Diagnose' },
 { key: 'industry', label: 'Industry' },
 { key: 'structure', label: 'Organisation' },
 { key: 'plan', label: 'Plan & Modules' },
@@ -36,16 +38,18 @@ export default function OnboardingWizard() {
     structure: { company_name: '', brand_name: '', outlet_name: '', outlet_address: '', is_virtual: false },
     planKey: 'orbitan_growth',
     selectedModules: [],
-    acceptedStandards: false
+    acceptedStandards: false,
+    prescription: null
   });
 
   const update = (patch) => setData((prev) => ({ ...prev, ...patch }));
 
   const canAdvance = () => {
-    if (step === 0) return !!data.packKey;
-    if (step === 1) return !!(data.tenant.name || '').trim();
-    if (step === 2) return !!data.planKey;
-    if (step === 3) return !!data.acceptedStandards;
+    if (step === 0) return true; // FindMySolutionWizard handles its own completion via onComplete
+    if (step === 1) return !!data.packKey;
+    if (step === 2) return !!(data.tenant.name || '').trim();
+    if (step === 3) return !!data.planKey;
+    if (step === 4) return !!data.acceptedStandards;
     return true;
   };
 
@@ -122,7 +126,7 @@ export default function OnboardingWizard() {
 
   }
 
-  const StepComponent = [IndustryStep, StructureStep, PlanStep, ActivationGateStep][step];
+  const StepComponent = [FindMySolutionWizard, IndustryStep, StructureStep, PlanStep, ActivationGateStep][step];
 
   return (
     <div className="min-h-screen bg-[#0A0F1A] text-white">
@@ -176,7 +180,7 @@ export default function OnboardingWizard() {
             exit={{ opacity: 0, x: -16 }}
             transition={{ duration: 0.25 }}>
 
-            <StepComponent data={data} update={update} />
+            <StepComponent data={data} update={update} onComplete={next} />
           </motion.div>
         </AnimatePresence>
 
@@ -201,23 +205,34 @@ export default function OnboardingWizard() {
             {step === 0 ? 'Back' : 'Previous'}
           </Button>
 
-          <Button
-            onClick={next}
-            disabled={!canAdvance() || submitting}
-            className={`h-11 px-6 rounded-xl gap-2 ${
-            step === STEPS.length - 1 ?
-            'bg-emerald-500 hover:bg-emerald-600 text-white' :
-            'bg-[#3B82F6] hover:bg-[#2563EB] text-white'}`
-            }>
+          {step === 0 ? (
+            <Button
+              variant="ghost"
+              onClick={next}
+              className="text-slate-400 hover:text-white text-xs gap-1"
+            >
+              Skip — Choose Manually
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          ) : (
+            <Button
+              onClick={next}
+              disabled={!canAdvance() || submitting}
+              className={`h-11 px-6 rounded-xl gap-2 ${
+              step === STEPS.length - 1 ?
+              'bg-emerald-500 hover:bg-emerald-600 text-white' :
+              'bg-[#3B82F6] hover:bg-[#2563EB] text-white'}`
+              }>
 
-            {submitting ?
-            <><Loader2 className="w-4 h-4 animate-spin" /> Provisioning…</> :
-            step === STEPS.length - 1 ?
-            <><Rocket className="w-4 h-4" /> Activate Workspace</> :
+              {submitting ?
+              <><Loader2 className="w-4 h-4 animate-spin" /> Provisioning…</> :
+              step === STEPS.length - 1 ?
+              <><Rocket className="w-4 h-4" /> Activate Workspace</> :
 
-            <>Continue <ArrowRight className="w-4 h-4" /></>
-            }
-          </Button>
+              <>Continue <ArrowRight className="w-4 h-4" /></>
+              }
+            </Button>
+          )}
         </div>
       </div>
     </div>);
