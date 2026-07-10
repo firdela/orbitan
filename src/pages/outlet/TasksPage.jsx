@@ -34,25 +34,26 @@ const NAV = [
   { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
 ];
 
-const EMPLOYEES = ['Ahmad Rizal', 'Siti Nora', 'Hafiz Rahman', 'Priya Kumar'];
 const PRIORITY_COLORS = { low: 'bg-secondary text-muted-foreground', medium: 'bg-orbitan-blue-light text-orbitan-blue', high: 'bg-orbitan-amber-light text-orbitan-amber', urgent: 'bg-orbitan-red-light text-orbitan-red' };
-
-const DEMO_TASKS = [
-  { id: 't1', title: 'Morning prep checklist completion', priority: 'high', status: 'completed', assigned_to_name: 'Ahmad Rizal', due_date: new Date().toISOString().split('T')[0], module_context: 'operations' },
-  { id: 't2', title: 'Food safety temperature log', priority: 'urgent', status: 'in_progress', assigned_to_name: 'Siti Nora', due_date: new Date().toISOString().split('T')[0], module_context: 'compliance' },
-  { id: 't3', title: 'Inventory stock count', priority: 'medium', status: 'pending', assigned_to_name: 'Hafiz Rahman', due_date: new Date().toISOString().split('T')[0], module_context: 'inventory' },
-  { id: 't4', title: 'End-of-day deep clean', priority: 'medium', status: 'pending', assigned_to_name: 'Priya Kumar', due_date: new Date().toISOString().split('T')[0], module_context: 'operations' },
-  { id: 't5', title: 'Weekly supplier order review', priority: 'low', status: 'pending', assigned_to_name: 'Ahmad Rizal', due_date: new Date(Date.now() + 86400000).toISOString().split('T')[0], module_context: 'procurement' },
-];
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
-    base44.entities.Task.list('-created_date', 100)
-      .then(data => setTasks(data?.length ? data : DEMO_TASKS))
-      .catch(() => setTasks(DEMO_TASKS))
+    Promise.all([
+      base44.entities.Task.list('-created_date', 100),
+      base44.entities.Employee.list('-created_date', 100),
+    ])
+      .then(([taskData, empData]) => {
+        setTasks(taskData || []);
+        setEmployees(empData || []);
+      })
+      .catch(() => {
+        setTasks([]);
+        setEmployees([]);
+      })
       .finally(() => setLoading(false));
   }, []);
   const [showAdd, setShowAdd] = useState(false);
@@ -70,7 +71,14 @@ export default function TasksPage() {
     setNewTask({ title: '', priority: 'medium', assigned_to_name: '', due_date: new Date().toISOString().split('T')[0] });
   };
 
-  const updateStatus = (id, status) => setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+  const updateStatus = async (id, status) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+    try {
+      await base44.entities.Task.update(id, { status });
+    } catch {
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, status: t.status === 'completed' ? 'pending' : 'completed' } : t));
+    }
+  };
 
   return (
     <AppShell navigation={NAV} title="">
@@ -149,7 +157,7 @@ export default function TasksPage() {
                 <Label className="text-xs mb-1 block">Assign To</Label>
                 <Select value={newTask.assigned_to_name} onValueChange={v => setNewTask(p => ({ ...p, assigned_to_name: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                  <SelectContent>{EMPLOYEES.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}</SelectContent>
+                  <SelectContent>{employees.map(e => <SelectItem key={e.id} value={e.full_name}>{e.full_name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>

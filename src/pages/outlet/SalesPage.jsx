@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
 import AppShell from '@/components/layout/AppShell';
@@ -184,9 +185,11 @@ export default function SalesPage() {
           <div>
             <p className="text-sm font-semibold text-orbitan-blue">Xero Integration</p>
             <p className="text-xs text-blue-700 mt-0.5">Connect your Xero account via the Integrations module to automatically sync daily reconciliations and generate accounting entries.</p>
-            <Button variant="outline" size="sm" className="mt-2 text-xs border-orbitan-blue text-orbitan-blue hover:bg-orbitan-blue hover:text-white">
-              Connect Xero
-            </Button>
+            <Link to="/platform/integrations">
+              <Button variant="outline" size="sm" className="mt-2 text-xs border-orbitan-blue text-orbitan-blue hover:bg-orbitan-blue hover:text-white">
+                Connect Xero
+              </Button>
+            </Link>
           </div>
         </div>
       </div>
