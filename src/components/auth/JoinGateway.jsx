@@ -6,7 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Building2, ArrowRight, Shield, Search, Loader2, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Building2, ArrowRight, ArrowLeft, Shield, Search, Loader2, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
 
 export default function JoinGateway() {
@@ -153,7 +153,13 @@ export default function JoinGateway() {
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)]" />
 
       <div className="relative z-10 w-full max-w-md mx-auto px-6 flex flex-col items-center gap-8">
-        <OrbitanWordmark size="md" variant="light" showOS={false} />
+        <div className="w-full flex items-center justify-between">
+          <OrbitanWordmark size="md" variant="light" showOS={false} />
+          <Link to="/" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Home
+          </Link>
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}

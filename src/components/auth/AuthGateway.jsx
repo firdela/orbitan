@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogIn, UserPlus, Search, Shield, ChevronRight, Rocket } from 'lucide-react';
+import { LogIn, UserPlus, Search, Shield, ChevronRight, ChevronLeft, Rocket } from 'lucide-react';
 import { SIX_R_PRINCIPLES, SHIELD_BRAND, TAGLINES, PACK_BRAND, PLAN_BRAND, resolveTenantBrand, getTenantBackgroundTint } from '@/lib/orbitan-identity';
 import { LAUNCH_TENANTS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
 import SixRSequence from '@/components/brand/SixRSequence';
@@ -144,6 +144,13 @@ export default function AuthGateway() {
 
       {/* ── Content ── */}
       <div className="relative z-10 w-full max-w-2xl mx-auto px-6 flex flex-col items-center gap-10">
+        {/* Top nav */}
+        <div className="w-full flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors z-20">
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Home
+          </Link>
+        </div>
         <AnimatePresence mode="wait">
           {/* Phase 1: Boot — 6R Sequence */}
           {phase === 'boot' && (

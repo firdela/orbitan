@@ -49,7 +49,7 @@ export const PACK_BRAND = {
   education:    { color: '#8B5CF6', label: 'Education',       description: 'Education & campus operations' },
   logistics:    { color: '#2563EB', label: 'Logistics',       description: 'Logistics & supply chain' },
   construction: { color: '#EAB308', label: 'Construction',    description: 'Construction operations' },
-  technology:   { color: '#0F172A', label: 'Technology',      description: 'Tech & software operations' },
+  technology:   { color: '#6366F1', label: 'Technology',      description: 'Tech & software operations' },
   events:       { color: '#EC4899', label: 'Events',          description: 'Events & activations' },
   facilities:   { color: '#64748B', label: 'Facilities',      description: 'Facilities management' },
 };

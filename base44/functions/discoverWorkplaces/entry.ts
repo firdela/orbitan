@@ -9,15 +9,26 @@ Deno.serve(async (req) => {
     const outlets = await base44.asServiceRole.entities.Outlet.filter({ status: 'active', is_virtual: false });
     const tenants = await base44.asServiceRole.entities.Tenant.filter({ status: 'active' });
 
-    // Build a tenant lookup map
+    // Build a tenant lookup map — exclude test/internal tenants from public discovery
     const tenantMap = {};
-    tenants.forEach(t => { tenantMap[t.id] = t.name; });
+    const testTenantIds = new Set();
+    tenants.forEach(t => {
+      const isTest = t.name && /test\s*lab|shadow|internal|demo/i.test(t.name);
+      if (isTest) {
+        testTenantIds.add(t.id);
+      } else {
+        tenantMap[t.id] = t.name;
+      }
+    });
 
-    // Attach tenant name to each outlet
-    const results = outlets.map(o => ({
-      ...o,
-      tenant_name: tenantMap[o.tenant_id] || '',
-    }));
+    // Attach tenant name to each outlet, filtering out test-tenant outlets
+    const results = outlets
+      .filter(o => !testTenantIds.has(o.tenant_id))
+      .map(o => ({
+        ...o,
+        tenant_name: tenantMap[o.tenant_id] || '',
+      }))
+      .filter(o => o.tenant_name); // only outlets with a valid (non-test) tenant
 
     return Response.json(results);
   } catch (error) {

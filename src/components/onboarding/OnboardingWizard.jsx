@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -130,9 +130,15 @@ export default function OnboardingWizard() {
       <div className="border-b border-white/[0.06]">
         <div className="max-w-3xl mx-auto px-6 h-16 flex items-center justify-between">
           <OrbitanWordmark size="sm" variant="light" showOS={false} />
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-            <Sparkles className="w-3 h-3 text-[#D4AF37]" />
-            Business Installation
+          <div className="flex items-center gap-4">
+            <Link to="/" className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-white transition-colors">
+              <ArrowLeft className="w-3 h-3" />
+              Home
+            </Link>
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+              <Sparkles className="w-3 h-3 text-[#D4AF37]" />
+              Business Installation
+            </div>
           </div>
         </div>
       </div>

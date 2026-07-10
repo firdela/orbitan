@@ -231,7 +231,7 @@ export const INDUSTRY_PACKS = {
     key: "technology",
     name: "Tech & Software Pack",
     industry: "technology_software",
-    color_hex: "#0F172A",
+    color_hex: "#6366F1",
     badge_label: "Technology",
     description: "Software teams, sprint operations & technical workforce management",
     launch_tenants: [],
