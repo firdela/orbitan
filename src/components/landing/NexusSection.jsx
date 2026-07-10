@@ -1,11 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Brain, Plug, Zap, ArrowRight } from 'lucide-react';
+import { Plug, Zap } from 'lucide-react';
+import { LOGO_ASSETS } from '@/lib/orbitan-identity';
 
 const NEXUS_PILLARS = [
   {
     name: 'Think',
-    icon: Brain,
+    icon: null, // replaced by Nexus logo in header; pillars use their own icons
     color: '#7C3AED',
     description: 'RAG, Agentic AI, AIReceipts, and intelligent recommendations powered by a shared knowledge layer.',
     features: ['Knowledge Search', 'SOP & Policy Search', 'Agentic Workflows', 'Smart Recommendations'],
@@ -33,19 +34,61 @@ const fadeUp = {
   transition: { duration: 0.6 },
 };
 
+// Breathing animation — Apple-vibe organic pulse
+const breathingLogo = {
+  animate: {
+    scale: [1, 1.05, 1],
+    transition: {
+      duration: 4,
+      repeat: Infinity,
+      ease: 'easeInOut',
+    },
+  },
+};
+
+const breathingHalo = {
+  animate: {
+    scale: [1, 1.3, 1],
+    opacity: [0.15, 0.35, 0.15],
+    transition: {
+      duration: 4,
+      repeat: Infinity,
+      ease: 'easeInOut',
+    },
+  },
+};
+
 export default function NexusSection() {
   return (
     <section id="nexus" className="py-20 md:py-28 px-6 bg-marketing-surface-dark">
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
+        {/* Header with breathing logo */}
         <motion.div {...fadeUp} className="text-center mb-14">
-          <div className="w-14 h-14 rounded-2xl bg-marketing-blue/10 flex items-center justify-center mx-auto mb-6">
-            <Brain className="w-7 h-7 text-marketing-blue" />
+          <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+            {/* Glow halo — synchronized breathing */}
+            <motion.div
+              variants={breathingHalo}
+              animate="animate"
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(124,58,237,0.4) 0%, rgba(59,130,246,0.15) 50%, transparent 70%)',
+                willChange: 'transform, opacity',
+              }}
+            />
+            {/* Logo — subtle scale pulse */}
+            <motion.img
+              src={LOGO_ASSETS.nexusLogo}
+              alt="Orbit Nexus"
+              variants={breathingLogo}
+              animate="animate"
+              className="relative w-16 h-16 object-contain"
+              style={{ willChange: 'transform' }}
+            />
           </div>
           <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">
             Powered by Orbit Nexus
           </p>
-          <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">
+          <h2 className="text-3xl md:text-4xl font-display font-bold mb-4 text-white">
             Think. Connect. Act.
           </h2>
           <p className="text-slate-300 max-w-lg mx-auto text-sm leading-relaxed">
@@ -77,7 +120,11 @@ export default function NexusSection() {
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
                   style={{ backgroundColor: `${pillar.color}15` }}
                 >
-                  <Icon className="w-6 h-6" style={{ color: pillar.color }} />
+                  {Icon ? (
+                    <Icon className="w-6 h-6" style={{ color: pillar.color }} />
+                  ) : (
+                    <img src={LOGO_ASSETS.nexusLogo} alt="Think" className="w-7 h-7 object-contain" />
+                  )}
                 </div>
 
                 <h3 className="font-display font-bold text-white text-lg mb-2">{pillar.name}</h3>

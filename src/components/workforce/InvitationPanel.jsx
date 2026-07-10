@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import EmptyState from '@/components/shared/EmptyState';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { UserPlus, Plus, CheckCircle2, Copy, Loader2, X } from 'lucide-react';
+import { UserPlus, Plus, CheckCircle2, Copy, Loader2, X, MapPin } from 'lucide-react';
 
 const ROLE_OPTIONS = [
   { value: 'worker', label: 'Team Member' },
@@ -39,17 +39,24 @@ export default function InvitationPanel({ tenantId }) {
   const [showInvite, setShowInvite] = useState(false);
   const [lastIssued, setLastIssued] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [form, setForm] = useState({ email: '', role: 'worker' });
+  const [form, setForm] = useState({ email: '', role: 'worker', outlet_id: '' });
 
   const queryKey = ['invitations', tenantId];
 
   const { data: invitations = [], isLoading } = useQuery({
     queryKey,
-    queryFn: () => base44.entities.Invitation.filter({ tenant_id: tenantId }),
+    queryFn: () => base44.entities.Invitation.filter({ tenant_id: tenantId }, '-issued_date', 50),
     enabled: !!tenantId,
   });
 
-  const activeInvites = invitations.filter(i => i.status === 'active');
+  // Fetch outlets for outlet-scoped invitations
+  const { data: outlets = [] } = useQuery({
+    queryKey: ['invitation-outlets', tenantId],
+    queryFn: () => base44.entities.Outlet.filter({ tenant_id: tenantId }),
+    enabled: !!tenantId,
+  });
+
+  const activeInvites = invitations.filter(i => i.status === 'active' || i.status === 'expired');
   const redeemedInvites = invitations.filter(i => i.status === 'redeemed');
 
   const issueMutation = useMutation({
@@ -58,8 +65,12 @@ export default function InvitationPanel({ tenantId }) {
       const expiry = new Date();
       expiry.setDate(expiry.getDate() + 7);
 
+      const selectedOutlet = outlets.find(o => o.id === data.outlet_id);
+
       const invitation = await base44.entities.Invitation.create({
         tenant_id: tenantId,
+        outlet_id: data.outlet_id || null,
+        company_id: selectedOutlet?.company_id || null,
         invite_code: code,
         invited_role: data.role,
         invited_email: data.email || null,
@@ -82,16 +93,16 @@ export default function InvitationPanel({ tenantId }) {
         module: 'workforce',
         target_entity: 'Invitation',
         target_record_id: invitation.id,
-        details: `Issued invitation code ${code} for ${data.email || 'open invite'} as ${data.role}.`,
+        details: `Issued invitation code ${code} for ${data.email || 'open invite'} as ${data.role}${selectedOutlet ? ` at ${selectedOutlet.name}` : ''}.`,
       });
 
-      return { code, email: data.email, joinUrl: `${window.location.origin}/join?code=${code}` };
+      return { code, email: data.email, joinUrl: `${window.location.origin}/join?code=${code}`, outletName: selectedOutlet?.name };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey });
       setShowInvite(false);
       setLastIssued(data);
-      setForm({ email: '', role: 'worker' });
+      setForm({ email: '', role: 'worker', outlet_id: '' });
     },
   });
 
@@ -143,7 +154,7 @@ export default function InvitationPanel({ tenantId }) {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">Invitation issued successfully</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Share this link with {lastIssued.email || 'your new team member'}:
+              Share this link with {lastIssued.email || 'your new team member'}{lastIssued.outletName ? ` at ${lastIssued.outletName}` : ''}:
             </p>
             <div className="flex items-center gap-2 mt-2">
               <code className="text-xs bg-card border border-border rounded px-2 py-1 flex-1 truncate">
@@ -183,6 +194,7 @@ export default function InvitationPanel({ tenantId }) {
           <div className="space-y-2">
             {activeInvites.map((inv) => {
               const isExpired = inv.expiry_date && new Date(inv.expiry_date) < new Date();
+              const outletName = outlets.find(o => o.id === inv.outlet_id)?.name;
               return (
                 <div key={inv.id} className="bg-card border border-border rounded-xl p-3.5 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-lg bg-orbitan-blue-light flex items-center justify-center flex-shrink-0">
@@ -197,9 +209,20 @@ export default function InvitationPanel({ tenantId }) {
                         <StatusBadge status="active" size="sm" />
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {inv.invited_email || 'Open invite'} · {ROLE_LABELS[inv.invited_role]} ·
-                      Expires {inv.expiry_date ? new Date(inv.expiry_date).toLocaleDateString() : 'N/A'}
+                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
+                      <span>{inv.invited_email || 'Open invite'}</span>
+                      <span>·</span>
+                      <span>{ROLE_LABELS[inv.invited_role]}</span>
+                      {outletName && (
+                        <>
+                          <span>·</span>
+                          <span className="flex items-center gap-0.5">
+                            <MapPin className="w-3 h-3" />{outletName}
+                          </span>
+                        </>
+                      )}
+                      <span>·</span>
+                      <span>Expires {inv.expiry_date ? new Date(inv.expiry_date).toLocaleDateString() : 'N/A'}</span>
                     </p>
                   </div>
                   <Button
@@ -223,26 +246,39 @@ export default function InvitationPanel({ tenantId }) {
         <div>
           <h3 className="text-sm font-heading font-semibold text-foreground mb-3">Redeemed ({redeemedInvites.length})</h3>
           <div className="space-y-2">
-            {redeemedInvites.map((inv) => (
-              <div key={inv.id} className="bg-muted/40 border border-border rounded-xl p-3.5 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-orbitan-green-light flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 className="w-4 h-4 text-orbitan-green" />
+            {redeemedInvites.map((inv) => {
+              const outletName = outlets.find(o => o.id === inv.outlet_id)?.name;
+              return (
+                <div key={inv.id} className="bg-muted/40 border border-border rounded-xl p-3.5 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-orbitan-green-light flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-4 h-4 text-orbitan-green" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{inv.redeemed_by_email || inv.invited_email}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+                      <span>{ROLE_LABELS[inv.invited_role]}</span>
+                      {outletName && (
+                        <>
+                          <span>·</span>
+                          <span className="flex items-center gap-0.5">
+                            <MapPin className="w-3 h-3" />{outletName}
+                          </span>
+                        </>
+                      )}
+                      <span>·</span>
+                      <span>Redeemed {inv.redeemed_date ? new Date(inv.redeemed_date).toLocaleDateString() : ''}</span>
+                    </p>
+                  </div>
+                  <StatusBadge status="completed" label="Redeemed" size="sm" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{inv.redeemed_by_email || inv.invited_email}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {ROLE_LABELS[inv.invited_role]} · Redeemed {inv.redeemed_date ? new Date(inv.redeemed_date).toLocaleDateString() : ''}
-                  </p>
-                </div>
-                <StatusBadge status="completed" label="Redeemed" size="sm" />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* Invite dialog */}
-      <Dialog open={showInvite} onOpenChange={(open) => { setShowInvite(open); if (!open) setForm({ email: '', role: 'worker' }); }}>
+      <Dialog open={showInvite} onOpenChange={(open) => { setShowInvite(open); if (!open) setForm({ email: '', role: 'worker', outlet_id: '' }); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Invite Team Member</DialogTitle>
@@ -272,6 +308,20 @@ export default function InvitationPanel({ tenantId }) {
                 </SelectContent>
               </Select>
             </div>
+            {outlets.length > 0 && (
+              <div>
+                <Label className="text-xs mb-1 block">Outlet (optional)</Label>
+                <Select value={form.outlet_id} onValueChange={(v) => setForm(p => ({ ...p, outlet_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Tenant-wide (no outlet)" /></SelectTrigger>
+                  <SelectContent>
+                    {outlets.map(o => (
+                      <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground mt-1">Scope this invitation to a specific outlet.</p>
+              </div>
+            )}
           </div>
           {issueMutation.isError && (
             <p className="text-sm text-destructive">
