@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '@/lib/use-tenant';
-import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import StatCard from '@/components/shared/StatCard';
@@ -18,23 +17,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
-const NAV = [
-  { type: 'section', label: 'Outlet' },
-  { href: '/outlet', icon: Home, label: 'Dashboard' },
-  { href: '/outlet/inventory', icon: Package, label: 'Inventory' },
-  { href: '/outlet/procurement', icon: ShoppingCart, label: 'Purchase Orders' },
-  { href: '/outlet/sales', icon: FileText, label: 'Sales & Reconciliation' },
-  { type: 'section', label: 'Team' },
-  { href: '/outlet/workforce', icon: Users, label: 'My Team' },
-  { href: '/outlet/scheduling', icon: Calendar, label: 'Shift Schedule' },
-  { href: '/outlet/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Reports' },
-  { href: '/outlet/reports', icon: BarChart2, label: 'Reports' },
-  { href: '/outlet/compliance', icon: Shield, label: 'Compliance' },
-  { type: 'section', label: 'Navigation' },
-  { href: '/company', icon: Building2, label: 'Company Dashboard' },
-  { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
-];
+
 
 const ROLE_COLORS = {
   tenant_admin: 'bg-orbitan-purple-light text-orbitan-purple',
@@ -78,7 +61,7 @@ export default function WorkforcePage() {
   const onLeave = employees.filter(e => e.status === 'on_leave').length;
 
   return (
-    <AppShell navigation={NAV} title="" tenant={currentTenant}>
+    <>
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
         <PageHeader
           title="Workforce Control Room"
@@ -211,6 +194,6 @@ export default function WorkforcePage() {
           )}
         </DialogContent>
       </Dialog>
-    </AppShell>
+    </>
   );
 }

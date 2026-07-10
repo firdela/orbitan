@@ -1,7 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatCard from '@/components/shared/StatCard';
 import {
@@ -11,23 +10,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 
-const NAV = [
-  { type: 'section', label: 'Outlet' },
-  { href: '/outlet', icon: Home, label: 'Dashboard' },
-  { href: '/outlet/inventory', icon: Package, label: 'Inventory' },
-  { href: '/outlet/procurement', icon: ShoppingCart, label: 'Purchase Orders' },
-  { href: '/outlet/sales', icon: FileText, label: 'Sales & Reconciliation' },
-  { type: 'section', label: 'Team' },
-  { href: '/outlet/workforce', icon: Users, label: 'My Team' },
-  { href: '/outlet/scheduling', icon: Calendar, label: 'Shift Schedule' },
-  { href: '/outlet/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Reports' },
-  { href: '/outlet/reports', icon: BarChart2, label: 'Reports' },
-  { href: '/outlet/compliance', icon: Shield, label: 'Compliance' },
-  { type: 'section', label: 'Navigation' },
-  { href: '/company', icon: Building2, label: 'Company Dashboard' },
-  { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
-];
+
 
 const SEED_CHART = [
   { day: 'Mon', revenue: 3200, cogs: 960 },
@@ -71,7 +54,7 @@ export default function ReportsPage() {
     : SEED_CHART;
 
   return (
-    <AppShell navigation={NAV} title="">
+    <>
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
         <PageHeader
           title="Reports"
@@ -158,6 +141,6 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
-    </AppShell>
+    </>
   );
 }

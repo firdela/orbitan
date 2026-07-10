@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -16,23 +15,7 @@ import {
   CheckSquare, BarChart2, Layers, Building2
 } from 'lucide-react';
 
-const NAV = [
-  { type: 'section', label: 'Outlet' },
-  { href: '/outlet', icon: Home, label: 'Dashboard' },
-  { href: '/outlet/inventory', icon: Package, label: 'Inventory' },
-  { href: '/outlet/procurement', icon: ShoppingCart, label: 'Purchase Orders' },
-  { href: '/outlet/sales', icon: FileText, label: 'Sales & Reconciliation' },
-  { type: 'section', label: 'Team' },
-  { href: '/outlet/workforce', icon: Users, label: 'My Team' },
-  { href: '/outlet/scheduling', icon: Calendar, label: 'Shift Schedule' },
-  { href: '/outlet/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Reports' },
-  { href: '/outlet/reports', icon: BarChart2, label: 'Reports' },
-  { href: '/outlet/compliance', icon: Shield, label: 'Compliance' },
-  { type: 'section', label: 'Navigation' },
-  { href: '/company', icon: Building2, label: 'Company Dashboard' },
-  { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
-];
+
 
 const STATUS_ICONS = {
   approved: <CheckCircle2 className="w-4 h-4 text-orbitan-green" />,
@@ -70,7 +53,7 @@ export default function CompliancePage() {
   const riskLabel = score >= 90 ? 'Green' : score >= 70 ? 'Amber' : 'Red';
 
   return (
-    <AppShell navigation={NAV} title="">
+    <>
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
         <PageHeader
           title="Compliance Centre"
@@ -184,6 +167,6 @@ export default function CompliancePage() {
           </div>
         </DialogContent>
       </Dialog>
-    </AppShell>
+    </>
   );
 }

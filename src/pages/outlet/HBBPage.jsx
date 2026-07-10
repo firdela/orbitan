@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import AppShell from '@/components/layout/AppShell';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -16,24 +15,7 @@ import {
   CheckSquare, BarChart2, Shield, Layers, Building2, Trash2, Loader2, Cake, ClipboardList
 } from 'lucide-react';
 
-const NAV = [
-  { type: 'section', label: 'Outlet' },
-  { href: '/outlet', icon: Home, label: 'Dashboard' },
-  { href: '/outlet/hbb', icon: Cake, label: 'Orders & Production' },
-  { href: '/outlet/inventory', icon: Package, label: 'Inventory' },
-  { href: '/outlet/procurement', icon: ShoppingCart, label: 'Purchase Orders' },
-  { href: '/outlet/sales', icon: FileText, label: 'Sales & Reconciliation' },
-  { type: 'section', label: 'Team' },
-  { href: '/outlet/workforce', icon: Users, label: 'My Team' },
-  { href: '/outlet/scheduling', icon: Calendar, label: 'Shift Schedule' },
-  { href: '/outlet/tasks', icon: CheckSquare, label: 'Tasks' },
-  { type: 'section', label: 'Reports' },
-  { href: '/outlet/reports', icon: BarChart2, label: 'Reports' },
-  { href: '/outlet/compliance', icon: Shield, label: 'Compliance' },
-  { type: 'section', label: 'Navigation' },
-  { href: '/company', icon: Building2, label: 'Company Dashboard' },
-  { href: '/leader-org', icon: Layers, label: 'OrbitanOS Console' },
-];
+
 
 export default function HBBPage() {
   const { toast } = useToast();
@@ -138,16 +120,16 @@ export default function HBBPage() {
 
   if (loading) {
     return (
-      <AppShell navigation={NAV} title="">
+      <>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
-      </AppShell>
+      </>
     );
   }
 
   return (
-    <AppShell navigation={NAV} title="">
+    <>
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
         <PageHeader
           title="Orders & Production"
@@ -315,6 +297,6 @@ export default function HBBPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </AppShell>
+    </>
   );
 }
