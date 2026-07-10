@@ -14,6 +14,7 @@ import { LOGO_ASSETS } from '@/lib/orbitan-identity';
 import OrbitEcosystemSection from '@/components/landing/OrbitEcosystemSection';
 import NexusSection from '@/components/landing/NexusSection';
 import IntegrationHubSection from '@/components/landing/IntegrationHubSection';
+import DualProductSection from '@/components/landing/DualProductSection';
 
 const PRINCIPLES = ['Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach'];
 
@@ -209,6 +210,9 @@ export default function Landing() {
       {/* ── Orbit Ecosystem Section ── */}
       <OrbitEcosystemSection />
 
+      {/* ── Dual Product: OrbitanOS vs Orbit Nexus ── */}
+      <DualProductSection />
+
       {/* ── 6R Framework ── */}
       <section id="framework" className="py-20 md:py-28 px-6">
         <div className="max-w-6xl mx-auto">
@@ -332,11 +336,11 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Subscription Plans ── */}
+      {/* ── OrbitanOS Subscription Plans ── */}
       <section id="plans" className="py-20 md:py-28 px-6">
         <div className="max-w-6xl mx-auto">
           <motion.div {...fadeUp} className="text-center mb-14">
-            <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Pricing</p>
+            <p className="text-xs tracking-[0.2em] uppercase text-marketing-blue font-bold mb-3">OrbitanOS Pricing</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Scale With Confidence</h2>
             <p className="text-slate-300 max-w-lg mx-auto text-sm">
               From single-outlet startups to multi-entity enterprises. Every plan scales with your growth.
@@ -432,11 +436,11 @@ export default function Landing() {
           </div>
           <div className="flex items-center gap-6">
             <a href="#ecosystem" className="text-xs text-slate-300 hover:text-white transition-colors">Platform</a>
-            <a href="#framework" className="text-xs text-slate-300 hover:text-white transition-colors">Framework</a>
+            <a href="#products" className="text-xs text-slate-300 hover:text-white transition-colors">Products</a>
             <a href="#nexus" className="text-xs text-slate-300 hover:text-white transition-colors">Nexus</a>
             <a href="#connect" className="text-xs text-slate-300 hover:text-white transition-colors">Connect</a>
             <a href="#packs" className="text-xs text-slate-300 hover:text-white transition-colors">Packs</a>
-            <a href="#plans" className="text-xs text-slate-300 hover:text-white transition-colors">Plans</a>
+            <a href="#plans" className="text-xs text-slate-300 hover:text-white transition-colors">Pricing</a>
             <a href="#shield" className="text-xs text-slate-300 hover:text-white transition-colors">Security</a>
           </div>
         </div>
