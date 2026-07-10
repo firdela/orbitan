@@ -1,29 +1,29 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Plug, Zap } from 'lucide-react';
+import { Plug, Zap, Brain } from 'lucide-react';
 import { LOGO_ASSETS } from '@/lib/orbitan-identity';
 
 const NEXUS_PILLARS = [
 {
   name: 'Think',
-  icon: null, // replaced by Nexus logo in header; pillars use their own icons
+  icon: Brain,
   color: '#7C3AED',
-  description: 'RAG, Agentic AI, AIReceipts, and intelligent recommendations powered by a shared knowledge layer.',
-  features: ['Knowledge Search', 'SOP & Policy Search', 'Agentic Workflows', 'Smart Recommendations']
+  description: 'Ground AI in your business context. RAG retrieves your SOPs, policies, and history so every recommendation is specific — not generic. Agent Engine executes autonomously within governance gates.',
+  features: ['RAG Knowledge Search', 'Agentic AI Workflows', 'AIReceipts OCR', 'Smart Recommendations']
 },
 {
   name: 'Connect',
   icon: Plug,
   color: '#06B6D4',
-  description: 'API gateway, OAuth connectors, MCP server, and SDKs — integrate everything into one operating system.',
-  features: ['Xero & QuickBooks', 'Google Workspace', 'Slack & WhatsApp', 'Stripe & Shopify']
+  description: 'A secure, high-performance integration hub. OAuth connectors, MCP server, and SDKs unify your existing tools — Xero, Stripe, Slack — into one operating system without data silos.',
+  features: ['Xero & QuickBooks', 'Stripe & Shopify', 'Slack & WhatsApp', 'Google Workspace']
 },
 {
   name: 'Act',
   icon: Zap,
   color: '#F97316',
-  description: 'MCP tools, workflow automations, and scheduled tasks that turn intelligence into real-world action.',
-  features: ['Automated Workflows', 'Procurement Agents', 'Inventory Agents', 'Scheduled Tasks']
+  description: 'The bridge between intelligence and execution. Automation Engine triggers workflows based on AI decisions — low stock creates purchase orders, schedule gaps trigger shift calls.',
+  features: ['Automated Workflows', 'Procurement Agents', 'Inventory Replenishment', 'Scheduled Tasks']
 }];
 
 
@@ -121,11 +121,7 @@ export default function NexusSection() {
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
                   style={{ backgroundColor: `${pillar.color}15` }}>
                   
-                  {Icon ?
-                  <Icon className="w-6 h-6" style={{ color: pillar.color }} /> :
-
-                  <img src={LOGO_ASSETS.nexusLogo} alt="Think" className="w-7 h-7 object-contain" />
-                  }
+                  {Icon && <Icon className="w-6 h-6" style={{ color: pillar.color }} />}
                 </div>
 
                 <h3 className="font-display font-bold text-white text-lg mb-2">{pillar.name}</h3>

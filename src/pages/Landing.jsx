@@ -13,6 +13,7 @@ import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
 import { LOGO_ASSETS } from '@/lib/orbitan-identity';
 import OrbitEcosystemSection from '@/components/landing/OrbitEcosystemSection';
 import NexusSection from '@/components/landing/NexusSection';
+import IntegrationHubSection from '@/components/landing/IntegrationHubSection';
 
 const PRINCIPLES = ['Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach'];
 
@@ -248,6 +249,9 @@ export default function Landing() {
       {/* ── Orbit Nexus (AI) Section ── */}
       <NexusSection />
 
+      {/* ── Orbit Connect — Integration Hub ── */}
+      <IntegrationHubSection />
+
       {/* ── Industry Packs ── */}
       <section id="packs" className="py-20 md:py-28 px-6">
         <div className="max-w-6xl mx-auto">
@@ -429,6 +433,8 @@ export default function Landing() {
           <div className="flex items-center gap-6">
             <a href="#ecosystem" className="text-xs text-slate-300 hover:text-white transition-colors">Platform</a>
             <a href="#framework" className="text-xs text-slate-300 hover:text-white transition-colors">Framework</a>
+            <a href="#nexus" className="text-xs text-slate-300 hover:text-white transition-colors">Nexus</a>
+            <a href="#connect" className="text-xs text-slate-300 hover:text-white transition-colors">Connect</a>
             <a href="#packs" className="text-xs text-slate-300 hover:text-white transition-colors">Packs</a>
             <a href="#plans" className="text-xs text-slate-300 hover:text-white transition-colors">Plans</a>
             <a href="#shield" className="text-xs text-slate-300 hover:text-white transition-colors">Security</a>
