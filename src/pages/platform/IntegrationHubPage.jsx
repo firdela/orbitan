@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, CheckCircle2, XCircle, AlertCircle, RefreshCw, ExternalLink, Zap, ArrowRight, Clock } from 'lucide-react';
+import IntegrationCatalog from '@/components/platform/IntegrationCatalog';
 
 const STATUS_CONFIG = {
   connected: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', label: 'Connected' },
@@ -335,6 +336,9 @@ export default function IntegrationHubPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Full Integration Catalog */}
+      <IntegrationCatalog />
     </div>
   );
 }

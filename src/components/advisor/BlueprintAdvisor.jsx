@@ -163,7 +163,9 @@ export default function BlueprintAdvisor({ open, onClose }) {
   const governanceGates = activeRules.filter(r => r.severity === 'governance_gate');
   const softGates = activeRules.filter(r => r.severity === 'soft_gate');
 
-const industryColor = industryRules?.color_hex || '#2563EB';
+  const { config: industryRules } = useAdvisoryConfig(state?.industry);
+
+  const industryColor = industryRules?.color_hex || '#2563EB';
 
   if (!open) return null;
 

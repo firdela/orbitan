@@ -1,14 +1,16 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import Stripe from 'npm:stripe@17.7.0';
 
-// ── Stripe Price Map: plan_key → Stripe Price ID ─────────────────────────────
-// Starter, Growth, and Business are self-service checkout plans.
-// Enterprise is custom pricing — handled via "Contact Sales" in the Checkout UI.
-// Source of truth: src/lib/orbitan-config.js → SUBSCRIPTION_PLANS.*.stripe_price_id
-const PRICE_MAP = {
-  orbitan_starter: 'price_1TrG2gDap39FEFGJZXTY5or7',
-  orbitan_growth: 'price_1TqdJoDap39FEFGJwNccaO12',
-  orbitan_business: 'price_1TqdJoDap39FEFGJDYVJYLDR',
+// ── Stripe Plan Lookup Keys ────────────────────────────────────────────────
+// Using lookup keys (not hardcoded price IDs) so the same code works in both
+// Live and Test mode — Stripe resolves the lookup key to the correct price
+// for whichever environment the STRIPE_SECRET_KEY belongs to.
+//
+// Source of truth: src/lib/orbitan-config.js → SUBSCRIPTION_PLANS
+const PLAN_LOOKUP_KEYS = {
+  orbitan_starter: 'orbitanos_starter_monthly',
+  orbitan_growth: 'orbitanos_growth_monthly',
+  orbitan_business: 'orbitanos_business_monthly',
 };
 
 const PLAN_NAMES = {
@@ -18,24 +20,25 @@ const PLAN_NAMES = {
 };
 
 /**
- * Stripe Checkout — OrbitanOS Subscription Billing
- *
- * Creates a Stripe Checkout Session for subscription plan purchase.
- * Public endpoint (no auth required) — tenant context is passed as parameters.
- *
- * Payload:
- *   - plan_key: 'orbitan_starter' | 'orbitan_growth' | 'orbitan_business'
- *   - tenant_id: (optional) existing tenant to link subscription to
- *   - tenant_name: (optional) org name for display
+ * Resolves a Stripe Price ID from a lookup key.
+ * Works automatically in Live or Test mode based on the active API key.
  */
+async function resolvePriceId(stripe, lookupKey) {
+  const prices = await stripe.prices.list({ lookup_keys: [lookupKey], limit: 1 });
+  if (!prices.data || prices.data.length === 0) {
+    throw new Error(`No Stripe price found for lookup key: ${lookupKey}. Ensure the price exists in your ${stripe._key?.startsWith('sk_test') ? 'Test' : 'Live'} Stripe environment.`);
+  }
+  return prices.data[0].id;
+}
+
 Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const { plan_key, tenant_id, tenant_name } = body;
 
-    if (!plan_key || !PRICE_MAP[plan_key]) {
+    if (!plan_key || !PLAN_LOOKUP_KEYS[plan_key]) {
       return Response.json(
-        { error: `Invalid plan_key. Must be one of: ${Object.keys(PRICE_MAP).join(', ')}` },
+        { error: `Invalid plan_key. Must be one of: ${Object.keys(PLAN_LOOKUP_KEYS).join(', ')}` },
         { status: 400 }
       );
     }
@@ -50,11 +53,14 @@ Deno.serve(async (req) => {
       apiVersion: '2024-12-18.acacia',
     });
 
+    // Resolve the price ID via lookup key — works in both Live and Test mode
+    const priceId = await resolvePriceId(stripe, PLAN_LOOKUP_KEYS[plan_key]);
+
     const origin = req.headers.get('origin') || 'https://app.orbitan.com';
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      line_items: [{ price: PRICE_MAP[plan_key], quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/checkout/cancelled`,
       metadata: {
