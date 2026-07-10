@@ -76,13 +76,14 @@ export default function NexusSection() {
               }} />
             
             {/* Logo — subtle scale pulse */}
-            <motion.img src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/f9064ee0a_Orbit_Nexus_Logo_Transparent.png"
-
-            alt="Orbit Nexus"
-            variants={breathingLogo}
-            animate="animate"
-            className="relative w-16 h-16 object-contain opacity-100"
-            style={{ willChange: 'transform' }} />
+            <motion.img
+              src={LOGO_ASSETS.nexusLogo}
+              alt="Orbit Nexus"
+              variants={breathingLogo}
+              animate="animate"
+              className="relative w-16 h-16 object-contain"
+              style={{ willChange: 'transform', filter: 'drop-shadow(0 0 12px rgba(124,58,237,0.3))' }}
+            />
             
           </div>
           <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">

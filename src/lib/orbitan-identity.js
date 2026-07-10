@@ -14,7 +14,7 @@ import { OPERATING_CYCLE, SUBSCRIPTION_PLANS, INDUSTRY_PACKS, PLATFORM_IDENTITY 
 export const LOGO_ASSETS = {
   mark: 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png',
   mark3D: 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png',
-  nexusLogo: 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/d600a4d04_generated_image.png',
+  nexusLogo: 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/563ef4f42_OrbitNexusLogo.png',
 };
 
 // ─────────────────────────────────────────────────────────────

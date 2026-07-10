@@ -81,11 +81,30 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* ── Hero — Apple-vibe Breathing Logo ── */}
-      <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 px-6">
-        {/* Background effects */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.06)_0%,transparent_60%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
+      {/* ── Hero — Fresh, Approachable AI Vibe ── */}
+      <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 px-6 overflow-hidden">
+        {/* Soft ambient base — slightly lighter than pure black */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(59,130,246,0.08)_0%,transparent_70%)]" />
+
+        {/* Floating ambient orbs — creates "alive, fresh AI" feel */}
+        <motion.div
+          animate={{ x: [0, 40, 0], y: [0, -30, 0] }}
+          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute top-20 left-[10%] w-72 h-72 rounded-full blur-[100px] opacity-[0.12]"
+          style={{ background: 'radial-gradient(circle, #3B82F6 0%, transparent 70%)' }}
+        />
+        <motion.div
+          animate={{ x: [0, -50, 0], y: [0, 40, 0] }}
+          transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+          className="absolute top-40 right-[8%] w-96 h-96 rounded-full blur-[120px] opacity-[0.08]"
+          style={{ background: 'radial-gradient(circle, #7C3AED 0%, transparent 70%)' }}
+        />
+        <motion.div
+          animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
+          transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
+          className="absolute bottom-10 left-[40%] w-80 h-80 rounded-full blur-[100px] opacity-[0.06]"
+          style={{ background: 'radial-gradient(circle, #06B6D4 0%, transparent 70%)' }}
+        />
 
         <div className="max-w-4xl mx-auto text-center relative z-10">
           {/* Huge breathing logo — Apple-style gentle pulse */}
@@ -149,8 +168,8 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="text-base md:text-lg text-slate-300 max-w-xl mx-auto mb-9 leading-relaxed"
           >
-            The Workforce Operating System for Modern Organisations — connecting people,
-            operations, knowledge, compliance, and growth.
+            One platform for your workforce, operations, and growth.
+            Simple to start, powerful enough to scale across any industry.
           </motion.p>
 
           <motion.div
