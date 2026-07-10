@@ -1,9 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import {
-  Layers, BrainCircuit, Shield, Plug, Wallet, Blocks,
-  ArrowRight, Check } from 'lucide-react';
+  Layers, BrainCircuit, Shield, Plug, Wallet, Blocks } from 'lucide-react';
 
 const ECOSYSTEM_SERVICES = [
   {
@@ -154,25 +152,6 @@ export default function OrbitEcosystemSection() {
           })}
         </div>
 
-        {/* Future products teaser */}
-        <motion.div
-          {...fadeUp}
-          className="mt-10 text-center"
-        >
-          <p className="text-[10px] tracking-[0.15em] uppercase text-slate-500 font-medium mb-3">
-            Future Orbit Products
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {['AquaOrbit', 'ChefOrbit', 'Future Orbit Products'].map((product) => (
-              <span
-                key={product}
-                className="px-4 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.06] text-xs text-slate-400 font-medium"
-              >
-                {product}
-              </span>
-            ))}
-          </div>
-        </motion.div>
       </div>
     </section>
   );

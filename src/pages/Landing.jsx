@@ -5,8 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   ArrowRight, Shield, Store, Leaf, ShoppingBag,
-  ChevronRight, Check, Sparkles, Zap, Lock, Globe, Server, Plug,
-  ChevronLeft, ChevronRight as ChevronRightIcon } from
+  ChevronRight, Check, Sparkles, Zap, Lock, Globe, Server } from
 'lucide-react';
 import { CapabilityBadge, CapabilityStack } from '@/components/shared/CapabilityBadge';
 import { OPERATING_CYCLE, SUBSCRIPTION_PLANS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
@@ -82,60 +81,52 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* ── Hero with Orbital Animation ── */}
-      <section className="relative pt-32 pb-20 md:pt-44 md:pb-32 px-6">
+      {/* ── Hero — Apple-vibe Breathing Logo ── */}
+      <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 px-6">
         {/* Background effects */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.08)_0%,transparent_70%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.04)_0%,transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.06)_0%,transparent_60%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
 
-        {/* Floating orbs */}
-        <motion.div
-          animate={{ y: [0, -20, 0], opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-1/4 left-10 w-3 h-3 rounded-full bg-marketing-blue/40 blur-sm"
-        />
-        <motion.div
-          animate={{ y: [0, 15, 0], opacity: [0.2, 0.4, 0.2] }}
-          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          className="absolute top-1/3 right-10 w-2 h-2 rounded-full bg-marketing-gold/40 blur-sm"
-        />
-
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          {/* Logo with orbital ring */}
-          <div className="relative w-56 h-56 md:w-72 md:h-72 lg:w-80 lg:h-80 mx-auto mb-10">
-            {/* Outer rotating ring */}
+          {/* Huge breathing logo — Apple-style gentle pulse */}
+          <div className="relative w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 mx-auto mb-8 flex items-center justify-center">
+            {/* Glow halo — breathes with the logo */}
             <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+              animate={{
+                scale: [1, 1.06, 1],
+                opacity: [0.4, 0.7, 0.4],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
               className="absolute inset-0 rounded-full"
               style={{
-                border: '1px solid rgba(59,130,246,0.15)',
-                boxShadow: '0 0 60px rgba(59,130,246,0.1)',
+                background: 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, rgba(59,130,246,0.03) 50%, transparent 70%)',
               }}
-            >
-              {/* Orbiting dot */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-marketing-blue shadow-lg" style={{ boxShadow: '0 0 20px rgba(59,130,246,0.6)' }} />
-            </motion.div>
-
-            {/* Inner counter-rotating ring */}
+            />
+            {/* Logo — gentle breath scale */}
             <motion.div
-              animate={{ rotate: -360 }}
-              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-              className="absolute inset-6 rounded-full"
-              style={{ border: '1px solid rgba(212,175,55,0.12)' }}
-            >
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-marketing-gold/60" />
-            </motion.div>
-
-            {/* 3D Logo */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1.2, ease: 'easeOut' }}
-              className="absolute inset-0 flex items-center justify-center"
+              transition={{ duration: 1.5, ease: 'easeOut' }}
+              className="relative z-10"
             >
-              <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-40 h-40 md:w-48 md:h-48 lg:w-52 lg:h-52 drop-shadow-2xl" />
+              <motion.img
+                src={LOGO_ASSETS.mark3D}
+                alt="Orbitan"
+                animate={{
+                  scale: [1, 1.04, 1],
+                }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+                className="w-48 h-48 md:w-64 md:h-64 lg:w-72 lg:h-72 drop-shadow-2xl"
+                style={{ filter: 'drop-shadow(0 0 40px rgba(59,130,246,0.15))' }}
+              />
             </motion.div>
           </div>
 
@@ -329,7 +320,7 @@ export default function Landing() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
             {PLAN_ORDER.map((key, i) => {
               const plan = SUBSCRIPTION_PLANS[key];
               const isEnterprise = key === 'orbitan_enterprise';
@@ -340,8 +331,8 @@ export default function Landing() {
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className={`rounded-2xl border p-6 flex flex-col ${isEnterprise ? 'bg-marketing-surface border-marketing-gold/30 ring-1 ring-marketing-gold/20' : 'bg-white/[0.03] border-white/[0.06]'}`}
+                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                  className={`rounded-2xl border p-6 flex flex-col ${isEnterprise ? 'bg-marketing-surface border-marketing-gold/30 ring-1 ring-marketing-gold/20 lg:col-span-1' : 'bg-white/[0.03] border-white/[0.06]'}`}
                 >
                   <div>
                     <span
@@ -351,16 +342,16 @@ export default function Landing() {
                       {plan.name}
                     </span>
                     <div className="mt-2 mb-0.5">
-                      <p className="text-2xl md:text-3xl font-display font-bold text-white whitespace-nowrap">{plan.price_label}</p>
+                      <p className="text-xl md:text-2xl font-display font-bold text-white">{plan.price_label}</p>
                       {isEnterprise && plan.starting_price_label && (
                         <p className="text-[11px] text-marketing-gold font-semibold mt-1">{plan.starting_price_label}</p>
                       )}
                     </div>
-                    <p className="text-xs text-slate-300 mb-5">{plan.suitable_for}</p>
+                    <p className="text-xs text-slate-400 mb-5 mt-2">{plan.suitable_for}</p>
                   </div>
                   <ul className="space-y-2.5 flex-1 mb-6">
                     {[
-                      isFree ? 'Up to 3 employees' : `Up to ${plan.max_employees ? plan.max_employees.toLocaleString() : 'unlimited'} employees`,
+                      isFree ? 'Up to 3 employees' : plan.max_employees ? `Up to ${plan.max_employees.toLocaleString()} employees` : 'Unlimited employees',
                       plan.ai_access ? 'AI-powered features' : 'Core features',
                       plan.advanced_reporting ? 'Advanced reporting' : 'Basic reporting',
                       plan.integrations ? 'External integrations' : 'Standard modules',

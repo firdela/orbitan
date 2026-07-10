@@ -43,15 +43,15 @@ export const PLAN_BRAND = {
 // ─────────────────────────────────────────────────────────────
 export const PACK_BRAND = {
   fnb:          { color: '#F97316', label: 'F&B',            description: 'Food & Beverage operations' },
-  retail:       { color: '#22C55E', label: 'Retail',          description: 'Retail & commerce operations' },
+  retail:       { color: '#EC4899', label: 'Retail',          description: 'Retail & commerce operations' },
   recycling:    { color: '#16A34A', label: 'Sustainability',  description: 'Recycling & sustainability' },
   healthcare:   { color: '#06B6D4', label: 'Healthcare',      description: 'Healthcare operations' },
-  education:    { color: '#8B5CF6', label: 'Education',       description: 'Education & campus operations' },
   logistics:    { color: '#2563EB', label: 'Logistics',       description: 'Logistics & supply chain' },
   construction: { color: '#EAB308', label: 'Construction',    description: 'Construction operations' },
   technology:   { color: '#6366F1', label: 'Technology',      description: 'Tech & software operations' },
-  events:       { color: '#EC4899', label: 'Events',          description: 'Events & activations' },
+  events:       { color: '#A855F7', label: 'Events',          description: 'Events & activations' },
   facilities:   { color: '#64748B', label: 'Facilities',      description: 'Facilities management' },
+  education:    { color: '#14B8A6', label: 'Education',       description: 'Education & campus operations' },
 };
 
 // ─────────────────────────────────────────────────────────────

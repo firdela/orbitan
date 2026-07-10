@@ -5,11 +5,13 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
 
     // Public endpoint — no auth required. Query as service role to bypass RLS.
-    // Only return real physical outlets (exclude virtual/HBB and onboarding tenants)
-    const outlets = await base44.asServiceRole.entities.Outlet.filter({ status: 'active', is_virtual: false });
-    const tenants = await base44.asServiceRole.entities.Tenant.filter({ status: 'active' });
+    // Include all pilot tenants (active AND onboarding) so workers can discover
+    // workplaces even before the tenant is fully set up.
+    // Exclude only internal/test tenants from public discovery.
+    const tenants = await base44.asServiceRole.entities.Tenant.filter({});
+    const outlets = await base44.asServiceRole.entities.Outlet.filter({});
 
-    // Build a tenant lookup map — exclude test/internal tenants from public discovery
+    // Build a tenant lookup map — exclude test/internal tenants
     const tenantMap = {};
     const testTenantIds = new Set();
     tenants.forEach(t => {
@@ -17,18 +19,54 @@ Deno.serve(async (req) => {
       if (isTest) {
         testTenantIds.add(t.id);
       } else {
-        tenantMap[t.id] = t.name;
+        // Include both active and onboarding tenants for pilot discovery
+        tenantMap[t.id] = { name: t.name, status: t.status };
       }
     });
 
-    // Attach tenant name to each outlet, filtering out test-tenant outlets
-    const results = outlets
-      .filter(o => !testTenantIds.has(o.tenant_id))
-      .map(o => ({
-        ...o,
-        tenant_name: tenantMap[o.tenant_id] || '',
-      }))
-      .filter(o => o.tenant_name); // only outlets with a valid (non-test) tenant
+    // Group outlets by tenant
+    const outletsByTenant = {};
+    outlets.forEach(o => {
+      if (testTenantIds.has(o.tenant_id)) return;
+      if (!outletsByTenant[o.tenant_id]) outletsByTenant[o.tenant_id] = [];
+      outletsByTenant[o.tenant_id].push(o);
+    });
+
+    const results = [];
+
+    // For each non-test tenant, add its outlets (including virtual for HBB)
+    Object.keys(tenantMap).forEach(tenantId => {
+      const tenantInfo = tenantMap[tenantId];
+      const tenantOutlets = outletsByTenant[tenantId] || [];
+
+      if (tenantOutlets.length > 0) {
+        // Tenant has outlets — return each one (including virtual/HBB)
+        tenantOutlets.forEach(o => {
+          results.push({
+            ...o,
+            tenant_name: tenantInfo.name,
+            tenant_status: tenantInfo.status,
+          });
+        });
+      } else {
+        // Tenant has no outlets yet — return a tenant-level entry with "Pending Setup"
+        results.push({
+          id: tenantId,
+          tenant_id: tenantId,
+          name: tenantInfo.name,
+          tenant_name: tenantInfo.name,
+          tenant_status: tenantInfo.status,
+          type: 'virtual',
+          is_virtual: true,
+          status: tenantInfo.status,
+          address: null,
+          contact_person: null,
+          contact_phone: null,
+          operating_hours: null,
+          is_pending_setup: true,
+        });
+      }
+    });
 
     return Response.json(results);
   } catch (error) {

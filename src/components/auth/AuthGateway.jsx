@@ -144,13 +144,15 @@ export default function AuthGateway() {
 
       {/* ── Content ── */}
       <div className="relative z-10 w-full max-w-2xl mx-auto px-6 flex flex-col items-center gap-10">
-        {/* Top nav */}
-        <div className="w-full flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors z-20">
-            <ChevronLeft className="w-3.5 h-3.5" />
-            Home
-          </Link>
-        </div>
+        {/* Top nav — only visible after boot sequence completes */}
+        {phase === 'cards' && (
+          <div className="w-full flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors z-20">
+              <ChevronLeft className="w-3.5 h-3.5" />
+              Home
+            </Link>
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {/* Phase 1: Boot — 6R Sequence */}
           {phase === 'boot' && (

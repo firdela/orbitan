@@ -22,15 +22,16 @@ export default function Onboarding() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#0A0F1A] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center px-6 relative">
+        {/* Top nav bar */}
+        <div className="absolute top-0 inset-x-0 h-16 flex items-center justify-between px-6 max-w-sm w-full mx-auto">
+          <OrbitanWordmark size="sm" variant="light" showOS={false} />
+          <Link to="/" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Home
+          </Link>
+        </div>
         <div className="max-w-sm w-full text-center">
-          <div className="mb-6 flex flex-col items-center gap-3">
-            <OrbitanWordmark size="md" variant="light" showOS={false} />
-            <Link to="/" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Back to Home
-            </Link>
-          </div>
           <h1 className="text-xl font-display font-bold text-white mb-2">Create your account first</h1>
           <p className="text-slate-400 text-sm mb-6">
             You'll need an Orbitan account before setting up your organisation. It only takes a moment.
@@ -42,7 +43,7 @@ export default function Onboarding() {
               </Button>
             </Link>
             <Link to="/login">
-              <Button variant="outline" className="w-full h-11 border-white/15 text-slate-300 hover:bg-white/[0.05] rounded-xl gap-2">
+              <Button variant="outline" className="w-full h-11 border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.08] rounded-xl gap-2">
                 <LogIn className="w-4 h-4" /> Sign In
               </Button>
             </Link>

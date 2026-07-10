@@ -46,13 +46,13 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
         </div>
 
         {/* Glass card form container */}
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-8 shadow-2xl">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm p-8 shadow-2xl text-slate-200 [&_label]:text-slate-300 [&_input]:text-white [&_input]:placeholder:text-slate-500 [&_.text-muted-foreground]:text-slate-400 [&_.text-primary]:text-blue-400 [&_.text-foreground]:text-slate-200 [&_.text-destructive]:text-red-400 [&_.bg-destructive\\/10]:bg-red-500/10 [&_.bg-card]:bg-white/[0.03] [&_.border-border]:border-white/[0.08]">
           {children}
         </div>
 
         {/* Footer link */}
         {footer && (
-          <p className="text-center text-sm text-slate-400 mt-6">{footer}</p>
+          <p className="text-center text-sm text-slate-400 mt-6 [&_.text-primary]:text-blue-400 [&_a]:text-blue-400">{footer}</p>
         )}
 
         {/* Shield footer */}
