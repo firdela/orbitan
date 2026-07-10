@@ -5,32 +5,15 @@ import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   ArrowRight, Shield, Store, Leaf, ShoppingBag,
-  ChevronRight, Check, Sparkles, Zap, Lock, Globe, Server } from
-'lucide-react';
-import { CapabilityBadge, CapabilityStack } from '@/components/shared/CapabilityBadge';
-import { OPERATING_CYCLE, SUBSCRIPTION_PLANS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
+  Check, Lock, Server } from 'lucide-react';
+import { CapabilityStack } from '@/components/shared/CapabilityBadge';
+import { SUBSCRIPTION_PLANS, INDUSTRY_PACKS } from '@/lib/orbitan-config';
 import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
 import { LOGO_ASSETS } from '@/lib/orbitan-identity';
 import OrbitEcosystemSection from '@/components/landing/OrbitEcosystemSection';
 import NexusSection from '@/components/landing/NexusSection';
 import IntegrationHubSection from '@/components/landing/IntegrationHubSection';
 import DualProductSection from '@/components/landing/DualProductSection';
-
-const PRINCIPLES = ['Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach'];
-
-const PRINCIPLE_ICONS = {
-  Renew: Sparkles,
-  Relate: Globe,
-  Respond: Zap,
-  Refine: Server,
-  Regulate: Shield,
-  Reach: ArrowRight,
-};
-
-const PRINCIPLE_COLORS = {
-  Renew: '#16A34A', Relate: '#2563EB', Respond: '#F97316',
-  Refine: '#7C3AED', Regulate: '#DC2626', Reach: '#D4AF37',
-};
 
 const FEATURED_PACKS = ['fnb', 'recycling', 'retail'];
 const PLAN_ORDER = ['orbitan_free', 'orbitan_starter', 'orbitan_growth', 'orbitan_business', 'orbitan_enterprise'];
@@ -83,12 +66,9 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* ── Hero — Fresh, Approachable AI Vibe ── */}
-      <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 px-6 overflow-hidden">
-        {/* Soft ambient base — slightly lighter than pure black */}
+      {/* ── Hero ── */}
+      <section className="relative pt-32 pb-16 md:pt-40 md:pb-20 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(59,130,246,0.08)_0%,transparent_70%)]" />
-
-        {/* Floating ambient orbs — creates "alive, fresh AI" feel */}
         <motion.div
           animate={{ x: [0, 40, 0], y: [0, -30, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
@@ -101,55 +81,24 @@ export default function Landing() {
           className="absolute top-40 right-[8%] w-96 h-96 rounded-full blur-[120px] opacity-[0.08]"
           style={{ background: 'radial-gradient(circle, #7C3AED 0%, transparent 70%)' }}
         />
-        <motion.div
-          animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
-          transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
-          className="absolute bottom-10 left-[40%] w-80 h-80 rounded-full blur-[100px] opacity-[0.06]"
-          style={{ background: 'radial-gradient(circle, #06B6D4 0%, transparent 70%)' }}
-        />
 
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          {/* Huge breathing logo — Apple-style gentle pulse */}
-          <div className="relative w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 mx-auto mb-8 flex items-center justify-center">
-            {/* Glow halo — breathes with the logo */}
-            <motion.div
-              animate={{
-                scale: [1, 1.06, 1],
-                opacity: [0.4, 0.7, 0.4],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, rgba(59,130,246,0.03) 50%, transparent 70%)',
-              }}
+          {/* Logo */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.2, ease: 'easeOut' }}
+            className="mb-8"
+          >
+            <motion.img
+              src={LOGO_ASSETS.mark3D}
+              alt="Orbitan"
+              animate={{ scale: [1, 1.04, 1] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              className="w-32 h-32 md:w-40 md:h-40 mx-auto drop-shadow-2xl"
+              style={{ filter: 'drop-shadow(0 0 40px rgba(59,130,246,0.15))' }}
             />
-            {/* Logo — gentle breath scale */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1.5, ease: 'easeOut' }}
-              className="relative z-10"
-            >
-              <motion.img
-                src={LOGO_ASSETS.mark3D}
-                alt="Orbitan"
-                animate={{
-                  scale: [1, 1.04, 1],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-                className="w-48 h-48 md:w-64 md:h-64 lg:w-72 lg:h-72 drop-shadow-2xl"
-                style={{ filter: 'drop-shadow(0 0 40px rgba(59,130,246,0.15))' }}
-              />
-            </motion.div>
-          </div>
+          </motion.div>
 
           {/* Headline */}
           <motion.h1
@@ -170,8 +119,8 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="text-base md:text-lg text-slate-300 max-w-xl mx-auto mb-9 leading-relaxed"
           >
-            One platform for your workforce, operations, and growth.
-            Simple to start, powerful enough to scale across any industry.
+            One ecosystem. Two products. OrbitanOS runs your workforce and operations.
+            Orbit Nexus powers it with AI. Subscribe to either — or both.
           </motion.p>
 
           <motion.div
@@ -187,78 +136,34 @@ export default function Landing() {
                 </Button>
               </Link>
             ) : (
-              <>
-                <Link to="/auth/gateway">
-                  <Button className="bg-marketing-blue hover:bg-marketing-blue/90 text-white text-sm font-semibold px-8 h-12 rounded-xl gap-2">
-                    Get Started <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </Link>
-                <Link to="/join">
-                  <Button variant="outline" className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 text-sm font-semibold px-8 h-12 rounded-xl gap-2">
-                    Join Organisation <Shield className="w-4 h-4" />
-                  </Button>
-                </Link>
-              </>
+              <Link to="/auth/gateway">
+                <Button className="bg-marketing-blue hover:bg-marketing-blue/90 text-white text-sm font-semibold px-8 h-12 rounded-xl gap-2">
+                  Get Started <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
             )}
-            <a href="#ecosystem" className="text-sm text-slate-300 hover:text-white transition-colors flex items-center gap-1.5">
-              Explore Platform <ChevronRight className="w-3.5 h-3.5" />
+            <a href="#products" className="text-sm text-slate-300 hover:text-white transition-colors">
+              Explore Products →
             </a>
           </motion.div>
         </div>
       </section>
 
-      {/* ── Orbit Ecosystem Section ── */}
-      <OrbitEcosystemSection />
-
-      {/* ── Dual Product: OrbitanOS vs Orbit Nexus ── */}
+      {/* ── 1. Two Products ── */}
       <DualProductSection />
 
-      {/* ── 6R Framework ── */}
-      <section id="framework" className="py-20 md:py-28 px-6">
-        <div className="max-w-6xl mx-auto">
-          <motion.div {...fadeUp} className="text-center mb-14">
-            <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">The Operating Cycle</p>
-            <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Six Principles. One Platform.</h2>
-            <p className="text-slate-300 max-w-lg mx-auto text-sm">
-              The six interconnected "R" elements represent the continuous cycle powering every Orbitan tenant.
-            </p>
-          </motion.div>
+      {/* ── 2. Ecosystem Engines ── */}
+      <OrbitEcosystemSection />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {PRINCIPLES.map((p, i) => {
-              const Icon = PRINCIPLE_ICONS[p];
-              const color = PRINCIPLE_COLORS[p];
-              const config = Object.values(OPERATING_CYCLE).find((c) => c.label === p);
-              return (
-                <motion.div
-                  key={p}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.08 }}
-                  className="group bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 hover:bg-white/[0.06] hover:border-white/[0.1] transition-all duration-300"
-                >
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: `${color}15` }}>
-                    <Icon className="w-5 h-5" style={{ color }} />
-                  </div>
-                  <h3 className="font-display font-bold text-white mb-1.5">{p}</h3>
-                  <p className="text-slate-300 text-xs leading-relaxed">{config?.description || ''}</p>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Orbit Nexus (AI) Section ── */}
+      {/* ── 3. Orbit Nexus (Intelligence) ── */}
       <NexusSection />
 
-      {/* ── Orbit Connect — Integration Hub ── */}
+      {/* ── 4. Integration Hub ── */}
       <IntegrationHubSection />
 
-      {/* ── Industry Packs ── */}
+      {/* ── 5. Industry Packs ── */}
       <section id="packs" className="py-20 md:py-28 px-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <motion.div {...fadeUp} className="text-center mb-14">
             <p className="text-xs tracking-[0.2em] uppercase text-marketing-gold font-bold mb-3">Industry Packs</p>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Built for Your Industry</h2>
@@ -297,47 +202,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Orbit Shield™ ── */}
-      <section id="shield" className="py-20 md:py-28 px-6 bg-marketing-surface-dark">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div {...fadeUp}>
-            <div className="w-14 h-14 rounded-2xl bg-marketing-red/10 flex items-center justify-center mx-auto mb-6">
-              <Shield className="w-7 h-7 text-marketing-red" />
-            </div>
-            <span className="text-xs tracking-[0.2em] uppercase text-marketing-red font-bold">Powered by Regulate</span>
-            <h2 className="text-3xl md:text-4xl font-display font-bold mt-3 mb-4">
-              Orbit Shield<span className="text-white/30">™</span>
-            </h2>
-            <p className="text-slate-300 max-w-xl mx-auto text-sm mb-10 leading-relaxed">
-              Enterprise-grade security, compliance, and governance. Auditable, portable, and exit-ready — every record, every action, every time.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 text-left">
-            {[
-              { icon: Lock, title: 'Access Control', desc: 'MFA, SSO, and granular role-based permissions across every module.' },
-              { icon: Server, title: 'Audit Trail', desc: 'Immutable audit logs. Every state change captured and verifiable.' },
-              { icon: Shield, title: 'Governance', desc: 'Compliance templates, data retention policies, and regulatory reporting.' },
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5"
-              >
-                <item.icon className="w-5 h-5 text-marketing-red mb-3" />
-                <h4 className="font-display font-semibold text-white text-sm mb-1.5">{item.title}</h4>
-                <p className="text-slate-300 text-xs leading-relaxed">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── OrbitanOS Subscription Plans ── */}
-      <section id="plans" className="py-20 md:py-28 px-6">
+      {/* ── 6. OrbitanOS Pricing ── */}
+      <section id="plans" className="py-20 md:py-28 px-6 bg-marketing-surface-dark">
         <div className="max-w-6xl mx-auto">
           <motion.div {...fadeUp} className="text-center mb-14">
             <p className="text-xs tracking-[0.2em] uppercase text-marketing-blue font-bold mb-3">OrbitanOS Pricing</p>
@@ -359,7 +225,7 @@ export default function Landing() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: i * 0.08 }}
-                  className={`rounded-2xl border p-6 flex flex-col ${isEnterprise ? 'bg-marketing-surface border-marketing-gold/30 ring-1 ring-marketing-gold/20 lg:col-span-1' : 'bg-white/[0.03] border-white/[0.06]'}`}
+                  className={`rounded-2xl border p-6 flex flex-col ${isEnterprise ? 'bg-marketing-surface border-marketing-gold/30 ring-1 ring-marketing-gold/20' : 'bg-white/[0.03] border-white/[0.06]'}`}
                 >
                   <div>
                     <span
@@ -402,13 +268,51 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
+      {/* ── 7. Trust: Orbit Shield ── */}
+      <section id="shield" className="py-20 md:py-28 px-6">
+        <div className="max-w-4xl mx-auto">
+          <motion.div {...fadeUp} className="text-center mb-12">
+            <div className="w-14 h-14 rounded-2xl bg-marketing-red/10 flex items-center justify-center mx-auto mb-6">
+              <Shield className="w-7 h-7 text-marketing-red" />
+            </div>
+            <span className="text-xs tracking-[0.2em] uppercase text-marketing-red font-bold">Orbit Shield™</span>
+            <h2 className="text-3xl md:text-4xl font-display font-bold mt-3 mb-4">Security You Can Audit.</h2>
+            <p className="text-slate-300 max-w-xl mx-auto text-sm leading-relaxed">
+              Enterprise-grade governance baked into every action. Immutable audit trails, compliance gates,
+              and policy-as-code enforcement — exit-ready and portable to any stack.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {[
+              { icon: Lock, title: 'Access Control', desc: 'MFA, SSO, and granular role-based permissions across every module.' },
+              { icon: Server, title: 'Audit Trail', desc: 'Immutable audit logs. Every state change captured and verifiable.' },
+              { icon: Shield, title: 'Governance', desc: 'Compliance templates, data retention policies, and regulatory reporting.' },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5"
+              >
+                <item.icon className="w-5 h-5 text-marketing-red mb-3" />
+                <h4 className="font-display font-semibold text-white text-sm mb-1.5">{item.title}</h4>
+                <p className="text-slate-300 text-xs leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 8. CTA ── */}
       <section className="py-20 md:py-28 px-6 bg-marketing-surface-dark">
         <div className="max-w-3xl mx-auto text-center">
           <motion.div {...fadeUp}>
             <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">Ready to Build Momentum?</h2>
             <p className="text-slate-300 text-sm mb-8">
-              Join the operating system that connects your workforce, operations, and growth.
+              Join the ecosystem that connects your workforce, operations, and intelligence.
             </p>
             {isAuthenticated ? (
               <Link to="/workspace">
@@ -434,12 +338,12 @@ export default function Landing() {
             <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-5 h-5 opacity-50" />
             <span className="text-xs text-slate-300">OrbitanOS by Orbitan © {new Date().getFullYear()} Muhammad Firdaus Bin Ismail</span>
           </div>
-          <div className="flex items-center gap-6">
-            <a href="#ecosystem" className="text-xs text-slate-300 hover:text-white transition-colors">Platform</a>
+          <div className="flex items-center gap-6 flex-wrap justify-center">
             <a href="#products" className="text-xs text-slate-300 hover:text-white transition-colors">Products</a>
+            <a href="#ecosystem" className="text-xs text-slate-300 hover:text-white transition-colors">Ecosystem</a>
             <a href="#nexus" className="text-xs text-slate-300 hover:text-white transition-colors">Nexus</a>
             <a href="#connect" className="text-xs text-slate-300 hover:text-white transition-colors">Connect</a>
-            <a href="#packs" className="text-xs text-slate-300 hover:text-white transition-colors">Packs</a>
+            <a href="#packs" className="text-xs text-slate-300 hover:text-white transition-colors">Industries</a>
             <a href="#plans" className="text-xs text-slate-300 hover:text-white transition-colors">Pricing</a>
             <a href="#shield" className="text-xs text-slate-300 hover:text-white transition-colors">Security</a>
           </div>
