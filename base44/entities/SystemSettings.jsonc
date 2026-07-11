@@ -1,7 +1,7 @@
 {
   "name": "SystemSettings",
   "type": "object",
-  "description": "OrbitanOS Global Governance Registry \u2014 singleton record controlling platform-wide maintenance mode, shield posture, and feature flags. Powered by the Regulate principle. Exit-Ready.",
+  "description": "OrbitanOS Global Governance Registry \u2014 singleton record controlling platform-wide maintenance mode, shield posture, AI kill switch, and feature flags. Powered by the Regulate principle. Exit-Ready.",
   "properties": {
     "maintenance_mode": {
       "type": "boolean",
@@ -30,6 +30,20 @@
       ],
       "default": "auditor",
       "description": "Platform-wide Shield posture. guardian = block high-risk actions globally."
+    },
+    "nexus_ai_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Orbit Nexus AI Kill Switch. When false, ALL AI intelligence requests return a graceful 'ai_disabled' response. OrbitanOS core modules continue operating fully without AI. Used for emergencies, cost control, or compliance lockdown."
+    },
+    "nexus_ai_disabled_message": {
+      "type": "string",
+      "default": "AI intelligence is currently disabled by the platform administrator. All OrbitanOS modules continue to operate normally.",
+      "description": "Message returned to the frontend when AI is disabled, shown in AI-augmented UI components."
+    },
+    "nexus_ai_disabled_reason": {
+      "type": "string",
+      "description": "Internal reason for disabling AI (e.g. 'Emergency cost freeze', 'Compliance investigation', 'Model provider outage'). Admin-only."
     },
     "allow_admin_access_during_maintenance": {
       "type": "boolean",

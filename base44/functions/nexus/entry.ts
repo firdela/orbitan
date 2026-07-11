@@ -12,6 +12,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 //   2. Shielded — every request passes the Shield governance gate.
 //   3. Metered — every request is tracked in OrbitUsageTracker + Wallet debited.
 //   4. Scalable — adding a new AI service = one line in the SERVICE_REGISTRY.
+//   5. Graceful Degradation — if AI Kill Switch is off, returns ai_disabled
+//      so the calling page degrades gracefully. OrbitanOS never depends on AI.
 //
 // Created by Muhammad Firdaus Bin Ismail
 // © 2024–2026 Orbitan & OrbitanOS. All Rights Reserved.
@@ -65,6 +67,44 @@ Deno.serve(async (req) => {
 
     if (!service_key) {
       return Response.json({ error: 'service_key is required' }, { status: 400 });
+    }
+
+    // ── STEP 0: AI KILL SWITCH (ADR-0018) ──────────────────────
+    // The highest-priority gate. If AI is globally disabled, return
+    // a graceful 'ai_disabled' response immediately — no shield,
+    // no wallet debit, no service execution. OrbitanOS continues.
+    try {
+      const settings = await base44.asServiceRole.entities.SystemSettings.list();
+      const globalSettings = settings[0];
+
+      if (globalSettings && globalSettings.nexus_ai_enabled === false) {
+        // Log the disabled request for audit, then return gracefully
+        await trackUsage(base44, {
+          tenant_id: tenantId || 'unknown',
+          outlet_id: outlet_id || null,
+          service_key,
+          routed_function: SERVICE_REGISTRY[service_key]?.function_name || 'unknown',
+          model_used: payload?.model || 'automatic',
+          credits_consumed: 0,
+          status: 'ai_disabled',
+          error_message: 'AI Kill Switch is active — request gracefully rejected',
+          actor_id: actorId,
+          actor_name: user.full_name,
+          shield_policy_evaluated: null,
+          shield_outcome: 'not_evaluated',
+          latency_ms: Date.now() - startTime,
+          metadata: payload || {},
+        });
+
+        return Response.json({
+          ai_disabled: true,
+          message: globalSettings.nexus_ai_disabled_message || 'AI intelligence is currently disabled by the platform administrator.',
+          service_key,
+        }, { status: 200 }); // 200 not 503 — the request succeeded, AI is just off
+      }
+    } catch (settingsErr) {
+      // If settings lookup fails, fail-open (don't block AI on infra issues)
+      console.log(`[nexusGateway] Kill switch check failed: ${settingsErr.message}`);
     }
 
     const serviceConfig = SERVICE_REGISTRY[service_key];
