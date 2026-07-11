@@ -7,7 +7,7 @@
 >
 > **Build Philosophy:** Build less. Validate more.
 >
-> Last updated: 2026-07-09 (Day 40 of 60-day MVP window)
+> Last updated: 2026-07-11 (Day 42 of 60-day MVP window)
 
 ---
 
@@ -209,6 +209,7 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 10. ~~**Double-AppShell on workspace pages**~~ ✅ FIXED (2026-07-10) — All 8 outlet pages (TasksPage, SalesPage, InventoryPage, SchedulingPage, CompliancePage, ReportsPage, HBBPage, WorkforcePage) had hardcoded `NAV` arrays + `AppShell` wrappers that caused double sidebars when rendered inside `WorkspaceLayout` (the primary `/workspace/:tenantId/*` routing). Removed `AppShell` import + `NAV` array from all 8 pages; replaced `<AppShell>` wrapper with `<>` fragment. Pages now render as bare fragments inside `WorkspaceLayout`'s `<Outlet />`, using the manifest-driven sidebar exclusively. ProcurementPage was already fixed (bug #8). The `/outlet/*` legacy routes now render without a sidebar — acceptable since the primary user flow goes through `/workspace/:tenantId/*` via RoleGateway. Unused icon imports (Home, Package, etc.) left in place — harmless, no build break.
 11. ~~**TasksPage demo data + persistence**~~ ✅ FIXED (2026-07-10) — Removed hardcoded `DEMO_TASKS` array and `EMPLOYEES` list. Tasks now load exclusively from `base44.entities.Task.list()`. Employee dropdown loads from `base44.entities.Employee.list()`. Task status toggle now persists via `base44.entities.Task.update(id, { status })` with optimistic UI + rollback on failure. Empty state shows when no tasks exist.
 12. ~~**SalesPage Xero link**~~ ✅ FIXED (2026-07-10) — "Connect Xero" button was a dead button with no handler. Now links to `/platform/integrations` where the Xero OAuth flow lives. Added `Link` import from `react-router-dom`.
+13. ~~**ReportsPage hardcoded fake data**~~ ✅ FIXED (2026-07-11) — `ReportsPage.jsx` had a `SEED_CHART` array with fake daily revenue numbers and StatCard fallback values showing S$26,600 / S$18,620 / 70% / 5 staff when no real data existed. This violated the Master Vision's Data Integrity Requirement: "Do not automatically create fictional Analytics, Reports." Removed all hardcoded fallback values. StatCards now show S$0 / "No data yet" when empty. Chart section replaced with an EmptyState component directing users to create reconciliations in the Sales module. Summary table only renders when real data exists. Added loading state with Loader2 spinner.
 
 ## Audit Findings — Sprint 5 (Session 2026-07-06)
 
@@ -268,10 +269,10 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 
 ## MVP Timeline Status
 - **Start:** 30 May 2026
-- **Today:** 9 July 2026 (Day 40)
+- **Today:** 11 July 2026 (Day 42)
 - **Target end:** ~30 July 2026 (Day 60)
 - **Remaining:** ~3 weeks
-- **Status:** Architecture is strong. Core operational modules largely exist. Ecosystem architecture formalised (ADRs 0008-0013). Stripe billing fully aligned — all 3 self-service plans (Starter/Growth/Business) return live checkout URLs; Enterprise is "Contact Sales". `orbitan-config.js` carries Stripe Product + Price IDs as internal source of truth. Biggest remaining focus is Sprint 5: pilot preparation, dashboards, bug fixes, permissions validation, mobile optimisation.
+- **Status:** Architecture is strong. Core operational modules largely exist. Ecosystem architecture formalised (ADRs 0008-0013). Stripe billing fully aligned. ReportsPage data integrity violation fixed (removed all hardcoded fake data). Biggest remaining focus is Sprint 5: pilot preparation, permissions validation, mobile optimisation, test data, export functions.
 
 ## HBB Industry Pack Provisioned (2026-07-07)
 - **ActivationRegistry `hbb` pack** created: `governance_domain: 'hbb_standard_ops'`, `governance_threshold_sgd: 50` (per Master Vision — HBB-specific). AI governance trust level = `low` (agent requires approval for all writes). Trust pillars configured: Food Safety (30%), Shield Governance (30%), Audit Integrity (20%), Production Velocity (20%).
