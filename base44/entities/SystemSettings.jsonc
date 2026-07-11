@@ -1,7 +1,7 @@
 {
   "name": "SystemSettings",
   "type": "object",
-  "description": "OrbitanOS Global Governance Registry \u2014 singleton record controlling platform-wide maintenance mode, shield posture, AI kill switch, and feature flags. Powered by the Regulate principle. Exit-Ready.",
+  "description": "OrbitanOS Global Governance Registry \u2014 singleton record controlling platform-wide maintenance mode, shield posture, AI kill switch, governance mode, and feature flags. Powered by the Regulate principle. Exit-Ready.",
   "properties": {
     "maintenance_mode": {
       "type": "boolean",
@@ -44,6 +44,20 @@
     "nexus_ai_disabled_reason": {
       "type": "string",
       "description": "Internal reason for disabling AI (e.g. 'Emergency cost freeze', 'Compliance investigation', 'Model provider outage'). Admin-only."
+    },
+    "ai_governance_mode": {
+      "type": "string",
+      "enum": [
+        "passive_logging",
+        "proactive_approval"
+      ],
+      "default": "proactive_approval",
+      "description": "Orbit Nexus AI governance mode. passive_logging = AI actions are logged to AuditLog after execution (operational velocity). proactive_approval = AI creates GovernanceOverride / EvolutionProposal and waits for human approval before high-impact actions (compliance-first)."
+    },
+    "orbit_evolution_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Orbit Evolution switch. When true, Orbit Nexus continuously observes usage patterns and generates EvolutionProposal records for improvement opportunities. When false, no proposals are generated."
     },
     "allow_admin_access_during_maintenance": {
       "type": "boolean",

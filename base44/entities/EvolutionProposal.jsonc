@@ -1,0 +1,243 @@
+{
+  "name": "EvolutionProposal",
+  "type": "object",
+  "description": "Orbit Evolution \u2014 AI-generated improvement proposals from Orbit Nexus Intelligence. Continuously observes operational patterns and recommends workflow improvements, automation opportunities, and optimisations. Aligned with the Refine principle. High-impact changes require human approval before implementation. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "Outlet context (null = tenant-wide observation)"
+    },
+    "proposal_type": {
+      "type": "string",
+      "enum": [
+        "workflow_automation",
+        "module_configuration",
+        "permission_refinement",
+        "inventory_optimisation",
+        "procurement_improvement",
+        "dashboard_layout",
+        "industry_pack_upgrade",
+        "ai_agent_suggestion",
+        "operational_best_practice",
+        "ui_ux_improvement"
+      ],
+      "description": "Category of improvement recommended by Orbit Intelligence"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string",
+      "description": "What the AI recommends and why"
+    },
+    "observed_pattern": {
+      "type": "string",
+      "description": "Summary of the usage data pattern that triggered this proposal"
+    },
+    "expected_impact": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "medium"
+    },
+    "affected_modules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Module keys affected by this proposal"
+    },
+    "recommended_action": {
+      "type": "object",
+      "description": "Structured recommendation data for implementation"
+    },
+    "governance_mode": {
+      "type": "string",
+      "enum": [
+        "passive_logging",
+        "proactive_approval"
+      ],
+      "default": "proactive_approval",
+      "description": "passive_logging = logged after implementation. proactive_approval = manager must approve before implementation."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_review",
+        "approved",
+        "implemented",
+        "rejected",
+        "measuring",
+        "completed"
+      ],
+      "default": "pending_review",
+      "description": "Lifecycle: pending_review \u2192 approved \u2192 implemented \u2192 measuring \u2192 completed (or rejected at any stage)"
+    },
+    "ai_confidence_score": {
+      "type": "number",
+      "description": "AI confidence in this recommendation 0-100"
+    },
+    "usage_data_summary": {
+      "type": "object",
+      "description": "Aggregated usage statistics that triggered this proposal"
+    },
+    "reviewed_by_id": {
+      "type": "string"
+    },
+    "reviewed_by_name": {
+      "type": "string"
+    },
+    "reviewed_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewer_notes": {
+      "type": "string"
+    },
+    "implemented_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "outcome_measured": {
+      "type": "string",
+      "description": "Measured outcome after implementation"
+    },
+    "outcome_improvement_pct": {
+      "type": "number",
+      "description": "Percentage improvement measured after implementation"
+    },
+    "principle": {
+      "type": "string",
+      "enum": [
+        "renew",
+        "relate",
+        "respond",
+        "refine",
+        "regulate",
+        "reach"
+      ],
+      "default": "refine"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "proposal_type",
+    "title",
+    "description",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "supervisor"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

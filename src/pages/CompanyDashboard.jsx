@@ -30,6 +30,7 @@ const NAV = [
   { href: '/company/tasks', icon: CheckSquare, label: 'Tasks' },
   { type: 'section', label: 'Management' },
   { href: '/company/compliance', icon: Shield, label: 'Compliance' },
+  { href: '/platform/access-control', icon: Shield, label: 'Access Control' },
   { href: '/company/reporting', icon: BarChart2, label: 'Reporting' },
   { href: '/company/integrations', icon: LinkIcon, label: 'Integrations' },
   { type: 'section', label: 'Platform' },

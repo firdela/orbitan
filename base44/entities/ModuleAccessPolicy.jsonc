@@ -1,0 +1,188 @@
+{
+  "name": "ModuleAccessPolicy",
+  "type": "object",
+  "description": "OrbitanOS Access Control Layer \u2014 Per-tenant, per-role, per-module access matrix. Defines what each role can view, create, update, or delete within specific modules and locations. Powered by the Regulate principle. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant this policy belongs to"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "Outlet scope (null = applies to all outlets in the tenant)"
+    },
+    "module_key": {
+      "type": "string",
+      "description": "Module key from orbitan-config e.g. 'inventory', 'procurement', 'sales_invoice', 'workforce', 'scheduling', 'compliance', 'task', 'reporting'"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "tenant_admin",
+        "client_manager",
+        "outlet_manager",
+        "supervisor",
+        "worker"
+      ],
+      "description": "Role this policy applies to"
+    },
+    "can_view": {
+      "type": "boolean",
+      "default": true,
+      "description": "Can view records in this module"
+    },
+    "can_create": {
+      "type": "boolean",
+      "default": false,
+      "description": "Can create new records in this module"
+    },
+    "can_update": {
+      "type": "boolean",
+      "default": false,
+      "description": "Can edit existing records in this module"
+    },
+    "can_delete": {
+      "type": "boolean",
+      "default": false,
+      "description": "Can delete records in this module"
+    },
+    "data_scope": {
+      "type": "string",
+      "enum": [
+        "all_outlets",
+        "assigned_outlet_only",
+        "own_records_only"
+      ],
+      "default": "assigned_outlet_only",
+      "description": "Data visibility scope \u2014 all outlets in tenant, only the user's assigned outlet, or only records they created"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "created_by_id": {
+      "type": "string"
+    },
+    "created_by_name": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "module_key",
+    "role"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "client_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "supervisor"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "worker"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

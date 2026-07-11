@@ -25,6 +25,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
+import AIKillSwitchPanel from '@/components/platform/AIKillSwitchPanel';
+import EvolutionProposalsPanel from '@/components/platform/EvolutionProposalsPanel';
+import { Lock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const STATUS_CONFIG = {
   pending: { label: 'Pending Review', color: 'bg-amber-100 text-amber-800', icon: Clock },
@@ -145,14 +149,28 @@ export default function ShieldCommandCenter() {
         <div className="mb-8">
           <div className="inline-flex items-center gap-2 bg-orbitan-blue-light text-orbitan-blue px-3 py-1.5 rounded-full text-xs font-semibold mb-3">
             <Shield className="w-3.5 h-3.5" />
-            Orbit Shield™ — Governance Override Registry
+            Orbit Shield™ — Governance & Intelligence Command Center
           </div>
           <h1 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-2">
-            Override Management
+            Shield Command Center
           </h1>
           <p className="text-muted-foreground">
-            Review and approve governance override requests from your team. Every decision is audited.
+            Control AI governance, review override requests, and manage Orbit Evolution proposals. Every decision is audited.
           </p>
+          <Link to="/platform/access-control" className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline mt-3">
+            <Lock className="w-3.5 h-3.5" />
+            Manage Module Access Control →
+          </Link>
+        </div>
+
+        {/* AI Kill Switch + Governance Mode + Evolution Toggle */}
+        <div className="mb-8">
+          <AIKillSwitchPanel />
+        </div>
+
+        {/* Orbit Evolution Proposals */}
+        <div className="mb-8">
+          <EvolutionProposalsPanel />
         </div>
 
         {/* Stats Cards */}
