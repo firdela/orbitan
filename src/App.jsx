@@ -38,6 +38,7 @@ import TasksPage from '@/pages/outlet/TasksPage';
 import WorkforcePage from '@/pages/outlet/WorkforcePage';
 import CompliancePage from '@/pages/outlet/CompliancePage';
 import ReportsPage from '@/pages/outlet/ReportsPage';
+import FeedbackCentre from '@/pages/FeedbackCentre';
 
 // Dynamic Workspace — scalable, tenant-agnostic routing
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
@@ -105,6 +106,7 @@ const AuthenticatedApp = () => {
         <Route path="scheduling" element={<SchedulingPage />} />
         <Route path="compliance" element={<CompliancePage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="feedback" element={<FeedbackCentre />} />
       </Route>
 
       {/* Self-Serve Business Installation Wizard — Create Organisation */}
@@ -130,6 +132,7 @@ const AuthenticatedApp = () => {
       <Route path="/outlet/workforce" element={<WorkforcePage />} />
       <Route path="/outlet/compliance" element={<CompliancePage />} />
       <Route path="/outlet/reports" element={<ReportsPage />} />
+      <Route path="/outlet/feedback" element={<FeedbackCentre />} />
 
       {/* Platform — Revenue Engine */}
       <Route path="/platform/wallet" element={<WalletPage />} />

@@ -80,14 +80,14 @@ import {
   Home, Package, ShoppingCart, FileText, Users, Calendar,
   CheckSquare, BarChart2, Shield, Layers, Settings,
   Clock, DollarSign, TrendingUp, Building2, ClipboardList,
-  Truck, AlertTriangle, Award, Zap, ChefHat,
+  Truck, AlertTriangle, Award, Zap, ChefHat, MessageSquare,
 } from 'lucide-react';
 
 const ICON_MAP = {
   Home, Package, ShoppingCart, FileText, Users, Calendar,
   CheckSquare, BarChart2, Shield, Layers, Settings,
   Clock, DollarSign, TrendingUp, Building2, ClipboardList,
-  Truck, AlertTriangle, Award, Zap, ChefHat,
+  Truck, AlertTriangle, Award, Zap, ChefHat, MessageSquare,
 };
 
 function resolveIcon(iconName) {

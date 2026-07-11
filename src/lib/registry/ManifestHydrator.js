@@ -34,6 +34,8 @@ const FALLBACK_NAV = [
   { type: 'section', label: 'Reports' },
   { id: 'reports', label: 'Reports', icon: 'BarChart2', route: '/reports', module_key: 'reporting', isLocked: false },
   { id: 'compliance', label: 'Compliance', icon: 'Shield', route: '/compliance', module_key: 'compliance', isLocked: false },
+  { type: 'section', label: 'Product' },
+  { id: 'feedback', label: 'Feedback Centre', icon: 'MessageSquare', route: '/feedback', module_key: 'feedback', isLocked: false },
 ];
 
 /**
@@ -134,6 +136,17 @@ function buildManifestNav(manifest, tenantId, allowedModules, isEnterprise) {
       });
     }
   }
+
+  // Append the Feedback Centre link (always visible — pilot-critical)
+  result.push({ type: 'section', label: 'Product' });
+  result.push({
+    id: 'feedback',
+    label: 'Feedback Centre',
+    icon: 'MessageSquare',
+    route: `/workspace/${tenantId}/feedback`,
+    module_key: 'feedback',
+    isLocked: false,
+  });
 
   // Append the platform navigation link (always visible)
   result.push({ type: 'section', label: 'Navigation' });

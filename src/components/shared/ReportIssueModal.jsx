@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -71,6 +72,7 @@ const SEVERITIES = [
 
 export default function ReportIssueModal({ hideFloatingButton = false, externalOpen, onExternalClose }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -140,6 +142,10 @@ export default function ReportIssueModal({ hideFloatingButton = false, externalO
     try {
       await base44.entities.IssueLog.create({
         ...form,
+        tenant_id: user?.tenant_id || user?.data?.tenant_id || undefined,
+        outlet_id: user?.outlet_id || user?.data?.outlet_id || undefined,
+        reported_by_id: user?.id || undefined,
+        reported_by_name: user?.full_name || user?.email || undefined,
         page_url: window.location.pathname,
         session_context: sessionContext,
         attachment_urls: attachments.length > 0 ? attachments : undefined,
