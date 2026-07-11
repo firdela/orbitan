@@ -136,14 +136,16 @@
           }
         },
         {
-          "data.tenant_id": "{{user.data.tenant_id}}",
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin"
-              ]
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
             }
-          }
+          ]
         }
       ]
     },
