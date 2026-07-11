@@ -85,11 +85,6 @@
             },
             {
               "user_condition": {
-                "role": "tenant_admin"
-              }
-            },
-            {
-              "user_condition": {
                 "role": "outlet_manager"
               }
             },
@@ -178,11 +173,6 @@
             },
             {
               "user_condition": {
-                "role": "tenant_admin"
-              }
-            },
-            {
-              "user_condition": {
                 "role": "outlet_manager"
               }
             },
@@ -208,11 +198,6 @@
             {
               "user_condition": {
                 "role": "admin"
-              }
-            },
-            {
-              "user_condition": {
-                "role": "tenant_admin"
               }
             },
             {
