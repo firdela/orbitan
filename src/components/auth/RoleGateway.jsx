@@ -9,20 +9,22 @@ import OrbitanLoader from '@/components/brand/OrbitanLoader';
  * RoleGateway — OrbitanOS Role Resolution Engine
  *
  * Runs after authentication. Looks up the user's Employee record
- * and routes them to their appropriate workspace.
+ * and routes them to their appropriate workspace based on role.
  *
- * Routing Logic:
- *   Platform Admin (user.role === 'admin')  → /leader-org
- *   Tenant Admin (employee.role)             → /company
- *   Outlet Manager / Supervisor              → /outlet
- *   Worker                                   → /worker
- *   No Employee record found                 → AccessRequestView (onboarding)
+ * Routing Logic (access control enforcement):
+ *   Platform Admin (user.role === 'admin')    → /leader-org
+ *   Worker (employee.role === 'worker')       → /worker (tasks & time-tracking only)
+ *   Manager roles (tenant_admin, client_manager,
+ *     outlet_manager, supervisor)              → /workspace/:tenantId (full dashboard)
+ *   No Employee record found                   → /join (onboarding pipeline)
  */
 export default function RoleGateway() {
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const userEmail = user?.email || '';
 
-  // Resolve employee record
+  // Resolve employee record — this is the authoritative source of
+  // the user's role within their organisation. We must wait for this
+  // before routing, because the role determines which UI they see.
   const { data: employee, isLoading: empLoading } = useQuery({
     queryKey: ['role-gateway-employee', userEmail],
     queryFn: async () => {
@@ -33,20 +35,9 @@ export default function RoleGateway() {
     enabled: !!userEmail && isAuthenticated,
   });
 
-  // Loading state
+  // Loading state — must resolve employee before routing
   if (isLoadingAuth || empLoading) {
     return <OrbitanLoader size="fullscreen" message="Loading OrbitanOS..." />;
-  }
-
-  // ── Dynamic Workspace Resolver ──
-  // If the user has a tenant_id bound to their profile (stamped by
-  // the OnboardingService), route them into their isolated, dynamic
-  // workspace at /workspace/:tenantId. This is the scalable path —
-  // works for any future customer without route changes.
-  const userTenantId = user?.tenant_id || user?.data?.tenant_id || null;
-
-  if (userTenantId) {
-    return <Navigate to={`/workspace/${userTenantId}`} replace />;
   }
 
   // Platform admin → Leader Org
@@ -54,24 +45,32 @@ export default function RoleGateway() {
     return <Navigate to="/leader-org" replace />;
   }
 
-  // Employee record found — route by role (pilot fallback)
+  // ── Role-based access control ──
+  // The Employee record is the authoritative source of the user's role.
+  // Workers are routed to the Worker Portal (tasks + time-tracking only).
+  // Managers are routed to the full workspace dashboard.
+  const userTenantId = user?.tenant_id || user?.data?.tenant_id || employee?.tenant_id || null;
+
   if (employee) {
     const role = employee.role;
 
-    // Tenant-level leadership
-    if (role === 'tenant_admin') {
-      return <Navigate to="/company" replace />;
+    // Workers → Worker Portal only (tasks, shifts, clock in/out, safety)
+    if (role === 'worker') {
+      return <Navigate to="/worker" replace />;
     }
 
-    // Outlet-level management
-    if (role === 'outlet_manager' || role === 'supervisor') {
+    // Manager roles → full workspace dashboard
+    if (role === 'tenant_admin' || role === 'client_manager' ||
+        role === 'outlet_manager' || role === 'supervisor') {
+      if (userTenantId) {
+        return <Navigate to={`/workspace/${userTenantId}`} replace />;
+      }
+      // Fallback for legacy pilot routing
+      if (role === 'tenant_admin') return <Navigate to="/company" replace />;
       return <Navigate to="/outlet" replace />;
     }
-
-    // Worker (default)
-    return <Navigate to="/worker" replace />;
   }
 
-  // No employee record — access portal
+  // No employee record — route to onboarding / access portal
   return <Navigate to="/join" replace />;
 }

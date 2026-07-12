@@ -33,6 +33,7 @@ export default function WorkspaceLayout() {
   const { tenantId } = useParams();
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const { switchTenant } = useTenant();
+  const userEmail = user?.email || '';
 
   // ── Resolve the Tenant record from the database ─────────
   const { data: tenantRecord, isLoading: tenantLoading } = useQuery({
@@ -46,6 +47,19 @@ export default function WorkspaceLayout() {
       }
     },
     enabled: !!tenantId && isAuthenticated,
+  });
+
+  // ── Resolve Employee record for role-based access control ──
+  // Workers are not permitted to access the management workspace.
+  // They are redirected to the Worker Portal.
+  const { data: employeeRecord, isLoading: empLoading } = useQuery({
+    queryKey: ['workspace-layout-employee', userEmail],
+    queryFn: async () => {
+      if (!userEmail) return null;
+      const results = await base44.entities.Employee.filter({ email: userEmail });
+      return results.length > 0 ? results[0] : null;
+    },
+    enabled: !!userEmail && isAuthenticated,
   });
 
   // ── HYDRATE: Fetch manifest + subscription policy ────────
@@ -68,6 +82,12 @@ export default function WorkspaceLayout() {
   }
 
   // ── Access control (Regulate principle) ─────────────────
+  // Workers are restricted to the Worker Portal — they cannot access
+  // the management workspace even via direct URL entry.
+  if (employeeRecord && employeeRecord.role === 'worker') {
+    return <Navigate to="/worker" replace />;
+  }
+
   const userTenantId = user?.tenant_id || user?.data?.tenant_id || null;
   const isPlatformAdmin = user?.role === 'admin';
   const isAuthorized = isPlatformAdmin || userTenantId === tenantId;
@@ -80,7 +100,7 @@ export default function WorkspaceLayout() {
   }
 
   // ── Resolve tenant (DB record → unresolved) ─────────────
-  if (tenantLoading || navLoading) {
+  if (tenantLoading || navLoading || empLoading) {
     return <OrbitanLoader size="fullscreen" message="Resolving workspace..." />;
   }
 
