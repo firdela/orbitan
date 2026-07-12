@@ -194,6 +194,64 @@ Analyse this feedback and return:
       console.log('[nexusFeedbackAnalyst] Usage tracking failed:', trackErr.message);
     }
 
+    // ── EVOLUTION PROPOSAL TRIGGER ─────────────────────────
+    // When 3+ issues share the same AI duplicate group, auto-generate
+    // an EvolutionProposal to close the feedback → evolution loop.
+    if (aiResult.duplicate_group_id) {
+      try {
+        const clusterIssues = await base44.asServiceRole.entities.IssueLog.filter(
+          { tenant_id: targetIssue.tenant_id, ai_duplicate_group_id: aiResult.duplicate_group_id },
+          '-created_date',
+          50
+        );
+
+        if (clusterIssues.length >= 3) {
+          const existingProposals = await base44.asServiceRole.entities.EvolutionProposal.filter(
+            { tenant_id: targetIssue.tenant_id, status: 'pending_review' },
+            '-created_date',
+            50
+          );
+
+          const alreadyExists = existingProposals.some(
+            (p) => p.usage_data_summary?.cluster_id === aiResult.duplicate_group_id
+          );
+
+          if (!alreadyExists) {
+            const settings = await base44.asServiceRole.entities.SystemSettings.list();
+            const globalSettings = settings?.[0];
+            const governanceMode = globalSettings?.ai_governance_mode || 'proactive_approval';
+            const clusterLabel = aiResult.duplicate_group_id.replace(/_/g, ' ');
+            const frustratedCount = clusterIssues.filter(i => i.ai_sentiment === 'frustrated').length;
+            const negativeCount = clusterIssues.filter(i => i.ai_sentiment === 'negative').length;
+
+            await base44.asServiceRole.entities.EvolutionProposal.create({
+              tenant_id: targetIssue.tenant_id,
+              outlet_id: targetIssue.outlet_id || null,
+              proposal_type: 'ui_ux_improvement',
+              title: `Address recurring feedback: ${clusterLabel}`,
+              description: `Orbit Nexus detected ${clusterIssues.length} similar feedback reports clustered under "${aiResult.duplicate_group_id}". This recurring pattern indicates a product improvement opportunity. AI summary: ${aiResult.summary}`,
+              observed_pattern: `${clusterIssues.length} feedback reports clustered under "${aiResult.duplicate_group_id}". Sentiment breakdown: ${frustratedCount} frustrated, ${negativeCount} negative, ${clusterIssues.filter(i => i.ai_sentiment === 'neutral').length} neutral.`,
+              expected_impact: clusterIssues.some(i => i.ai_priority === 'critical') ? 'critical' : 'high',
+              affected_modules: [...new Set(clusterIssues.map(i => i.module).filter(Boolean))],
+              governance_mode: governanceMode,
+              status: governanceMode === 'proactive_approval' ? 'pending_review' : 'implemented',
+              ai_confidence_score: 80,
+              usage_data_summary: {
+                cluster_id: aiResult.duplicate_group_id,
+                cluster_size: clusterIssues.length,
+                issue_ids: clusterIssues.map(i => i.id),
+              },
+              principle: targetIssue.principle || 'refine',
+            });
+
+            console.log(`[nexusFeedbackAnalyst] EvolutionProposal created for cluster "${aiResult.duplicate_group_id}" (${clusterIssues.length} reports)`);
+          }
+        }
+      } catch (evolutionErr) {
+        console.log('[nexusFeedbackAnalyst] Evolution proposal creation failed:', evolutionErr.message);
+      }
+    }
+
     return Response.json({
       success: true,
       issue_id: issueToUpdateId,

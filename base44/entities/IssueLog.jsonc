@@ -78,6 +78,19 @@
       ],
       "default": "medium"
     },
+    "principle": {
+      "type": "string",
+      "enum": [
+        "respond",
+        "refine",
+        "regulate",
+        "renew",
+        "relate",
+        "reach"
+      ],
+      "default": "refine",
+      "description": "Orbitan Six-R principle this feedback relates to. respond=fix blockers, refine=improve workflows, regulate=compliance/governance, renew=new capabilities, relate=AI/integrations, reach=market expansion."
+    },
     "title": {
       "type": "string"
     },

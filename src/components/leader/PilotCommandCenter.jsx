@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import TenantPilotCard from './TenantPilotCard';
+import FeedbackIntelligenceDashboard from './FeedbackIntelligenceDashboard';
 import { Button } from '@/components/ui/button';
 import {
   Radar, Shield, Activity, RefreshCw, AlertTriangle, CheckCircle2,
-  Zap, Clock, Building2, ClipboardCheck, XCircle
+  Zap, Clock, Building2, ClipboardCheck, XCircle, Sparkles
 } from 'lucide-react';
 
 const PILOT_TENANTS = [
@@ -179,6 +180,15 @@ export default function PilotCommandCenter() {
             />
           ))}
         </div>
+      </div>
+
+      {/* Product Intelligence — Feedback → Evolution Loop */}
+      <div>
+        <h3 className="font-heading font-semibold text-sm mb-3 flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-orbitan-purple" />
+          Product Intelligence
+        </h3>
+        <FeedbackIntelligenceDashboard />
       </div>
 
       {/* Footer note */}

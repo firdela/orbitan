@@ -70,6 +70,15 @@ const SEVERITIES = [
   { value: 'critical', label: 'Critical — System failure',   dot: 'bg-red-600' },
 ];
 
+const PRINCIPLES = [
+  { value: 'respond',   label: 'Respond',   desc: 'Fix blockers',       icon: Zap,      color: 'text-red-500' },
+  { value: 'refine',    label: 'Refine',    desc: 'Improve workflows',   icon: Sparkles, color: 'text-amber-500' },
+  { value: 'regulate',  label: 'Regulate',  desc: 'Compliance & governance', icon: Shield, color: 'text-blue-500' },
+  { value: 'renew',     label: 'Renew',     desc: 'New capabilities',    icon: Lightbulb,color: 'text-green-500' },
+  { value: 'relate',    label: 'Relate',    desc: 'AI & integrations',  icon: Heart,    color: 'text-purple-500' },
+  { value: 'reach',     label: 'Reach',     desc: 'Market expansion',   icon: CheckCircle2, color: 'text-orbitan-blue' },
+];
+
 export default function ReportIssueModal({ hideFloatingButton = false, externalOpen, onExternalClose }) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -83,6 +92,7 @@ export default function ReportIssueModal({ hideFloatingButton = false, externalO
     feedback_category: 'bug_report',
     module: 'general',
     severity: 'medium',
+    principle: 'refine',
     title: '',
     description: '',
   });
@@ -232,6 +242,33 @@ export default function ReportIssueModal({ hideFloatingButton = false, externalO
                         >
                           <Icon className={cn('w-3.5 h-3.5', form.issue_type === t.value ? 'text-orbitan-blue' : t.color)} />
                           {t.label.split(' / ')[0]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Six-R Principle */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Orbitan Principle</Label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {PRINCIPLES.map((p) => {
+                      const Icon = p.icon;
+                      return (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => setForm(f => ({ ...f, principle: p.value }))}
+                          className={cn(
+                            'flex flex-col items-center gap-0.5 rounded-lg border px-1.5 py-2 text-[10px] font-medium transition-all',
+                            form.principle === p.value
+                              ? 'border-orbitan-blue bg-orbitan-blue-light text-orbitan-blue'
+                              : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                          )}
+                        >
+                          <Icon className={cn('w-3.5 h-3.5', form.principle === p.value ? 'text-orbitan-blue' : p.color)} />
+                          <span>{p.label}</span>
+                          <span className="text-[8px] text-muted-foreground">{p.desc}</span>
                         </button>
                       );
                     })}
