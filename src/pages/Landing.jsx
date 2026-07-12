@@ -256,11 +256,19 @@ export default function Landing() {
                       </li>
                     ))}
                   </ul>
-                  <Link to="/auth/gateway">
-                    <Button className={`w-full h-10 rounded-xl text-xs font-bold ${isEnterprise ? 'bg-marketing-gold hover:bg-marketing-gold/90 text-marketing-bg' : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'}`}>
-                      {isEnterprise ? 'Contact Sales' : 'Get Started'}
-                    </Button>
-                  </Link>
+                  {isEnterprise ? (
+                    <a href="mailto:sales@orbitan.com">
+                      <Button className={`w-full h-10 rounded-xl text-xs font-bold bg-marketing-gold hover:bg-marketing-gold/90 text-marketing-bg`}>
+                        Contact Sales
+                      </Button>
+                    </a>
+                  ) : (
+                    <Link to="/request-access">
+                      <Button className={`w-full h-10 rounded-xl text-xs font-bold bg-white/[0.08] hover:bg-white/[0.12] text-white`}>
+                        Coming Soon
+                      </Button>
+                    </Link>
+                  )}
                 </motion.div>
               );
             })}

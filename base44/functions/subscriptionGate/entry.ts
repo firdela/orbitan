@@ -31,6 +31,41 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Tenant not found' }, { status: 404 });
     }
 
+    // ── PILOT MODE: Check if billing is paused globally ──────────────
+    // When billing_paused is true, only pilot tenants get access.
+    // Non-pilot tenants are blocked from all subscription-gated features.
+    const settings = await base44.asServiceRole.entities.SystemSettings.list();
+    const systemSettings = settings?.[0] || {};
+
+    if (systemSettings.billing_paused) {
+      // Pilot tenants get full access — bypass all billing checks
+      if (tenant.is_pilot_tenant) {
+        return Response.json({
+          tenant_id,
+          plan: tenant.subscription_plan || 'orbitan_starter',
+          billing_paused: true,
+          is_pilot_tenant: true,
+          access_granted: true,
+          module_access: check_module ? true : null,
+          pack_access: check_pack ? true : null,
+          employee_limit: null,
+          message: 'Pilot mode — full access granted.',
+        });
+      }
+
+      // Non-pilot tenant — block access
+      return Response.json({
+        tenant_id,
+        billing_paused: true,
+        is_pilot_tenant: false,
+        access_granted: false,
+        module_access: false,
+        pack_access: false,
+        message: systemSettings.billing_paused_message ||
+          'OrbitanOS is currently in pilot mode. Public subscriptions will be available soon.',
+      }, { status: 403 });
+    }
+
     const plan = tenant.subscription_plan || 'orbitan_starter';
 
     // SHADOW MODE: Try SubscriptionPolicy entity first, fallback to hardcoded constants

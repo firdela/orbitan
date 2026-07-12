@@ -46,6 +46,11 @@
       ],
       "default": "onboarding"
     },
+    "is_pilot_tenant": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, this tenant bypasses billing checks during pilot mode (billing_paused). Set by platform admins only."
+    },
     "manifest_key": {
       "type": "string",
       "description": "PlatformManifest.manifest_key this tenant uses for UI/navigation rendering. Null = legacy fallback nav. Set during provisioning (e.g. 'core_ops_v1')."

@@ -1,7 +1,7 @@
 {
   "name": "SystemSettings",
   "type": "object",
-  "description": "OrbitanOS Global Governance Registry \u2014 singleton record controlling platform-wide maintenance mode, shield posture, AI kill switch, governance mode, and feature flags. Powered by the Regulate principle. Exit-Ready.",
+  "description": "OrbitanOS Global Governance Registry \u2014 singleton record controlling platform-wide maintenance mode, billing pause, shield posture, AI kill switch, governance mode, and feature flags. Powered by the Regulate principle. Exit-Ready.",
   "properties": {
     "maintenance_mode": {
       "type": "boolean",
@@ -21,6 +21,25 @@
       "type": "string",
       "format": "date-time",
       "description": "Expected time the platform will return to full operation"
+    },
+    "billing_paused": {
+      "type": "boolean",
+      "default": true,
+      "description": "Global billing kill-switch. When true, Stripe checkout is disabled and only pilot tenants (is_pilot_tenant=true) can access subscription-gated features. Used during pilot phase to prevent unintended charges."
+    },
+    "billing_paused_message": {
+      "type": "string",
+      "default": "OrbitanOS is currently in pilot mode. Public subscriptions will be available soon.",
+      "description": "Message shown to non-pilot users when billing is paused."
+    },
+    "billing_paused_reason": {
+      "type": "string",
+      "description": "Internal reason for pausing billing (e.g. 'Pilot phase', 'Maintenance', 'Compliance review'). Admin-only."
+    },
+    "allow_admin_access_during_maintenance": {
+      "type": "boolean",
+      "default": true,
+      "description": "If true, admin users bypass the MaintenanceView and retain full access"
     },
     "shield_level": {
       "type": "string",
@@ -58,11 +77,6 @@
       "type": "boolean",
       "default": true,
       "description": "Orbit Evolution switch. When true, Orbit Nexus continuously observes usage patterns and generates EvolutionProposal records for improvement opportunities. When false, no proposals are generated."
-    },
-    "allow_admin_access_during_maintenance": {
-      "type": "boolean",
-      "default": true,
-      "description": "If true, admin users bypass the MaintenanceView and retain full access"
     },
     "platform_version": {
       "type": "string",

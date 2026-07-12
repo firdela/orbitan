@@ -143,13 +143,22 @@ export default function Checkout() {
 
       <main className="max-w-5xl mx-auto px-6 py-12">
         {/* Page heading */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold mb-6">
+            <Shield className="w-4 h-4" />
+            Pilot Mode Active
+          </div>
           <h1 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
             Choose Your Orbitan Plan
           </h1>
           <p className="mt-3 text-muted-foreground text-lg max-w-2xl mx-auto">
-            Start your 14-day free trial. No charge until the trial ends. Cancel anytime.
+            OrbitanOS is currently in pilot mode. Public subscriptions will be available soon.
           </p>
+        </div>
+
+        <div className="max-w-2xl mx-auto mb-8 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm text-center">
+          <strong>Pilot Phase:</strong> We're currently onboarding select pilot tenants.
+          If you'd like early access, please <Link to="/request-access" className="underline font-semibold">request access</Link>.
         </div>
 
         {error && (
@@ -201,24 +210,14 @@ export default function Checkout() {
                   </ul>
 
                   <Button
-                    onClick={() => handleCheckout(plan.key)}
-                    disabled={loading !== null}
-                    className={`w-full mt-6 h-11 ${
+                    disabled
+                    className={`w-full mt-6 h-11 opacity-60 cursor-not-allowed ${
                       plan.highlighted
-                        ? 'bg-primary hover:bg-primary/90'
-                        : 'bg-foreground hover:bg-foreground/90'
+                        ? 'bg-primary'
+                        : 'bg-foreground'
                     }`}
                   >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {plan.isFree ? 'Starting...' : 'Redirecting to checkout...'}
-                      </>
-                    ) : plan.isFree ? (
-                      'Get Started Free'
-                    ) : (
-                      'Start Free Trial'
-                    )}
+                    Coming Soon
                   </Button>
 
                   <p className="text-xs text-muted-foreground text-center mt-3">

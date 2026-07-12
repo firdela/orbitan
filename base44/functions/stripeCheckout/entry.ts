@@ -43,6 +43,26 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── PILOT MODE: Block all checkout when billing is paused ──────────
+    try {
+      const base44 = createClientFromRequest(req);
+      const settings = await base44.asServiceRole.entities.SystemSettings.list();
+      const systemSettings = settings?.[0] || {};
+      if (systemSettings.billing_paused) {
+        console.log('[stripeCheckout] Blocked — billing_paused is true');
+        return Response.json({
+          error: 'Billing is currently paused. OrbitanOS is in pilot mode.',
+          billing_paused: true,
+        }, { status: 503 });
+      }
+    } catch (settingsErr) {
+      console.error('[stripeCheckout] Failed to check SystemSettings:', settingsErr.message);
+      // Fail safe — block checkout if we can't verify billing status
+      return Response.json({
+        error: 'Unable to verify billing status. Please try again later.',
+      }, { status: 503 });
+    }
+
     const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY');
     if (!stripeSecret) {
       console.error('[stripeCheckout] STRIPE_SECRET_KEY not set');
