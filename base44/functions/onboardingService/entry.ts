@@ -162,12 +162,31 @@ async function activateTenant(base44, manifest, actorId, actorName) {
 // Premium tiers require payment validation or admin override.
 const ALLOWED_SELF_SERVE_PLANS = ["orbitan_free", "orbitan_starter"];
 
-const PLAN_REGISTRY = {
-  orbitan_starter:    { credits: 100,  max_employees: 10,   modules: ["workforce", "task", "reporting"] },
-  orbitan_growth:     { credits: 500,  max_employees: 50,   modules: ["workforce", "task", "reporting", "inventory", "scheduling"] },
-  orbitan_business:   { credits: 2000, max_employees: 250,  modules: ["workforce", "task", "reporting", "inventory", "procurement", "scheduling", "compliance", "sales_invoice", "finance_integration", "customer_management"] },
-  orbitan_enterprise: { credits: null, max_employees: null, modules: ["all"] },
-};
+// ── SUBSCRIPTION POLICY RESOLVER ─────────────────────────────
+// Plan limits are fetched from the SubscriptionPolicy entity
+// (Registry-Driven). Adding or updating a plan = update one
+// SubscriptionPolicy record. No code changes required here.
+async function resolvePlanPolicy(base44, planKey) {
+  try {
+    const policies = await base44.asServiceRole.entities.SubscriptionPolicy.filter({
+      plan_key: planKey,
+      is_active: true,
+    });
+    if (policies.length === 0) {
+      // Fallback to conservative defaults if no policy registered
+      return { credits: 100, max_employees: 10, modules: ["workforce", "task", "reporting"] };
+    }
+    const policy = policies[0];
+    return {
+      credits: policy.limits?.monthly_credit_quota ?? 100,
+      max_employees: policy.limits?.max_employees ?? null,
+      modules: policy.allowed_modules || ["workforce", "task", "reporting"],
+    };
+  } catch (err) {
+    console.log(`[onboardingService] SubscriptionPolicy lookup failed for ${planKey}: ${err.message}`);
+    return { credits: 100, max_employees: 10, modules: ["workforce", "task", "reporting"] };
+  }
+}
 
 // ── REGISTRY-DRIVEN PROVISIONING ──────────────────────────────
 // Industry blueprints are now served from the ActivationRegistry entity,
@@ -209,6 +228,62 @@ async function resolveIndustryBlueprint(base44, industry) {
   }
 }
 
+// ── INVITATION VALIDATION & REDEMPTION ───────────────────────
+// Validates an invitation code before access is granted.
+// Checks: existence, status (active), expiry, max_uses.
+// On success: increments use_count, marks as redeemed if exhausted.
+// Returns { valid, error } — caller must check valid before proceeding.
+async function validateAndRedeemInvitation(base44, inviteCode, tenantId, email) {
+  if (!inviteCode) return { valid: true, invitation: null, skipped: true };
+
+  try {
+    const invitations = await base44.asServiceRole.entities.Invitation.filter({
+      invite_code: inviteCode,
+      tenant_id: tenantId,
+    });
+
+    if (invitations.length === 0) {
+      return { valid: false, error: "Invalid invitation code." };
+    }
+
+    const invitation = invitations[0];
+
+    if (invitation.status === "revoked") {
+      return { valid: false, error: "This invitation has been revoked." };
+    }
+
+    if (invitation.status === "expired" || (invitation.expiry_date && new Date(invitation.expiry_date) < new Date())) {
+      if (invitation.status !== "expired") {
+        await base44.asServiceRole.entities.Invitation.update(invitation.id, { status: "expired" });
+      }
+      return { valid: false, error: "This invitation has expired." };
+    }
+
+    if (invitation.status === "redeemed" && invitation.max_uses <= 1) {
+      return { valid: false, error: "This invitation has already been redeemed." };
+    }
+
+    if (invitation.use_count >= invitation.max_uses) {
+      return { valid: false, error: "This invitation has reached its maximum number of uses." };
+    }
+
+    // Redeem: increment use_count, mark as redeemed if fully consumed
+    const newUseCount = invitation.use_count + 1;
+    const isFullyRedeemed = newUseCount >= invitation.max_uses;
+
+    await base44.asServiceRole.entities.Invitation.update(invitation.id, {
+      status: isFullyRedeemed ? "redeemed" : "active",
+      use_count: newUseCount,
+      redeemed_by_email: email,
+      redeemed_date: new Date().toISOString(),
+    });
+
+    return { valid: true, invitation, redeemed: true };
+  } catch (err) {
+    return { valid: false, error: `Invitation validation failed: ${err.message}` };
+  }
+}
+
 async function provisionOrganisation(base44, body, user) {
   const {
     packKey,
@@ -244,7 +319,7 @@ async function provisionOrganisation(base44, body, user) {
     ? (planKey || 'orbitan_starter')
     : (ALLOWED_SELF_SERVE_PLANS.includes(planKey) ? planKey : 'orbitan_starter');
 
-  const plan = PLAN_REGISTRY[safePlanKey] || PLAN_REGISTRY.orbitan_starter;
+  const plan = await resolvePlanPolicy(base44, safePlanKey);
   const allowsAll = plan.modules.includes("all");
   const validModules = allowsAll ? selectedModules : selectedModules.filter(m => plan.modules.includes(m));
 
@@ -488,12 +563,29 @@ Deno.serve(async (req) => {
     const isApprovalAutomation = !action && body.event?.entity_name === "AccessRequest" && body.event?.type === "update" && body.data?.status === "approved";
     if (action === "approve_access_request" || isApprovalAutomation) {
       const payload = isApprovalAutomation ? (body.data || {}) : body;
-      const { email, tenant_id, outlet_id, company_name, role_requested } = payload;
+      const { email, tenant_id, outlet_id, company_name, role_requested, invite_code } = payload;
       const workerName = payload.email ? payload.email.split('@')[0] : "New Worker";
 
       if (!email || !tenant_id) {
         return Response.json({ error: "email and tenant_id are required" }, { status: 400 });
       }
+
+      // ── Invitation Validation & Redemption (Regulate principle) ──
+      // If the access request carries an invite_code, validate it before
+      // creating the Employee record. Revoked / expired / exhausted codes
+      // are rejected with 403. Valid codes are redeemed atomically.
+      if (invite_code) {
+        const invitationResult = await validateAndRedeemInvitation(base44, invite_code, tenant_id, email);
+        if (!invitationResult.valid) {
+          return Response.json({ error: invitationResult.error }, { status: 403 });
+        }
+      }
+
+      // ── Resolve reviewer identity for audit attribution ──
+      // Direct API calls use the authenticated user; entity-automation
+      // triggers use reviewed_by_id / reviewed_by_name set by the frontend.
+      const reviewerId = payload.reviewed_by_id || (isApprovalAutomation ? null : user.id);
+      const reviewerName = payload.reviewed_by_name || (isApprovalAutomation ? "Manager (via automation)" : user.full_name || user.email);
 
       const existingEmployees = await base44.asServiceRole.entities.Employee.filter({
         tenant_id,
@@ -526,16 +618,16 @@ Deno.serve(async (req) => {
 
       await base44.asServiceRole.entities.AuditLog.create({
         tenant_id,
-        actor_id: "system",
-        actor_name: "OrbitanOS Onboarding Engine",
-        actor_role: "system",
+        actor_id: reviewerId || "system",
+        actor_name: reviewerName,
+        actor_role: "manager",
         action_type: employeeAction === "synced" ? "employee_synced" : "worker_onboarded",
         module: "workforce",
         target_entity: "Employee",
         target_record_id: employee.id,
         details: employeeAction === "synced"
-          ? `Canonical sync: Updated Employee record for ${email} — role ${role_requested || "updated"}, outlet ${outlet_id || "unchanged"}. AccessRequest approved.`
-          : `Auto-provisioned Employee record for ${email} as ${(role_requested || "worker").replace(/_/g, " ")} at ${company_name || tenant_id}. AccessRequest approved. Powered by the Regulate principle.`,
+          ? `Canonical sync: Updated Employee record for ${email} — role ${role_requested || "updated"}, outlet ${outlet_id || "unchanged"}. AccessRequest approved by ${reviewerName}.`
+          : `Auto-provisioned Employee record for ${email} as ${(role_requested || "worker").replace(/_/g, " ")} at ${company_name || tenant_id}. AccessRequest approved by ${reviewerName}. Powered by the Regulate principle.`,
         new_state: {
           employee_id: employee.id,
           email,
@@ -543,6 +635,8 @@ Deno.serve(async (req) => {
           tenant_id,
           outlet_id: outlet_id || employee.outlet_id || null,
           action: employeeAction,
+          approved_by: reviewerId || reviewerName,
+          invitation_redeemed: !!invite_code,
         },
       });
 
@@ -552,6 +646,7 @@ Deno.serve(async (req) => {
         worker_name: workerName,
         role: role_requested || employee.role,
         action: employeeAction,
+        invitation_redeemed: !!invite_code,
         details: employeeAction === "synced"
           ? `Employee record synchronized for ${email}. Outlet and role updated. Ready for workspace access.`
           : `Employee record created for ${email}. They can now access their OrbitanOS workspace.`,
