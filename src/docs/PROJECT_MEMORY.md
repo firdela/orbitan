@@ -87,6 +87,7 @@ Future customers are the primary market.
 12. **Orbit ID expanded scope:** Identity governance for human + machine + AI agent identities. Business Access Intelligence as differentiator. AI Agent Governance via ActivationRegistry.ai_governance. (ODR-0020)
 13. **Orbit Nexus standalone subscription:** Separate product with Free/Pro/Team/Enterprise plans. Customers can subscribe without OrbitanOS. MVP bundles AI within OrbitanOS plans; standalone is post-MVP. (ODR-0021)
 14. **Enterprise compliance readiness:** SOC 2, ISO 27001, Vanta-ready from day one. RBAC, RLS, audit logs, encryption, shield governance, AI kill switch all built in. Formal certification post-MVP. (ODR-0022)
+15. **Orbit Core Adapter Pattern:** Platform-agnostic data access layer at `src/lib/orbit-core.js`. All new modules import `OrbitCore` instead of `base44` directly. Existing code unchanged (additive). Single migration point when switching platforms. (ODR-0023)
 
 ## Things Not To Change
 - Entity schemas for Tenant, Employee, Outlet, Company, Client (foundational structure)
