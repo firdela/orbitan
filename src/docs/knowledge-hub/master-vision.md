@@ -139,6 +139,79 @@ Public Landing (/) → Auth Gateway (/auth/gateway)
 
 If the answer is no, redesign the solution.
 
+## Orbit Evolution — Continuous Improvement Loop
+
+Unlike traditional analytics that only report what happened, OrbitanOS continuously
+evolves alongside its customers through a closed improvement loop:
+
+```
+Observe → Understand → Recommend → Approve → Implement → Measure → Learn
+```
+
+- **Observe:** Usage analytics, workflow execution, feedback, error patterns
+- **Understand:** Orbit Nexus AI identifies bottlenecks, pain points, automation opportunities
+- **Recommend:** EvolutionProposal records with AI confidence scores and expected impact
+- **Approve:** Human review for high-impact changes (proactive_approval governance mode)
+- **Implement:** Configuration changes, workflow automations, module updates
+- **Measure:** Post-implementation outcome tracking with improvement percentage
+- **Learn:** Outcomes feed back into AI context; institutional memory grows
+
+This aligns with the 6-R philosophy — the platform becomes smarter and more valuable
+over time, not just on release day.
+
+**Privacy-first:** The objective is to improve the product and operational efficiency,
+not to learn personal behaviour. Tenant isolation is always respected.
+
+## Orbit ID — Identity, Access & AI Governance
+
+Orbit ID governs human, machine, and AI agent identities across the entire ecosystem:
+
+- **Human identities:** Employees, managers, founders, admins (RBAC + RLS)
+- **Machine identities:** API keys, connectors, webhooks, MCP servers (scoped service accounts)
+- **AI agent identities:** Orbit Nexus agents with permission policies, trust levels, and approval gates
+
+**Business Access Intelligence (Orbit Differentiator):**
+Beyond "who has access to this system?", Orbit ID answers:
+- Who approved this purchase order?
+- Which AI agent reordered inventory?
+- Who changed this recipe?
+- Why did the AI recommend this procurement action?
+
+This links identity, permissions, business workflows, and AI decisions into a single
+auditable trail via the `AuditLog` entity.
+
+## Orbit Nexus — Standalone Subscription Product
+
+Orbit Nexus is marketed and subscribed separately from OrbitanOS:
+
+| Plan | Price | Key Features |
+|------|-------|--------------|
+| Free | S$0/mo | Basic AI Assistant, limited requests, AI Search |
+| Pro | S$39/mo | AIReceipts, Document AI, Workflow AI, higher usage |
+| Team | S$149/mo | AI Agents, RAG Knowledge Base, team collaboration, automations |
+| Enterprise | Custom | Private deployment, MCP Server, APIs/SDKs, dedicated infra |
+
+Customers can subscribe to Orbit Nexus independently — even without OrbitanOS.
+Future add-ons: AIReceipts+, premium connectors, extra AI credits, industry AI models.
+
+## Enterprise Compliance Readiness
+
+OrbitanOS and Orbit Nexus are architected from day one for SOC 2, ISO 27001, and
+Vanta-readiness:
+
+- RBAC with least-privilege (6-role hierarchy + ModuleAccessPolicy)
+- Tenant data isolation (RLS on every entity)
+- Comprehensive, immutable audit logs (AuditLog entity)
+- Encryption in transit and at rest
+- Secure API architecture (auth verification on every backend function)
+- Secrets management (environment variables, never in code)
+- Shield governance interceptor (policy-as-code, override workflow)
+- AI kill switch (SystemSettings.nexus_ai_enabled)
+- Privacy-by-design (analytics are anonymised and aggregated)
+
+Compliance documentation lives in this Knowledge Hub — Vanta can reference
+Decision Records as evidence of control implementation.
+
 ## 6-R Principles
 
 `Regulate · Refine · Respond · Renew · Relate · Reach`
@@ -149,4 +222,4 @@ evolving Workforce Operating System.
 
 ---
 
-**Last Updated:** 2026-07-08
+**Last Updated:** 2026-07-12

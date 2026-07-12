@@ -83,6 +83,10 @@ Future customers are the primary market.
 8. **Wallet-native ledger:** OrbitanWallet is the master ledger. FinanceSyncQueue bridges to ERP (Xero).
 9. **Dynamic Trust thresholds:** Governance thresholds per industry (HBB=S$50, F&B=S$200, Retail=S$300).
 10. **Decision Records:** All significant architecture decisions recorded in src/docs/knowledge-hub/decision-records/.
+11. **Orbit Evolution:** Continuous improvement loop (Observe → Understand → Recommend → Approve → Implement → Measure → Learn). EvolutionProposal entity + evolutionEngine function. Privacy-first, human-in-control. (ODR-0019)
+12. **Orbit ID expanded scope:** Identity governance for human + machine + AI agent identities. Business Access Intelligence as differentiator. AI Agent Governance via ActivationRegistry.ai_governance. (ODR-0020)
+13. **Orbit Nexus standalone subscription:** Separate product with Free/Pro/Team/Enterprise plans. Customers can subscribe without OrbitanOS. MVP bundles AI within OrbitanOS plans; standalone is post-MVP. (ODR-0021)
+14. **Enterprise compliance readiness:** SOC 2, ISO 27001, Vanta-ready from day one. RBAC, RLS, audit logs, encryption, shield governance, AI kill switch all built in. Formal certification post-MVP. (ODR-0022)
 
 ## Things Not To Change
 - Entity schemas for Tenant, Employee, Outlet, Company, Client (foundational structure)
