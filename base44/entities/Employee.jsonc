@@ -153,6 +153,9 @@
         {
           "$and": [
             {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
               "data.outlet_id": "{{user.data.outlet_id}}"
             },
             {
@@ -206,6 +209,9 @@
         },
         {
           "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
             {
               "data.outlet_id": "{{user.data.outlet_id}}"
             },
