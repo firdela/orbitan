@@ -1,0 +1,54 @@
+{
+  "name": "OrbitanOS — Workforce Operating System",
+  "short_name": "OrbitanOS",
+  "description": "OrbitanOS is the Workforce Operating System for modern organisations. Manage people, operations, inventory, compliance, and intelligence in one platform.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0A0F1A",
+  "theme_color": "#2563EB",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "url": "/workspace",
+      "description": "Go to your workspace dashboard"
+    },
+    {
+      "name": "Inventory",
+      "short_name": "Stock",
+      "url": "/outlet/inventory",
+      "description": "Manage inventory and stock levels"
+    },
+    {
+      "name": "Workforce",
+      "short_name": "Team",
+      "url": "/outlet/workforce",
+      "description": "View and manage your workforce"
+    }
+  ]
+}

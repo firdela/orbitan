@@ -137,11 +137,22 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-background text-foreground font-body antialiased;
+    /* PWA safe-area insets — respects notches & home indicators */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading tracking-tight;
+  }
+  /* Prevent text selection on UI chrome for native-app feel */
+  button, [role="button"], nav, header {
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 
