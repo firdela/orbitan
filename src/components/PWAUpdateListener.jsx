@@ -16,6 +16,26 @@ export default function PWAUpdateListener() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
 
+    // In dev mode, the service worker can cache-serve stale React/Vite chunks,
+    // causing "null is not an object (evaluating 'dispatcher.useState')" due to
+    // React/ReactDOM version mismatch. Prevent registration and purge stale caches.
+    if (import.meta.env.DEV) {
+      const purgeDevCaches = async () => {
+        try {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+          if (window.caches) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+          }
+        } catch (e) {
+          // Silent — dev-only cleanup
+        }
+      };
+      purgeDevCaches();
+      return;
+    }
+
     let refreshing = false;
 
     const registerSW = async () => {
