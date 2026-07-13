@@ -27,7 +27,7 @@ import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
 import AIKillSwitchPanel from '@/components/platform/AIKillSwitchPanel';
 import EvolutionProposalsPanel from '@/components/platform/EvolutionProposalsPanel';
-import { Lock } from 'lucide-react';
+import { Lock, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const STATUS_CONFIG = {
@@ -137,9 +137,21 @@ export default function ShieldCommandCenter() {
       <header className="border-b border-border bg-background sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <OrbitanLogo size="sm" showOS />
-          <div className="flex items-center gap-2 bg-orbitan-blue-light text-orbitan-blue px-3 py-1.5 rounded-lg text-xs font-semibold">
-            <Shield className="w-3.5 h-3.5" />
-            Shield Command Center
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 bg-orbitan-blue-light text-orbitan-blue px-3 py-1.5 rounded-lg text-xs font-semibold">
+              <Shield className="w-3.5 h-3.5" />
+              Shield Command Center
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => base44.auth.logout()}
+              className="gap-1.5 text-xs"
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
           </div>
         </div>
       </header>

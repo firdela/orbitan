@@ -30,7 +30,7 @@ import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
-  Rocket, Activity, Zap, Wallet, ShoppingBag, Target, FileText, Lock } from 'lucide-react';
+  Rocket, Activity, Zap, Wallet, ShoppingBag, Target, FileText, Lock, LogOut } from 'lucide-react';
 
 export default function LeaderOrg() {
   const [activeTab, setActiveTab] = useState('tenants');
@@ -97,6 +97,16 @@ export default function LeaderOrg() {
             </div>
             <CurrencyDropdown />
             <TenantSwitcher />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => base44.auth.logout()}
+              className="gap-1.5 text-xs"
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sign Out
+            </Button>
           </div>
         </div>
       </header>

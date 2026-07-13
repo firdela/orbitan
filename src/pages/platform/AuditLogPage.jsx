@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Shield, Search, Download, ArrowLeft, FileText, Filter } from 'lucide-react';
+import { Shield, Search, Download, ArrowLeft, FileText, Filter, LogOut } from 'lucide-react';
 
 const MODULE_LABELS = {
   finance: 'Finance',
@@ -127,6 +127,16 @@ export default function AuditLogPage() {
                 Back
               </Button>
             </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => base44.auth.logout()}
+              className="gap-1.5 text-xs"
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
           </div>
         </div>
       </header>

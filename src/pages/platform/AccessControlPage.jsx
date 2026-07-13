@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Lock, Plus, Save, Trash2, Shield, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Lock, Plus, Save, Trash2, Shield, Eye, EyeOff, ArrowLeft, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -186,9 +186,21 @@ export default function AccessControlPage() {
             </Button>
             <OrbitanLogo size="sm" showOS />
           </div>
-          <div className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-xs font-semibold">
-            <Lock className="w-3.5 h-3.5" />
-            Access Control
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-xs font-semibold">
+              <Lock className="w-3.5 h-3.5" />
+              Access Control
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => base44.auth.logout()}
+              className="gap-1.5 text-xs"
+              title="Sign Out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </Button>
           </div>
         </div>
       </header>

@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, CheckCircle2, XCircle, AlertCircle, RefreshCw, ExternalLink, Zap, ArrowRight, Clock } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertCircle, RefreshCw, ExternalLink, Zap, ArrowRight, Clock, ArrowLeft, LogOut } from 'lucide-react';
 import IntegrationCatalog from '@/components/platform/IntegrationCatalog';
+import OrbitanLogo from '@/components/layout/OrbitanLogo';
+import { Link } from 'react-router-dom';
 
 const STATUS_CONFIG = {
   connected: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', label: 'Connected' },
