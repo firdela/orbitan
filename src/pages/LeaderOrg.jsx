@@ -30,7 +30,7 @@ import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
-  Rocket, Activity, Zap, Wallet, ShoppingBag, Target, FileText } from 'lucide-react';
+  Rocket, Activity, Zap, Wallet, ShoppingBag, Target, FileText, Lock } from 'lucide-react';
 
 export default function LeaderOrg() {
   const [activeTab, setActiveTab] = useState('tenants');
@@ -163,6 +163,16 @@ export default function LeaderOrg() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white">Audit Logs</p>
               <p className="text-[11px] text-teal-300">Compliance · Traceability</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
+          </Link>
+          <Link to="/platform/access-control" className="group bg-gradient-to-br from-[#1E3A8A] to-[#111827] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
+            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Lock className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">Access Control</p>
+              <p className="text-[11px] text-blue-300">Module permissions by role</p>
             </div>
             <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
           </Link>

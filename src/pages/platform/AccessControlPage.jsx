@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Lock, Plus, Save, Trash2, Shield, Eye, EyeOff } from 'lucide-react';
+import { Lock, Plus, Save, Trash2, Shield, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,10 +11,12 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/components/ui/use-toast';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
 import { useTenant } from '@/lib/use-tenant.jsx';
 import { MODULES } from '@/lib/orbitan-config';
+import { auditFrontend } from '@/lib/audit';
 
 const ROLES = [
   { key: 'tenant_admin', label: 'Tenant Admin' },
@@ -39,8 +42,9 @@ const PERMISSIONS = [
 export default function AccessControlPage() {
   const { currentTenant: tenant } = useTenant();
   const queryClient = useQueryClient();
-  const [selectedModule, setSelectedModule] = useState('inventory');
-  const [selectedRole, setSelectedRole] = useState('worker');
+  const { toast } = useToast();
+  const [selectedModule, setSelectedModule] = useState('all');
+  const [selectedRole, setSelectedRole] = useState('all');
   const [showNewForm, setShowNewForm] = useState(false);
   const [newPolicy, setNewPolicy] = useState({
     module_key: 'inventory',
@@ -69,40 +73,99 @@ export default function AccessControlPage() {
   const createMutation = useMutation({
     mutationFn: async (policyData) => {
       const user = await base44.auth.me();
-      return await base44.entities.ModuleAccessPolicy.create({
+      const existing = (policies || []).find(
+        p => p.module_key === policyData.module_key && p.role === policyData.role
+      );
+      if (existing) {
+        throw new Error(`A policy already exists for ${MODULES[policyData.module_key]?.name || policyData.module_key} — ${policyData.role.replace(/_/g, ' ')}. Edit the existing one instead.`);
+      }
+      const record = await base44.entities.ModuleAccessPolicy.create({
         ...policyData,
         tenant_id: tenant.id,
         created_by_id: user.id,
         created_by_name: user.full_name,
       });
+      await auditFrontend({
+        tenant_id: tenant.id,
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: user.role,
+        action_type: 'settings_updated',
+        module: 'compliance',
+        target_entity: 'ModuleAccessPolicy',
+        target_record_id: record.id,
+        details: `Created access policy: ${policyData.module_key} / ${policyData.role} (view=${policyData.can_view}, create=${policyData.can_create}, update=${policyData.can_update}, delete=${policyData.can_delete}, scope=${policyData.data_scope})`,
+        new_state: policyData,
+      });
+      return record;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['moduleAccessPolicies'] });
       setShowNewForm(false);
+      toast({ title: 'Policy created', description: 'Access policy saved successfully.' });
+    },
+    onError: (error) => {
+      toast({ title: 'Failed to create policy', description: error.message, variant: 'destructive' });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ policyId, data }) => {
-      return await base44.entities.ModuleAccessPolicy.update(policyId, data);
+    mutationFn: async ({ policyId, data, previousState }) => {
+      const user = await base44.auth.me();
+      const record = await base44.entities.ModuleAccessPolicy.update(policyId, data);
+      await auditFrontend({
+        tenant_id: tenant.id,
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: user.role,
+        action_type: 'settings_updated',
+        module: 'compliance',
+        target_entity: 'ModuleAccessPolicy',
+        target_record_id: policyId,
+        details: `Updated access policy: ${JSON.stringify(data)}`,
+        previous_state: previousState,
+        new_state: data,
+      });
+      return record;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['moduleAccessPolicies'] });
+    },
+    onError: (error) => {
+      toast({ title: 'Failed to update policy', description: error.message, variant: 'destructive' });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (policyId) => {
-      return await base44.entities.ModuleAccessPolicy.delete(policyId);
+      const user = await base44.auth.me();
+      const policy = (policies || []).find(p => p.id === policyId);
+      await base44.entities.ModuleAccessPolicy.delete(policyId);
+      await auditFrontend({
+        tenant_id: tenant.id,
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: user.role,
+        action_type: 'settings_updated',
+        module: 'compliance',
+        target_entity: 'ModuleAccessPolicy',
+        target_record_id: policyId,
+        details: `Deleted access policy: ${policy?.module_key} / ${policy?.role}`,
+        previous_state: policy,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['moduleAccessPolicies'] });
+      toast({ title: 'Policy deleted', description: 'Access policy removed. Default permissions now apply.' });
+    },
+    onError: (error) => {
+      toast({ title: 'Failed to delete policy', description: error.message, variant: 'destructive' });
     },
   });
 
   const filteredPolicies = (policies || []).filter(p =>
-    (!selectedModule || p.module_key === selectedModule) &&
-    (!selectedRole || p.role === selectedRole)
+    (selectedModule === 'all' || p.module_key === selectedModule) &&
+    (selectedRole === 'all' || p.role === selectedRole)
   );
 
   if (!tenant) {
@@ -117,7 +180,12 @@ export default function AccessControlPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border bg-background sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <OrbitanLogo size="sm" showOS />
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/leader-org"><ArrowLeft className="w-4 h-4" /></Link>
+            </Button>
+            <OrbitanLogo size="sm" showOS />
+          </div>
           <div className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-xs font-semibold">
             <Lock className="w-3.5 h-3.5" />
             Access Control
@@ -146,6 +214,7 @@ export default function AccessControlPage() {
             <Select value={selectedModule} onValueChange={setSelectedModule}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Modules</SelectItem>
                 {Object.values(MODULES).map(m => (
                   <SelectItem key={m.key} value={m.key}>{m.name}</SelectItem>
                 ))}
@@ -157,6 +226,7 @@ export default function AccessControlPage() {
             <Select value={selectedRole} onValueChange={setSelectedRole}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
                 {ROLES.map(r => (
                   <SelectItem key={r.key} value={r.key}>{r.label}</SelectItem>
                 ))}
@@ -164,7 +234,11 @@ export default function AccessControlPage() {
             </Select>
           </div>
           <Button onClick={() => {
-            setNewPolicy(p => ({ ...p, module_key: selectedModule, role: selectedRole }));
+            setNewPolicy(p => ({
+              ...p,
+              module_key: selectedModule !== 'all' ? selectedModule : 'inventory',
+              role: selectedRole !== 'all' ? selectedRole : 'worker',
+            }));
             setShowNewForm(true);
           }} className="gap-1.5">
             <Plus className="w-4 h-4" />
@@ -270,16 +344,32 @@ export default function AccessControlPage() {
                         <Badge variant="outline" className="text-xs capitalize">
                           {policy.role.replace(/_/g, ' ')}
                         </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          {DATA_SCOPES.find(s => s.key === policy.data_scope)?.label || policy.data_scope}
-                        </Badge>
+                        <Select
+                          value={policy.data_scope}
+                          onValueChange={v => updateMutation.mutate({
+                            policyId: policy.id,
+                            data: { data_scope: v },
+                            previousState: { data_scope: policy.data_scope }
+                          })}
+                        >
+                          <SelectTrigger className="h-6 text-xs px-2 py-0 w-auto"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {DATA_SCOPES.map(s => (
+                              <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="flex items-center gap-4 flex-wrap">
                         {PERMISSIONS.map(perm => (
                           <div key={perm.key} className="flex items-center gap-2">
                             <Switch
                               checked={policy[perm.key] || false}
-                              onCheckedChange={v => updateMutation.mutate({ policyId: policy.id, data: { [perm.key]: v } })}
+                              onCheckedChange={v => updateMutation.mutate({
+                                policyId: policy.id,
+                                data: { [perm.key]: v },
+                                previousState: { [perm.key]: policy[perm.key] }
+                              })}
                             />
                             <span className={`text-xs ${policy[perm.key] ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                               {perm.label}
