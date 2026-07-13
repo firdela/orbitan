@@ -7,6 +7,8 @@ import OrbitanLogo from './OrbitanLogo';
 import PlatformFooter from './PlatformFooter';
 import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
 import ReportIssueModal from '@/components/shared/ReportIssueModal';
+import GlobalSearchBar from './GlobalSearchBar';
+import OutletSwitcher from './OutletSwitcher';
 import { Menu, X, LogOut } from 'lucide-react';
 
 export default function AppShell({ navigation, manifestNav, children, headerRight, title, tenant }) {
@@ -36,6 +38,9 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Outlet Switcher — quick outlet context switching */}
+        {tenant && <OutletSwitcher tenant={tenant} />}
 
         {/* Nav items — Manifest-driven (new) or legacy array (fallback) */}
         <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
@@ -132,9 +137,9 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
       {/* ── Main Content Area ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-        {/* Top bar — Titanium glass */}
-        <header className="flex items-center justify-between px-4 sm:px-6 h-14 border-b border-border/60 bg-background/90 backdrop-blur-md sticky top-0 z-30">
-          <div className="flex items-center gap-3">
+        {/* Top bar — Titanium glass with global search */}
+        <header className="flex items-center gap-3 px-4 sm:px-6 h-14 border-b border-border/60 bg-background/90 backdrop-blur-md sticky top-0 z-30">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden text-muted-foreground hover:text-foreground transition-colors"
@@ -142,13 +147,14 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
               <Menu className="w-5 h-5" />
             </button>
             {title && (
-              <h1 className="font-heading font-semibold text-foreground text-sm sm:text-[15px] tracking-tight">
+              <h1 className="font-heading font-semibold text-foreground text-sm sm:text-[15px] tracking-tight hidden md:block">
                 {title}
               </h1>
             )}
           </div>
+          <GlobalSearchBar tenant={tenant} />
           {headerRight && (
-            <div className="flex items-center gap-2">{headerRight}</div>
+            <div className="flex items-center gap-2 flex-shrink-0 ml-auto">{headerRight}</div>
           )}
         </header>
 

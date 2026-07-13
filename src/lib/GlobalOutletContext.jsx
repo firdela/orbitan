@@ -18,8 +18,9 @@ export const SCOPE_ALL = 'ALL';
 
 const GlobalOutletContext = createContext(null);
 
-export function GlobalOutletProvider({ children, outlets = [] }) {
+export function GlobalOutletProvider({ children, outlets: initialOutlets = [] }) {
   const [activeScope, setActiveScope] = useState(SCOPE_ALL);
+  const [outlets, setOutlets] = useState(initialOutlets);
 
   // Returns a filter object safe to spread into any base44.entities.X.filter() call
   // If scope is ALL → empty object (no filter = all records returned)
@@ -54,6 +55,7 @@ export function GlobalOutletProvider({ children, outlets = [] }) {
       getOutletFilter,
       switchToOutlet,
       switchToGlobal,
+      setOutlets,
     }}>
       {children}
     </GlobalOutletContext.Provider>
