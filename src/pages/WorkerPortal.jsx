@@ -658,7 +658,7 @@ export default function WorkerPortal() {
               tenantId={tenantId}
               outletId={outletId}
             />
-            <Link to="/t1/compliance"
+            <Link to={tenantId ? `/workspace/${tenantId}/compliance` : '/workspace'}
               className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3.5 hover:border-primary/30 transition-all group">
               <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
                 <Shield className="w-4 h-4 text-purple-600" />

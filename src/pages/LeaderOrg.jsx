@@ -196,8 +196,10 @@ export default function LeaderOrg() {
                     : <><Zap className="w-3.5 h-3.5" /> Activate All</>
                   }
                 </Button>
-                <Button size="sm" className="gap-1.5">
-                  <Plus className="w-4 h-4" /> Onboard Tenant
+                <Button size="sm" className="gap-1.5" asChild>
+                  <Link to="/onboarding">
+                    <Plus className="w-4 h-4" /> Onboard Tenant
+                  </Link>
                 </Button>
               </div>
             </div>

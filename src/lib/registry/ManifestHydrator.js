@@ -23,7 +23,7 @@ import { base44 } from '@/api/base44Client';
 // This ensures zero downtime during migration.
 const FALLBACK_NAV = [
   { type: 'section', label: 'Workspace' },
-  { id: 'dashboard', label: 'Dashboard', icon: 'Home', route: '', module_key: 'dashboard', isLocked: false },
+  { id: 'dashboard', label: 'Dashboard', icon: 'Home', route: '/dashboard', module_key: 'dashboard', isLocked: false },
   { id: 'inventory', label: 'Inventory', icon: 'Package', route: '/inventory', module_key: 'inventory', isLocked: false },
   { id: 'procurement', label: 'Purchase Orders', icon: 'ShoppingCart', route: '/procurement', module_key: 'procurement', isLocked: false },
   { id: 'sales', label: 'Sales & Reconciliation', icon: 'FileText', route: '/sales', module_key: 'sales_invoice', isLocked: false },
@@ -124,6 +124,8 @@ function buildManifestNav(manifest, tenantId, allowedModules, isEnterprise) {
     // Module items
     for (const item of (section.children || [])) {
       const route = (item.route || '').replace(':tenantId', tenantId);
+      // Skip items with no route — they would render as dead links
+      if (!route) continue;
       const isLocked = !isEnterprise && !allowedModules.includes(item.id);
 
       result.push({

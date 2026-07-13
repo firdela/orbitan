@@ -11,11 +11,21 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Lock, Crown } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function ManifestNav({ navigation }) {
   const location = useLocation();
+  const { toast } = useToast();
 
   if (!navigation || navigation.length === 0) return null;
+
+  const handleLockedClick = (label) => {
+    toast({
+      title: 'Module Locked',
+      description: `Upgrade your subscription to access ${label}.`,
+      variant: 'default',
+    });
+  };
 
   return (
     <nav className="space-y-1">
@@ -31,16 +41,20 @@ export default function ManifestNav({ navigation }) {
           );
         }
 
-        // Nav item
-        const isActive = location.pathname === item.route;
+        // Nav item — use startsWith so sub-routes also highlight parent
+        const isActive = item.route && (
+          location.pathname === item.route ||
+          (item.route !== `/workspace` && location.pathname.startsWith(item.route))
+        );
         const Icon = resolveIcon(item.icon);
 
         if (item.isLocked) {
-          // Graceful Lockout — visible but locked
+          // Graceful Lockout — visible but locked, with click feedback
           return (
             <div
               key={`nav-${idx}`}
-              className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/50 cursor-not-allowed relative"
+              onClick={() => handleLockedClick(item.label)}
+              className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sidebar-foreground/50 cursor-pointer relative hover:bg-sidebar-accent/30 transition-colors"
               title={`Upgrade to access ${item.label}`}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
@@ -52,6 +66,9 @@ export default function ManifestNav({ navigation }) {
             </div>
           );
         }
+
+        // Skip items with no route (would render dead links)
+        if (!item.route) return null;
 
         // Active nav item
         return (
