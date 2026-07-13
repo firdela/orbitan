@@ -42,6 +42,8 @@ import CompliancePage from '@/pages/outlet/CompliancePage';
 import ReportsPage from '@/pages/outlet/ReportsPage';
 import FeedbackCentre from '@/pages/FeedbackCentre';
 import AccessRequests from '@/pages/workspace/AccessRequests';
+import NotificationsPage from '@/pages/Notifications';
+import AnalyticsPage from '@/pages/Analytics';
 
 // Dynamic Workspace — scalable, tenant-agnostic routing
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
@@ -149,6 +151,10 @@ const AuthenticatedApp = () => {
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />
+
+      {/* Notifications & Analytics — Cross-outlet intelligence */}
+      <Route path="/notifications" element={<NotificationsPage />} />
+      <Route path="/analytics" element={<AnalyticsPage />} />
 
       {/* Account Settings */}
       <Route path="/settings" element={<AccountSettings />} />
