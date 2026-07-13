@@ -30,8 +30,6 @@ const ROLES = [
 
 // ── Phase 1: Workplace Discovery ──
 function WorkplaceSearch({ onSelect }) {
-  const searchRef = useRef(null);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: workplaces = [], isLoading: wpLoading } = useQuery({
@@ -41,14 +39,6 @@ function WorkplaceSearch({ onSelect }) {
       return res.data || [];
     },
   });
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) setSearchOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
 
   const filteredWorkplaces = (() => {
     if (!workplaces.length) return [];
@@ -67,58 +57,54 @@ function WorkplaceSearch({ onSelect }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       className="w-full space-y-3"
-      ref={searchRef}
     >
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 z-10" />
         <Input
           placeholder="Search for your workplace..."
           value={searchQuery}
-          onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
-          onFocus={() => setSearchOpen(true)}
+          onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10 h-12 bg-white/[0.05] border-white/[0.10] text-white placeholder:text-slate-500 focus:border-[#3B82F6]/40 rounded-xl text-sm"
         />
       </div>
 
-      {searchOpen && (
-        <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl overflow-hidden max-h-72 overflow-y-auto">
-          {wpLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
-            </div>
-          ) : filteredWorkplaces.length === 0 ? (
-            <div className="py-8 text-center">
-              <MapPin className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-              <p className="text-sm text-slate-500">No workplaces found</p>
-              <p className="text-xs text-slate-600 mt-1">Try a different search term</p>
-            </div>
-          ) : (
-            filteredWorkplaces.map((w) => {
-              const Icon = OUTLET_ICONS[w.type] || OUTLET_ICONS.default;
-              return (
-                <button key={w.id}
-                  onClick={() => onSelect(w)}
-                  className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.06] transition-colors border-b border-white/[0.04] last:border-b-0 group"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-[#3B82F6]/10 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-4 h-4 text-[#3B82F6]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{w.name}</p>
-                    <p className="text-xs text-slate-500 truncate">
-                      {w.tenant_name}{w.address ? ` · ${w.address}` : w.is_pending_setup ? ' · Pending Setup' : ''}
-                    </p>
-                  </div>
-                  {w.is_pending_setup && (
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold flex-shrink-0">Pending Setup</span>
-                  )}
-                  <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-[#3B82F6] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-                </button>
-              );
-            })
-          )}
-        </div>
-      )}
+      <div className="bg-white/[0.04] border border-white/[0.08] rounded-xl overflow-hidden max-h-72 overflow-y-auto">
+        {wpLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+          </div>
+        ) : filteredWorkplaces.length === 0 ? (
+          <div className="py-8 text-center">
+            <MapPin className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+            <p className="text-sm text-slate-500">No workplaces found</p>
+            <p className="text-xs text-slate-600 mt-1">Try a different search term</p>
+          </div>
+        ) : (
+          filteredWorkplaces.map((w) => {
+            const Icon = OUTLET_ICONS[w.type] || OUTLET_ICONS.default;
+            return (
+              <button key={w.id}
+                onClick={() => onSelect(w)}
+                className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.06] transition-colors border-b border-white/[0.04] last:border-b-0 group"
+              >
+                <div className="w-9 h-9 rounded-lg bg-[#3B82F6]/10 flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-4 h-4 text-[#3B82F6]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{w.name}</p>
+                  <p className="text-xs text-slate-500 truncate">
+                    {w.tenant_name}{w.address ? ` · ${w.address}` : w.is_pending_setup ? ' · Pending Setup' : ''}
+                  </p>
+                </div>
+                {w.is_pending_setup && (
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold flex-shrink-0">Pending Setup</span>
+                )}
+                <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-[#3B82F6] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+              </button>
+            );
+          })
+        )}
+      </div>
     </motion.div>
   );
 }
