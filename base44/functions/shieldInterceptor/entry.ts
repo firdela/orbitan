@@ -116,7 +116,10 @@ Deno.serve(async (req) => {
           last_triggered_at: new Date().toISOString()
         }).catch(() => {});
 
-        // Write to AuditLog
+        // Write to AuditLog with shield_outcome for Vanta/SOC 2 evidence trail
+        const shieldOutcome = policy.effect === 'block' ? 'blocked' :
+                               policy.effect === 'notify' ? 'notify' :
+                               policy.effect === 'auto_remediate' ? 'pass' : 'not_evaluated';
         base44.asServiceRole.entities.AuditLog.create({
           tenant_id: resolvedTenantId,
           actor_id: user.id,
@@ -126,6 +129,8 @@ Deno.serve(async (req) => {
           module: 'compliance',
           target_entity: entity_name,
           target_record_id: data?.id || 'new',
+          shield_outcome: shieldOutcome,
+          policy_name: policy.policy_name,
           details: `Shield triggered policy [${policy.policy_name}] — effect: ${policy.effect} — action: ${action}`,
           new_state: { policy: policy.policy_name, condition, triggered_by: user.id }
         }).catch(() => {});

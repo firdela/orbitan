@@ -86,13 +86,14 @@
       "enum": [
         "pass",
         "blocked",
+        "notify",
         "override_requested",
         "override_approved",
         "override_denied",
         "not_evaluated"
       ],
       "default": "not_evaluated",
-      "description": "Result of Shield evaluation for this event"
+      "description": "Result of Shield evaluation for this event. 'notify' = soft-gate warning (action allowed but flagged for audit). 'blocked' = hard-gate (action prevented). 'override_*' = governance override lifecycle."
     }
   },
   "required": [

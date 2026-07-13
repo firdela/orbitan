@@ -22,6 +22,7 @@ import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
 import AnnouncementsManager from '@/components/announcements/AnnouncementsManager';
 import PilotCommandCenter from '@/components/leader/PilotCommandCenter';
 import FeedbackIntelligenceDashboard from '@/components/leader/FeedbackIntelligenceDashboard';
+import SystemHealthScoreboard from '@/components/leader/SystemHealthScoreboard';
 import BlueprintAdvisor from '@/components/advisor/BlueprintAdvisor';
 import BlueprintStudio from '@/components/blueprint/BlueprintStudio';
 import SubscriptionPolicyManager from '@/components/platform/SubscriptionPolicyManager';
@@ -350,6 +351,7 @@ export default function LeaderOrg() {
           {/* System Controls Tab — Orchestrator & Broadcast combined */}
           <TabsContent value="system-controls">
             <div className="space-y-6">
+              <SystemHealthScoreboard />
               <OrchestratorTab />
               <div className="pt-6 border-t border-border">
                 <AnnouncementsManager
