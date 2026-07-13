@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   Shield, Plus, AlertTriangle, CheckCircle2, Clock, XCircle,
   Home, Package, ShoppingCart, FileText, Users, Calendar,
-  CheckSquare, BarChart2, Layers, Building2
+  CheckSquare, BarChart2, Layers, Building2, PenTool, ShieldCheck
 } from 'lucide-react';
+import SignatureDialog from '@/components/compliance/SignatureDialog';
 
 
 
@@ -29,6 +30,7 @@ const STATUS_ICONS = {
 export default function CompliancePage() {
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
+  const [signRecord, setSignRecord] = useState(null);
   const [newRec, setNewRec] = useState({ title: '', type: '', category: 'food_safety', due_date: '', status: 'pending' });
 
   const { data: records = [], isLoading } = useQuery({
@@ -44,6 +46,10 @@ export default function CompliancePage() {
       setNewRec({ title: '', type: '', category: 'food_safety', due_date: '', status: 'pending' });
     },
   });
+
+  const onSigned = () => {
+    queryClient.invalidateQueries({ queryKey: ['outlet-compliance'] });
+  };
 
   const approved = records.filter(r => r.status === 'approved').length;
   const overdue = records.filter(r => r.status === 'overdue').length;
@@ -107,15 +113,36 @@ export default function CompliancePage() {
             <div className="divide-y divide-border">
               {records.map(rec => (
                 <div key={rec.id} className="px-5 py-4 flex items-center gap-4">
-                  <div className="flex-shrink-0">{STATUS_ICONS[rec.status] || <Clock className="w-4 h-4 text-muted-foreground" />}</div>
+                  <div className="flex-shrink-0">
+                    {rec.signature_hash
+                      ? <ShieldCheck className="w-4 h-4 text-orbitan-green" />
+                      : (STATUS_ICONS[rec.status] || <Clock className="w-4 h-4 text-muted-foreground" />)}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{rec.title}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground truncate">{rec.title}</p>
+                      {rec.signature_hash && (
+                        <span className="text-[10px] font-semibold text-orbitan-green bg-orbitan-green-light px-1.5 py-0.5 rounded-full flex items-center gap-0.5 flex-shrink-0">
+                          <ShieldCheck className="w-2.5 h-2.5" /> Signed
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">{rec.type} · {rec.category?.replace('_', ' ')}</p>
+                    {rec.signed_by_name && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Signed by {rec.signed_by_name} · {rec.signed_date ? new Date(rec.signed_date).toLocaleDateString('en-SG') : ''}
+                      </p>
+                    )}
                   </div>
                   {rec.due_date && (
                     <p className="text-xs text-muted-foreground hidden sm:block">{rec.due_date}</p>
                   )}
                   <StatusBadge status={rec.status} size="sm" />
+                  {!rec.signature_hash && rec.status !== 'approved' && (
+                    <Button size="sm" variant="outline" className="gap-1 text-xs h-7 flex-shrink-0" onClick={() => setSignRecord(rec)}>
+                      <PenTool className="w-3 h-3" /> Sign
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -167,6 +194,14 @@ export default function CompliancePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <SignatureDialog
+        open={!!signRecord}
+        onOpenChange={setSignRecord}
+        record={signRecord}
+        entityName="ComplianceRecord"
+        onSigned={onSigned}
+      />
     </>
   );
 }

@@ -49,6 +49,11 @@ import AnalyticsPage from '@/pages/Analytics';
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
 import WorkspaceDashboard from '@/pages/workspace/WorkspaceDashboard';
 
+// Governance & Knowledge
+import GovernanceLog from '@/pages/GovernanceLog';
+import Suppliers from '@/pages/Suppliers';
+import KnowledgeHub from '@/pages/KnowledgeHub';
+
 // Platform — Revenue Engine
 import WalletPage from '@/pages/platform/WalletPage';
 import MarketplacePage from '@/pages/platform/MarketplacePage';
@@ -140,6 +145,11 @@ const AuthenticatedApp = () => {
       <Route path="/outlet/compliance" element={<CompliancePage />} />
       <Route path="/outlet/reports" element={<ReportsPage />} />
       <Route path="/outlet/feedback" element={<FeedbackCentre />} />
+
+      {/* Governance & Knowledge */}
+      <Route path="/governance-log" element={<GovernanceLog />} />
+      <Route path="/suppliers" element={<Suppliers />} />
+      <Route path="/knowledge-hub" element={<KnowledgeHub />} />
 
       {/* Platform — Revenue Engine */}
       <Route path="/platform/wallet" element={<WalletPage />} />

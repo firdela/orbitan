@@ -54,6 +54,31 @@
         "financial",
         "other"
       ]
+    },
+    "signed_by_id": {
+      "type": "string",
+      "description": "User ID of the employee who digitally signed off on this compliance record"
+    },
+    "signed_by_name": {
+      "type": "string",
+      "description": "Full name of the signer at time of signature"
+    },
+    "signed_by_role": {
+      "type": "string",
+      "description": "Role of the signer at time of signature"
+    },
+    "signed_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the digital signature was applied"
+    },
+    "signature_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of the record state at time of signing. Tamper-evident proof for SOC 2 audit bundles."
+    },
+    "audit_log_id": {
+      "type": "string",
+      "description": "Linked AuditLog entry created by the digitalSignature function \u2014 immutable notary record"
     }
   },
   "required": [
