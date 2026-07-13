@@ -311,6 +311,22 @@ async function provisionOrganisation(base44, body, user) {
     return { ...report, status: "failed", errors: [{ step: "validate", error: "Organisation name, industry and pack are required." }] };
   }
 
+  // ── Anti-Escalation Guard (Regulate principle) ──
+  // Prevent authenticated users who already belong to an active tenant
+  // from re-running self-serve provisioning to reassign themselves to a
+  // new tenant or regain tenant_admin privileges. Platform admins are
+  // exempt (they may provision on behalf of pilot tenants).
+  if (user.role !== "admin") {
+    const existingTenantId = user.tenant_id || user.data?.tenant_id;
+    if (existingTenantId) {
+      return {
+        ...report,
+        status: "failed",
+        errors: [{ step: "guard", error: "You already belong to an organisation. Contact your platform owner to provision additional workspaces." }],
+      };
+    }
+  }
+
   // ── Premium Bypass Fix ──
   // On the self-serve path, restrict the plan to entry tiers unless the
   // actor is a platform admin. Prevents unpaid upgrades to enterprise.

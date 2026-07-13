@@ -22,9 +22,31 @@ function useChart() {
   return context
 }
 
-const ChartContainer = React.forwardRef(({ id, className, children, config, ...props }, ref) => {
+const ChartContainer = React.forwardRef(({ id, className, children, config, style, ...props }, ref) => {
   const uniqueId = React.useId()
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
+
+  // CSS custom properties are applied as a sanitized inline style object
+  // (no dangerouslySetInnerHTML). Keys must be alphanumeric/hyphen/underscore;
+  // color values are restricted to safe color characters and must not contain
+  // url() — preventing CSS-based injection / data exfiltration.
+  const cssVars = React.useMemo(() => {
+    const vars = {}
+    if (config) {
+      Object.entries(config).forEach(([key, itemConfig]) => {
+        if (typeof key !== "string" || !/^[a-zA-Z0-9_-]+$/.test(key)) return
+        const color = itemConfig?.theme?.light || itemConfig?.color
+        if (
+          typeof color === "string" &&
+          !/url/i.test(color) &&
+          /^[a-zA-Z0-9_#().,%\s-]+$/.test(color)
+        ) {
+          vars[`--color-${key}`] = color.trim()
+        }
+      })
+    }
+    return vars
+  }, [config])
 
   return (
     (<ChartContext.Provider value={{ config }}>
@@ -35,8 +57,8 @@ const ChartContainer = React.forwardRef(({ id, className, children, config, ...p
           "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-none [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-none [&_.recharts-surface]:outline-none",
           className
         )}
+        style={{ ...cssVars, ...style }}
         {...props}>
-        <ChartStyle id={chartId} config={config} />
         <RechartsPrimitive.ResponsiveContainer>
           {children}
         </RechartsPrimitive.ResponsiveContainer>
@@ -46,36 +68,10 @@ const ChartContainer = React.forwardRef(({ id, className, children, config, ...p
 })
 ChartContainer.displayName = "Chart"
 
-const ChartStyle = ({
-  id,
-  config
-}) => {
-  const colorConfig = Object.entries(config).filter(([, config]) => config.theme || config.color)
-
-  if (!colorConfig.length) {
-    return null
-  }
-
-  return (
-    (<style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-.map(([key, itemConfig]) => {
-const color =
-  itemConfig.theme?.[theme] ||
-  itemConfig.color
-return color ? `  --color-${key}: ${color};` : null
-})
-.join("\n")}
-}
-`)
-          .join("\n"),
-      }} />)
-  );
-}
+// ChartStyle is retained for backward compatibility — chart color CSS
+// variables are now applied as sanitized inline styles on the ChartContainer
+// div, eliminating dangerouslySetInnerHTML usage entirely.
+const ChartStyle = () => null
 
 const ChartTooltip = RechartsPrimitive.Tooltip
 
