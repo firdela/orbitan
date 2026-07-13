@@ -269,7 +269,7 @@ function ShiftsScreen({ shifts, clockedIn, clockInTime, elapsed, onClockIn, onCl
   );
 }
 
-function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onReportIssue }) {
+function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onReportIssue, onSignOut }) {
   return (
     <div className="space-y-4">
       {/* Profile card */}
@@ -332,6 +332,13 @@ function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onR
           </button>
         </div>
       </div>
+
+      {/* Sign Out */}
+      <button onClick={onSignOut}
+        className="w-full flex items-center justify-center gap-2 bg-card border border-border rounded-2xl px-5 py-4 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-sm font-semibold text-muted-foreground">
+        <LogOut className="w-4 h-4" />
+        Sign Out
+      </button>
 
       {/* Quick access links */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -684,6 +691,7 @@ export default function WorkerPortal() {
             productivityPct={productivityPct}
             onFeedback={openFeedback}
             onReportIssue={() => setReportIssueOpen(true)}
+            onSignOut={() => base44.auth.logout()}
           />
         )}
 
