@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import {
   Search, MapPin, Building2, Store, Factory, Warehouse, ChevronRight,
   Loader2, ArrowLeft, IdCard, User, Shield, Send, CheckCircle2,
-  Clock, Users, Sparkles, ArrowRight
+  Clock, Users, Sparkles, ArrowRight, LogOut
 } from 'lucide-react';
 import OrbitanWordmark from '@/components/brand/OrbitanWordmark';
 
@@ -83,9 +83,9 @@ function WorkplaceSearch({ onSelect }) {
           filteredWorkplaces.map((w) => {
             const Icon = OUTLET_ICONS[w.type] || OUTLET_ICONS.default;
             return (
-              <button key={w.id}
+              <button key={w.id} type="button"
                 onClick={() => onSelect(w)}
-                className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.06] transition-colors border-b border-white/[0.04] last:border-b-0 group"
+                className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-white/[0.06] transition-colors border-b border-white/[0.04] last:border-b-0 group cursor-pointer"
               >
                 <div className="w-9 h-9 rounded-lg bg-[#3B82F6]/10 flex items-center justify-center flex-shrink-0">
                   <Icon className="w-4 h-4 text-[#3B82F6]" />
@@ -192,7 +192,7 @@ function RoleSelection({ workplace, onBack, onConfirm, initialRole }) {
             <MapPin className="w-3 h-3" /> Select Outlet
           </p>
           {outlets.map(outlet => (
-            <button key={outlet.id} onClick={() => setSelectedOutlet(outlet)}
+            <button key={outlet.id} type="button" onClick={() => setSelectedOutlet(outlet)}
               className={`w-full border rounded-xl p-3.5 flex items-center gap-3 text-left transition-all ${
                 selectedOutlet?.id === outlet.id ? 'border-[#3B82F6]/40 bg-[#3B82F6]/[0.06]' : 'border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15]'
               }`}>
@@ -211,7 +211,7 @@ function RoleSelection({ workplace, onBack, onConfirm, initialRole }) {
         {ROLES.map(role => {
           const Icon = role.icon;
           return (
-            <button key={role.value} onClick={() => { setSelectedRole(role.value); setStep(2); }}
+            <button key={role.value} type="button" onClick={() => { setSelectedRole(role.value); setStep(2); }}
               className="w-full border border-white/[0.08] bg-white/[0.02] rounded-xl p-4 flex items-center gap-4 text-left hover:border-[#3B82F6]/30 transition-all group">
               <div className="w-10 h-10 rounded-xl bg-[#3B82F6]/10 flex items-center justify-center flex-shrink-0">
                 <Icon className="w-5 h-5 text-[#3B82F6]" />
@@ -400,15 +400,21 @@ export default function RequestAccessPage() {
       <div className="relative z-10 w-full max-w-lg mx-auto px-6 flex flex-col items-center gap-8">
         <div className="w-full flex items-center justify-between">
           <OrbitanWordmark size="md" variant="light" showOS={false} />
-          <Link to="/" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors">
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Home
-          </Link>
+          <div className="flex items-center gap-4">
+            <button type="button" onClick={() => base44.auth.logout()} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors">
+              <LogOut className="w-3.5 h-3.5" />
+              Sign Out
+            </button>
+            <Link to="/" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Home
+            </Link>
+          </div>
         </div>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           {phase === 'search' && (
-            <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, x: -40 }} className="w-full space-y-5">
+            <motion.div key="search" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full space-y-5">
               <div className="text-center space-y-2">
                 <h1 className="text-2xl md:text-3xl font-display font-bold text-white tracking-tight">
                   Find Your Workplace
@@ -435,7 +441,7 @@ export default function RequestAccessPage() {
           )}
 
           {phase === 'role' && selectedWorkplace && (
-            <motion.div key="role" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} className="w-full">
+            <motion.div key="role" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full">
               <RoleSelection
                 workplace={selectedWorkplace}
                 onBack={() => setPhase('search')}
