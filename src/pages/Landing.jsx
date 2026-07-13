@@ -97,7 +97,7 @@ export default function Landing() {
             className="mb-8"
           >
             <motion.img
-              src={LOGO_ASSETS.mark3D}
+              src="https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/4fb495aab_OrbitonLogowebsite.png"
               alt="Orbitan"
               animate={{ scale: [1, 1.04, 1] }}
               transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
