@@ -29,6 +29,7 @@ const FALLBACK_NAV = [
   { id: 'sales', label: 'Sales & Reconciliation', icon: 'FileText', route: '/sales', module_key: 'sales_invoice', isLocked: false },
   { type: 'section', label: 'Team' },
   { id: 'workforce', label: 'My Team', icon: 'Users', route: '/workforce', module_key: 'workforce', isLocked: false },
+  { id: 'access-requests', label: 'Access Requests', icon: 'UserCheck', route: '/access-requests', module_key: 'access_requests', isLocked: false },
   { id: 'scheduling', label: 'Shift Schedule', icon: 'Calendar', route: '/scheduling', module_key: 'scheduling', isLocked: false },
   { id: 'tasks', label: 'Tasks', icon: 'CheckSquare', route: '/tasks', module_key: 'task', isLocked: false },
   { type: 'section', label: 'Reports' },
