@@ -30,7 +30,8 @@ import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
 import {
   Building2, Package, Shield, ChevronRight,
   Cpu, Layers, Plus, CheckCircle2, RefreshCw,
-  Rocket, Activity, Zap, Wallet, ShoppingBag, Target, FileText, Lock, LogOut } from 'lucide-react';
+  Rocket, Activity, Zap, Wallet, ShoppingBag, Target, FileText, Lock } from 'lucide-react';
+import UserMenu from '@/components/shared/UserMenu';
 
 export default function LeaderOrg() {
   const [activeTab, setActiveTab] = useState('tenants');
@@ -78,7 +79,7 @@ export default function LeaderOrg() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top Nav */}
-      <header className="border-b border-border bg-background sticky top-0 z-40">
+      <header className="border-b border-border bg-background sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
           <OrbitanLogo size="sm" showOS />
           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -97,16 +98,9 @@ export default function LeaderOrg() {
             </div>
             <CurrencyDropdown />
             <TenantSwitcher />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => base44.auth.logout()}
-              className="gap-1.5 text-xs"
-              title="Sign Out"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Sign Out
-            </Button>
+            <div className="w-28">
+              <UserMenu variant="light" />
+            </div>
           </div>
         </div>
       </header>

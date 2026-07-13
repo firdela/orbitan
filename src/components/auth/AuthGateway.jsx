@@ -114,7 +114,7 @@ export default function AuthGateway() {
 
   if (isLoadingAuth) {
     return (
-      <div className="min-h-screen bg-marketing-bg flex items-center justify-center">
+      <div className="min-h-screen bg-marketing-bg flex items-center justify-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
       </div>
     );
@@ -126,7 +126,7 @@ export default function AuthGateway() {
   const accentColor = tenantContext?.accent || '#3B82F6';
 
   return (
-    <div className="min-h-screen bg-marketing-bg flex flex-col items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-marketing-bg flex flex-col items-center justify-center relative overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* ── Background Ambient Orbs ── */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-[40rem] h-[40rem] rounded-full bg-blue-600/[0.03] blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />

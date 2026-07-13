@@ -14,7 +14,7 @@ export default function Onboarding() {
 
   if (isLoadingAuth) {
     return (
-      <div className="min-h-screen bg-[#0A0F1A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0A0F1A] flex items-center justify-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
       </div>);
 
@@ -22,9 +22,9 @@ export default function Onboarding() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center px-6 relative">
+      <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center px-6 relative pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         {/* Top nav bar */}
-        <div className="absolute top-0 inset-x-0 h-16 flex items-center justify-between px-6 max-w-sm w-full mx-auto">
+        <div className="absolute top-0 inset-x-0 h-16 flex items-center justify-between px-6 max-w-sm w-full mx-auto pt-[env(safe-area-inset-top)]">
           <OrbitanWordmark size="sm" variant="light" showOS={false} />
           <Link to="/" className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" />

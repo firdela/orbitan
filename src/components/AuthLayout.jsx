@@ -10,7 +10,7 @@ import OrbitanWordmark from "@/components/brand/OrbitanWordmark";
  */
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
   return (
-    <div className="min-h-screen bg-marketing-bg flex flex-col items-center justify-center relative overflow-hidden px-4">
+    <div className="min-h-screen bg-marketing-bg flex flex-col items-center justify-center relative overflow-hidden px-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* Ambient orbs */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-[30rem] h-[30rem] rounded-full bg-marketing-blue/[0.04] blur-[120px]" />

@@ -485,7 +485,7 @@ export default function WorkerPortal() {
   return (
     <div className="min-h-screen bg-background">
       {/* Sticky Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border pt-[env(safe-area-inset-top)]">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <OrbitanLogo size="sm" />
           <div className="flex items-center gap-2">
@@ -698,7 +698,7 @@ export default function WorkerPortal() {
       </main>
 
       {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border safe-area-inset-bottom">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-lg mx-auto px-2 pt-2 pb-3 flex items-center justify-around">
           {NAV_TABS.map(({ id, icon: Icon, label, badge }) => (
             <button key={id} onClick={() => setActiveSection(id)}

@@ -337,7 +337,7 @@ export default function RequestAccessPage() {
   // ── Loading ──
   if (isLoadingAuth) {
     return (
-      <div className="min-h-screen bg-[#0A0F1A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0A0F1A] flex items-center justify-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <Loader2 className="w-8 h-8 animate-spin text-[#3B82F6]" />
       </div>
     );
@@ -346,7 +346,7 @@ export default function RequestAccessPage() {
   // ── Approved! ──
   if (liveRequest?.status === 'approved') {
     return (
-      <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center p-6 text-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-sm w-full space-y-6">
           <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
             <Sparkles className="w-8 h-8 text-emerald-400" />
@@ -366,7 +366,7 @@ export default function RequestAccessPage() {
   // ── Pending ──
   if (pendingRequest) {
     return (
-      <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center p-6 text-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="max-w-sm w-full space-y-6">
           <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto">
             <Clock className="w-8 h-8 text-amber-400" />
@@ -393,7 +393,7 @@ export default function RequestAccessPage() {
 
   // ── Main Flow ──
   return (
-    <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-[#0A0F1A] flex flex-col items-center justify-center relative overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.05)_0%,transparent_70%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)]" />
 

@@ -14,6 +14,7 @@ import OrbitEcosystemSection from '@/components/landing/OrbitEcosystemSection';
 import NexusSection from '@/components/landing/NexusSection';
 import IntegrationHubSection from '@/components/landing/IntegrationHubSection';
 import DualProductSection from '@/components/landing/DualProductSection';
+import UserMenu from '@/components/shared/UserMenu';
 
 const FEATURED_PACKS = ['fnb', 'recycling', 'retail'];
 const PLAN_ORDER = ['orbitan_free', 'orbitan_starter', 'orbitan_growth', 'orbitan_business', 'orbitan_enterprise'];
@@ -38,17 +39,22 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-marketing-bg text-white overflow-x-hidden">
       {/* ── Navigation ── */}
-      <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-marketing-bg/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'}`}>
+      <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 pt-[env(safe-area-inset-top)] ${scrolled ? 'bg-marketing-bg/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
             <OrbitanWordmark size="sm" variant="light" showOS={false} />
           </Link>
           {isAuthenticated ? (
-            <Link to="/workspace">
-              <Button variant="outline" className="border-marketing-gold/30 text-marketing-gold hover:bg-marketing-gold/10 text-xs font-bold px-5 h-9 rounded-lg">
-                Workspace
-              </Button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link to="/workspace">
+                <Button variant="outline" className="border-marketing-gold/30 text-marketing-gold hover:bg-marketing-gold/10 text-xs font-bold px-5 h-9 rounded-lg">
+                  Workspace
+                </Button>
+              </Link>
+              <div className="w-36 [&_button]:text-white/70 [&_button:hover]:text-white">
+                <UserMenu variant="dark" />
+              </div>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <Link to="/join">

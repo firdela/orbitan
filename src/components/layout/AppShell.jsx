@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { base44 } from '@/api/base44Client';
-import { useAuth } from '@/lib/AuthContext';
 import OrbitanLogo from './OrbitanLogo';
 import PlatformFooter from './PlatformFooter';
 import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
 import ReportIssueModal from '@/components/shared/ReportIssueModal';
 import GlobalSearchBar from './GlobalSearchBar';
 import OutletSwitcher from './OutletSwitcher';
-import { Menu, X, LogOut } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import UserMenu from '@/components/shared/UserMenu';
 
 export default function AppShell({ navigation, manifestNav, children, headerRight, title, tenant }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const { user } = useAuth();
-  const userInitial = user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?';
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -107,22 +104,7 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
           </p>
 
           {/* User profile + sign out */}
-          <div className="flex items-center gap-2 pt-2 border-t border-sidebar-border/40">
-            <div className="w-7 h-7 rounded-full bg-sidebar-accent flex items-center justify-center text-[11px] font-semibold text-sidebar-foreground/70 flex-shrink-0">
-              {userInitial}
-            </div>
-            <span className="flex-1 text-[11px] text-sidebar-foreground/50 truncate">
-              {user?.email || user?.full_name || 'User'}
-            </span>
-            <button
-              type="button"
-              onClick={() => base44.auth.logout()}
-              title="Sign Out"
-              className="p-1.5 rounded-md text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 transition-colors"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <UserMenu variant="sidebar" />
         </div>
       </aside>
 
@@ -138,7 +120,7 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Top bar — Titanium glass with global search */}
-        <header className="flex items-center gap-3 px-4 sm:px-6 h-14 border-b border-border/60 bg-background/90 backdrop-blur-md sticky top-0 z-30">
+        <header className="flex items-center gap-3 px-4 sm:px-6 h-14 border-b border-border/60 bg-background/90 backdrop-blur-md sticky top-0 z-30 pt-[env(safe-area-inset-top)]" style={{ height: 'calc(3.5rem + env(safe-area-inset-top))' }}>
           <div className="flex items-center gap-3 flex-shrink-0">
             <button
               onClick={() => setSidebarOpen(true)}
