@@ -1,0 +1,221 @@
+---
+title: Orbitan Master Vision
+category: Product
+owner: Product Owner
+status: Active
+version: 1.0
+last_updated: 2026-07-13
+related:
+  - NorthStar.md
+  - ProductStrategy.md
+  - ../Architecture/PlatformArchitecture.md
+  - ../Architecture/OrbitNexus.md
+  - ../Architecture/OrbitEvolution.md
+  - NamingConventions.md
+  - SubscriptionFramework.md
+  - BrandGuidelines.md
+tags:
+  - vision
+  - ecosystem
+  - orbitanos
+  - orbit-nexus
+  - future-products
+---
+
+# Orbitan Master Vision
+
+## Purpose
+
+Defines the long-term ecosystem vision, product distinction, organisational architecture, platform service architecture, and strategic principles for the Orbitan ecosystem.
+
+## Ecosystem Vision
+
+The long-term vision is to build an ecosystem of specialised Operating Systems powered by shared platform capabilities and intelligence.
+
+```
+Orbitan Company (Future)
+│
+├── OrbitanOS     — Workforce Operating System
+├── Orbit Nexus   — Intelligence Platform (Brain)
+├── AquaOrbit     — Aquarist Operating System
+├── ChefOrbit     — Kitchen Operating System
+└── Future Orbit Products
+```
+
+Each product operates independently while leveraging common platform services: Authentication · Permissions · Notifications · Analytics · Marketplace · Billing · Security · Shared AI Services · APIs & Integrations.
+
+## Product Distinction
+
+| Layer | What it is | Who uses it |
+|-------|-----------|-------------|
+| **Orbitan** | Customer-facing product | Organisations managing workforce, ops, finance, compliance |
+| **OrbitanOS** | Underlying Workforce OS | Platform architecture, multi-tenancy, AI, governance, integrations |
+| **Orbit Nexus** | Intelligence Platform | AI, RAG, AIReceipts, Integration Hub, Agentic AI |
+| **Pilot Tenants** | Validation environments | Taqueria, Renewed Resources, Renewed Fashion, Izaliqa Bakes |
+| **Future Customers** | Primary market | Any organisation that discovers and subscribes to Orbitan |
+
+## Standard Organisational Architecture
+
+```
+Industry
+  → Tenant / Company
+    → Brand
+      → Outlet
+        → Department
+          → Team
+            → Employee
+```
+
+This structure must work across: Free Plans · Paid Subscriptions · Industry Packs · Enterprise Deployments · White Label · Future Marketplace Integrations. Every customer — from a single-person HBB to a multi-brand enterprise — operates within the same OrbitanOS framework.
+
+## Platform Service Architecture
+
+The Orbitan ecosystem is powered by shared platform services, each with a concise "Orbit" prefix. Orbitan is the master brand; Orbit services are the engines that power everything.
+
+```
+Orbitan (Company / Master Brand)
+│
+├── Orbit Core          — Foundational services (Auth, Tenancy, Identity, Audit, Config)
+├── Orbit Nexus         — Intelligence Platform (AI, RAG, AIReceipts, Integration Hub)
+├── Orbit Shield        — Security & Governance (Policy-as-Code, Override, Compliance)
+├── Orbit Connect       — Integrations & Connectors (Xero, QuickBooks, Google, Slack, Shopify)
+├── Orbit Builder       — Workspace & Configuration Builder (Manifest, Blueprint Studio)
+├── Orbit Wallet        — Payments & Credits (Orbitan Credits, Cashback, Procurement Debit)
+├── Orbit Rewards       — Loyalty & Incentives (Points, Tiers, Referrals)
+├── Orbit Marketplace   — Apps & Extensions (post-MVP)
+├── Orbit Flow          — Automation Engine (Scheduled, Entity, Webhook automations)
+├── Orbit Insight       — Analytics & Reporting (Dashboards, KPIs, Trends)
+├── Orbit ID            — Identity & Access Management (RBAC, Invitations, Access Requests)
+├── Orbit Notify        — Notifications & Communications (Announcements, Alerts)
+│
+├── OrbitanOS           — Workforce Operating System (flagship product)
+├── AquaOrbit           — Aquarist Operating System (future)
+├── ChefOrbit           — Kitchen Operating System (future)
+└── Future Orbit Products
+```
+
+**Customer-facing branding:**
+> OrbitanOS by Orbitan
+> Powered by: Orbit Core · Orbit Nexus · Orbit Shield · Orbit Connect · Orbit Builder
+
+### Orbit Core (Foundational Layer)
+
+Every Orbit product is built on Orbit Core. These entities are **immutable** — product modules must never add fields to them. Product-specific data lives in side-car entities that reference Core via `tenant_id`, `outlet_id`, `employee_id`.
+
+**Core entities:** Tenant, Company, Client, Outlet, Employee, Invitation, AccessRequest, AuditLog, GovernancePolicy, GovernanceOverride, ActivationRegistry, PlatformManifest, SubscriptionPolicy, OrbitanWallet, WalletTransaction, IntegrationCredential, SystemSettings.
+
+### Orbit Nexus (Intelligence Platform)
+
+Three clear responsibilities:
+
+1. **Think** — RAG, Agentic AI, AIReceipts, recommendations
+2. **Connect** — APIs, Connectors, Integration Hub (Xero, QuickBooks, Google Workspace, Slack, Shopify, Stripe)
+3. **Act** — MCP tools, workflows, automations
+
+### Independent Deployability
+
+All cross-module communication between OrbitanOS and Orbit Nexus uses the **Interface-First Constraint**: communication is exclusively via `base44.functions.invoke()`. No direct imports of Nexus code into OrbitanOS. This ensures each product can be independently built, deployed, and exported as a standalone application.
+
+## Public Onboarding Flow
+
+```
+Public Landing (/) → Auth Gateway (/auth/gateway)
+  ├─ Login (existing employees)
+  ├─ Join Organisation (invited users)
+  ├─ Request Access (workplace discovery)
+  └─ Create Organisation (new businesses)
+        → Select Industry → Select Plan → Configure Org → Activate Packs/Modules
+→ Customer Workspace (/workspace/:tenantId/*)
+```
+
+## Founder & Product Ownership
+
+- **Founder & Product Owner:** Muhammad Firdaus Bin Ismail
+- **Co-founder:** Hamka Ariffin (pilot tenant association)
+- **Final corporate ownership:** TBD (Orbitan Pte Ltd / LLC / Fetch Innovation / new holding)
+- OrbitanOS remains architecturally independent from any future corporate arrangement.
+
+## Scalability Principle
+
+> Before implementing any feature, ask: **Will this still work when Orbit serves thousands of organisations, millions of users, multiple industries, and operates across multiple countries?**
+
+If the answer is no, redesign the solution.
+
+## Orbit Evolution — Continuous Improvement Loop
+
+Unlike traditional analytics that only report what happened, OrbitanOS continuously evolves alongside its customers through a closed improvement loop:
+
+```
+Observe → Understand → Recommend → Approve → Implement → Measure → Learn
+```
+
+- **Observe:** Usage analytics, workflow execution, feedback, error patterns
+- **Understand:** Orbit Nexus AI identifies bottlenecks, pain points, automation opportunities
+- **Recommend:** EvolutionProposal records with AI confidence scores and expected impact
+- **Approve:** Human review for high-impact changes (proactive_approval governance mode)
+- **Implement:** Configuration changes, workflow automations, module updates
+- **Measure:** Post-implementation outcome tracking with improvement percentage
+- **Learn:** Outcomes feed back into AI context; institutional memory grows
+
+**Privacy-first:** The objective is to improve the product and operational efficiency, not to learn personal behaviour. Tenant isolation is always respected.
+
+## Orbit ID — Identity, Access & AI Governance
+
+Orbit ID governs human, machine, and AI agent identities across the entire ecosystem:
+
+- **Human identities:** Employees, managers, founders, admins (RBAC + RLS)
+- **Machine identities:** API keys, connectors, webhooks, MCP servers (scoped service accounts)
+- **AI agent identities:** Orbit Nexus agents with permission policies, trust levels, and approval gates
+
+**Business Access Intelligence (Orbit Differentiator):**
+Beyond "who has access to this system?", Orbit ID answers:
+- Who approved this purchase order?
+- Which AI agent reordered inventory?
+- Who changed this recipe?
+- Why did the AI recommend this procurement action?
+
+## Orbit Nexus — Standalone Subscription Product
+
+Orbit Nexus is marketed and subscribed separately from OrbitanOS:
+
+| Plan | Price | Key Features |
+|------|-------|--------------|
+| Free | S$0/mo | Basic AI Assistant, limited requests, AI Search |
+| Pro | S$39/mo | AIReceipts, Document AI, Workflow AI, higher usage |
+| Team | S$149/mo | AI Agents, RAG Knowledge Base, team collaboration, automations |
+| Enterprise | Custom | Private deployment, MCP Server, APIs/SDKs, dedicated infra |
+
+Customers can subscribe to Orbit Nexus independently — even without OrbitanOS. Future add-ons: AIReceipts+, premium connectors, extra AI credits, industry AI models.
+
+## Enterprise Compliance Readiness
+
+OrbitanOS and Orbit Nexus are architected from day one for SOC 2, ISO 27001, and Vanta-readiness:
+
+- RBAC with least-privilege (6-role hierarchy + ModuleAccessPolicy)
+- Tenant data isolation (RLS on every entity)
+- Comprehensive, immutable audit logs (AuditLog entity)
+- Encryption in transit and at rest
+- Secure API architecture (auth verification on every backend function)
+- Secrets management (environment variables, never in code)
+- Shield governance interceptor (policy-as-code, override workflow)
+- AI kill switch (SystemSettings.nexus_ai_enabled)
+- Privacy-by-design (analytics are anonymised and aggregated)
+
+Compliance documentation lives in this Knowledge Hub — Vanta can reference Decision Records as evidence of control implementation.
+
+## 6-R Principles
+
+`Regulate · Refine · Respond · Renew · Relate · Reach`
+
+Every piece of feedback, every architectural decision, and every product improvement should contribute to making OrbitanOS a smarter, more valuable, and continuously evolving Workforce Operating System.
+
+## Related Documents
+
+- [NorthStar.md](./NorthStar.md) — Mission, vision, and guiding philosophy
+- [ProductStrategy.md](./ProductStrategy.md) — Product positioning and competitive advantage
+- [../Architecture/PlatformArchitecture.md](../Architecture/PlatformArchitecture.md) — Three-layer architecture and platform services
+- [../Architecture/OrbitNexus.md](../Architecture/OrbitNexus.md) — Intelligence platform architecture
+- [../Architecture/OrbitEvolution.md](../Architecture/OrbitEvolution.md) — Continuous improvement loop
+- [NamingConventions.md](./NamingConventions.md) — Dual-prefix naming standard
+- [SubscriptionFramework.md](./SubscriptionFramework.md) — OrbitanOS and Orbit Nexus plans
+- [BrandGuidelines.md](./BrandGuidelines.md) — Brand identity and visual standards
