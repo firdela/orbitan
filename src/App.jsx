@@ -54,6 +54,12 @@ import GovernanceLog from '@/pages/GovernanceLog';
 import Suppliers from '@/pages/Suppliers';
 import KnowledgeHub from '@/pages/KnowledgeHub';
 
+// Enterprise — Compliance & Data
+import AuditTrail from '@/pages/AuditTrail';
+import UserRoles from '@/pages/UserRoles';
+import DataImport from '@/pages/DataImport';
+import DataExplorer from '@/pages/DataExplorer';
+
 // Platform — Revenue Engine
 import WalletPage from '@/pages/platform/WalletPage';
 import MarketplacePage from '@/pages/platform/MarketplacePage';
@@ -150,6 +156,12 @@ const AuthenticatedApp = () => {
       <Route path="/governance-log" element={<GovernanceLog />} />
       <Route path="/suppliers" element={<Suppliers />} />
       <Route path="/knowledge-hub" element={<KnowledgeHub />} />
+
+      {/* Enterprise — Compliance & Data */}
+      <Route path="/audit-trail" element={<AuditTrail />} />
+      <Route path="/user-roles" element={<UserRoles />} />
+      <Route path="/data-import" element={<DataImport />} />
+      <Route path="/data-explorer" element={<DataExplorer />} />
 
       {/* Platform — Revenue Engine */}
       <Route path="/platform/wallet" element={<WalletPage />} />
