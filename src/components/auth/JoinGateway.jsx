@@ -64,7 +64,7 @@ export default function JoinGateway() {
         const params = new URLSearchParams({
           tenant_id: inv.tenant_id || '',
           outlet_id: inv.outlet_id || '',
-          company_name: inv.company_id || '',
+          company_name: inv.notes || inv.tenant_id || '',
           invite_code: code,
         });
         if (inv.invited_role) {
