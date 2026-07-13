@@ -30,6 +30,7 @@ import LeaderOrg from '@/pages/LeaderOrg';
 import CompanyDashboard from '@/pages/CompanyDashboard';
 import OutletDashboard from '@/pages/OutletDashboard';
 import WorkerPortal from '@/pages/WorkerPortal';
+import AccountSettings from '@/pages/workspace/AccountSettings';
 import InventoryPage from '@/pages/outlet/InventoryPage';
 import ProcurementPage from '@/pages/outlet/ProcurementPage';
 import HBBPage from '@/pages/outlet/HBBPage';
@@ -146,6 +147,9 @@ const AuthenticatedApp = () => {
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />
+
+      {/* Account Settings */}
+      <Route path="/settings" element={<AccountSettings />} />
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>

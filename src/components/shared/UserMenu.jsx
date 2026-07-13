@@ -1,9 +1,10 @@
 import React from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { Link } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LogOut, User, ChevronUp } from 'lucide-react';
+import { LogOut, User, Settings, Building2, ChevronUp, Wallet, ScrollText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /**
@@ -12,7 +13,7 @@ import { cn } from '@/lib/utils';
  */
 export default function UserMenu({ variant = 'sidebar', className }) {
   const { user } = useAuth();
-  const userInitial = user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?';
+  const isAdmin = user?.role === 'admin';
   const displayName = user?.full_name || 'User';
   const displayEmail = user?.email || '';
   const initials = displayName
@@ -27,6 +28,12 @@ export default function UserMenu({ variant = 'sidebar', className }) {
 
   const triggerText = isSidebar ? 'text-sidebar-foreground/50 hover:text-sidebar-foreground' : isDark ? 'text-white/70 hover:text-white' : 'text-muted-foreground hover:text-foreground';
   const avatarBg = isSidebar ? 'bg-sidebar-accent text-sidebar-foreground/70' : 'bg-primary text-primary-foreground';
+
+  const handleSignOut = () => {
+    base44.auth.logout('/');
+  };
+
+  const menuItemClass = 'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors';
 
   return (
     <Popover>
@@ -69,16 +76,38 @@ export default function UserMenu({ variant = 'sidebar', className }) {
 
         {/* Menu Items */}
         <div className="p-1.5">
-          <a
-            href="/worker"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-          >
+          <Link to="/worker" className={menuItemClass}>
             <User className="w-4 h-4" />
             My Profile
-          </a>
+          </Link>
+          <Link to="/settings" className={menuItemClass}>
+            <Settings className="w-4 h-4" />
+            Account Settings
+          </Link>
+          <Link to="/request-access" className={menuItemClass}>
+            <Building2 className="w-4 h-4" />
+            Switch Organization
+          </Link>
+          {isAdmin && (
+            <>
+              <div className="my-1 h-px bg-border/60" />
+              <Link to="/platform/wallet" className={menuItemClass}>
+                <Wallet className="w-4 h-4" />
+                Orbit Wallet
+              </Link>
+              <Link to="/platform/audit-logs" className={menuItemClass}>
+                <ScrollText className="w-4 h-4" />
+                Audit Logs
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Sign Out */}
+        <div className="p-1.5 border-t border-border">
           <button
             type="button"
-            onClick={() => base44.auth.logout()}
+            onClick={handleSignOut}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/5 transition-colors"
           >
             <LogOut className="w-4 h-4" />

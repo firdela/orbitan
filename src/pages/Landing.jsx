@@ -106,6 +106,17 @@ export default function Landing() {
             />
           </motion.div>
 
+          {/* Early Access Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-marketing-blue/10 border border-marketing-blue/20 text-marketing-blue text-xs font-semibold mb-6"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-marketing-blue animate-pulse" />
+            Early Access — Pilot Programme Active
+          </motion.div>
+
           {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -127,6 +138,15 @@ export default function Landing() {
           >
             One ecosystem. Two products. OrbitanOS runs your workforce and operations.
             Orbit Nexus powers it with AI. Subscribe to either — or both.
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="text-xs text-slate-500 mt-4 max-w-md mx-auto"
+          >
+            OrbitanOS is actively evolving alongside our pilot partners. New modules, intelligence capabilities, and enterprise features ship weekly — your feedback directly shapes the roadmap.
           </motion.p>
 
           <motion.div
