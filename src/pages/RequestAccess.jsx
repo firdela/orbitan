@@ -67,8 +67,9 @@ function WorkplaceSearch({ onSelect }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       className="w-full space-y-3"
+      ref={searchRef}
     >
-      <div className="relative" ref={searchRef}>
+      <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 z-10" />
         <Input
           placeholder="Search for your workplace..."
