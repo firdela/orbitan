@@ -13,7 +13,7 @@
 // switcher in the platform console.
 // ============================================================
 
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { LAUNCH_TENANTS } from '@/lib/orbitan-config';
@@ -122,10 +122,13 @@ export function TenantProvider({ children }) {
   const [currentTenant, setCurrentTenant] = useState(null);
   const [currentRole, setCurrentRole] = useState(userRole || 'tenant_admin');
   const [isLoadingTenant, setIsLoadingTenant] = useState(false);
+  const manualOverride = useRef(false);
 
   // ── Dynamic resolution: fetch Tenant record from DB ──────
   useEffect(() => {
     if (isLoadingAuth) return;
+    // Don't override a manual tenant switch (e.g. admin using TenantSwitcher)
+    if (manualOverride.current) return;
     if (!isAuthenticated || !userTenantId) {
       // Anonymous or no tenant bound yet — leave null; RoleGateway
       // will route to onboarding / join flow.
@@ -165,9 +168,16 @@ export function TenantProvider({ children }) {
   }, [userRole]);
 
   // ── Manual switcher (console / pilot navigation) ───────
-  const switchTenant = (slugOrId) => {
+  // Accepts a slug, an ID, or a full tenant object. Sets a
+  // manualOverride so the auto-resolve useEffect doesn't clobber it.
+  const switchTenant = (slugOrIdOrObj) => {
+    manualOverride.current = true;
+    if (slugOrIdOrObj && typeof slugOrIdOrObj === 'object' && slugOrIdOrObj.name) {
+      setCurrentTenant(slugOrIdOrObj);
+      return;
+    }
     const found = DEMO_TENANTS.find(
-      t => t.slug === slugOrId || t.id === slugOrId
+      t => t.slug === slugOrIdOrObj || t.id === slugOrIdOrObj
     );
     if (found) setCurrentTenant(found);
   };

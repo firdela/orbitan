@@ -67,9 +67,11 @@ export default function WorkspaceLayout() {
   const { navigation, source, isLoading: navLoading } = useManifestHydration(tenantId, tenantRecord);
 
   // Sync the active tenant in context for downstream consumers.
+  // Pass the full tenant record so switchTenant can set it directly
+  // even if the DB id doesn't match a hardcoded DEMO_TENANTS entry.
   // (Declared before any early return so hook order stays stable.)
   useEffect(() => {
-    if (tenantRecord) switchTenant(tenantRecord.id);
+    if (tenantRecord) switchTenant(tenantRecord);
   }, [tenantRecord, switchTenant]);
 
   // ── Boot: wait for auth ──────────────────────────────────

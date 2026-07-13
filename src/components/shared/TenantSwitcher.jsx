@@ -29,7 +29,7 @@ export default function TenantSwitcher({ className }) {
   const navigate = useNavigate();
 
   const handleSwitch = (tenant) => {
-    switchTenant(tenant.id);
+    switchTenant(tenant);
     navigate(`/workspace/${tenant.id}/dashboard`);
   };
 
