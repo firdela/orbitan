@@ -55,6 +55,11 @@
         "qr"
       ]
     },
+    "reminder_sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "True after shiftReminderEngine has sent an email reminder for this shift. Prevents duplicate notifications."
+    },
     "notes": {
       "type": "string"
     },

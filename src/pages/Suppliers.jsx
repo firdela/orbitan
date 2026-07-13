@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EmptyState from '@/components/shared/EmptyState';
-import { Plus, Truck, Star, Mail, Phone, MapPin, Clock, Edit2, Trash2, Package } from 'lucide-react';
+import SupplierPerformancePanel from '@/components/suppliers/SupplierPerformancePanel';
+import { Plus, Truck, Star, Mail, Phone, MapPin, Clock, Edit2, Trash2, Package, BarChart2 } from 'lucide-react';
 
 export default function Suppliers() {
   const queryClient = useQueryClient();
@@ -163,82 +165,99 @@ export default function Suppliers() {
           />
         </div>
 
-        {/* Supplier List */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          {isLoading ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">Loading suppliers…</div>
-          ) : filtered.length === 0 ? (
-            <EmptyState icon={Truck} title="No suppliers found" description="Add your first supplier to start managing vendor relationships." action={openCreate} actionLabel="Add Supplier" />
-          ) : (
-            <div className="divide-y divide-border">
-              {filtered.map(supplier => (
-                <div key={supplier.id} className="px-5 py-4 hover:bg-accent/30 transition-colors">
-                  <div className="flex items-start gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${supplier.is_preferred ? 'bg-orbitan-amber-light' : 'bg-muted'}`}>
-                      <Truck className={`w-5 h-5 ${supplier.is_preferred ? 'text-orbitan-amber' : 'text-muted-foreground'}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-foreground">{supplier.name}</p>
-                        {supplier.is_preferred && (
-                          <Badge className="text-[10px] bg-orbitan-amber-light text-orbitan-amber border-amber-200 gap-0.5">
-                            <Star className="w-3 h-3" /> Preferred
-                          </Badge>
-                        )}
-                        {supplier.is_critical_fnb && (
-                          <Badge className="text-[10px] bg-orbitan-green-light text-orbitan-green border-green-200">
-                            Critical F&B
-                          </Badge>
-                        )}
-                        <Badge variant="outline" className={`text-[10px] ${supplier.status === 'active' ? 'text-orbitan-green' : 'text-muted-foreground'}`}>
-                          {supplier.status}
-                        </Badge>
+        <Tabs defaultValue="directory" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="directory" className="gap-1.5">
+              <Truck className="w-3.5 h-3.5" /> Directory
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="gap-1.5">
+              <BarChart2 className="w-3.5 h-3.5" /> Performance
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="directory">
+            {/* Supplier List */}
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              {isLoading ? (
+                <div className="py-12 text-center text-sm text-muted-foreground">Loading suppliers…</div>
+              ) : filtered.length === 0 ? (
+                <EmptyState icon={Truck} title="No suppliers found" description="Add your first supplier to start managing vendor relationships." action={openCreate} actionLabel="Add Supplier" />
+              ) : (
+                <div className="divide-y divide-border">
+                  {filtered.map(supplier => (
+                    <div key={supplier.id} className="px-5 py-4 hover:bg-accent/30 transition-colors">
+                      <div className="flex items-start gap-4">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${supplier.is_preferred ? 'bg-orbitan-amber-light' : 'bg-muted'}`}>
+                          <Truck className={`w-5 h-5 ${supplier.is_preferred ? 'text-orbitan-amber' : 'text-muted-foreground'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold text-foreground">{supplier.name}</p>
+                            {supplier.is_preferred && (
+                              <Badge className="text-[10px] bg-orbitan-amber-light text-orbitan-amber border-amber-200 gap-0.5">
+                                <Star className="w-3 h-3" /> Preferred
+                              </Badge>
+                            )}
+                            {supplier.is_critical_fnb && (
+                              <Badge className="text-[10px] bg-orbitan-green-light text-orbitan-green border-green-200">
+                                Critical F&B
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className={`text-[10px] ${supplier.status === 'active' ? 'text-orbitan-green' : 'text-muted-foreground'}`}>
+                              {supplier.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 mt-1 flex-wrap">
+                            {supplier.contact_person && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <span className="w-1 h-1 rounded-full bg-muted-foreground" /> {supplier.contact_person}
+                              </span>
+                            )}
+                            {supplier.email && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Mail className="w-3 h-3" /> {supplier.email}
+                              </span>
+                            )}
+                            {supplier.phone && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Phone className="w-3 h-3" /> {supplier.phone}
+                              </span>
+                            )}
+                            {supplier.lead_time_days != null && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> {supplier.lead_time_days}d lead
+                              </span>
+                            )}
+                            {supplier.payment_terms && (
+                              <span className="text-xs text-muted-foreground">{supplier.payment_terms}</span>
+                            )}
+                          </div>
+                          {supplier.address && (
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> {supplier.address}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(supplier)}>
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => { if (confirm(`Delete supplier "${supplier.name}"?`)) deleteMutation.mutate(supplier.id); }}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4 mt-1 flex-wrap">
-                        {supplier.contact_person && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <span className="w-1 h-1 rounded-full bg-muted-foreground" /> {supplier.contact_person}
-                          </span>
-                        )}
-                        {supplier.email && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Mail className="w-3 h-3" /> {supplier.email}
-                          </span>
-                        )}
-                        {supplier.phone && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Phone className="w-3 h-3" /> {supplier.phone}
-                          </span>
-                        )}
-                        {supplier.lead_time_days != null && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> {supplier.lead_time_days}d lead
-                          </span>
-                        )}
-                        {supplier.payment_terms && (
-                          <span className="text-xs text-muted-foreground">{supplier.payment_terms}</span>
-                        )}
-                      </div>
-                      {supplier.address && (
-                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                          <MapPin className="w-3 h-3" /> {supplier.address}
-                        </p>
-                      )}
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(supplier)}>
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => { if (confirm(`Delete supplier "${supplier.name}"?`)) deleteMutation.mutate(supplier.id); }}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="performance">
+            <SupplierPerformancePanel suppliers={suppliers} />
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Create/Edit Dialog */}
