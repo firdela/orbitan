@@ -98,7 +98,7 @@ import {
   CheckSquare, BarChart2, Shield, Layers, Settings,
   Clock, DollarSign, TrendingUp, Building2, ClipboardList,
   Truck, AlertTriangle, Award, Zap, ChefHat, MessageSquare,
-  UserCheck,
+  UserCheck, Receipt, ArrowLeftRight, Store, Leaf,
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -106,7 +106,7 @@ const ICON_MAP = {
   CheckSquare, BarChart2, Shield, Layers, Settings,
   Clock, DollarSign, TrendingUp, Building2, ClipboardList,
   Truck, AlertTriangle, Award, Zap, ChefHat, MessageSquare,
-  UserCheck,
+  UserCheck, Receipt, ArrowLeftRight, Store, Leaf,
 };
 
 function resolveIcon(iconName) {

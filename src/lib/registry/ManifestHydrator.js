@@ -22,19 +22,23 @@ import { base44 } from '@/api/base44Client';
 // Used ONLY when no PlatformManifest record exists for a tenant.
 // This ensures zero downtime during migration.
 const FALLBACK_NAV = [
-  { type: 'section', label: 'Workspace' },
+  { type: 'section', label: 'Operations' },
   { id: 'dashboard', label: 'Dashboard', icon: 'Home', route: '/dashboard', module_key: 'dashboard', isLocked: false },
   { id: 'inventory', label: 'Inventory', icon: 'Package', route: '/inventory', module_key: 'inventory', isLocked: false },
   { id: 'procurement', label: 'Purchase Orders', icon: 'ShoppingCart', route: '/procurement', module_key: 'procurement', isLocked: false },
   { id: 'sales', label: 'Sales & Reconciliation', icon: 'FileText', route: '/sales', module_key: 'sales_invoice', isLocked: false },
+  { id: 'clients', label: 'Clients', icon: 'Store', route: '/clients', module_key: 'clients', isLocked: false },
+  { id: 'expenses', label: 'Expenses', icon: 'Receipt', route: '/expenses', module_key: 'expenses', isLocked: false },
   { type: 'section', label: 'Team' },
   { id: 'workforce', label: 'My Team', icon: 'Users', route: '/workforce', module_key: 'workforce', isLocked: false },
-  { id: 'access-requests', label: 'Access Requests', icon: 'UserCheck', route: '/access-requests', module_key: 'access_requests', isLocked: false },
   { id: 'scheduling', label: 'Shift Schedule', icon: 'Calendar', route: '/scheduling', module_key: 'scheduling', isLocked: false },
+  { id: 'shift-trades', label: 'Shift Trades', icon: 'ArrowLeftRight', route: '/shift-trades', module_key: 'shift_trades', isLocked: false },
   { id: 'tasks', label: 'Tasks', icon: 'CheckSquare', route: '/tasks', module_key: 'task', isLocked: false },
-  { type: 'section', label: 'Reports' },
+  { id: 'access-requests', label: 'Access Requests', icon: 'UserCheck', route: '/access-requests', module_key: 'access_requests', isLocked: false },
+  { type: 'section', label: 'Insights & Compliance' },
   { id: 'reports', label: 'Reports', icon: 'BarChart2', route: '/reports', module_key: 'reporting', isLocked: false },
   { id: 'compliance', label: 'Compliance', icon: 'Shield', route: '/compliance', module_key: 'compliance', isLocked: false },
+  { id: 'sustainability', label: 'Sustainability', icon: 'Leaf', route: '/sustainability', module_key: 'sustainability', isLocked: false },
   { type: 'section', label: 'Product' },
   { id: 'feedback', label: 'Feedback Centre', icon: 'MessageSquare', route: '/feedback', module_key: 'feedback', isLocked: false },
 ];

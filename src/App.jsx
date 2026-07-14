@@ -147,28 +147,28 @@ const AuthenticatedApp = () => {
       {/* Tenant / Company */}
       <Route path="/company" element={<CompanyDashboard />} />
 
-      {/* Outlet */}
+      {/* Outlet (legacy standalone dashboard — kept for direct access) */}
       <Route path="/outlet" element={<OutletDashboard />} />
-      <Route path="/outlet/inventory" element={<InventoryPage />} />
-      <Route path="/outlet/procurement" element={<ProcurementPage />} />
-      <Route path="/outlet/hbb" element={<HBBPage />} />
-      <Route path="/outlet/scheduling" element={<SchedulingPage />} />
-      <Route path="/outlet/sales" element={<SalesPage />} />
-      <Route path="/outlet/tasks" element={<TasksPage />} />
-      <Route path="/outlet/workforce" element={<WorkforcePage />} />
-      <Route path="/outlet/compliance" element={<CompliancePage />} />
-      <Route path="/outlet/reports" element={<ReportsPage />} />
-      <Route path="/outlet/feedback" element={<FeedbackCentre />} />
 
-      {/* Operational Modules — Expenses, Shift Trades, Clients, Sustainability */}
-      <Route path="/expenses" element={<ExpensePage />} />
-      <Route path="/outlet/expenses" element={<ExpensePage />} />
-      <Route path="/shift-trades" element={<ShiftTradesPage />} />
-      <Route path="/outlet/shift-trades" element={<ShiftTradesPage />} />
-      <Route path="/clients" element={<ClientsPage />} />
-      <Route path="/outlet/clients" element={<ClientsPage />} />
-      <Route path="/sustainability-impact" element={<SustainabilityPage />} />
-      <Route path="/outlet/sustainability" element={<SustainabilityPage />} />
+      {/* Legacy route redirects — all module routes consolidated to workspace-scoped paths */}
+      <Route path="/outlet/inventory" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/procurement" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/hbb" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/scheduling" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/sales" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/tasks" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/workforce" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/compliance" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/reports" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/feedback" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/expenses" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/shift-trades" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/clients" element={<Navigate to="/workspace" replace />} />
+      <Route path="/outlet/sustainability" element={<Navigate to="/workspace" replace />} />
+      <Route path="/expenses" element={<Navigate to="/workspace" replace />} />
+      <Route path="/shift-trades" element={<Navigate to="/workspace" replace />} />
+      <Route path="/clients" element={<Navigate to="/workspace" replace />} />
+      <Route path="/sustainability-impact" element={<Navigate to="/workspace" replace />} />
 
       {/* Governance & Knowledge */}
       <Route path="/governance-log" element={<GovernanceLog />} />
