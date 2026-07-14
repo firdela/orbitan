@@ -225,6 +225,25 @@ export const INDUSTRY_PACKS = {
     },
   },
 
+  // ── HOME-BASED BUSINESS PACK (Flexible Seed Pack) ───────
+  hbb: {
+    key: "hbb",
+    name: "Home-Based Business Pack",
+    industry: "food_beverage",
+    color_hex: "#F59E0B",
+    badge_label: "HBB",
+    description: "Lightweight operations for home-based businesses — baking, online retail, home services, creative & consulting. Scales to SME without migration.",
+    launch_tenants: ["Izaliqa Bakes"],
+    launch_brands: ["Izaliqa Bakes"],
+    modules: ["task", "inventory", "procurement", "sales_invoice", "compliance", "reporting", "workforce", "scheduling"],
+    capabilities: {
+      required_integrations: [],
+      default_workflows: ["order_planning", "production_preparation", "simple_inventory", "expense_tracking"],
+      compliance_templates: ["home_business_regulation_check"],
+      access_roles: ["worker", "outlet_manager", "tenant_admin"],
+    },
+  },
+
   // ── FUTURE-PROOFED PACKS (Seeded — ready to activate) ───
 
   technology: {
