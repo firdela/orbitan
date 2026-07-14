@@ -22,6 +22,7 @@ const AUDITABLE_ENTITIES = new Set([
   'SalesInvoice', 'PurchaseOrder', 'GoodsReceipt', 'ClockRecord',
   'FoodSafetyLog', 'ComplianceRecord', 'MaterialCollection',
   'ProductCatalog', 'DailyReconciliation', 'InventoryItem',
+  'ArtifactRecord',
 ]);
 
 // ── Responsibility Matrix ─────────────────────────────────────────
@@ -276,6 +277,13 @@ const resolveActionType = (entityName, eventType, data, old_data) => {
     if (data?.current_stock !== old_data?.current_stock) return 'STOCK_ADJUSTED';
     return 'INVENTORY_UPDATED';
   }
+  if (entityName === 'ArtifactRecord') {
+    if (eventType === 'create') return 'ARTIFACT_UPLOADED';
+    if (data?.status === 'approved' && old_data?.status !== 'approved') return 'ARTIFACT_APPROVED';
+    if (data?.status === 'rejected' && old_data?.status !== 'rejected') return 'ARTIFACT_REJECTED';
+    if (data?.status === 'archived' && old_data?.status !== 'archived') return 'ARTIFACT_ARCHIVED';
+    return 'ARTIFACT_UPDATED';
+  }
   return `${entityName.toUpperCase()}_${eventType.toUpperCase()}`;
 };
 
@@ -286,6 +294,7 @@ const resolveModule = (entityName) => {
     ClockRecord: 'workforce', FoodSafetyLog: 'compliance',
     ComplianceRecord: 'compliance', MaterialCollection: 'sustainability',
     ProductCatalog: 'retail', InventoryItem: 'inventory',
+    ArtifactRecord: 'compliance',
   };
   return map[entityName] || 'system';
 };

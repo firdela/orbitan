@@ -79,6 +79,13 @@ export const ACTION_TYPES = {
   COMPLIANCE_APPROVED:  'compliance_approved',
   COMPLIANCE_REJECTED:  'compliance_rejected',
 
+  // Artifacts (ADR-0025)
+  ARTIFACT_UPLOADED:    'artifact_uploaded',
+  ARTIFACT_APPROVED:    'artifact_approved',
+  ARTIFACT_REJECTED:    'artifact_rejected',
+  ARTIFACT_ARCHIVED:    'artifact_archived',
+  ARTIFACT_UPDATED:    'artifact_updated',
+
   // Retail
   PRODUCT_LISTED:       'product_listed',
   PRICE_ADJUSTED:       'price_adjusted',

@@ -57,6 +57,7 @@ import WorkspaceDashboard from '@/pages/workspace/WorkspaceDashboard';
 import GovernanceLog from '@/pages/GovernanceLog';
 import Suppliers from '@/pages/Suppliers';
 import KnowledgeHub from '@/pages/KnowledgeHub';
+import ArtifactRegistry from '@/pages/workspace/ArtifactRegistry';
 
 // Enterprise — Compliance & Data
 import AuditTrail from '@/pages/AuditTrail';
@@ -133,6 +134,7 @@ const AuthenticatedApp = () => {
         <Route path="shift-trades" element={<ShiftTradesPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="sustainability" element={<SustainabilityPage />} />
+        <Route path="artifacts" element={<ArtifactRegistry />} />
       </Route>
 
       {/* Self-Serve Business Installation Wizard — Create Organisation */}
@@ -174,6 +176,7 @@ const AuthenticatedApp = () => {
       <Route path="/governance-log" element={<GovernanceLog />} />
       <Route path="/suppliers" element={<Suppliers />} />
       <Route path="/knowledge-hub" element={<KnowledgeHub />} />
+      <Route path="/artifacts" element={<ArtifactRegistry />} />
 
       {/* Enterprise — Compliance & Data */}
       <Route path="/audit-trail" element={<AuditTrail />} />

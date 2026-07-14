@@ -160,6 +160,7 @@ export const MODULES = {
   training:           { key: "training",           name: "Training Module",           icon: "BookOpen",     principle: "renew",    description: "Staff training and certifications" },
   knowledge:          { key: "knowledge",          name: "Knowledge Module",          icon: "Archive",      principle: "renew",    description: "SOPs and knowledge base" },
   customer_management:{ key: "customer_management",name: "Customer Management",       icon: "UserCheck",    principle: "relate",   description: "Customer profiles and purchase history" },
+  artifacts:          { key: "artifacts",          name: "Artifact Registry",          icon: "Archive",      principle: "regulate", description: "Unified document & compliance repository (ADR-0025)" },
 };
 
 // ============================================================
