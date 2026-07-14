@@ -11,7 +11,7 @@
  * Migrate by swapping createClientFromRequest with your own DB client.
  */
 
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
 Deno.serve(async (req) => {
   try {
