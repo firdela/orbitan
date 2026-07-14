@@ -1,6 +1,7 @@
 {
   "name": "Outlet",
   "type": "object",
+  "description": "OrbitanOS Facility \u2014 a physical or virtual operating location within an organisation. Extended with the Facility Settings module (ADR): structured operating hours, business days, holiday schedule, location coordinates, and a flexible facility_settings JSON object for industry-specific preferences. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -15,7 +16,8 @@
       "type": "string"
     },
     "address": {
-      "type": "string"
+      "type": "string",
+      "description": "Full street address of the facility"
     },
     "type": {
       "type": "string",
@@ -33,7 +35,180 @@
       "default": "other"
     },
     "operating_hours": {
-      "type": "string"
+      "type": "string",
+      "description": "Human-readable operating hours summary e.g. '11:00 AM - 10:00 PM'. Kept for backward-compatible display; the structured weekly_hours field is the source of truth."
+    },
+    "weekly_hours": {
+      "type": "object",
+      "description": "Structured per-day operating hours keyed by JS getDay() index (0=Sunday \u2026 6=Saturday). Source of truth for scheduling, compliance, and worker portal.",
+      "properties": {
+        "0": {
+          "type": "object",
+          "properties": {
+            "open": {
+              "type": "string"
+            },
+            "close": {
+              "type": "string"
+            },
+            "is_closed": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "1": {
+          "type": "object",
+          "properties": {
+            "open": {
+              "type": "string"
+            },
+            "close": {
+              "type": "string"
+            },
+            "is_closed": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "2": {
+          "type": "object",
+          "properties": {
+            "open": {
+              "type": "string"
+            },
+            "close": {
+              "type": "string"
+            },
+            "is_closed": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "3": {
+          "type": "object",
+          "properties": {
+            "open": {
+              "type": "string"
+            },
+            "close": {
+              "type": "string"
+            },
+            "is_closed": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "4": {
+          "type": "object",
+          "properties": {
+            "open": {
+              "type": "string"
+            },
+            "close": {
+              "type": "string"
+            },
+            "is_closed": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "5": {
+          "type": "object",
+          "properties": {
+            "open": {
+              "type": "string"
+            },
+            "close": {
+              "type": "string"
+            },
+            "is_closed": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "6": {
+          "type": "object",
+          "properties": {
+            "open": {
+              "type": "string"
+            },
+            "close": {
+              "type": "string"
+            },
+            "is_closed": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "business_days": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "description": "Day indices (0=Sunday \u2026 6=Saturday) the business operates. Derived from weekly_hours.is_closed; stored for efficient querying."
+    },
+    "holidays": {
+      "type": "array",
+      "description": "Facility-specific holiday / closure schedule. Each entry overrides weekly_hours for that date.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "name": {
+            "type": "string"
+          },
+          "is_closed": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    },
+    "latitude": {
+      "type": "number",
+      "description": "Geographic latitude for geo-fenced clock-in and maps"
+    },
+    "longitude": {
+      "type": "number",
+      "description": "Geographic longitude for geo-fenced clock-in and maps"
+    },
+    "timezone": {
+      "type": "string",
+      "default": "Asia/Singapore",
+      "description": "IANA timezone for this facility (scheduling + reminders). Defaults to tenant timezone."
+    },
+    "facility_settings": {
+      "type": "object",
+      "description": "Flexible, industry-agnostic facility preferences. Industry Packs extend this object without schema migrations. Common keys: max_capacity, accepts_walk_ins, requires_reservation, has_parking, wheelchair_accessible.",
+      "properties": {
+        "max_capacity": {
+          "type": "number"
+        },
+        "accepts_walk_ins": {
+          "type": "boolean"
+        },
+        "requires_reservation": {
+          "type": "boolean"
+        },
+        "has_parking": {
+          "type": "boolean"
+        },
+        "wheelchair_accessible": {
+          "type": "boolean"
+        }
+      }
     },
     "contact_person": {
       "type": "string"
@@ -151,6 +326,18 @@
               "user_condition": {
                 "role": "tenant_admin"
               }
+            },
+            {
+              "$and": [
+                {
+                  "data.id": "{{user.data.outlet_id}}"
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                }
+              ]
             }
           ]
         }
