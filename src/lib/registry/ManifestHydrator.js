@@ -26,11 +26,12 @@ const FALLBACK_NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: 'Home', route: '/dashboard', module_key: 'dashboard', isLocked: false },
   { id: 'inventory', label: 'Inventory', icon: 'Package', route: '/inventory', module_key: 'inventory', isLocked: false },
   { id: 'procurement', label: 'Purchase Orders', icon: 'ShoppingCart', route: '/procurement', module_key: 'procurement', isLocked: false },
-  { id: 'sales', label: 'Sales & Reconciliation', icon: 'FileText', route: '/sales', module_key: 'sales_invoice', isLocked: false },
   { id: 'clients', label: 'Clients', icon: 'Store', route: '/clients', module_key: 'clients', isLocked: false },
+  { type: 'section', label: 'Finance' },
+  { id: 'sales', label: 'Sales & Invoicing', icon: 'FileText', route: '/sales', module_key: 'sales_invoice', isLocked: false },
   { id: 'expenses', label: 'Expenses', icon: 'Receipt', route: '/expenses', module_key: 'expenses', isLocked: false },
-  { type: 'section', label: 'Team' },
-  { id: 'workforce', label: 'My Team', icon: 'Users', route: '/workforce', module_key: 'workforce', isLocked: false },
+  { type: 'section', label: 'Staffing' },
+  { id: 'workforce', label: 'Workforce', icon: 'Users', route: '/workforce', module_key: 'workforce', isLocked: false },
   { id: 'scheduling', label: 'Shift Schedule', icon: 'Calendar', route: '/scheduling', module_key: 'scheduling', isLocked: false },
   { id: 'shift-trades', label: 'Shift Trades', icon: 'ArrowLeftRight', route: '/shift-trades', module_key: 'shift_trades', isLocked: false },
   { id: 'tasks', label: 'Tasks', icon: 'CheckSquare', route: '/tasks', module_key: 'task', isLocked: false },
@@ -121,10 +122,10 @@ function filterHiddenModules(navItems, hiddenModules) {
 // Ensures operational tools are always one click away, even if
 // a PlatformManifest DB record doesn't explicitly list them.
 const STANDARD_WORKSPACE_MODULES = [
-  { section: 'Operations', id: 'expenses', label: 'Expenses', icon: 'Receipt', routeSuffix: '/expenses', moduleKey: 'expenses' },
+  { section: 'Finance', id: 'expenses', label: 'Expenses', icon: 'Receipt', routeSuffix: '/expenses', moduleKey: 'expenses' },
   { section: 'Operations', id: 'clients', label: 'Clients', icon: 'Store', routeSuffix: '/clients', moduleKey: 'clients' },
-  { section: 'Operations', id: 'sustainability', label: 'Sustainability', icon: 'Leaf', routeSuffix: '/sustainability', moduleKey: 'sustainability' },
-  { section: 'Team', id: 'shift-trades', label: 'Shift Trades', icon: 'ArrowLeftRight', routeSuffix: '/shift-trades', moduleKey: 'shift_trades' },
+  { section: 'Insights & Compliance', id: 'sustainability', label: 'Sustainability', icon: 'Leaf', routeSuffix: '/sustainability', moduleKey: 'sustainability' },
+  { section: 'Staffing', id: 'shift-trades', label: 'Shift Trades', icon: 'ArrowLeftRight', routeSuffix: '/shift-trades', moduleKey: 'shift_trades' },
 ];
 
 function appendMissingStandardModules(result, tenantId, allowedModules, allUnlocked) {
@@ -132,23 +133,39 @@ function appendMissingStandardModules(result, tenantId, allowedModules, allUnloc
   const missing = STANDARD_WORKSPACE_MODULES.filter(m => !existingKeys.has(m.moduleKey));
   if (missing.length === 0) return;
 
-  const grouped = {};
+  // Insert missing modules into their matching existing section,
+  // or append a new section at the end if no match exists.
   for (const m of missing) {
-    (grouped[m.section] ||= []).push(m);
-  }
+    const isLocked = !allUnlocked && !allowedModules.includes(m.moduleKey);
+    const navItem = {
+      id: m.id,
+      label: m.label,
+      icon: m.icon,
+      route: `/workspace/${tenantId}${m.routeSuffix}`,
+      module_key: m.moduleKey,
+      isLocked,
+    };
 
-  for (const [sectionLabel, modules] of Object.entries(grouped)) {
-    result.push({ type: 'section', label: sectionLabel });
-    for (const m of modules) {
-      const isLocked = !allUnlocked && !allowedModules.includes(m.moduleKey);
-      result.push({
-        id: m.id,
-        label: m.label,
-        icon: m.icon,
-        route: `/workspace/${tenantId}${m.routeSuffix}`,
-        module_key: m.moduleKey,
-        isLocked,
-      });
+    // Find the section header index
+    let sectionIdx = -1;
+    for (let i = 0; i < result.length; i++) {
+      if (result[i].type === 'section' && result[i].label === m.section) {
+        sectionIdx = i;
+        break;
+      }
+    }
+
+    if (sectionIdx >= 0) {
+      // Find the last item in this section (before next section or end)
+      let insertAt = sectionIdx + 1;
+      while (insertAt < result.length && result[insertAt].type !== 'section') {
+        insertAt++;
+      }
+      result.splice(insertAt, 0, navItem);
+    } else {
+      // Section doesn't exist yet — create it
+      result.push({ type: 'section', label: m.section });
+      result.push(navItem);
     }
   }
 }
