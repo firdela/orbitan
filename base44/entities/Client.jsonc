@@ -1,6 +1,7 @@
 {
   "name": "Client",
   "type": "object",
+  "description": "OrbitanOS CRM Module \u2014 external client and partner directory with business details and primary points of contact. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -9,7 +10,8 @@
       "type": "string"
     },
     "name": {
-      "type": "string"
+      "type": "string",
+      "description": "Client or partner organisation name"
     },
     "brand": {
       "type": "string"
@@ -21,20 +23,62 @@
       "type": "string"
     },
     "description": {
+      "type": "string",
+      "description": "Brief description of the client/partner relationship"
+    },
+    "client_type": {
+      "type": "string",
+      "enum": [
+        "customer",
+        "supplier_partner",
+        "service_provider",
+        "distributor",
+        "consultant",
+        "other"
+      ],
+      "default": "customer",
+      "description": "Type of external relationship"
+    },
+    "contact_person": {
+      "type": "string",
+      "description": "Primary point of contact name"
+    },
+    "contact_email": {
       "type": "string"
+    },
+    "contact_phone": {
+      "type": "string"
+    },
+    "contact_position": {
+      "type": "string",
+      "description": "POC job title"
+    },
+    "address": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string",
+      "default": "Singapore"
     },
     "status": {
       "type": "string",
       "enum": [
         "active",
-        "inactive"
+        "inactive",
+        "prospective",
+        "archived"
       ],
       "default": "active"
+    },
+    "notes": {
+      "type": "string"
     }
   },
   "required": [
     "tenant_id",
-    "company_id",
     "name"
   ],
   "rls": {
@@ -58,6 +102,11 @@
             {
               "user_condition": {
                 "role": "client_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
               }
             }
           ]
@@ -93,6 +142,11 @@
             },
             {
               "user_condition": {
+                "role": "supervisor"
+              }
+            },
+            {
+              "user_condition": {
                 "role": "worker"
               }
             }
@@ -120,6 +174,11 @@
             {
               "user_condition": {
                 "role": "client_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
               }
             }
           ]
