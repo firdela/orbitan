@@ -17,8 +17,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Link } from 'react-router-dom';
-import { ArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRight, LayoutGrid, CalendarClock } from 'lucide-react';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
+import ShiftBoard from '@/components/scheduling/ShiftBoard';
 
 
 
@@ -32,6 +33,7 @@ export default function SchedulingPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [view, setView] = useState('grid'); // 'grid' | 'board'
   const [showAdd, setShowAdd] = useState(false);
   const [newShift, setNewShift] = useState({ employee_id: '', date: new Date().toISOString().split('T')[0], start_time: '09:00', end_time: '17:00' });
 
@@ -85,6 +87,78 @@ export default function SchedulingPage() {
     },
   });
 
+  // ── Drag-and-drop board actions (publish immediately) ──────
+  const boardCreateMutation = useMutation({
+    mutationFn: async (data) => {
+      const created = await base44.entities.Shift.create({
+        tenant_id: tenantId,
+        outlet_id: outletId,
+        employee_id: data.employee_id,
+        employee_name: data.employee_name,
+        date: data.date,
+        start_time: data.start_time,
+        end_time: data.end_time,
+        status: 'scheduled',
+        published: true, // immediate publish to worker portal
+      });
+      await auditFrontend({
+        tenant_id: tenantId,
+        outlet_id: outletId,
+        actor_id: user?.id,
+        actor_name: user?.full_name,
+        actor_role: user?.role,
+        action_type: ACTION_TYPES.SHIFT_AMENDED,
+        module: 'scheduling',
+        target_entity: 'Shift',
+        target_record_id: created.id,
+        new_state: created,
+        details: `Shift assigned via drag-and-drop for ${data.employee_name} on ${data.date} (${data.start_time}–${data.end_time}) — published immediately`,
+      });
+      return created;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['outlet-shifts'] }),
+  });
+
+  const boardUpdateMutation = useMutation({
+    mutationFn: async ({ shiftId, patch }) => {
+      const updated = await base44.entities.Shift.update(shiftId, { ...patch, published: true });
+      await auditFrontend({
+        tenant_id: tenantId,
+        outlet_id: outletId,
+        actor_id: user?.id,
+        actor_name: user?.full_name,
+        actor_role: user?.role,
+        action_type: ACTION_TYPES.SHIFT_AMENDED,
+        module: 'scheduling',
+        target_entity: 'Shift',
+        target_record_id: shiftId,
+        new_state: patch,
+        details: `Shift reassigned via drag-and-drop to ${patch.employee_name} on ${patch.date} — published immediately`,
+      });
+      return updated;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['outlet-shifts'] }),
+  });
+
+  const boardDeleteMutation = useMutation({
+    mutationFn: async (shiftId) => {
+      await base44.entities.Shift.delete(shiftId);
+      await auditFrontend({
+        tenant_id: tenantId,
+        outlet_id: outletId,
+        actor_id: user?.id,
+        actor_name: user?.full_name,
+        actor_role: user?.role,
+        action_type: ACTION_TYPES.SHIFT_AMENDED,
+        module: 'scheduling',
+        target_entity: 'Shift',
+        target_record_id: shiftId,
+        details: 'Shift removed via drag-and-drop board',
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['outlet-shifts'] }),
+  });
+
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const shiftsForDay = (day) => shifts.filter(s => isSameDay(new Date(s.date + 'T00:00:00'), day));
 
@@ -114,15 +188,27 @@ export default function SchedulingPage() {
           subtitle={`Week of ${format(weekStart, 'd MMM')} · ${shifts.length} shifts · ${totalPublished} published`}
           actions={
             <div className="flex items-center gap-2">
+              <div className="flex items-center rounded-lg border border-border p-0.5 bg-card">
+                <button
+                  onClick={() => setView('grid')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  Grid
+                </button>
+                <button
+                  onClick={() => setView('board')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === 'board' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  <CalendarClock className="w-3.5 h-3.5" />
+                  Board
+                </button>
+              </div>
               <Button variant="outline" size="sm" asChild className="text-xs gap-1.5">
                 <Link to="/shift-trades">
                   <ArrowLeftRight className="w-3.5 h-3.5" />
                   Trade Requests
                 </Link>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => publishAllMutation.mutate()} disabled={publishAllMutation.isPending} className="text-xs gap-1.5">
-                <CheckSquare className="w-3.5 h-3.5" />
-                Publish All
               </Button>
               <Button size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
                 <Plus className="w-4 h-4" />
@@ -165,6 +251,15 @@ export default function SchedulingPage() {
             action={() => setShowAdd(true)}
             actionLabel="Add Shift"
             color="blue"
+          />
+        ) : view === 'board' ? (
+          <ShiftBoard
+            employees={employees}
+            shifts={shifts}
+            weekDays={weekDays}
+            onCreateShift={(d) => boardCreateMutation.mutate(d)}
+            onUpdateShift={(id, patch) => boardUpdateMutation.mutate({ shiftId: id, patch })}
+            onDeleteShift={(id) => boardDeleteMutation.mutate(id)}
           />
         ) : (
           <>
