@@ -1,0 +1,243 @@
+{
+  "name": "ExpenseRecord",
+  "type": "object",
+  "description": "OrbitanOS Finance Module \u2014 operational expense tracking with receipt attachment and category/department breakdown. Feeds into FinanceSyncQueue for ERP sync. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string",
+      "description": "What the expense was for"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Expense amount in tenant currency"
+    },
+    "currency": {
+      "type": "string",
+      "default": "SGD"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "utilities",
+        "rent",
+        "supplies",
+        "transport",
+        "meals",
+        "maintenance",
+        "marketing",
+        "professional_services",
+        "equipment",
+        "misc"
+      ],
+      "default": "misc",
+      "description": "Expense category for reporting breakdown"
+    },
+    "department": {
+      "type": "string",
+      "description": "Department or cost centre e.g. Kitchen, Front of House, Operations"
+    },
+    "expense_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "receipt_url": {
+      "type": "string",
+      "description": "Uploaded receipt image/PDF"
+    },
+    "vendor": {
+      "type": "string",
+      "description": "Who the expense was paid to"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "reimbursed"
+      ],
+      "default": "pending",
+      "description": "Approval state \u2014 expenses above governance threshold require manager approval"
+    },
+    "approved_by": {
+      "type": "string"
+    },
+    "approved_by_name": {
+      "type": "string"
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rejection_reason": {
+      "type": "string"
+    },
+    "finance_sync_id": {
+      "type": "string",
+      "description": "Linked FinanceSyncQueue entry after ERP sync"
+    },
+    "created_by_id": {
+      "type": "string"
+    },
+    "created_by_name": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "description",
+    "amount",
+    "category",
+    "expense_date"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "worker"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            }
+          ]
+        },
+        {
+          "data.created_by_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "data.created_by_id": "{{user.id}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

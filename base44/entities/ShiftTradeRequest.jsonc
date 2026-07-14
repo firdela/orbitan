@@ -1,0 +1,228 @@
+{
+  "name": "ShiftTradeRequest",
+  "type": "object",
+  "description": "OrbitanOS Workforce Module \u2014 shift trade requests enabling employees to swap shifts with manager approval. All trades are audit-logged before the official schedule is updated. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "shift_id": {
+      "type": "string",
+      "description": "The Shift record being traded"
+    },
+    "shift_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "shift_start_time": {
+      "type": "string"
+    },
+    "shift_end_time": {
+      "type": "string"
+    },
+    "requesting_employee_id": {
+      "type": "string",
+      "description": "Employee requesting the trade"
+    },
+    "requesting_employee_name": {
+      "type": "string"
+    },
+    "target_employee_id": {
+      "type": "string",
+      "description": "Employee who would take the shift"
+    },
+    "target_employee_name": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Why the trade is requested"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "denied",
+        "cancelled",
+        "expired"
+      ],
+      "default": "pending"
+    },
+    "reviewed_by_id": {
+      "type": "string"
+    },
+    "reviewed_by_name": {
+      "type": "string"
+    },
+    "reviewed_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "manager_notes": {
+      "type": "string",
+      "description": "Manager's notes on approval/denial"
+    },
+    "audit_log_id": {
+      "type": "string",
+      "description": "Linked AuditLog entry for the trade event"
+    },
+    "created_date": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "shift_id",
+    "requesting_employee_id",
+    "reason"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "worker"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            }
+          ]
+        },
+        {
+          "data.requesting_employee_id": "{{user.id}}"
+        },
+        {
+          "data.target_employee_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            },
+            {
+              "data.requesting_employee_id": "{{user.id}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -40,6 +40,10 @@ import TasksPage from '@/pages/outlet/TasksPage';
 import WorkforcePage from '@/pages/outlet/WorkforcePage';
 import CompliancePage from '@/pages/outlet/CompliancePage';
 import ReportsPage from '@/pages/outlet/ReportsPage';
+import ExpensePage from '@/pages/outlet/ExpensePage';
+import ShiftTradesPage from '@/pages/outlet/ShiftTradesPage';
+import ClientsPage from '@/pages/outlet/ClientsPage';
+import SustainabilityPage from '@/pages/outlet/SustainabilityPage';
 import FeedbackCentre from '@/pages/FeedbackCentre';
 import AccessRequests from '@/pages/workspace/AccessRequests';
 import NotificationsPage from '@/pages/Notifications';
@@ -125,6 +129,10 @@ const AuthenticatedApp = () => {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="feedback" element={<FeedbackCentre />} />
         <Route path="access-requests" element={<AccessRequests />} />
+        <Route path="expenses" element={<ExpensePage />} />
+        <Route path="shift-trades" element={<ShiftTradesPage />} />
+        <Route path="clients" element={<ClientsPage />} />
+        <Route path="sustainability" element={<SustainabilityPage />} />
       </Route>
 
       {/* Self-Serve Business Installation Wizard — Create Organisation */}
@@ -151,6 +159,16 @@ const AuthenticatedApp = () => {
       <Route path="/outlet/compliance" element={<CompliancePage />} />
       <Route path="/outlet/reports" element={<ReportsPage />} />
       <Route path="/outlet/feedback" element={<FeedbackCentre />} />
+
+      {/* Operational Modules — Expenses, Shift Trades, Clients, Sustainability */}
+      <Route path="/expenses" element={<ExpensePage />} />
+      <Route path="/outlet/expenses" element={<ExpensePage />} />
+      <Route path="/shift-trades" element={<ShiftTradesPage />} />
+      <Route path="/outlet/shift-trades" element={<ShiftTradesPage />} />
+      <Route path="/clients" element={<ClientsPage />} />
+      <Route path="/outlet/clients" element={<ClientsPage />} />
+      <Route path="/sustainability-impact" element={<SustainabilityPage />} />
+      <Route path="/outlet/sustainability" element={<SustainabilityPage />} />
 
       {/* Governance & Knowledge */}
       <Route path="/governance-log" element={<GovernanceLog />} />

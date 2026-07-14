@@ -19,8 +19,12 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import QuickStockDialog from '@/components/inventory/QuickStockDialog';
+import ReconciliationDialog from '@/components/inventory/ReconciliationDialog';
+import ForecastingPanel from '@/components/inventory/ForecastingPanel';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
 import { useAuth } from '@/lib/AuthContext';
+import { TrendingUp, ClipboardCheck } from 'lucide-react';
 
 
 
@@ -35,6 +39,9 @@ export default function InventoryPage() {
   const [newItem, setNewItem] = useState({ name: '', category: '', unit: '', current_stock: '', par_level: '', cost_per_unit: '' });
   const [adjustItem, setAdjustItem] = useState(null);
   const [showAdjust, setShowAdjust] = useState(false);
+  const [reconcileItem, setReconcileItem] = useState(null);
+  const [showReconcile, setShowReconcile] = useState(false);
+  const [activeTab, setActiveTab] = useState('items');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -136,6 +143,53 @@ export default function InventoryPage() {
             </Button>
           }
         />
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList>
+            <TabsTrigger value="items" className="gap-1.5"><Package className="w-3.5 h-3.5" /> Items</TabsTrigger>
+            <TabsTrigger value="reconcile" className="gap-1.5"><ClipboardCheck className="w-3.5 h-3.5" /> Reconciliation</TabsTrigger>
+            <TabsTrigger value="forecast" className="gap-1.5"><TrendingUp className="w-3.5 h-3.5" /> Forecasting</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="reconcile" className="mt-4">
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h3 className="font-heading font-semibold text-sm mb-2">Stock Reconciliation</h3>
+              <p className="text-xs text-muted-foreground mb-4">Count physical stock and log discrepancies to the audit trail for SOC 2 traceability.</p>
+              {items.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">No inventory items to reconcile.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {items.map(item => {
+                    const isLow = item.par_level && item.current_stock < item.par_level;
+                    return (
+                      <div key={item.id} className="border border-border rounded-lg p-3 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isLow ? 'bg-orbitan-amber-light' : 'bg-orbitan-blue-light'}`}>
+                            <Package className={`w-4 h-4 ${isLow ? 'text-orbitan-amber' : 'text-orbitan-blue'}`} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{item.name}</p>
+                            <p className="text-xs text-muted-foreground">{item.current_stock} {item.unit} in system</p>
+                          </div>
+                        </div>
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => { setReconcileItem(item); setShowReconcile(true); }}>
+                          Count
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="forecast" className="mt-4">
+            <ForecastingPanel />
+          </TabsContent>
+        </Tabs>
+
+        {activeTab === 'items' && (
+        <>
 
         {/* KPI Stats */}
         {!loading && items.length > 0 && (
@@ -276,6 +330,10 @@ export default function InventoryPage() {
                               <Package className="w-4 h-4 mr-2" />
                               Adjust Stock
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setReconcileItem(item); setShowReconcile(true); }}>
+                              <ClipboardCheck className="w-4 h-4 mr-2" />
+                              Reconcile
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -291,6 +349,8 @@ export default function InventoryPage() {
             )}
           </div>
         </div>
+        </>
+        )}
         </>
         )}
       </div>
@@ -335,6 +395,18 @@ export default function InventoryPage() {
         onOpenChange={setShowAdjust}
         item={adjustItem}
         onSave={handleStockAdjust}
+      />
+
+      {/* Reconciliation Dialog */}
+      <ReconciliationDialog
+        open={showReconcile}
+        onOpenChange={setShowReconcile}
+        item={reconcileItem}
+        onReconciled={(itemId, newStock, flagged) => {
+          if (!flagged) {
+            setItems(prev => prev.map(i => i.id === itemId ? { ...i, current_stock: newStock } : i));
+          }
+        }}
       />
     </>
   );

@@ -1,0 +1,218 @@
+{
+  "name": "StockCount",
+  "type": "object",
+  "description": "OrbitanOS Inventory Module \u2014 stock reconciliation records. Staff input actual counted stock; discrepancies are automatically logged to AuditLog for SOC 2 traceability. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "inventory_item_id": {
+      "type": "string"
+    },
+    "inventory_item_name": {
+      "type": "string"
+    },
+    "unit": {
+      "type": "string"
+    },
+    "system_stock": {
+      "type": "number",
+      "description": "Stock level in the system before count"
+    },
+    "counted_stock": {
+      "type": "number",
+      "description": "Actual physical count"
+    },
+    "discrepancy": {
+      "type": "number",
+      "description": "counted_stock - system_stock (negative = shrinkage)"
+    },
+    "discrepancy_pct": {
+      "type": "number",
+      "description": "Discrepancy as percentage of system stock"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Staff explanation for the discrepancy"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "counted",
+        "reviewed",
+        "adjusted",
+        "flagged"
+      ],
+      "default": "counted",
+      "description": "counted = initial entry, reviewed = manager checked, adjusted = stock updated, flagged = significant shrinkage requiring investigation"
+    },
+    "counted_by_id": {
+      "type": "string"
+    },
+    "counted_by_name": {
+      "type": "string"
+    },
+    "counted_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "audit_log_id": {
+      "type": "string",
+      "description": "Linked AuditLog entry for the discrepancy event"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "inventory_item_id",
+    "system_stock",
+    "counted_stock"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "worker"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "worker"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -38,6 +38,20 @@ const STATUS_CONFIG = {
   not_synced: { label: 'Not Synced', classes: 'bg-muted text-muted-foreground border-border' },
   synced: { label: 'Synced', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
   error: { label: 'Sync Error', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
+  // Shift Trades
+  denied: { label: 'Denied', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
+  cancelled: { label: 'Cancelled', classes: 'bg-muted text-muted-foreground border-border' },
+  expired: { label: 'Expired', classes: 'bg-muted text-muted-foreground border-border' },
+  // Expenses
+  reimbursed: { label: 'Reimbursed', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
+  // Stock Count
+  counted: { label: 'Counted', classes: 'bg-orbitan-blue-light text-orbitan-blue border-blue-100' },
+  reviewed: { label: 'Reviewed', classes: 'bg-orbitan-purple-light text-orbitan-purple border-purple-100' },
+  adjusted: { label: 'Adjusted', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
+  flagged: { label: 'Flagged', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
+  // Client
+  prospective: { label: 'Prospective', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
+  archived: { label: 'Archived', classes: 'bg-muted text-muted-foreground border-border' },
 };
 
 export default function StatusBadge({ status, label, size = 'sm' }) {

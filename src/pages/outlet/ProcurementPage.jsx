@@ -183,6 +183,10 @@ export default function ProcurementPage() {
     }
   };
 
+  const isApprover = ['admin', 'tenant_admin', 'outlet_manager'].includes(user?.role);
+  const pendingApprovalCount = pos.filter(p => p.status === 'pending_approval').length;
+  const totalPendingValue = pos.filter(p => p.status === 'pending_approval').reduce((s, p) => s + (p.total_amount || 0), 0);
+
   return (
     <>
       <GovernanceOverrideModal
@@ -194,7 +198,7 @@ export default function ProcurementPage() {
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
         <PageHeader
           title="Purchase Orders"
-          subtitle={`${pos.length} orders · ${pos.filter(p => p.status === 'pending_approval').length} pending approval`}
+          subtitle={`${pos.length} orders · ${pendingApprovalCount} pending approval${pendingApprovalCount > 0 ? ` · S$${totalPendingValue.toFixed(2)} awaiting review` : ''}`}
           actions={
             <Button size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
               <Plus className="w-4 h-4" />

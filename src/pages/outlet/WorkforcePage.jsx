@@ -10,10 +10,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AccessRequestQueue from '@/components/workforce/AccessRequestQueue';
 import InvitationPanel from '@/components/workforce/InvitationPanel';
+import PerformanceHeatmap from '@/components/reporting/PerformanceHeatmap';
 import {
   Users, Search, Home, Package, ShoppingCart, FileText,
   Calendar, CheckSquare, BarChart2, Shield, Layers, Building2,
-  Mail, Briefcase, UserCheck, Clock, UserPlus, UserCog
+  Mail, Briefcase, UserCheck, Clock, UserPlus, UserCog, Activity
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -94,6 +95,9 @@ export default function WorkforcePage() {
             <TabsTrigger value="invitations" className="gap-1.5">
               <UserPlus className="w-3.5 h-3.5" /> Invitations
             </TabsTrigger>
+            <TabsTrigger value="punctuality" className="gap-1.5">
+              <Activity className="w-3.5 h-3.5" /> Punctuality & Performance
+            </TabsTrigger>
           </TabsList>
 
           {/* Directory tab */}
@@ -160,6 +164,17 @@ export default function WorkforcePage() {
           {/* Invitations tab */}
           <TabsContent value="invitations">
             <InvitationPanel tenantId={tenantId} />
+          </TabsContent>
+
+          {/* Punctuality & Performance tab */}
+          <TabsContent value="punctuality">
+            <div className="bg-card border border-border rounded-xl p-5">
+              <h3 className="font-heading font-semibold text-sm mb-2">Punctuality & Task Performance</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Tracks employee clock-in punctuality and task completion rates. Performance scores are computed from ClockRecord late minutes and Task completion data.
+              </p>
+              <PerformanceHeatmap />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

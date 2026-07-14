@@ -84,6 +84,22 @@ export const ACTION_TYPES = {
   PRICE_ADJUSTED:       'price_adjusted',
   ITEM_SOLD:            'item_sold',
 
+  // Inventory Reconciliation
+  STOCK_RECONCILED:     'stock_reconciled',
+  STOCK_DISCREPANCY:    'stock_discrepancy',
+
+  // Shift Trades
+  SHIFT_TRADE_REQUESTED: 'shift_trade_requested',
+  SHIFT_TRADE_APPROVED:  'shift_trade_approved',
+  SHIFT_TRADE_DENIED:    'shift_trade_denied',
+  SHIFT_CHANGE_REQUESTED: 'shift_change_requested',
+  SHIFT_CHANGE_APPROVED:  'shift_change_approved',
+
+  // Expenses
+  EXPENSE_LOGGED:       'expense_logged',
+  EXPENSE_APPROVED:     'expense_approved',
+  EXPENSE_REJECTED:     'expense_rejected',
+
   // System
   USER_INVITED:         'user_invited',
   ROLE_CHANGED:         'role_changed',

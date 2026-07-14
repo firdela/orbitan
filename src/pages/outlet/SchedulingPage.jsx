@@ -16,6 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Link } from 'react-router-dom';
+import { ArrowLeftRight } from 'lucide-react';
+import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
 
 
 
@@ -46,7 +49,23 @@ export default function SchedulingPage() {
   });
 
   const createShiftMutation = useMutation({
-    mutationFn: (data) => base44.entities.Shift.create(data),
+    mutationFn: async (data) => {
+      const created = await base44.entities.Shift.create(data);
+      await auditFrontend({
+        tenant_id: tenantId,
+        outlet_id: outletId,
+        actor_id: user?.id,
+        actor_name: user?.full_name,
+        actor_role: user?.role,
+        action_type: ACTION_TYPES.SHIFT_AMENDED,
+        module: 'scheduling',
+        target_entity: 'Shift',
+        target_record_id: created.id,
+        new_state: data,
+        details: `Shift created for ${data.employee_name} on ${data.date} (${data.start_time}–${data.end_time})`,
+      });
+      return created;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['outlet-shifts'] });
       setShowAdd(false);
@@ -95,6 +114,12 @@ export default function SchedulingPage() {
           subtitle={`Week of ${format(weekStart, 'd MMM')} · ${shifts.length} shifts · ${totalPublished} published`}
           actions={
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild className="text-xs gap-1.5">
+                <Link to="/shift-trades">
+                  <ArrowLeftRight className="w-3.5 h-3.5" />
+                  Trade Requests
+                </Link>
+              </Button>
               <Button variant="outline" size="sm" onClick={() => publishAllMutation.mutate()} disabled={publishAllMutation.isPending} className="text-xs gap-1.5">
                 <CheckSquare className="w-3.5 h-3.5" />
                 Publish All

@@ -5,9 +5,10 @@ import PageHeader from '@/components/shared/PageHeader';
 import StatCard from '@/components/shared/StatCard';
 import EmptyState from '@/components/shared/EmptyState';
 import {
-  BarChart2, TrendingUp, DollarSign, Package, CheckCircle2, Loader2,
+  BarChart2, TrendingUp, DollarSign, Package, CheckCircle2, Loader2, Activity,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import PerformanceHeatmap from '@/components/reporting/PerformanceHeatmap';
 
 
 
@@ -97,6 +98,16 @@ export default function ReportsPage() {
                 />
               </div>
             )}
+
+            {/* Worker Performance Heatmap */}
+            <div className="bg-card border border-border rounded-xl p-5 mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Activity className="w-4 h-4 text-orbitan-blue" />
+                <h3 className="font-heading font-semibold text-sm">Worker Performance Heatmap</h3>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">Punctuality and task completion rates across all staff. Scores are computed from clock-in records and task data.</p>
+              <PerformanceHeatmap />
+            </div>
 
             {/* Summary table — only when real data exists */}
             {reconciliations.length > 0 && (
