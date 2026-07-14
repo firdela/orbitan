@@ -11,12 +11,15 @@ Deno.serve(async (req) => {
     const tenants = await base44.asServiceRole.entities.Tenant.filter({});
     const outlets = await base44.asServiceRole.entities.Outlet.filter({});
 
-    // Build a tenant lookup map — exclude test/internal tenants
+    // Build a tenant lookup map — exclude sandbox/test tenants from public discovery.
+    // Uses the is_sandbox flag (authoritative) with a name-based regex as a safety net
+    // for tenants provisioned before the flag was introduced.
     const tenantMap = {};
     const testTenantIds = new Set();
     tenants.forEach(t => {
-      const isTest = t.name && /test\s*lab|shadow|internal|demo/i.test(t.name);
-      if (isTest) {
+      const isSandbox = t.is_sandbox === true;
+      const isTestName = t.name && /test\s*lab|shadow|internal|demo/i.test(t.name);
+      if (isSandbox || isTestName) {
         testTenantIds.add(t.id);
       } else {
         // Include both active and onboarding tenants for pilot discovery

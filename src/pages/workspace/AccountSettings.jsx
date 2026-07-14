@@ -11,10 +11,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
 import {
   ArrowLeft, Mail, Shield, Building2, Wallet, ScrollText,
-  Plug, Lock, Save, Loader2, Bell, UserCog, KeyRound, Monitor,
+  Plug, Lock, Save, Loader2, Bell, UserCog, KeyRound, Monitor, Globe,
 } from 'lucide-react';
 import { LOGO_ASSETS } from '@/lib/orbitan-identity';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
+import ProfilePhotoUploader from '@/components/profile/ProfilePhotoUploader';
+import OrgRoleCard from '@/components/profile/OrgRoleCard';
+import RecentActivityFeed from '@/components/profile/RecentActivityFeed';
+import PreferencesSection from '@/components/profile/PreferencesSection';
 
 const NOTIFICATION_DEFAULTS = {
   notif_operational: true,
@@ -129,11 +133,7 @@ export default function AccountSettings() {
 
           {/* Avatar + Identity */}
           <div className="flex items-center gap-4 mb-6">
-            <Avatar className="w-16 h-16 border-2 border-border">
-              <AvatarFallback className="bg-primary text-primary-foreground text-xl font-bold">
-                {initial}
-              </AvatarFallback>
-            </Avatar>
+            <ProfilePhotoUploader size="md" />
             <div className="flex-1 min-w-0">
               <p className="text-lg font-display font-bold truncate">{displayName}</p>
               <p className="text-sm text-muted-foreground flex items-center gap-1.5 truncate">
@@ -232,21 +232,31 @@ export default function AccountSettings() {
           )}
         </section>
 
-        {/* ── Organization Section ── */}
+        {/* ── Organization, Role & Wallet ── */}
         <section className="bg-card rounded-xl border border-border p-6">
           <div className="flex items-center gap-2 mb-5">
             <Building2 className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Organization</h2>
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Organization & Wallet</h2>
           </div>
-          <Link to="/request-access" className="flex items-center gap-3 p-3 -mx-3 rounded-lg hover:bg-accent transition-colors">
-            <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-              <Building2 className="w-5 h-5 text-foreground" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">Switch Organization</p>
-              <p className="text-xs text-muted-foreground">Request access to another workspace</p>
-            </div>
-          </Link>
+          <OrgRoleCard />
+        </section>
+
+        {/* ── Recent Activity ── */}
+        <section className="bg-card rounded-xl border border-border p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <ScrollText className="w-4 h-4 text-muted-foreground" />
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Activity</h2>
+          </div>
+          <RecentActivityFeed limit={8} />
+        </section>
+
+        {/* ── Language & Accessibility ── */}
+        <section className="bg-card rounded-xl border border-border p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Globe className="w-4 h-4 text-muted-foreground" />
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Language & Accessibility</h2>
+          </div>
+          <PreferencesSection />
         </section>
 
         {/* ── Platform Console (admin only) ── */}

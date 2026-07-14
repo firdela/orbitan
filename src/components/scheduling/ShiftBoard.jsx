@@ -12,7 +12,7 @@
 
 import React, { useState } from 'react';
 import { format, isSameDay } from 'date-fns';
-import { X, Clock, Users, GripVertical, AlertCircle } from 'lucide-react';
+import { X, Clock, Users, GripVertical, AlertCircle, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SHIFT_TEMPLATES = [
@@ -63,6 +63,22 @@ export default function ShiftBoard({
     shifts.filter(
       (s) => s.employee_id === empId && isSameDay(new Date(s.date + 'T00:00:00'), day)
     );
+
+  // ── Conflict detection: time overlap between shifts on the same day ──
+  const timeToMin = (t) => {
+    const [h, m] = (t || '00:00').split(':').map(Number);
+    return h * 60 + m;
+  };
+  const hasOverlap = (cellShifts) => {
+    if (cellShifts.length < 2) return false;
+    const ranges = cellShifts
+      .map((s) => ({ start: timeToMin(s.start_time), end: timeToMin(s.end_time) }))
+      .sort((a, b) => a.start - b.start);
+    for (let i = 1; i < ranges.length; i++) {
+      if (ranges[i].start < ranges[i - 1].end) return true;
+    }
+    return false;
+  };
 
   // ── Drag handlers ─────────────────────────────────────────
   const handleDragStart = (e, payload) => {
@@ -203,6 +219,11 @@ export default function ShiftBoard({
                               isOver && 'bg-orbitan-blue-light/60 ring-1 ring-inset ring-orbitan-blue'
                             )}
                           >
+                            {hasOverlap(cellShifts) && (
+                              <div className="flex items-center gap-1 text-[9px] font-semibold text-orbitan-red bg-orbitan-red-light px-1.5 py-0.5 rounded">
+                                <AlertTriangle className="w-2.5 h-2.5" /> Overlap
+                              </div>
+                            )}
                             {cellShifts.map((shift, si) => (
                               <div
                                 key={shift.id}
