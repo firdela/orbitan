@@ -40,6 +40,8 @@ const FALLBACK_NAV = [
   { id: 'reports', label: 'Reports', icon: 'BarChart2', route: '/reports', module_key: 'reporting', isLocked: false },
   { id: 'compliance', label: 'Compliance', icon: 'Shield', route: '/compliance', module_key: 'compliance', isLocked: false },
   { id: 'sustainability', label: 'Sustainability', icon: 'Leaf', route: '/sustainability', module_key: 'sustainability', isLocked: false },
+  { type: 'section', label: 'Settings' },
+  { id: 'facility-settings', label: 'Facility Settings', icon: 'Settings', route: '/facility-settings', module_key: 'facility_settings', isLocked: false },
   { type: 'section', label: 'Product' },
   { id: 'feedback', label: 'Feedback Centre', icon: 'MessageSquare', route: '/feedback', module_key: 'feedback', isLocked: false },
 ];
@@ -126,6 +128,7 @@ const STANDARD_WORKSPACE_MODULES = [
   { section: 'Operations', id: 'clients', label: 'Clients', icon: 'Store', routeSuffix: '/clients', moduleKey: 'clients' },
   { section: 'Insights & Compliance', id: 'sustainability', label: 'Sustainability', icon: 'Leaf', routeSuffix: '/sustainability', moduleKey: 'sustainability' },
   { section: 'Staffing', id: 'shift-trades', label: 'Shift Trades', icon: 'ArrowLeftRight', routeSuffix: '/shift-trades', moduleKey: 'shift_trades' },
+  { section: 'Settings', id: 'facility-settings', label: 'Facility Settings', icon: 'Settings', routeSuffix: '/facility-settings', moduleKey: 'facility_settings' },
 ];
 
 function appendMissingStandardModules(result, tenantId, allowedModules, allUnlocked) {

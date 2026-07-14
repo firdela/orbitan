@@ -44,6 +44,7 @@ import ExpensePage from '@/pages/outlet/ExpensePage';
 import ShiftTradesPage from '@/pages/outlet/ShiftTradesPage';
 import ClientsPage from '@/pages/outlet/ClientsPage';
 import SustainabilityPage from '@/pages/outlet/SustainabilityPage';
+import FacilitySettings from '@/pages/outlet/FacilitySettings';
 import FeedbackCentre from '@/pages/FeedbackCentre';
 import AccessRequests from '@/pages/workspace/AccessRequests';
 import NotificationsPage from '@/pages/Notifications';
@@ -134,6 +135,7 @@ const AuthenticatedApp = () => {
         <Route path="shift-trades" element={<ShiftTradesPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="sustainability" element={<SustainabilityPage />} />
+        <Route path="facility-settings" element={<FacilitySettings />} />
         <Route path="artifacts" element={<ArtifactRegistry />} />
       </Route>
 
