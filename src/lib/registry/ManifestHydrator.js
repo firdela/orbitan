@@ -85,7 +85,7 @@ export async function hydrateManifest(tenantId, tenant) {
 
     const hiddenModules = tenant.hidden_modules || [];
     const navigation = filterHiddenModules(
-      buildManifestNav(manifest, tenantId, allowedModules, isEnterprise),
+      buildManifestNav(manifest, tenantId, tenant, allowedModules, isEnterprise),
       hiddenModules
     );
 
@@ -117,10 +117,50 @@ function filterHiddenModules(navItems, hiddenModules) {
   });
 }
 
+// ── Standard workspace modules guaranteed in every nav ─────
+// Ensures operational tools are always one click away, even if
+// a PlatformManifest DB record doesn't explicitly list them.
+const STANDARD_WORKSPACE_MODULES = [
+  { section: 'Operations', id: 'expenses', label: 'Expenses', icon: 'Receipt', routeSuffix: '/expenses', moduleKey: 'expenses' },
+  { section: 'Operations', id: 'clients', label: 'Clients', icon: 'Store', routeSuffix: '/clients', moduleKey: 'clients' },
+  { section: 'Operations', id: 'sustainability', label: 'Sustainability', icon: 'Leaf', routeSuffix: '/sustainability', moduleKey: 'sustainability' },
+  { section: 'Team', id: 'shift-trades', label: 'Shift Trades', icon: 'ArrowLeftRight', routeSuffix: '/shift-trades', moduleKey: 'shift_trades' },
+];
+
+function appendMissingStandardModules(result, tenantId, allowedModules, allUnlocked) {
+  const existingKeys = new Set(result.filter(i => i.module_key).map(i => i.module_key));
+  const missing = STANDARD_WORKSPACE_MODULES.filter(m => !existingKeys.has(m.moduleKey));
+  if (missing.length === 0) return;
+
+  const grouped = {};
+  for (const m of missing) {
+    (grouped[m.section] ||= []).push(m);
+  }
+
+  for (const [sectionLabel, modules] of Object.entries(grouped)) {
+    result.push({ type: 'section', label: sectionLabel });
+    for (const m of modules) {
+      const isLocked = !allUnlocked && !allowedModules.includes(m.moduleKey);
+      result.push({
+        id: m.id,
+        label: m.label,
+        icon: m.icon,
+        route: `/workspace/${tenantId}${m.routeSuffix}`,
+        module_key: m.moduleKey,
+        isLocked,
+      });
+    }
+  }
+}
+
 // ── Build navigation from a PlatformManifest record ─────────
-function buildManifestNav(manifest, tenantId, allowedModules, isEnterprise) {
+function buildManifestNav(manifest, tenantId, tenant, allowedModules, isEnterprise) {
   const navTree = manifest.ui_config?.navigation_blueprint || [];
   const result = [];
+
+  // Pilot tenants bypass subscription gating during pilot phase
+  const isPilot = tenant?.is_pilot_tenant === true;
+  const allUnlocked = isEnterprise || isPilot;
 
   for (const section of navTree) {
     // Section header
@@ -131,7 +171,7 @@ function buildManifestNav(manifest, tenantId, allowedModules, isEnterprise) {
       const route = (item.route || '').replace(':tenantId', tenantId);
       // Skip items with no route — they would render as dead links
       if (!route) continue;
-      const isLocked = !isEnterprise && !allowedModules.includes(item.id);
+      const isLocked = !allUnlocked && !allowedModules.includes(item.id);
 
       result.push({
         id: item.id,
@@ -143,6 +183,9 @@ function buildManifestNav(manifest, tenantId, allowedModules, isEnterprise) {
       });
     }
   }
+
+  // Ensure all standard workspace modules are accessible (one-click guarantee)
+  appendMissingStandardModules(result, tenantId, allowedModules, allUnlocked);
 
   // Append the Feedback Centre link (always visible — pilot-critical)
   result.push({ type: 'section', label: 'Product' });
