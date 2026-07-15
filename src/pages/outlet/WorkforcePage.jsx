@@ -67,14 +67,23 @@ export default function WorkforcePage() {
         <PageHeader
           title="Workforce Control Room"
           subtitle={`${employees.length} members · ${active} active`}
+          help={{
+            title: 'Workforce Control Room',
+            content: 'Your central hub for managing staff, onboarding new team members, and monitoring attendance and performance across this outlet.',
+            tips: [
+              'Use Invitations to onboard staff — they receive a join link by email.',
+              'Access Requests appear when existing users request to join your organisation.',
+              'Click any team member card to view their profile and employment details.',
+            ],
+          }}
         />
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard title="Total Staff" value={employees.length} icon={Users} color="blue" />
-          <StatCard title="Active" value={active} icon={UserCheck} color="green" />
-          <StatCard title="On Leave" value={onLeave} icon={Clock} color="amber" />
-          <StatCard title="Pending Requests" value={pendingRequests.length} icon={UserCog} color="purple" />
+          <StatCard title="Total Staff" value={employees.length} icon={Users} color="blue" help={{ content: 'Every employee record in this organisation, including active, on-leave, and inactive staff.' }} />
+          <StatCard title="Active" value={active} icon={UserCheck} color="green" help={{ content: 'Staff currently available for shifts and tasks. Inactive or terminated employees are excluded.' }} />
+          <StatCard title="On Leave" value={onLeave} icon={Clock} color="amber" help={{ content: 'Staff with an "on_leave" status — they cannot be assigned new shifts until their status returns to active.' }} />
+          <StatCard title="Pending Requests" value={pendingRequests.length} icon={UserCog} color="purple" help={{ content: 'Users who have requested access to your organisation and are awaiting your approval in the Access Requests tab.' }} />
         </div>
 
         {/* Tabs */}

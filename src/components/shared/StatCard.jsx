@@ -1,8 +1,9 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import ContextualHelp from '@/components/shared/ContextualHelp';
 
-export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue', trend, trendValue, className }) {
+export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue', trend, trendValue, className, help }) {
   const colors = {
     blue: { bg: 'bg-orbitan-blue-light', icon: 'text-orbitan-blue', border: 'border-blue-100' },
     green: { bg: 'bg-orbitan-green-light', icon: 'text-orbitan-green', border: 'border-green-100' },
@@ -33,7 +34,10 @@ export default function StatCard({ title, value, subtitle, icon: Icon, color = '
         )}
       </div>
       <p className="text-2xl font-heading font-bold text-foreground mb-0.5">{value ?? '—'}</p>
-      <p className="text-sm font-medium text-foreground/80">{title}</p>
+      <div className="flex items-center gap-1">
+        <p className="text-sm font-medium text-foreground/80">{title}</p>
+        {help && <ContextualHelp {...(typeof help === 'string' ? { content: help } : help)} />}
+      </div>
       {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
     </div>
   );
