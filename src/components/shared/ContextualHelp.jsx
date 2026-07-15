@@ -34,6 +34,7 @@ export default function ContextualHelp({
         <button
           type="button"
           aria-label={title ? `More info: ${title}` : 'More information'}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
           className={cn(
             'inline-flex items-center justify-center rounded-full text-muted-foreground/70 hover:text-primary hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 transition-colors w-5 h-5 shrink-0',
             className

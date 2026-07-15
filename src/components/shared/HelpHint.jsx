@@ -21,6 +21,7 @@ export default function HelpHint({ text, side = 'top', align = 'center', classNa
         <button
           type="button"
           aria-label="More information"
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
           className={cn(
             'inline-flex items-center justify-center text-muted-foreground/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full transition-colors align-middle',
             className

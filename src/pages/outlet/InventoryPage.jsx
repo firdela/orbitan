@@ -136,6 +136,15 @@ export default function InventoryPage() {
         <PageHeader
           title="Inventory"
           subtitle={`${items.length} items · ${lowStock.length} below par level`}
+          help={{
+            title: 'Inventory',
+            content: 'Track every ingredient and supply item in your outlet — current stock, par (minimum) levels, unit cost, and total stock value.',
+            tips: [
+              'Set a par level on each item to get low-stock alerts.',
+              'Use Reconciliation to log physical counts — discrepancies are audit-logged.',
+              'Forecasting predicts when items will hit par level based on usage.',
+            ],
+          }}
           actions={
             <Button size="sm" className="gap-1.5" onClick={() => { setFormMode('add'); setShowForm(true); }}>
               <Plus className="w-4 h-4" />
@@ -194,10 +203,10 @@ export default function InventoryPage() {
         {/* KPI Stats */}
         {!loading && items.length > 0 && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            <StatCard title="Total Items" value={items.length} subtitle="In catalog" icon={Boxes} color="blue" />
-            <StatCard title="Low Stock" value={lowStock.length} subtitle="Below par level" icon={AlertTriangle} color={lowStock.length > 0 ? 'amber' : 'green'} />
-            <StatCard title="Categories" value={categories.length} subtitle="Item groupings" icon={Tags} color="purple" />
-            <StatCard title="Stock Value" value={`S$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} subtitle="Total inventory cost" icon={DollarSign} color="green" />
+            <StatCard title="Total Items" value={items.length} subtitle="In catalog" icon={Boxes} color="blue" help={{ content: 'Every active inventory item recorded for this outlet, including ingredients and supplies.' }} />
+            <StatCard title="Low Stock" value={lowStock.length} subtitle="Below par level" icon={AlertTriangle} color={lowStock.length > 0 ? 'amber' : 'green'} help={lowStock.length > 0 ? { content: 'Items at or below their par level. Click to view only these items and raise purchase orders.', tips: ['Raise a purchase order from the Procurement module to replenish.'] } : { content: 'No items are below par level — your stock is healthy.' }} onClick={lowStock.length > 0 ? () => { setActiveTab('items'); setFilterLow(true); } : undefined} />
+            <StatCard title="Categories" value={categories.length} subtitle="Item groupings" icon={Tags} color="purple" help={{ content: 'Distinct categories you have assigned to items (e.g. Proteins, Produce, Dry Goods).' }} />
+            <StatCard title="Stock Value" value={`S$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} subtitle="Total inventory cost" icon={DollarSign} color="green" help={{ content: 'Sum of (current stock × cost per unit) across all items — the capital currently tied up in inventory.' }} />
           </div>
         )}
 

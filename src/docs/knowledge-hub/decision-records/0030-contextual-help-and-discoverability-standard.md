@@ -72,6 +72,17 @@ The Golden Standard requires every interaction to work across mobile, tablet, an
 - ✅ `StatCard`/`PageHeader` remain unchanged when `help` is omitted.
 - ✅ First integration: Workforce Control Room page (`WorkforcePage.jsx`) — page header + four KPI cards carry structured contextual help.
 
+## Interactive Drill-Down (Update — 2026-07-16)
+
+The Golden Standard also requires dashboard widgets to be **clickable for drill-down** into the relevant records, reports, or workflows. To satisfy this alongside contextual help:
+
+- `StatCard` now accepts an optional `to` (route) or `onClick` (handler) prop.
+- When interactive, the card renders with `role="button"`, `tabIndex={0}`, Enter/Space keyboard activation, and visible hover/focus states (ring + border tint) — fully accessible without nested-link HTML.
+- The `ContextualHelp` and `HelpHint` triggers call `e.stopPropagation()` + `e.preventDefault()` so clicking the info icon inside a clickable card opens help **without** triggering the card's navigation.
+- This avoids invalid nested interactive elements (a button inside a link) while preserving both behaviours.
+
+**First integrations:** Inventory (Low Stock card → filters to low-stock items), Workforce (Pending Requests card → jumps to access requests queue).
+
 ## Scalability Check
 
 > *Will this still work when Orbit serves thousands of organisations, millions of users, multiple industries, and operates globally?*

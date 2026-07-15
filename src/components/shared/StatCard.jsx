@@ -1,9 +1,11 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import ContextualHelp from '@/components/shared/ContextualHelp';
 
-export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue', trend, trendValue, className, help }) {
+export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue', trend, trendValue, className, help, to, onClick }) {
+  const navigate = useNavigate();
   const colors = {
     blue: { bg: 'bg-orbitan-blue-light', icon: 'text-orbitan-blue', border: 'border-blue-100' },
     green: { bg: 'bg-orbitan-green-light', icon: 'text-orbitan-green', border: 'border-green-100' },
@@ -17,11 +19,31 @@ export default function StatCard({ title, value, subtitle, icon: Icon, color = '
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
   const trendColor = trend === 'up' ? 'text-orbitan-green' : trend === 'down' ? 'text-orbitan-red' : 'text-muted-foreground';
 
+  const isInteractive = !!(to || onClick);
+  const handleClick = isInteractive ? (e) => {
+    if (onClick) onClick(e);
+    if (to) navigate(to);
+  } : undefined;
+  const handleKeyDown = isInteractive ? (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleClick(e);
+    }
+  } : undefined;
+
   return (
-    <div className={cn(
-      "bg-card border border-border rounded-xl p-5 hover:shadow-md transition-shadow duration-200",
-      className
-    )}>
+    <div
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      aria-label={isInteractive ? `${title} — view details` : undefined}
+      className={cn(
+        "bg-card border border-border rounded-xl p-5 transition-shadow duration-200",
+        isInteractive && "cursor-pointer hover:shadow-md hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        className
+      )}
+    >
       <div className="flex items-start justify-between mb-4">
         <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", c.bg)}>
           {Icon && <Icon className={cn("w-5 h-5", c.icon)} />}

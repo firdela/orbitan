@@ -83,7 +83,7 @@ export default function WorkforcePage() {
           <StatCard title="Total Staff" value={employees.length} icon={Users} color="blue" help={{ content: 'Every employee record in this organisation, including active, on-leave, and inactive staff.' }} />
           <StatCard title="Active" value={active} icon={UserCheck} color="green" help={{ content: 'Staff currently available for shifts and tasks. Inactive or terminated employees are excluded.' }} />
           <StatCard title="On Leave" value={onLeave} icon={Clock} color="amber" help={{ content: 'Staff with an "on_leave" status — they cannot be assigned new shifts until their status returns to active.' }} />
-          <StatCard title="Pending Requests" value={pendingRequests.length} icon={UserCog} color="purple" help={{ content: 'Users who have requested access to your organisation and are awaiting your approval in the Access Requests tab.' }} />
+          <StatCard title="Pending Requests" value={pendingRequests.length} icon={UserCog} color="purple" help={{ content: 'Users who have requested access to your organisation and are awaiting your approval in the Access Requests tab.' }} onClick={() => setActiveTab('requests')} />
         </div>
 
         {/* Tabs */}
