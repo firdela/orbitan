@@ -1,7 +1,7 @@
 {
   "name": "Recipe",
   "type": "object",
-  "description": "Bill of Materials (BOM) for menu items. Links menu items to their required ingredients for COGS calculation and inventory deduction.",
+  "description": "OrbitanOS Recipe Manager \u2014 Sovereign Asset Container (ADR-0026). A manufacturing blueprint that dynamically links to InventoryItem records for Live COGS computation. Treated as tenant-owned intellectual property: supports versioned SOPs, IP classification, content protection (watermarking, export controls), and detailed audit trails. Every access to proprietary recipes is governance-gated. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -9,9 +9,12 @@
     "outlet_id": {
       "type": "string"
     },
+    "company_id": {
+      "type": "string"
+    },
     "menu_item_name": {
       "type": "string",
-      "description": "Name of the menu item (e.g. Birria Taco, Quesadilla)"
+      "description": "Name of the menu item / product (e.g. Birria Taco, Quesadilla)"
     },
     "menu_item_sku": {
       "type": "string",
@@ -24,17 +27,49 @@
         "side",
         "beverage",
         "dessert",
-        "combo"
+        "combo",
+        "ingredient",
+        "other"
       ],
       "default": "main"
     },
+    "description": {
+      "type": "string",
+      "description": "Short description of the recipe / product"
+    },
+    "instructions_markdown": {
+      "type": "string",
+      "description": "Full preparation SOP in Markdown \u2014 the core intellectual property. Watermarked and copy-restricted when intellectual_property_level is proprietary or confidential."
+    },
+    "intellectual_property_level": {
+      "type": "string",
+      "enum": [
+        "standard",
+        "proprietary",
+        "confidential"
+      ],
+      "default": "standard",
+      "description": "IP classification. standard = visible to all tenant staff. proprietary = managers + supervisors only, watermark + export-gated. confidential = tenant_admin only, full content protection."
+    },
+    "yield_qty": {
+      "type": "number",
+      "description": "Production yield quantity per batch"
+    },
+    "yield_unit": {
+      "type": "string",
+      "description": "Unit of yield e.g. servings, pcs, kg"
+    },
+    "prep_time_mins": {
+      "type": "number",
+      "description": "Preparation time in minutes"
+    },
     "selling_price": {
       "type": "number",
-      "description": "Selling price of the menu item (SGD)"
+      "description": "Selling price per unit (tenant currency)"
     },
     "ingredients": {
       "type": "array",
-      "description": "List of ingredients required to produce one unit of this menu item",
+      "description": "Bill of Materials \u2014 dynamic links to InventoryItem records. Cost is computed live from latest GoodsReceipt, never stored statically as source of truth.",
       "items": {
         "type": "object",
         "properties": {
@@ -51,26 +86,110 @@
             "type": "string",
             "description": "e.g. g, ml, pcs"
           },
-          "cost_per_unit": {
-            "type": "number"
+          "unit_cost_snapshot": {
+            "type": "number",
+            "description": "Cached unit cost at last COGS calculation (display only \u2014 not source of truth)"
           },
           "ingredient_cost": {
             "type": "number",
-            "description": "quantity_required * cost_per_unit"
+            "description": "quantity_required * unit_cost_snapshot (cached)"
+          },
+          "last_cost_source": {
+            "type": "string",
+            "description": "e.g. goods_receipt:GR-0001 | inventory_fallback"
           }
         }
       }
     },
     "total_cogs": {
       "type": "number",
-      "description": "Total ingredient cost to produce one unit of this menu item"
+      "description": "Cached total ingredient cost per unit \u2014 recomputed by calculateRecipeCost (Live COGS engine). Not the source of truth."
     },
     "gross_margin_pct": {
       "type": "number",
-      "description": "Calculated gross margin: ((selling_price - total_cogs) / selling_price) * 100"
+      "description": "Cached gross margin: ((selling_price - total_cogs) / selling_price) * 100"
     },
-    "prep_time_mins": {
-      "type": "number"
+    "last_cogs_calculated_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the Live COGS engine last recomputed costs"
+    },
+    "last_cogs_source": {
+      "type": "string",
+      "description": "Primary source reference for the last COGS calculation"
+    },
+    "content_protection": {
+      "type": "object",
+      "description": "Sovereignty-by-Design content protection controls (ADR-0026). Configurable per recipe.",
+      "properties": {
+        "watermark_enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "copy_restrict_enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "export_requires_approval": {
+          "type": "boolean",
+          "default": false
+        },
+        "download_controlled": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "version": {
+      "type": "number",
+      "default": 1,
+      "description": "Recipe version \u2014 incremented on re-approval or instruction change"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "in_review",
+        "approved",
+        "archived",
+        "superseded"
+      ],
+      "default": "draft",
+      "description": "Review lifecycle \u2014 recipes require manager approval before activation (Regulate principle)"
+    },
+    "approved_by": {
+      "type": "string"
+    },
+    "approved_by_name": {
+      "type": "string"
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "artifact_record_id": {
+      "type": "string",
+      "description": "Linked ArtifactRecord for the versioned SOP document (ArtifactRegistry)"
+    },
+    "allergens": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "e.g. ['gluten', 'dairy', 'nuts']"
+    },
+    "dietary_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "e.g. ['halal', 'vegetarian', 'vegan']"
+    },
+    "created_by_id": {
+      "type": "string"
+    },
+    "created_by_name": {
+      "type": "string"
     },
     "is_active": {
       "type": "boolean",
@@ -82,31 +201,37 @@
   },
   "required": [
     "tenant_id",
-    "menu_item_name"
+    "menu_item_name",
+    "intellectual_property_level"
   ],
   "rls": {
     "create": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "read": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
       "$or": [
         {
           "user_condition": {
@@ -114,56 +239,87 @@
           }
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager",
-                "supervisor",
-                "worker"
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "client_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "supervisor"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "worker"
+                  }
+                }
               ]
             }
-          }
+          ]
         }
       ]
     },
     "update": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "delete": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
             }
-          }
+          ]
         }
       ]
     }
