@@ -31,6 +31,7 @@ export const MODULE_REGISTRY = {
 
   // People & Tasks
   workforce:   { label: 'Workforce',          iconKey: 'Users' },
+  staff_directory: { label: 'Staff Directory', iconKey: 'Contact' },
   tasks:       { label: 'Tasks',              iconKey: 'CheckSquare' },
   clockin:     { label: 'Clock In/Out',       iconKey: 'Clock' },
   replenishment: { label: 'Replenishment',    iconKey: 'AlertTriangle' },

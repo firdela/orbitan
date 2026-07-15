@@ -32,6 +32,7 @@ const FALLBACK_NAV = [
   { id: 'expenses', label: 'Expenses', icon: 'Receipt', route: '/expenses', module_key: 'expenses', isLocked: false },
   { type: 'section', label: 'Staffing' },
   { id: 'workforce', label: 'Workforce', icon: 'Users', route: '/workforce', module_key: 'workforce', isLocked: false },
+  { id: 'staff-directory', label: 'Staff Directory', icon: 'Contact', route: '/staff-directory', module_key: 'staff_directory', isLocked: false },
   { id: 'scheduling', label: 'Shift Schedule', icon: 'Calendar', route: '/scheduling', module_key: 'scheduling', isLocked: false },
   { id: 'shift-trades', label: 'Shift Trades', icon: 'ArrowLeftRight', route: '/shift-trades', module_key: 'shift_trades', isLocked: false },
   { id: 'tasks', label: 'Tasks', icon: 'CheckSquare', route: '/tasks', module_key: 'task', isLocked: false },
@@ -127,6 +128,7 @@ const STANDARD_WORKSPACE_MODULES = [
   { section: 'Finance', id: 'expenses', label: 'Expenses', icon: 'Receipt', routeSuffix: '/expenses', moduleKey: 'expenses' },
   { section: 'Operations', id: 'clients', label: 'Clients', icon: 'Store', routeSuffix: '/clients', moduleKey: 'clients' },
   { section: 'Insights & Compliance', id: 'sustainability', label: 'Sustainability', icon: 'Leaf', routeSuffix: '/sustainability', moduleKey: 'sustainability' },
+  { section: 'Staffing', id: 'staff-directory', label: 'Staff Directory', icon: 'Contact', routeSuffix: '/staff-directory', moduleKey: 'staff_directory' },
   { section: 'Staffing', id: 'shift-trades', label: 'Shift Trades', icon: 'ArrowLeftRight', routeSuffix: '/shift-trades', moduleKey: 'shift_trades' },
   { section: 'Settings', id: 'facility-settings', label: 'Facility Settings', icon: 'Settings', routeSuffix: '/facility-settings', moduleKey: 'facility_settings' },
 ];

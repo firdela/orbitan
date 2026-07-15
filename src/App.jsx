@@ -39,6 +39,7 @@ import SalesPage from '@/pages/outlet/SalesPage';
 import RecipesPage from '@/pages/outlet/RecipesPage';
 import TasksPage from '@/pages/outlet/TasksPage';
 import WorkforcePage from '@/pages/outlet/WorkforcePage';
+import StaffDirectoryPage from '@/pages/outlet/StaffDirectoryPage';
 import CompliancePage from '@/pages/outlet/CompliancePage';
 import ReportsPage from '@/pages/outlet/ReportsPage';
 import ExpensePage from '@/pages/outlet/ExpensePage';
@@ -128,6 +129,7 @@ const AuthenticatedApp = () => {
         <Route path="recipes" element={<RecipesPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="workforce" element={<WorkforcePage />} />
+        <Route path="staff-directory" element={<StaffDirectoryPage />} />
         <Route path="scheduling" element={<SchedulingPage />} />
         <Route path="compliance" element={<CompliancePage />} />
         <Route path="reports" element={<ReportsPage />} />

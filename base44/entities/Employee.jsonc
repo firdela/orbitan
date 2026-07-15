@@ -1,6 +1,7 @@
 {
   "name": "Employee",
   "type": "object",
+  "description": "OrbitanOS Workforce Module \u2014 Centralised staff directory record. Stores employee profiles, contact information, organisational assignments (Company \u2192 Brand \u2192 Outlet \u2192 Department \u2192 Team), roles, employment status, skills, certifications, emergency contacts, and employment history. Governed by RBAC and tenant isolation (ADR-0027). Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -32,10 +33,16 @@
       "default": "worker"
     },
     "position": {
-      "type": "string"
+      "type": "string",
+      "description": "Job title / position within the organisation"
     },
     "department": {
-      "type": "string"
+      "type": "string",
+      "description": "Department or cost centre e.g. Kitchen, Front of House, Operations"
+    },
+    "team": {
+      "type": "string",
+      "description": "Team assignment within the department"
     },
     "employment_type": {
       "type": "string",
@@ -61,6 +68,11 @@
       "type": "string",
       "format": "date"
     },
+    "termination_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of employment termination if status is terminated"
+    },
     "avatar_url": {
       "type": "string"
     },
@@ -75,6 +87,87 @@
         "daily"
       ],
       "default": "monthly"
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "e.g. ['Food Safety Level 2', 'Barista', 'Cashier', 'Inventory Management']"
+    },
+    "certifications": {
+      "type": "array",
+      "description": "Professional certifications with expiry tracking for compliance",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "issue_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "expiry_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "cert_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "emergency_contact": {
+      "type": "object",
+      "description": "Primary emergency contact for the employee",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "relationship": {
+          "type": "string"
+        }
+      }
+    },
+    "employment_history": {
+      "type": "array",
+      "description": "Chronological record of position/assignment changes within the tenant. Appended on each role or outlet assignment change for audit traceability.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "string"
+          },
+          "outlet_id": {
+            "type": "string"
+          },
+          "outlet_name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "change_reason": {
+            "type": "string",
+            "description": "e.g. 'Promotion', 'Transfer', 'Role change', 'Onboarding'"
+          }
+        }
+      }
     }
   },
   "required": [
