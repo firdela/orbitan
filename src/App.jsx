@@ -36,6 +36,7 @@ import ProcurementPage from '@/pages/outlet/ProcurementPage';
 import HBBPage from '@/pages/outlet/HBBPage';
 import SchedulingPage from '@/pages/outlet/SchedulingPage';
 import SalesPage from '@/pages/outlet/SalesPage';
+import RecipesPage from '@/pages/outlet/RecipesPage';
 import TasksPage from '@/pages/outlet/TasksPage';
 import WorkforcePage from '@/pages/outlet/WorkforcePage';
 import CompliancePage from '@/pages/outlet/CompliancePage';
@@ -124,6 +125,7 @@ const AuthenticatedApp = () => {
         <Route path="procurement" element={<ProcurementPage />} />
         <Route path="hbb" element={<HBBPage />} />
         <Route path="sales" element={<SalesPage />} />
+        <Route path="recipes" element={<RecipesPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="workforce" element={<WorkforcePage />} />
         <Route path="scheduling" element={<SchedulingPage />} />

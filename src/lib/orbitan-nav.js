@@ -19,6 +19,7 @@ export const MODULE_REGISTRY = {
   inventory:   { label: 'Inventory',          iconKey: 'Package' },
   procurement: { label: 'Procurement',        iconKey: 'ShoppingCart' },
   sales:       { label: 'Sales & Invoicing',  iconKey: 'FileText' },
+  recipes:     { label: 'Recipes',            iconKey: 'ChefHat' },
   scheduling:  { label: 'Scheduling',         iconKey: 'Calendar' },
 
   // Recycling & Sustainability Pack
@@ -80,6 +81,7 @@ export const TENANT_NAV_MANIFESTS = {
     { module: 'inventory',     path: '/inventory' },
     { module: 'procurement',   path: '/procurement' },
     { module: 'sales',         path: '/sales' },
+    { module: 'recipes',       path: '/recipes' },
     { module: 'scheduling',    path: '/scheduling' },
     { module: 'replenishment', path: '/replenishment' },
     NAV_SECTIONS.people,
