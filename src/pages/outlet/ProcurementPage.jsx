@@ -199,6 +199,15 @@ export default function ProcurementPage() {
         <PageHeader
           title="Purchase Orders"
           subtitle={`${pos.length} orders · ${pendingApprovalCount} pending approval${pendingApprovalCount > 0 ? ` · S$${totalPendingValue.toFixed(2)} awaiting review` : ''}`}
+          help={{
+            title: 'Purchase Orders',
+            content: 'Create and manage orders to your suppliers. Each PO moves through Draft → Pending Approval → Approved → Received, and the Shield enforces a governance threshold on spend.',
+            tips: [
+              'Submit a draft PO for manager approval before it can be received.',
+              'Receiving a PO posts the spend to your wallet ledger automatically.',
+              'POs above your governance threshold require an override approval.',
+            ],
+          }}
           actions={
             <Button size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
               <Plus className="w-4 h-4" />

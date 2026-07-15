@@ -186,6 +186,15 @@ export default function SchedulingPage() {
         <PageHeader
           title="Shift Schedule"
           subtitle={`Week of ${format(weekStart, 'd MMM')} · ${shifts.length} shifts · ${totalPublished} published`}
+          help={{
+            title: 'Shift Schedule',
+            content: 'Plan weekly shifts for your team. Use the Grid view for an overview, or the Board view to drag-and-drop assignments onto employees.',
+            tips: [
+              'New shifts are drafts until you publish them to the worker portal.',
+              'Drag-and-drop in Board view publishes immediately.',
+              'Workers can request shift trades from the Trade Requests page.',
+            ],
+          }}
           actions={
             <div className="flex items-center gap-2">
               <div className="flex items-center rounded-lg border border-border p-0.5 bg-card">
