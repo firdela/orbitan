@@ -25,7 +25,8 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, entity_name, data, tenant_id, domain_id } = body;
+    const { action, entity_name, data, tenant_id, domain_id, actor_type, agent_name } = body;
+    const resolvedActorType = actor_type === 'agent' ? 'agent' : 'human'; // default human for backward compat
 
     if (!action || !entity_name) {
       return Response.json({ error: 'Missing required fields: action, entity_name' }, { status: 400 });
@@ -89,6 +90,27 @@ Deno.serve(async (req) => {
       applicablePolicies = applicablePolicies.filter(p => p.domain_id === resolvedDomainId);
     }
 
+    // ── AGENTIC GOVERNANCE FILTER (ADR-0029) ──────────────────
+    // Filter policies by whether they apply to human or agent actors.
+    // Agent policies only fire for agent-initiated actions; human policies
+    // only fire for human-initiated actions. 'both' applies to either.
+    // Pre-existing policies without applies_to default to 'both' for
+    // backward compatibility — so all current behavior is preserved.
+    applicablePolicies = applicablePolicies.filter(p =>
+      p.applies_to === 'both' ||
+      p.applies_to === resolvedActorType ||
+      p.applies_to === undefined ||
+      p.applies_to === null
+    );
+
+    // If agent_name specified, further filter to policies targeting that
+    // specific agent (agent_name null/empty on the policy = all agents).
+    if (resolvedActorType === 'agent' && agent_name) {
+      applicablePolicies = applicablePolicies.filter(p =>
+        !p.agent_name || p.agent_name === agent_name
+      );
+    }
+
     if (applicablePolicies.length === 0) {
       return Response.json({ allowed: true, reason: 'No applicable policies' });
     }
@@ -108,31 +130,56 @@ Deno.serve(async (req) => {
       if (condition.field_exists && data?.[condition.field_exists] === undefined) triggered = true;
 
       if (triggered) {
-        violations.push(policy);
+        // ── SHADOW AUDIT MODE (ADR-0029) ──────────────────────
+        // When a policy has shadow_audit_mode=true, block effects are
+        // downgraded to notify. The action proceeds, but a
+        // 'would-have-blocked' AuditLog entry is written with
+        // shadow_audit: true — used for 14-day threshold calibration
+        // before enforcing hard gates. Auto-expires at shadow_audit_until.
+        const shadowExpired = policy.shadow_audit_until &&
+          new Date(policy.shadow_audit_until).getTime() < Date.now();
+        const inShadowAudit = policy.shadow_audit_mode === true &&
+          policy.effect === 'block' &&
+          !shadowExpired;
+        const effectiveEffect = inShadowAudit ? 'notify' : policy.effect;
 
-        // Increment violation count (fire-and-forget)
+        violations.push({ ...policy, effect: effectiveEffect, _shadow_audit: inShadowAudit });
+
+        // Increment violation count + shadow audit hits (fire-and-forget)
         base44.asServiceRole.entities.GovernancePolicy.update(policy.id, {
           violations_count: (policy.violations_count || 0) + 1,
+          shadow_audit_hits: (policy.shadow_audit_hits || 0) + (inShadowAudit ? 1 : 0),
           last_triggered_at: new Date().toISOString()
         }).catch(() => {});
 
         // Write to AuditLog with shield_outcome for Vanta/SOC 2 evidence trail
-        const shieldOutcome = policy.effect === 'block' ? 'blocked' :
-                               policy.effect === 'notify' ? 'notify' :
-                               policy.effect === 'auto_remediate' ? 'pass' : 'not_evaluated';
+        const shieldOutcome = effectiveEffect === 'block' ? 'blocked' :
+                               effectiveEffect === 'notify' ? 'notify' :
+                               effectiveEffect === 'auto_remediate' ? 'pass' : 'not_evaluated';
+        const auditDetails = inShadowAudit
+          ? `SHADOW AUDIT: policy [${policy.policy_name}] WOULD have blocked action [${action}] — effect downgraded to notify for threshold calibration${resolvedActorType === 'agent' ? ` — agent: ${agent_name || 'unknown'}` : ''}`
+          : `Shield triggered policy [${policy.policy_name}] — effect: ${effectiveEffect} — action: ${action}${resolvedActorType === 'agent' ? ` — agent: ${agent_name || 'unknown'}` : ''}`;
         base44.asServiceRole.entities.AuditLog.create({
           tenant_id: resolvedTenantId,
           actor_id: user.id,
           actor_name: user.full_name,
           actor_role: user.role,
-          action_type: `shield_${policy.effect}`,
+          action_type: `shield_${effectiveEffect}${inShadowAudit ? '_shadow' : ''}`,
           module: 'compliance',
           target_entity: entity_name,
           target_record_id: data?.id || 'new',
           shield_outcome: shieldOutcome,
           policy_name: policy.policy_name,
-          details: `Shield triggered policy [${policy.policy_name}] — effect: ${policy.effect} — action: ${action}`,
-          new_state: { policy: policy.policy_name, condition, triggered_by: user.id }
+          details: auditDetails,
+          new_state: {
+            policy: policy.policy_name,
+            condition,
+            triggered_by: user.id,
+            actor_type: resolvedActorType,
+            agent_name: agent_name || null,
+            shadow_audit: inShadowAudit,
+            native_effect: policy.effect
+          }
         }).catch(() => {});
       }
     }

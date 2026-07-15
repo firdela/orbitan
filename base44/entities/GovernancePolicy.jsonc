@@ -1,7 +1,7 @@
 {
   "name": "GovernancePolicy",
   "type": "object",
-  "description": "OrbitanOS Shield\u2122 \u2014 Policy-as-Code registry. Defines operational governance rules evaluated by the Shield Interceptor before sensitive actions. Auditor mode = notify. Guardian mode = block. Exit-Ready: pure schema, portable to any stack.",
+  "description": "OrbitanOS Shield\u2122 \u2014 Policy-as-Code registry. Defines operational governance rules evaluated by the Shield Interceptor before sensitive actions. Supports human and agentic AI actors (ADR-0029). Auditor mode = notify. Guardian mode = block. Shadow Audit Mode downgrades block \u2192 notify for safe threshold calibration. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -12,14 +12,14 @@
     },
     "policy_name": {
       "type": "string",
-      "description": "Unique human-readable identifier e.g. 'no_log_deletion', 'finance_threshold_gate'"
+      "description": "Unique human-readable identifier e.g. 'no_log_deletion', 'finance_threshold_gate', 'procurement_agent_autonomy_gate'"
     },
     "description": {
       "type": "string"
     },
     "target_entity": {
       "type": "string",
-      "description": "Entity this policy governs e.g. AuditLog, FinanceSyncQueue, ClockRecord"
+      "description": "Entity this policy governs e.g. AuditLog, FinanceSyncQueue, ClockRecord, PurchaseOrder, Shift"
     },
     "trigger_action": {
       "type": "string",
@@ -77,6 +77,43 @@
       "default": "regulate",
       "description": "Which 6R principle this policy enforces"
     },
+    "applies_to": {
+      "type": "string",
+      "enum": [
+        "human",
+        "agent",
+        "both"
+      ],
+      "default": "both",
+      "description": "ADR-0029: Whether this policy governs human actions, AI agent actions, or both. 'both' is the backward-compatible default for pre-existing policies."
+    },
+    "agent_name": {
+      "type": "string",
+      "description": "ADR-0029: Specific agent slug this policy targets (e.g. 'procurement_agent', 'inventory_agent'). Null/empty = applies to all agents. Only evaluated when applies_to is 'agent' or 'both'."
+    },
+    "agent_trust_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "ADR-0029: Trust tier this policy gates. low = agent requires approval for all writes | medium = autonomous within threshold gates | high = autonomous (enterprise only)."
+    },
+    "agentic_threshold_sgd": {
+      "type": "number",
+      "description": "ADR-0029: Monetary threshold (in tenant currency) for autonomous agent actions. Actions below this value proceed; at or above, the policy effect triggers. Used by condition_json amount_gt comparisons in agentic contexts."
+    },
+    "shadow_audit_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "ADR-0029: When true, block effects are downgraded to notify \u2014 the action proceeds but a 'would-have-blocked' AuditLog entry is written with shadow_audit: true. Used for 14-day threshold calibration before enforcing hard gates. Auto-expires at shadow_audit_until."
+    },
+    "shadow_audit_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ADR-0029: When shadow_audit_mode expires. After this timestamp, the policy resumes its native effect (block). Set by tenant_admin during rollout."
+    },
     "is_active": {
       "type": "boolean",
       "default": true
@@ -89,6 +126,11 @@
       "type": "number",
       "default": 0,
       "description": "Lifetime count of policy violations triggered"
+    },
+    "shadow_audit_hits": {
+      "type": "number",
+      "default": 0,
+      "description": "ADR-0029: Count of Shadow Audit 'would-have-blocked' events during calibration. Used to tune thresholds before switching to hard-gate enforcement."
     },
     "last_triggered_at": {
       "type": "string",
