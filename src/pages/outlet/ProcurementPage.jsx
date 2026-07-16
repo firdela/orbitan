@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { ShieldGuard } from '@/lib/ShieldGuard';
 import GovernanceOverrideModal from '@/components/shield/GovernanceOverrideModal';
+import AccessButton from '@/components/shared/AccessButton';
+import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
 
 export default function ProcurementPage() {
   const { toast } = useToast();
@@ -183,7 +185,7 @@ export default function ProcurementPage() {
     }
   };
 
-  const isApprover = ['admin', 'tenant_admin', 'outlet_manager'].includes(user?.role);
+  const { can } = useModuleAccess('procurement');
   const pendingApprovalCount = pos.filter(p => p.status === 'pending_approval').length;
   const totalPendingValue = pos.filter(p => p.status === 'pending_approval').reduce((s, p) => s + (p.total_amount || 0), 0);
 
@@ -209,10 +211,10 @@ export default function ProcurementPage() {
             ],
           }}
           actions={
-            <Button size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
+            <AccessButton can={can} action="create" size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
               <Plus className="w-4 h-4" />
               New PO
-            </Button>
+            </AccessButton>
           }
         />
 
@@ -245,17 +247,19 @@ export default function ProcurementPage() {
                   </div>
                   <div className="flex gap-1.5">
                     {po.status === 'draft' && (
-                      <Button size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(po.id, 'pending_approval')}>
+                      <AccessButton can={can} action="update" size="sm" variant="outline" className="text-xs" onClick={() => updateStatus(po.id, 'pending_approval')}>
                         Submit
-                      </Button>
+                      </AccessButton>
                     )}
-                    {po.status === 'pending_approval' && ['admin', 'tenant_admin', 'outlet_manager'].includes(user?.role) && (
-                      <Button size="sm" className="text-xs" onClick={() => updateStatus(po.id, 'approved')}>
+                    {po.status === 'pending_approval' && (
+                      <AccessButton can={can} action="update" size="sm" className="text-xs" onClick={() => updateStatus(po.id, 'approved')}>
                         Approve
-                      </Button>
+                      </AccessButton>
                     )}
                     {po.status === 'approved' && (
-                      <Button
+                      <AccessButton
+                        can={can}
+                        action="update"
                         size="sm"
                         variant="outline"
                         className="text-xs"
@@ -263,7 +267,7 @@ export default function ProcurementPage() {
                         onClick={() => updateStatus(po.id, 'received')}
                       >
                         {receivingId === po.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Receive'}
-                      </Button>
+                      </AccessButton>
                     )}
                   </div>
                 </div>

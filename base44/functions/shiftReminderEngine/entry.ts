@@ -69,10 +69,14 @@ Deno.serve(async (req) => {
         const formattedTime = shift.start_time || 'TBD';
         const formattedEnd = shift.end_time || 'TBD';
 
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          to: email,
-          subject: `Shift Reminder — ${formattedDate} at ${formattedTime}`,
-          body: `Hi ${employeeName},\n\nThis is a friendly reminder about your upcoming shift:\n\nDate: ${formattedDate}\nStart Time: ${formattedTime}\nEnd Time: ${formattedEnd}\n\nPlease ensure you arrive on time. If you are unable to attend, please contact your manager immediately.\n\n— OrbitanOS Workforce`
+        // Delegate to the Unified Notification Pipeline (ADR-0031, Pillar 2).
+        // Template resolution + delivery are centralised in notificationDispatcher.
+        await base44.asServiceRole.functions.invoke('notificationDispatcher', {
+          template_key: 'shift_reminder',
+          tenant_id: shift.tenant_id,
+          recipient_email: email,
+          recipient_name: employeeName,
+          context: { shift_date: formattedDate, start_time: formattedTime, end_time: formattedEnd }
         });
 
         // Mark reminder as sent to prevent duplicates
