@@ -1,0 +1,257 @@
+{
+  "name": "AutomationRule",
+  "type": "object",
+  "description": "OrbitanOS Polymorphic Action Engine (ADR-0032) \u2014 Registry of tenant-scoped, JSON-defined automation rules that map trigger events to actions. Replaces hardcoded event coupling between backend functions. Rules are evaluated by the actionDispatcher and governance-gated by the shieldInterceptor before execution. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant this rule belongs to. 'system' = platform-default rule available to all tenants."
+    },
+    "rule_key": {
+      "type": "string",
+      "description": "Unique rule identifier, namespaced by module e.g. 'po_received_debit_wallet', 'low_stock_auto_order'. The dispatcher resolves by (tenant_id, rule_key) with fallback to system default."
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable label shown in the automation manager UI"
+    },
+    "module": {
+      "type": "string",
+      "enum": [
+        "finance",
+        "inventory",
+        "procurement",
+        "workforce",
+        "compliance",
+        "sales",
+        "scheduling",
+        "retail",
+        "sustainability",
+        "system"
+      ],
+      "description": "Owning module \u2014 used for grouping, filtering, and Shield domain resolution"
+    },
+    "trigger_event": {
+      "type": "string",
+      "description": "Event key that fires this rule e.g. 'po.received', 'inventory.threshold_breached', 'shift.published', 'compliance.overdue'. Emitted by entity automations or explicit backend dispatch."
+    },
+    "trigger_entity": {
+      "type": "string",
+      "description": "Entity type that emits the trigger event e.g. 'PurchaseOrder', 'InventoryItem', 'Shift'"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "debit_wallet",
+        "credit_wallet",
+        "create_task",
+        "send_notification",
+        "create_purchase_order",
+        "adjust_inventory",
+        "call_backend_function",
+        "no_op"
+      ],
+      "description": "Action the dispatcher executes when the rule fires. call_backend_function allows arbitrary function invocation via action_config.function_name."
+    },
+    "action_config": {
+      "type": "object",
+      "description": "Action-specific configuration. For debit_wallet: {wallet_id_field, amount_field, memo}. For create_task: {title_template, module_context, priority}. For call_backend_function: {function_name, payload_mapping}.",
+      "properties": {
+        "wallet_id_field": {
+          "type": "string"
+        },
+        "amount_field": {
+          "type": "string"
+        },
+        "memo": {
+          "type": "string"
+        },
+        "title_template": {
+          "type": "string"
+        },
+        "module_context": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string"
+        },
+        "function_name": {
+          "type": "string"
+        },
+        "payload_mapping": {
+          "type": "object"
+        },
+        "template_key": {
+          "type": "string"
+        },
+        "recipient_field": {
+          "type": "string"
+        }
+      }
+    },
+    "conditions": {
+      "type": "array",
+      "description": "Optional conditions evaluated against the trigger payload. All must pass for the rule to fire. Supports the same field/operator/value shape as GovernancePolicy.condition_json.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "Dot-path into the trigger payload e.g. 'data.total_amount', 'data.outlet_id'"
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "equals",
+              "not_equals",
+              "gt",
+              "gte",
+              "lt",
+              "lte",
+              "contains",
+              "in_list",
+              "not_in_list"
+            ]
+          },
+          "value": {}
+        }
+      }
+    },
+    "cooldown_minutes": {
+      "type": "number",
+      "default": 0,
+      "description": "Minimum minutes between firings for the same trigger entity. Prevents runaway loops. 0 = no cooldown."
+    },
+    "governance_domain": {
+      "type": "string",
+      "description": "Shield governance domain for policy resolution before action execution e.g. 'fnb_standard_ops'. The dispatcher calls shieldInterceptor with this domain."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_system_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for platform-seeded rules (tenant_id='system'). Read-only for non-admins; serve as fallback when a tenant has no custom override."
+    },
+    "last_fired_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "fire_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Lifetime count of successful rule firings"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "rule_key",
+    "module",
+    "trigger_event",
+    "trigger_entity",
+    "action_type"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.tenant_id": "system"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
