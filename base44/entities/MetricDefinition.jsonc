@@ -1,7 +1,7 @@
 {
   "name": "MetricDefinition",
   "type": "object",
-  "description": "OrbitanOS Metrics & Analytics Registry (ADR-0033) \u2014 Single source of truth for every quantitative KPI across the platform. Each record declares a metric's formula reference, source entities, aggregation mode, and display metadata. The metricsEngine backend function evaluates a definition and returns a standardised result. Prevents conflicting inline calculations across dashboards. Tenant-overridable for white-label/enterprise customisation. Exit-Ready: pure schema, portable to any stack.",
+  "description": "OrbitanOS Metrics & Analytics Registry (ADR-0033) \u2014 Single source of truth for every quantitative KPI across the platform. Each record declares a metric's formula reference, source entities, aggregation mode, and display metadata. The metricsEngine backend function evaluates a definition and returns a standardised result. Prevents conflicting inline calculations across dashboards. Tenant-overridable for white-label/enterprise customisation. Observability Stream: threshold_config lets a metric emit a breach event to actionDispatcher, making the registry an event source for the Action Engine (ADR-0032) rather than a parallel action executor. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string",
@@ -84,12 +84,48 @@
     },
     "formula_ref": {
       "type": "string",
-      "description": "Named computation in the metricsEngine for custom mode e.g. 'labour_cost_as_pct_of_revenue'. Versioned via formula_version."
+      "description": "Named computation in the metricsEngine for custom mode e.g. 'inventory_value_sgd', 'labour_cost_as_pct_of_revenue'. Versioned via formula_version."
     },
     "formula_version": {
       "type": "string",
       "default": "1.0.0",
       "description": "Semantic version of the formula \u2014 bump when computation logic changes for audit traceability."
+    },
+    "threshold_config": {
+      "type": "object",
+      "description": "ADR-0033 Observability Stream: when the computed value crosses these bounds, metricsEngine emits trigger_event to actionDispatcher. This makes the registry an event SOURCE for the Action Engine (ADR-0032), keeping all remediation logic in one place. Omit for pure display metrics with no automation.",
+      "properties": {
+        "warn_above": {
+          "type": "number",
+          "description": "Value above which a 'warn_above' breach event is emitted."
+        },
+        "warn_below": {
+          "type": "number",
+          "description": "Value below which a 'warn_below' breach event is emitted."
+        },
+        "critical_above": {
+          "type": "number",
+          "description": "Value above which a 'critical_above' breach event is emitted (higher severity)."
+        },
+        "critical_below": {
+          "type": "number",
+          "description": "Value below which a 'critical_below' breach event is emitted (higher severity)."
+        },
+        "trigger_event": {
+          "type": "string",
+          "description": "Event key emitted to actionDispatcher on breach e.g. 'metric.po_pending_high', 'metric.inventory_value_low'. An AutomationRule with this trigger_event performs the remediation."
+        },
+        "cooldown_minutes": {
+          "type": "number",
+          "default": 60,
+          "description": "Minimum minutes between emissions for the same metric to prevent alert fatigue. 0 = no cooldown."
+        }
+      }
+    },
+    "last_breach_emitted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the last threshold breach event emitted. Used by the engine to enforce cooldown_minutes."
     },
     "is_active": {
       "type": "boolean",

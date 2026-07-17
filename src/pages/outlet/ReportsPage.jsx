@@ -5,10 +5,11 @@ import PageHeader from '@/components/shared/PageHeader';
 import StatCard from '@/components/shared/StatCard';
 import EmptyState from '@/components/shared/EmptyState';
 import {
-  BarChart2, TrendingUp, DollarSign, Package, CheckCircle2, Loader2, Activity,
+  BarChart2, TrendingUp, DollarSign, Package, CheckCircle2, Loader2, Activity, ShoppingCart, Layers,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import PerformanceHeatmap from '@/components/reporting/PerformanceHeatmap';
+import RegistryMetrics from '@/components/reporting/RegistryMetrics';
 
 
 
@@ -68,6 +69,22 @@ export default function ReportsPage() {
               <StatCard title="Gross Profit" value={`S$${grossProfit.toLocaleString()}`} subtitle={reconciliations.length > 0 ? 'After COGS' : 'No data yet'} icon={DollarSign} color="blue" />
               <StatCard title="Avg Margin" value={reconciliations.length > 0 ? `${avgMargin}%` : '—'} subtitle="F&B target: 65-75%" icon={BarChart2} color="purple" />
               <StatCard title="Active Staff" value={activeStaff} subtitle={`${completedTasks} tasks done`} icon={CheckCircle2} color="amber" />
+            </div>
+
+            {/* Registry Metrics — ADR-0033: KPIs computed by metricsEngine, not inline */}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Layers className="w-4 h-4 text-orbitan-blue" />
+                <h3 className="font-heading font-semibold text-sm">Registry Metrics</h3>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">ADR-0033</span>
+              </div>
+              <RegistryMetrics
+                outletId={undefined}
+                metrics={[
+                  { metric_key: 'inventory_value_sgd', fallbackTitle: 'Inventory Value', icon: Package, color: 'green', drillTo: 'inventory', tips: ['Compare against revenue to gauge working capital efficiency', 'A sudden drop may indicate a stockout risk'] },
+                  { metric_key: 'po_pending_count', fallbackTitle: 'POs Pending Approval', icon: ShoppingCart, color: 'amber', drillTo: 'procurement', tips: ['Approve promptly to avoid supply chain delays', 'Breaching the threshold triggers an automated alert'] },
+                ]}
+              />
             </div>
 
             {/* Revenue vs COGS Chart — only when real data exists */}

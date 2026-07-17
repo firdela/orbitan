@@ -70,11 +70,13 @@ its `source_entities` and returns a standardised result object
 
 1. Create the `MetricDefinition` entity (this ADR).
 2. Seed two platform-default metric definitions:
-   - `inventory_value_sgd` (module: `inventory`, mode: `sum`)
+   - `inventory_value_sgd` (module: `inventory`, mode: `custom`)
    - `po_pending_count` (module: `procurement`, mode: `count`)
-3. The `metricsEngine` function is **deferred** beyond a stub until at least
-   one real dashboard consumes a metric — this ADR establishes the *contract*
-   (the registry), not the full compute pipeline, to protect the MVP timeline.
+3. Implement the `metricsEngine` backend function with full compute support
+   (`sum` / `count` / `average` / `ratio` / `custom`) and an **Observability
+   Stream** bridge to `actionDispatcher` (ADR-0032).
+4. Wire a registry-driven `RegistryMetrics` component into the Reports page
+   to prove the contract end-to-end — dashboards no longer compute KPIs inline.
 
 ---
 
@@ -98,3 +100,57 @@ its `source_entities` and returns a standardised result object
   its `source_entities` reference `InventoryItem`.
 - The registry is tenant-isolated (`system` defaults + tenant overrides) and
   RLS-restricted to admin / tenant_admin writes.
+- The `metricsEngine` resolves a definition by (tenant_id, metric_key) with
+  fallback to the `system` default, and returns a standardised result object.
+- The Reports page renders `inventory_value_sgd` and `po_pending_count` via
+  `RegistryMetrics` → `metricsEngine`, with zero inline KPI math.
+
+---
+
+## Implementation Update — Observability Stream (2026-07-17)
+
+The registry is now an **event source** for the Action Engine (ADR-0032),
+resolving the "metric-action coupling" risk that arises when two registries
+govern overlapping automation.
+
+### Pattern
+
+`MetricDefinition` carries an optional `threshold_config`:
+`{ warn_above, warn_below, critical_above, critical_below, trigger_event,
+  cooldown_minutes }`. When `metricsEngine` computes a value that crosses a
+configured bound **and** the cooldown window has elapsed, it emits
+`trigger_event` to `actionDispatcher` — it does **not** execute remediation.
+
+### Why this over parallel action engines
+
+- **Single remediation pathway:** every automated action — whether triggered
+  by a human event (`po.received`) or a system state (`metric.po_pending_high`)
+  — flows through the same `actionDispatcher` → `shieldInterceptor` →
+  `AuditLog` pipeline. There is no second action executor to audit or tune.
+- **Separation of concerns:** `metricsEngine` *quantifies* business state; the
+  Action Engine *responds* to it. The metric definition has no knowledge of
+  remediation logic, and AutomationRules have no knowledge of formulas.
+- **Auditability:** a threshold breach is an `AuditLog` event
+  (`AUTOMATION_RULE_FIRED`) just like any other automation, so a single report
+  shows the full automation history regardless of trigger source.
+
+### Alternatives considered
+
+- *Metrics execute remediation directly:* couples formula logic to action
+  logic and creates a second governance surface. **Rejected.**
+- *Polling dashboards emit events:* non-deterministic timing, depends on a
+  user viewing a page. The engine evaluates on-demand and on a future
+  scheduled sweep, giving deterministic breach detection. **Chosen.**
+
+### First reference integration
+
+`po_pending_count` (warn_above: 5) → emits `metric.po_pending_high` to
+`actionDispatcher`. Creating a matching `AutomationRule`
+(`trigger_event: metric.po_pending_high`, action: `send_notification`) is
+future work; the breach currently dispatches and no-ops cleanly, proving the
+wiring without side effects.
+
+### Cooldown
+
+`last_breach_emitted_at` is stamped on the definition after each emission and
+enforces `cooldown_minutes` (default 60) to prevent alert fatigue.
