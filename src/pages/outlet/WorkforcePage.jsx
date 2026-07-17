@@ -17,6 +17,8 @@ import {
   Mail, Briefcase, UserCheck, Clock, UserPlus, UserCog, Activity
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
+import AccessGuard from '@/components/shared/AccessGuard';
 
 
 
@@ -37,6 +39,7 @@ export default function WorkforcePage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [activeTab, setActiveTab] = useState('directory');
+  const { can } = useModuleAccess('workforce');
 
   // Tenant-scoped query — prevents cross-tenant data exposure
   const { data: employees = [], isLoading } = useQuery({
@@ -83,7 +86,7 @@ export default function WorkforcePage() {
           <StatCard title="Total Staff" value={employees.length} icon={Users} color="blue" help={{ content: 'Every employee record in this organisation, including active, on-leave, and inactive staff.' }} />
           <StatCard title="Active" value={active} icon={UserCheck} color="green" help={{ content: 'Staff currently available for shifts and tasks. Inactive or terminated employees are excluded.' }} />
           <StatCard title="On Leave" value={onLeave} icon={Clock} color="amber" help={{ content: 'Staff with an "on_leave" status — they cannot be assigned new shifts until their status returns to active.' }} />
-          <StatCard title="Pending Requests" value={pendingRequests.length} icon={UserCog} color="purple" help={{ content: 'Users who have requested access to your organisation and are awaiting your approval in the Access Requests tab.' }} onClick={() => setActiveTab('requests')} />
+          <StatCard title="Pending Requests" value={pendingRequests.length} icon={UserCog} color="purple" help={{ content: 'Users who have requested access to your organisation and are awaiting your approval in the Access Requests tab.' }} onClick={can('create') ? () => setActiveTab('requests') : undefined} />
         </div>
 
         {/* Tabs */}
@@ -92,18 +95,22 @@ export default function WorkforcePage() {
             <TabsTrigger value="directory" className="gap-1.5">
               <Users className="w-3.5 h-3.5" /> Directory
             </TabsTrigger>
-            <TabsTrigger value="requests" className="gap-1.5">
-              <UserCog className="w-3.5 h-3.5" />
-              Access Requests
-              {pendingRequests.length > 0 && (
-                <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 font-bold">
-                  {pendingRequests.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="invitations" className="gap-1.5">
-              <UserPlus className="w-3.5 h-3.5" /> Invitations
-            </TabsTrigger>
+            <AccessGuard can={can} action="create">
+              <TabsTrigger value="requests" className="gap-1.5">
+                <UserCog className="w-3.5 h-3.5" />
+                Access Requests
+                {pendingRequests.length > 0 && (
+                  <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 font-bold">
+                    {pendingRequests.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            </AccessGuard>
+            <AccessGuard can={can} action="create">
+              <TabsTrigger value="invitations" className="gap-1.5">
+                <UserPlus className="w-3.5 h-3.5" /> Invitations
+              </TabsTrigger>
+            </AccessGuard>
             <TabsTrigger value="punctuality" className="gap-1.5">
               <Activity className="w-3.5 h-3.5" /> Punctuality & Performance
             </TabsTrigger>
@@ -167,12 +174,16 @@ export default function WorkforcePage() {
 
           {/* Access Requests tab */}
           <TabsContent value="requests">
-            <AccessRequestQueue tenantId={tenantId} />
+            <AccessGuard can={can} action="create" fallback={<EmptyState icon={UserCog} title="Access Requests" description="Only managers can review access requests for this organisation." color="slate" />}>
+              <AccessRequestQueue tenantId={tenantId} />
+            </AccessGuard>
           </TabsContent>
 
           {/* Invitations tab */}
           <TabsContent value="invitations">
-            <InvitationPanel tenantId={tenantId} />
+            <AccessGuard can={can} action="create" fallback={<EmptyState icon={UserPlus} title="Invitations" description="Only managers can invite new team members." color="slate" />}>
+              <InvitationPanel tenantId={tenantId} />
+            </AccessGuard>
           </TabsContent>
 
           {/* Punctuality & Performance tab */}

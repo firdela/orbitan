@@ -20,6 +20,9 @@ import { Link } from 'react-router-dom';
 import { ArrowLeftRight, LayoutGrid, CalendarClock } from 'lucide-react';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
 import ShiftBoard from '@/components/scheduling/ShiftBoard';
+import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
+import AccessButton from '@/components/shared/AccessButton';
+import AccessGuard from '@/components/shared/AccessGuard';
 
 
 
@@ -32,6 +35,7 @@ const AVATAR_COLORS = [
 export default function SchedulingPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { can } = useModuleAccess('scheduling');
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [view, setView] = useState('grid'); // 'grid' | 'board'
   const [showAdd, setShowAdd] = useState(false);
@@ -197,32 +201,34 @@ export default function SchedulingPage() {
           }}
           actions={
             <div className="flex items-center gap-2">
-              <div className="flex items-center rounded-lg border border-border p-0.5 bg-card">
-                <button
-                  onClick={() => setView('grid')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  Grid
-                </button>
-                <button
-                  onClick={() => setView('board')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === 'board' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                >
-                  <CalendarClock className="w-3.5 h-3.5" />
-                  Board
-                </button>
-              </div>
+              <AccessGuard can={can} action="update">
+                <div className="flex items-center rounded-lg border border-border p-0.5 bg-card">
+                  <button
+                    onClick={() => setView('grid')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    Grid
+                  </button>
+                  <button
+                    onClick={() => setView('board')}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${view === 'board' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    <CalendarClock className="w-3.5 h-3.5" />
+                    Board
+                  </button>
+                </div>
+              </AccessGuard>
               <Button variant="outline" size="sm" asChild className="text-xs gap-1.5">
                 <Link to="/shift-trades">
                   <ArrowLeftRight className="w-3.5 h-3.5" />
                   Trade Requests
                 </Link>
               </Button>
-              <Button size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
+              <AccessButton can={can} action="create" mode="hide" size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
                 <Plus className="w-4 h-4" />
                 Add Shift
-              </Button>
+              </AccessButton>
             </div>
           }
         />
