@@ -140,43 +140,53 @@ export default function ProcurementPage() {
     await base44.entities.PurchaseOrder.update(id, { status });
     setPos(prev => prev.map(p => p.id === id ? { ...p, status } : p));
 
-    // When a PO is received, post the procurement debit to the Wallet-Native Ledger
+    // When a PO is received, emit a `po.received` event to the Action Dispatcher
+    // (ADR-0032). The dispatcher resolves the matching AutomationRule and executes
+    // the wallet debit — Procurement no longer calls walletEngine directly.
     if (status === 'received') {
       const po = pos.find(p => p.id === id);
       if (!po) return;
       setReceivingId(id);
       try {
-        const res = await base44.functions.invoke('walletEngine', {
-          action: 'debit_procurement_sgd',
+        const res = await base44.functions.invoke('actionDispatcher', {
+          trigger_event: 'po.received',
           tenant_id: po.tenant_id,
           outlet_id: po.outlet_id,
-          amount: po.total_amount || 0,
-          reference_id: po.id,
-          reference_type: 'PurchaseOrder',
-          metadata: {
+          entity_id: po.id,
+          entity_type: 'PurchaseOrder',
+          data: {
             po_number: po.po_number,
             supplier_name: po.supplier_name,
             supplier_id: po.supplier_id,
+            total_amount: po.total_amount || 0,
             items: po.items,
+            status: 'received',
           },
         });
         const data = res.data || res;
-        if (data.above_threshold) {
+        const fired = (data.fired || [])[0];
+        const walletResult = fired?.result || {};
+        if (walletResult.above_threshold) {
           toast({
             title: 'Governance Threshold Exceeded',
-            description: `PO SGD ${po.total_amount?.toFixed(2)} exceeds threshold (SGD ${data.threshold_applied}). Manager approval required.`,
+            description: `PO SGD ${po.total_amount?.toFixed(2)} exceeds threshold (SGD ${walletResult.threshold_applied}). Manager approval required.`,
             variant: 'destructive',
+          });
+        } else if (fired) {
+          toast({
+            title: 'Goods Received — Wallet Debited',
+            description: `SGD ${po.total_amount?.toFixed(2)} posted to wallet ledger. Threshold: SGD ${walletResult.threshold_applied}.`,
           });
         } else {
           toast({
-            title: 'Goods Received — Wallet Debited',
-            description: `SGD ${po.total_amount?.toFixed(2)} posted to wallet ledger. Threshold: SGD ${data.threshold_applied}.`,
+            title: 'Goods Received',
+            description: 'No automation rule matched — wallet not debited.',
           });
         }
       } catch (err) {
         toast({
-          title: 'Wallet Debit Failed',
-          description: err?.response?.data?.error || err?.message || 'Could not post procurement debit to wallet.',
+          title: 'Action Dispatch Failed',
+          description: err?.response?.data?.error || err?.message || 'Could not dispatch the procurement event.',
           variant: 'destructive',
         });
       } finally {
