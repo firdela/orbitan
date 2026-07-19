@@ -30,7 +30,9 @@ knowledge-hub/
 │   ├── 0007-delegated-integration-hub.md
 │   ├── 0008-orbit-naming-standards.md
 │   ├── 0009-orbit-core-boundary.md
-│   └── 0010-independent-deployability.md
+│   ├── 0010-independent-deployability.md
+│   └── ... (0011–0034 in directory)
+│   └── 0035-github-two-way-code-sync.md
 ```
 
 ## How to Use
@@ -83,4 +85,4 @@ Until then, these documents serve as human-readable institutional memory.
 ---
 
 **Product Owner:** Muhammad Firdaus Bin Ismail
-**Last Updated:** 2026-07-08
+**Last Updated:** 2026-07-19
