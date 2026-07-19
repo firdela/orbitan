@@ -18,15 +18,21 @@ import {
   BarChart2, Shield, Layers, Building2, RefreshCw, Inbox, Loader2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/use-toast';
+import AccessButton from '@/components/shared/AccessButton';
+import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
 
 
 
 export default function SalesPage() {
   const { currentTenant } = useTenant();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const { can } = useModuleAccess('sales');
   const [reconciliations, setReconciliations] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '' });
 
   const tenantId = user?.data?.tenant_id || user?.tenant_id || currentTenant?.id || null;
@@ -43,23 +49,36 @@ export default function SalesPage() {
   const margin = form.total_revenue ? ((grossProfit / parseFloat(form.total_revenue)) * 100).toFixed(1) : 0;
 
   const handleCreate = async () => {
-    const rec = {
-      tenant_id: tenantId,
-      outlet_id: outletId,
-      date: form.date,
-      total_revenue: parseFloat(form.total_revenue) || 0,
-      total_cogs: parseFloat(form.total_cogs) || 0,
-      gross_profit: grossProfit,
-      gross_margin_pct: parseFloat(margin),
-      cash_sales: parseFloat(form.cash_sales) || 0,
-      card_sales: parseFloat(form.card_sales) || 0,
-      net_revenue: parseFloat(form.total_revenue) || 0,
-      status: 'draft',
-      xero_sync_status: 'not_synced',
-    };
-    const created = await base44.entities.DailyReconciliation.create(rec);
-    setReconciliations(prev => [created, ...prev]);
-    setShowCreate(false);
+    if (!tenantId || !outletId) {
+      toast({ title: 'Cannot create reconciliation', description: 'Your user profile is missing tenant or outlet assignment.', variant: 'destructive' });
+      return;
+    }
+    setCreating(true);
+    try {
+      const rec = {
+        tenant_id: tenantId,
+        outlet_id: outletId,
+        date: form.date,
+        total_revenue: parseFloat(form.total_revenue) || 0,
+        total_cogs: parseFloat(form.total_cogs) || 0,
+        gross_profit: grossProfit,
+        gross_margin_pct: parseFloat(margin),
+        cash_sales: parseFloat(form.cash_sales) || 0,
+        card_sales: parseFloat(form.card_sales) || 0,
+        net_revenue: parseFloat(form.total_revenue) || 0,
+        status: 'draft',
+        xero_sync_status: 'not_synced',
+      };
+      const created = await base44.entities.DailyReconciliation.create(rec);
+      setReconciliations(prev => [created, ...prev]);
+      setShowCreate(false);
+      setForm({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '' });
+      toast({ title: 'Reconciliation Saved', description: `Daily record for ${form.date} saved as draft.` });
+    } catch (err) {
+      toast({ title: 'Failed to save reconciliation', description: err?.response?.data?.error || err?.message || 'An error occurred.', variant: 'destructive' });
+    } finally {
+      setCreating(false);
+    }
   };
 
   const totalRevenue = reconciliations.reduce((s, r) => s + (r.total_revenue || 0), 0);
@@ -81,10 +100,10 @@ export default function SalesPage() {
             ],
           }}
           actions={
-            <Button size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
+            <AccessButton can={can} action="create" size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
               <Plus className="w-4 h-4" />
               New Reconciliation
-            </Button>
+            </AccessButton>
           }
         />
 
@@ -220,8 +239,10 @@ export default function SalesPage() {
             )}
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={!form.total_revenue}>Submit</Button>
+            <Button variant="outline" onClick={() => setShowCreate(false)} disabled={creating}>Cancel</Button>
+            <Button onClick={handleCreate} disabled={!form.total_revenue || creating}>
+              {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
