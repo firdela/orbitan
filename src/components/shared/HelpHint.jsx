@@ -10,29 +10,34 @@ import { cn } from '@/lib/utils';
  * ContextualHelp block would be overkill. Click-to-open (not hover) so it is
  * usable on touch devices and with keyboard navigation.
  *
+ * Wrapped in a span with stopPropagation so clicks do not bubble to interactive
+ * parents; preventDefault is avoided so it does not interfere with Radix's
+ * trigger toggle.
+ *
  * Props:
  *  - text:  string|node — short hint (1-2 sentences)
  *  - side:  popover placement
  */
 export default function HelpHint({ text, side = 'top', align = 'center', className, iconClassName }) {
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="More information"
-          onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
-          className={cn(
-            'inline-flex items-center justify-center text-muted-foreground/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full transition-colors align-middle',
-            className
-          )}
-        >
-          <Info className={cn('w-3.5 h-3.5', iconClassName)} />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent side={side} align={align} className="w-64 p-3 text-xs text-muted-foreground leading-relaxed">
-        {text}
-      </PopoverContent>
-    </Popover>
+    <span onClick={(e) => e.stopPropagation()} className="inline-flex">
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="More information"
+            className={cn(
+              'inline-flex items-center justify-center text-muted-foreground/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full transition-colors align-middle',
+              className
+            )}
+          >
+            <Info className={cn('w-3.5 h-3.5', iconClassName)} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side={side} align={align} className="w-64 p-3 text-xs text-muted-foreground leading-relaxed">
+          {text}
+        </PopoverContent>
+      </Popover>
+    </span>
   );
 }
