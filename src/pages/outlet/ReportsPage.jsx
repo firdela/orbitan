@@ -54,6 +54,15 @@ export default function ReportsPage() {
         <PageHeader
           title="Reports"
           subtitle="Outlet performance · Refine principle"
+          help={{
+            title: 'Reports',
+            content: 'Outlet-level performance analytics computed from real operational data — daily reconciliations, workforce records, and inventory. Metrics powered by the registry-driven metrics engine (ADR-0033).',
+            tips: [
+              'KPIs show zero (not fabricated) when no data exists yet.',
+              'Registry Metrics are computed server-side for audit-grade accuracy.',
+              'Create daily reconciliations to populate revenue and margin charts.',
+            ],
+          }}
         />
 
         {loading ? (
@@ -65,10 +74,10 @@ export default function ReportsPage() {
           <>
             {/* KPI Stats — real data only, zero when empty */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <StatCard title="Total Revenue" value={`S$${totalRevenue.toLocaleString()}`} subtitle={reconciliations.length > 0 ? `${reconciliations.length} records` : 'No data yet'} icon={TrendingUp} color="green" />
-              <StatCard title="Gross Profit" value={`S$${grossProfit.toLocaleString()}`} subtitle={reconciliations.length > 0 ? 'After COGS' : 'No data yet'} icon={DollarSign} color="blue" />
-              <StatCard title="Avg Margin" value={reconciliations.length > 0 ? `${avgMargin}%` : '—'} subtitle="F&B target: 65-75%" icon={BarChart2} color="purple" />
-              <StatCard title="Active Staff" value={activeStaff} subtitle={`${completedTasks} tasks done`} icon={CheckCircle2} color="amber" />
+              <StatCard title="Total Revenue" value={`S$${totalRevenue.toLocaleString()}`} subtitle={reconciliations.length > 0 ? `${reconciliations.length} records` : 'No data yet'} icon={TrendingUp} color="green" help={{ content: 'Total revenue from all daily reconciliation records. Shows zero when no reconciliations exist — no data is fabricated.' }} />
+              <StatCard title="Gross Profit" value={`S$${grossProfit.toLocaleString()}`} subtitle={reconciliations.length > 0 ? 'After COGS' : 'No data yet'} icon={DollarSign} color="blue" help={{ content: 'Revenue minus COGS across all reconciliation records — the actual profit generated before operating expenses.' }} />
+              <StatCard title="Avg Margin" value={reconciliations.length > 0 ? `${avgMargin}%` : '—'} subtitle="F&B target: 65-75%" icon={BarChart2} color="purple" help={{ content: 'Average gross margin percentage. A healthy F&B operation targets 65–75%.', tips: ['Below 60% indicates COGS or pricing needs attention.'] }} />
+              <StatCard title="Active Staff" value={activeStaff} subtitle={`${completedTasks} tasks done`} icon={CheckCircle2} color="amber" help={{ content: 'Number of employees currently marked active, with completed task count for context on workforce productivity.' }} />
             </div>
 
             {/* Registry Metrics — ADR-0033: KPIs computed by metricsEngine, not inline */}

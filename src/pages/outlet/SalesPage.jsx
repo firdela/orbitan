@@ -71,6 +71,15 @@ export default function SalesPage() {
         <PageHeader
           title="Sales & Reconciliation"
           subtitle="Daily P&L tracking with Xero sync"
+          help={{
+            title: 'Sales & Reconciliation',
+            content: 'Record daily sales revenue, COGS, and payment method breakdown. Each reconciliation is a draft until approved, and can be synced to Xero for accounting.',
+            tips: [
+              'Enter total revenue and COGS — gross profit and margin are calculated automatically.',
+              'The F&B healthy gross margin target is 65–75%.',
+              'Approved reconciliations sync to Xero via the Integrations module.',
+            ],
+          }}
           actions={
             <Button size="sm" className="gap-1.5" onClick={() => setShowCreate(true)}>
               <Plus className="w-4 h-4" />
@@ -80,10 +89,10 @@ export default function SalesPage() {
         />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard title="Total Revenue" value={`S$${totalRevenue.toLocaleString()}`} subtitle="All records" icon={TrendingUp} color="green" />
-          <StatCard title="Avg Gross Margin" value={`${avgMargin}%`} subtitle="F&B target: 65-75%" icon={BarChart2} color="blue" />
-          <StatCard title="Xero Synced" value={reconciliations.filter(r => r.xero_sync_status === 'synced').length} subtitle={`of ${reconciliations.length} records`} icon={RefreshCw} color="purple" />
-          <StatCard title="Approved" value={reconciliations.filter(r => r.status === 'approved').length} subtitle="Days reconciled" icon={CheckCircle2} color="green" />
+          <StatCard title="Total Revenue" value={`S$${totalRevenue.toLocaleString()}`} subtitle="All records" icon={TrendingUp} color="green" help={{ content: 'Sum of total revenue across all daily reconciliation records for this outlet.' }} />
+          <StatCard title="Avg Gross Margin" value={`${avgMargin}%`} subtitle="F&B target: 65-75%" icon={BarChart2} color="blue" help={{ content: 'Average gross margin across all records. A healthy F&B margin sits between 65–75%.', tips: ['If margin drops below 60%, review your COGS and recipe pricing.'] }} />
+          <StatCard title="Xero Synced" value={reconciliations.filter(r => r.xero_sync_status === 'synced').length} subtitle={`of ${reconciliations.length} records`} icon={RefreshCw} color="purple" help={{ content: 'Records that have been successfully pushed to your Xero ledger. Connect Xero via the Integrations module to enable sync.' }} />
+          <StatCard title="Approved" value={reconciliations.filter(r => r.status === 'approved').length} subtitle="Days reconciled" icon={CheckCircle2} color="green" help={{ content: 'Reconciliations that a manager has reviewed and approved. Only approved records are eligible for Xero sync.' }} />
         </div>
 
         {/* ── Reconciliation Inbox ─────────────────────────────────── */}
