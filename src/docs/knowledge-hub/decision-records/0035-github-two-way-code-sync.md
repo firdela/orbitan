@@ -1,6 +1,6 @@
 # ADR-0035: GitHub Two-Way Code Synchronisation
 
-**Status:** Proposed (pending manual platform configuration)
+**Status:** Accepted
 **Date:** 2026-07-19
 **Principle:** Regulate (version control governance) + Refine (reuse existing platform capability)
 **Supersedes:** —
@@ -80,9 +80,9 @@ Before completing the irreversible connection, the following must be confirmed:
 - [x] `.gitignore` excludes `.env`, `.env.local`, `*.local` (verified — lines 1–3, 30).
 - [x] `.gitignore` excludes `node_modules`, `dist`, `.vite` (verified — lines 14–15, 31).
 - [x] `.gitignore` excludes `base44/.app.jsonc` (verified — line 32).
-- [ ] Product Owner confirms they are the **app owner** in Base44 (required for initial connection).
-- [ ] Product Owner's Base44 subscription is **Builder plan or higher** (required for GitHub sync).
-- [ ] The newly created GitHub account is the intended long-term owner (not a temporary account).
+- [x] Product Owner confirms they are the **app owner** in Base44 (required for initial connection).
+- [x] Product Owner's Base44 subscription supports GitHub sync (connection succeeded).
+- [x] GitHub account `firdela` is the connected owner — repository `orbitan` created and synced.
 
 ---
 
