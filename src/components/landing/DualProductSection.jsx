@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Brain, Briefcase, Check } from 'lucide-react';
+import { Rocket, FlaskConical } from 'lucide-react';
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -21,6 +22,12 @@ const PRODUCTS = [
     icon: Briefcase,
     accent: '#2563EB',
     accentGradient: 'linear-gradient(135deg, #3B82F6, #1D4ED8)',
+    availability: {
+      label: 'Pilot Programme',
+      status: 'Currently validating with selected pilot organisations to ensure production readiness before a wider public launch.',
+      badgeClass: 'bg-marketing-blue/10 border-marketing-blue/30 text-marketing-blue',
+      dotClass: 'bg-marketing-blue',
+    },
     features: [
       'Workforce & Attendance',
       'Inventory & Procurement',
@@ -30,7 +37,8 @@ const PRODUCTS = [
       'Xero & Stripe Integration',
     ],
     pricing: 'From S$49/mo',
-    cta: 'Start with OrbitanOS',
+    cta: 'Request Pilot Access',
+    ctaHref: '/request-access',
     href: '#plans',
   },
   {
@@ -42,6 +50,12 @@ const PRODUCTS = [
     icon: Brain,
     accent: '#7C3AED',
     accentGradient: 'linear-gradient(135deg, #8B5CF6, #6D28D9)',
+    availability: {
+      label: 'In Active Development',
+      status: 'Standalone subscriptions and pilot enrolment will open separately once the platform is ready for external validation.',
+      badgeClass: 'bg-marketing-gold/10 border-marketing-gold/30 text-marketing-gold',
+      dotClass: 'bg-marketing-gold',
+    },
     features: [
       'RAG Knowledge Search',
       'Agentic AI Workflows',
@@ -51,7 +65,8 @@ const PRODUCTS = [
       'Automation Engine',
     ],
     pricing: 'From S$39/mo',
-    cta: 'Explore Orbit Nexus',
+    cta: 'Register Interest',
+    ctaHref: '/request-access',
     href: '#nexus',
   },
 ];
@@ -101,7 +116,7 @@ export default function DualProductSection() {
 
                 <div className="relative z-10">
                   {/* Icon + Name */}
-                  <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-3 mb-3">
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center"
                       style={{
@@ -118,8 +133,19 @@ export default function DualProductSection() {
                     </div>
                   </div>
 
-                  <p className="text-slate-300 text-xs leading-relaxed mb-5">
+                  {/* Availability Badge */}
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-semibold mb-4 ${product.availability.badgeClass}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${product.availability.dotClass} animate-pulse`} />
+                    {product.id === 'orbitanos' ? <FlaskConical className="w-3 h-3" /> : <Rocket className="w-3 h-3" />}
+                    {product.availability.label}
+                  </div>
+
+                  <p className="text-slate-300 text-xs leading-relaxed mb-2">
                     {product.description}
+                  </p>
+
+                  <p className="text-[11px] text-slate-400 leading-relaxed mb-5 italic">
+                    {product.availability.status}
                   </p>
 
                   {/* Features */}
@@ -143,7 +169,7 @@ export default function DualProductSection() {
                     >
                       {product.pricing}
                     </span>
-                    <a href={product.href}>
+                    <Link to={product.ctaHref}>
                       <Button
                         className="h-9 px-5 rounded-lg text-xs font-bold gap-1.5"
                         style={{
@@ -154,7 +180,7 @@ export default function DualProductSection() {
                         {product.cta}
                         <ArrowRight className="w-3.5 h-3.5" />
                       </Button>
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </motion.div>

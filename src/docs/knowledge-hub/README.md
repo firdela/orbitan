@@ -32,7 +32,8 @@ knowledge-hub/
 │   ├── 0009-orbit-core-boundary.md
 │   ├── 0010-independent-deployability.md
 │   └── ... (0011–0034 in directory)
-│   └── 0035-github-two-way-code-sync.md
+│   ├── 0035-github-two-way-code-sync.md
+│   └── 0036-github-first-platform-independence-strategy.md
 ```
 
 ## How to Use
