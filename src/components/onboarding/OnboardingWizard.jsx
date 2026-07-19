@@ -13,6 +13,7 @@ import IndustryStep from '@/components/onboarding/steps/IndustryStep';
 import StructureStep from '@/components/onboarding/steps/StructureStep';
 import PlanStep from '@/components/onboarding/steps/PlanStep';
 import ActivationGateStep from '@/components/onboarding/steps/ActivationGateStep';
+import BlueprintPreviewStep from '@/components/onboarding/steps/BlueprintPreviewStep';
 import FindMySolutionWizard from '@/components/onboarding/FindMySolutionWizard';
 
 const STEPS = [
@@ -20,6 +21,7 @@ const STEPS = [
 { key: 'industry', label: 'Industry' },
 { key: 'structure', label: 'Organisation' },
 { key: 'plan', label: 'Plan & Modules' },
+{ key: 'preview', label: 'Blueprint' },
 { key: 'activate', label: 'Activate' }];
 
 
@@ -49,7 +51,8 @@ export default function OnboardingWizard() {
     if (step === 1) return !!data.packKey;
     if (step === 2) return !!(data.tenant.name || '').trim();
     if (step === 3) return !!data.planKey;
-    if (step === 4) return !!data.acceptedStandards;
+    if (step === 4) return true; // Blueprint preview — read-only, always advanceable
+    if (step === 5) return !!data.acceptedStandards;
     return true;
   };
 
@@ -126,7 +129,7 @@ export default function OnboardingWizard() {
 
   }
 
-  const StepComponent = [FindMySolutionWizard, IndustryStep, StructureStep, PlanStep, ActivationGateStep][step];
+  const StepComponent = [FindMySolutionWizard, IndustryStep, StructureStep, PlanStep, BlueprintPreviewStep, ActivationGateStep][step];
 
   return (
     <div className="min-h-screen bg-[#0A0F1A] text-white">
