@@ -245,7 +245,7 @@ export default function NexusSection() {
                       : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'
                   }`}
                 >
-                  {plan.name === 'Enterprise' ? 'Contact Sales' : 'Join the Waitlist'}
+                  {plan.name === 'Enterprise' ? 'Enterprise Pilot Access' : 'Join the Waitlist'}
                 </Button>
               </Link>
             </motion.div>

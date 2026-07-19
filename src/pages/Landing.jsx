@@ -144,7 +144,7 @@ export default function Landing() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.6 }}
-            className="text-xs text-slate-500 mt-4 max-w-md mx-auto"
+            className="text-xs text-slate-500 mt-4 mb-8 max-w-md mx-auto"
           >
             OrbitanOS is actively evolving alongside our pilot partners. New modules, intelligence capabilities, and enterprise features ship weekly — your feedback directly shapes the roadmap.
             Orbit Nexus is in active development and will open for pilot enrolment separately once ready for external validation.
@@ -285,7 +285,7 @@ export default function Landing() {
                   </ul>
                   <Link to="/request-access">
                     <Button className={`w-full h-10 rounded-xl text-xs font-bold ${isEnterprise ? 'bg-marketing-gold hover:bg-marketing-gold/90 text-marketing-bg' : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'}`}>
-                      Request Pilot Access
+                      {isEnterprise ? 'Enterprise Pilot Access' : 'Request Pilot Access'}
                     </Button>
                   </Link>
                 </motion.div>
@@ -373,6 +373,8 @@ export default function Landing() {
             <a href="#packs" className="text-xs text-slate-300 hover:text-white transition-colors">Industries</a>
             <a href="#plans" className="text-xs text-slate-300 hover:text-white transition-colors">Pricing</a>
             <a href="#shield" className="text-xs text-slate-300 hover:text-white transition-colors">Security</a>
+            <Link to="/governance-log" className="text-xs text-slate-300 hover:text-white transition-colors">Governance</Link>
+            <Link to="/request-access" className="text-xs text-slate-300 hover:text-white transition-colors">Customer Support</Link>
           </div>
         </div>
       </footer>
