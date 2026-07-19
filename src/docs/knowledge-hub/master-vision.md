@@ -220,6 +220,34 @@ Every piece of feedback, every architectural decision, and every product improve
 should contribute to making OrbitanOS a smarter, more valuable, and continuously
 evolving Workforce Operating System.
 
+## Source of Truth & Platform Independence
+
+Orbitan's authoritative source of truth is the **GitHub repository** (`orbitan`),
+kept in lockstep with the Base44 editor via two-way code synchronisation
+(ADR-0035). Base44 is a development accelerator — never the foundation Orbitan
+depends on. All platform-dependent calls are isolated behind the `OrbitCore`
+adapter (ADR-0023), and every new module is evaluated against the Vendor
+Lock-in Prevention protocol before implementation (ADR-0036).
+
+**Migration Readiness Contract:** Orbitan can be exported to any Vite-compatible
+host with alternative auth/DB/AI providers via an infrastructure-swap — no
+application redesign. See ADR-0036 for the full exit strategy and dependency map.
+
+## MVP Pilot Stage Communication
+
+The public landing page must transparently communicate platform maturity so
+visitors form accurate expectations on first contact:
+
+- **OrbitanOS** — Currently in a Pilot Programme with selected organisations.
+  CTA: **Request Pilot Access** → `/request-access`.
+- **Orbit Nexus** — In active development. Standalone subscriptions and pilot
+  enrolment open separately once ready for external validation.
+  CTA: **Register Interest / Join the Waitlist** → `/request-access`.
+
+This messaging is a standing product principle, not a one-time copy decision.
+Any future landing-page redesign must preserve the Pilot/Waitlist distinction
+until each product reaches general availability. See `DualProductSection.jsx`.
+
 ---
 
-**Last Updated:** 2026-07-12
+**Last Updated:** 2026-07-19
