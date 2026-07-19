@@ -123,10 +123,10 @@ export default function LeaderOrg() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard title="Active Tenants" value={activeTenants} subtitle={`${totalTenants} total`} icon={Building2} color="blue" trend="up" trendValue="+3 this month" />
-          <StatCard title="Module Activations" value={totalModuleUsage} subtitle="Across all tenants" icon={Layers} color="purple" />
-          <StatCard title="Industry Packs" value={Object.keys(INDUSTRY_PACKS).length} subtitle="Available packs" icon={Package} color="green" />
-          <StatCard title="Platform Health" value="100%" subtitle="All systems operational" icon={CheckCircle2} color="green" trend="up" />
+          <StatCard title="Active Tenants" value={activeTenants} subtitle={`${totalTenants} total`} icon={Building2} color="blue" trend="up" trendValue="+3 this month" onClick={() => setActiveTab('tenants')} help={{ title: 'Active Tenants', content: 'Pilot organisations currently provisioned on OrbitanOS. Click to open the Tenant Command Center and manage capabilities, modules, and activation status.' }} />
+          <StatCard title="Module Activations" value={totalModuleUsage} subtitle="Across all tenants" icon={Layers} color="purple" onClick={() => setActiveTab('modules')} help={{ title: 'Module Activations', content: 'Total enabled modules across all pilot tenants. Click to view the full platform module registry and Industry Pack catalog.' }} />
+          <StatCard title="Industry Packs" value={Object.keys(INDUSTRY_PACKS).length} subtitle="Available packs" icon={Package} color="green" onClick={() => setActiveTab('modules')} help={{ title: 'Industry Packs', content: 'Self-aware capability blueprints available for activation — F&B, Retail, Recycling, and more. Click to browse active and future-proofed packs.' }} />
+          <StatCard title="Platform Health" value="100%" subtitle="All systems operational" icon={CheckCircle2} color="green" trend="up" onClick={() => setActiveTab('system-controls')} help={{ title: 'Platform Health', content: 'Real-time status of OrbitanOS backend engines, automations, and integrations. Click to open the System Health Scoreboard.' }} />
         </div>
 
         {/* Revenue Engine Quick Links */}
