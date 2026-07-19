@@ -147,6 +147,7 @@ export default function Landing() {
             className="text-xs text-slate-500 mt-4 max-w-md mx-auto"
           >
             OrbitanOS is actively evolving alongside our pilot partners. New modules, intelligence capabilities, and enterprise features ship weekly — your feedback directly shapes the roadmap.
+            Orbit Nexus is in active development and will open for pilot enrolment separately once ready for external validation.
           </motion.p>
 
           <motion.div
