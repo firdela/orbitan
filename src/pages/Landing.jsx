@@ -285,7 +285,7 @@ export default function Landing() {
                   </ul>
                   <Link to="/request-access">
                     <Button className={`w-full h-10 rounded-xl text-xs font-bold ${isEnterprise ? 'bg-marketing-gold hover:bg-marketing-gold/90 text-marketing-bg' : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'}`}>
-                      {isEnterprise ? 'Request Pilot Access' : 'Coming Soon'}
+                      Request Pilot Access
                     </Button>
                   </Link>
                 </motion.div>

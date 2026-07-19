@@ -120,6 +120,10 @@ export default function NexusSection() {
             The standalone AI & Intelligence Platform. Subscribe independently —
             or let it power your OrbitanOS with RAG, Agentic AI, and the Integration Hub.
           </p>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+            In Active Development — Pilot Enrolment Coming Soon
+          </div>
         </motion.div>
 
         {/* Three pillars */}
@@ -233,7 +237,7 @@ export default function NexusSection() {
                   </li>
                 ))}
               </ul>
-              <Link to="/auth/gateway">
+              <Link to="/request-access">
                 <Button
                   className={`w-full h-9 rounded-lg text-xs font-bold ${
                     plan.highlight
@@ -241,7 +245,7 @@ export default function NexusSection() {
                       : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'
                   }`}
                 >
-                  {plan.name === 'Enterprise' ? 'Contact Sales' : 'Get Started'}
+                  {plan.name === 'Enterprise' ? 'Contact Sales' : 'Join the Waitlist'}
                 </Button>
               </Link>
             </motion.div>
