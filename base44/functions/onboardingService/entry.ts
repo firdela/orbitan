@@ -478,7 +478,13 @@ Deno.serve(async (req) => {
     }
 
     // ── ADMIN-ONLY ACTIONS BELOW ────────────────────────────
-    if (user.role !== "admin") {
+    // Entity automations (body.event present) bypass the admin guard —
+    // they are platform-triggered by AccessRequest create/update and carry
+    // their own authorization context (the triggering user's role). The
+    // notification + approval handlers below use asServiceRole for all
+    // writes and do not require platform-admin privileges.
+    const isAutomationTrigger = !!body.event;
+    if (user.role !== "admin" && !isAutomationTrigger) {
       return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
