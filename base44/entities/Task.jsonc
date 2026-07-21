@@ -1,17 +1,12 @@
 {
   "name": "Task",
   "type": "object",
+  "description": "OrbitanOS Operational Task \u2014 canonical work unit governed by the OSF RESPONSIBLE_FOR / ACCOUNTABLE_FOR relationships (ADR-0047). Current responsible/accountable agents are cached on the record for query efficiency; the authoritative assignment history lives in TaskAssignment. Lifecycle transitions are governed by the taskController transition engine against an explicit matrix. Optimistic locking via `version`; idempotent transitions via `last_idempotency_key`. Evidence attaches via ArtifactRecord (linked_entity_id); verification decisions live in WorkReview. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
     },
     "outlet_id": {
-      "type": "string"
-    },
-    "assigned_to": {
-      "type": "string"
-    },
-    "assigned_to_name": {
       "type": "string"
     },
     "title": {
@@ -40,13 +35,20 @@
     "status": {
       "type": "string",
       "enum": [
-        "pending",
+        "draft",
+        "assigned",
+        "acknowledged",
         "in_progress",
+        "blocked",
+        "submitted_for_review",
+        "changes_required",
         "completed",
-        "overdue",
-        "cancelled"
+        "verified",
+        "cancelled",
+        "archived"
       ],
-      "default": "pending"
+      "default": "draft",
+      "description": "Governed lifecycle state. Transitions validated by taskController against the approved matrix. `completed` = finished without verification; `verified` = passed governed review."
     },
     "module_context": {
       "type": "string",
@@ -55,14 +57,86 @@
     "category": {
       "type": "string"
     },
+    "responsible_agent_id": {
+      "type": "string",
+      "description": "Cached current RESPONSIBLE_FOR agent (Employee/User id). Authoritative history in TaskAssignment. May equal accountable for small orgs but the distinction is preserved."
+    },
+    "responsible_agent_name": {
+      "type": "string",
+      "description": "Cached display name of the current responsible agent"
+    },
+    "accountable_agent_id": {
+      "type": "string",
+      "description": "Cached current ACCOUNTABLE_FOR agent \u2014 ultimately answerable for the outcome. Distinct from responsible (who performs) and assigned (who is allocated)."
+    },
+    "accountable_agent_name": {
+      "type": "string"
+    },
+    "verification_mode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "self",
+        "manager",
+        "approval_gated"
+      ],
+      "default": "none",
+      "description": "Governance mode for completion. none = in_progress\u2192completed; self = responsible agent self-verifies; manager = outlet_manager/supervisor verifies; approval_gated = Shield policy binding required."
+    },
+    "verification_policy_id": {
+      "type": "string",
+      "description": "GovernancePolicy id binding verification requirements when verification_mode is approval_gated. Null for simpler modes."
+    },
+    "completion_requirements": {
+      "type": "string",
+      "description": "What must be satisfied before the responsible agent may submit. Used by the transition engine to gate in_progress\u2192submitted_for_review."
+    },
+    "blocker_reason": {
+      "type": "string",
+      "description": "Required when status is `blocked`. Cleared on transition back to in_progress."
+    },
+    "last_transition_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_transition_by": {
+      "type": "string",
+      "description": "User id of the actor who performed the most recent state transition"
+    },
+    "last_transition_by_name": {
+      "type": "string"
+    },
+    "last_transition_reason": {
+      "type": "string",
+      "description": "Reason for the most recent transition (blocker, cancellation, reassignment, etc.)"
+    },
+    "version": {
+      "type": "number",
+      "default": 1,
+      "description": "Optimistic lock. The transition engine increments on every state change and rejects updates where the supplied version does not match the stored version."
+    },
+    "last_idempotency_key": {
+      "type": "string",
+      "description": "Most recent transition idempotency key. If a new transition request supplies a key matching this value, the engine returns the current state without re-processing \u2014 prevents double-click/retry duplication."
+    },
     "attachments": {
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Simple attachment URLs. Rich evidence with review lifecycle uses ArtifactRecord (linked_entity_type='Task')."
     },
     "completed_date": {
       "type": "string"
+    },
+    "verified_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the task reached `verified` status via a WorkReview approval."
+    },
+    "cancelled_date": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "required": [
@@ -71,92 +145,159 @@
   ],
   "rls": {
     "create": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "data.outlet_id": "{{user.data.outlet_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "outlet_manager",
-                "supervisor"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "read": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "data.assigned_to_name": "{{user.full_name}}"
-        },
-        {
-          "data.outlet_id": "{{user.data.outlet_id}}",
-          "user_condition": {
-            "role": {
-              "$in": [
-                "outlet_manager",
-                "supervisor"
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "data.responsible_agent_id": "{{user.id}}"
+            },
+            {
+              "data.accountable_agent_id": "{{user.id}}"
+            },
+            {
+              "$and": [
+                {
+                  "data.outlet_id": "{{user.data.outlet_id}}"
+                },
+                {
+                  "$or": [
+                    {
+                      "user_condition": {
+                        "role": "outlet_manager"
+                      }
+                    },
+                    {
+                      "user_condition": {
+                        "role": "supervisor"
+                      }
+                    }
+                  ]
+                }
               ]
             }
-          }
+          ]
         }
       ]
     },
     "update": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "data.assigned_to_name": "{{user.full_name}}"
-        },
-        {
-          "data.outlet_id": "{{user.data.outlet_id}}",
-          "user_condition": {
-            "role": {
-              "$in": [
-                "outlet_manager",
-                "supervisor"
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "data.responsible_agent_id": "{{user.id}}"
+            },
+            {
+              "$and": [
+                {
+                  "data.outlet_id": "{{user.data.outlet_id}}"
+                },
+                {
+                  "$or": [
+                    {
+                      "user_condition": {
+                        "role": "outlet_manager"
+                      }
+                    },
+                    {
+                      "user_condition": {
+                        "role": "supervisor"
+                      }
+                    }
+                  ]
+                }
               ]
             }
-          }
+          ]
         }
       ]
     },
     "delete": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "data.outlet_id": "{{user.data.outlet_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "outlet_manager",
-                "supervisor"
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "$and": [
+                {
+                  "data.outlet_id": "{{user.data.outlet_id}}"
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                }
               ]
             }
-          }
+          ]
         }
       ]
     }
