@@ -211,6 +211,14 @@ Full ADR/ODR content is preserved in the legacy directory `src/docs/knowledge-hu
 - **Future Review:** 2026-10-01
 - **Legacy Path:** `src/docs/knowledge-hub/decision-records/0046-capability-tiered-orchestrator.md`
 
+### ADR-0047: Orbit Semantic Foundation (OSF)
+- **Date:** 2026-07-21
+- **Status:** Accepted
+- **Impacted Modules:** SemanticRelationship, all intelligence layer capabilities, Shield, Action Engine, Knowledge Hub
+- **Summary:** Adopt the Orbit Semantic Foundation as the canonical semantic contract of the platform. Three-layer model: Layer 1 (Universal Platform Relationships — 12 enduring organisational truths), Layer 2 (Cross-Domain Operational — reusable verbs), Layer 3 (Industry Pack Extensions). Enforces strict separation of Semantic Reality (OSF), Knowledge (evolving understanding), and Intelligence (reasoning engine) to prevent the Ontology Trap. Every relationship is a first-class architectural citizen with a full contract: meaning, inverse, cardinality, temporal behaviour, governance, privacy, lifecycle, and AI inference rules. Relationships describe meaning, not implementation — agnostic to storage technology. `ai_may_infer` / `human_must_confirm` enforce the Behavioural Framework's human-authority principle at the schema level. Universal Layer changes require an ADR.
+- **Future Review:** 2027-01-01
+- **Legacy Path:** `src/docs/knowledge-hub/decision-records/0047-orbit-semantic-foundation.md`
+
 ## ADR Template
 
 ```markdown

@@ -1,0 +1,182 @@
+{
+  "name": "SemanticRelationship",
+  "type": "object",
+  "description": "Orbit Semantic Foundation (OSF) \u2014 Registry of canonical relationship definitions that form the semantic language through which Orbitan understands organisations. Three layers: universal (enduring organisational truths), cross_domain (reusable operational verbs), industry (pack-specific extensions). Each relationship is a first-class architectural citizen with a full semantic contract: meaning, direction, inverse, cardinality, temporal behaviour, governance, privacy, lifecycle, and AI inference rules. This registry defines WHAT relationships mean, not HOW they are stored or traversed \u2014 it is implementation-agnostic by design (ADR-0047). Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant this relationship definition belongs to. 'system' = platform-default universal/cross-domain relationship available to all tenants. Tenant-specific overrides allow enterprise customisation of semantic contracts."
+    },
+    "relationship_key": {
+      "type": "string",
+      "description": "Unique relationship identifier, uppercase with underscores e.g. 'RESPONSIBLE_FOR', 'GOVERNS', 'CONSUMES'. The intelligence layer resolves by (tenant_id, relationship_key, layer) with fallback to system default."
+    },
+    "layer": {
+      "type": "string",
+      "enum": [
+        "universal",
+        "cross_domain",
+        "industry"
+      ],
+      "description": "OSF layer: universal = enduring organisational truths (Layer 1, the most stable artefact in the platform). cross_domain = reusable operational verbs (Layer 2). industry = pack-specific extensions (Layer 3). Universal layer changes require an ADR \u2014 they are the canonical semantic contract."
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable name shown in admin UI and audit trails"
+    },
+    "description": {
+      "type": "string",
+      "description": "The semantic meaning \u2014 what this relationship represents in organisational reality. Must describe meaning, not implementation. This is the canonical definition the intelligence layer uses to interpret relationships."
+    },
+    "inverse_relationship_key": {
+      "type": "string",
+      "description": "The inverse relationship key e.g. for RESPONSIBLE_FOR the inverse is ACCOUNTABLE_TO. Enables bidirectional semantic traversal without storing duplicate definitions."
+    },
+    "source_semantic_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Semantic categories of entities that can be the source of this relationship e.g. ['agent', 'organisational_unit']. Uses semantic types (not entity names) to remain implementation-agnostic. Valid categories: agent, organisational_unit, resource, policy, event, artifact, outcome."
+    },
+    "target_semantic_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Semantic categories of entities that can be the target of this relationship. Uses semantic types (not entity names)."
+    },
+    "cardinality": {
+      "type": "string",
+      "enum": [
+        "one_to_one",
+        "one_to_many",
+        "many_to_one",
+        "many_to_many"
+      ],
+      "description": "Expected cardinality of this relationship. Describes the semantic constraint, not a database index."
+    },
+    "temporal_behaviour": {
+      "type": "string",
+      "enum": [
+        "static",
+        "temporal",
+        "ephemeral"
+      ],
+      "description": "static = relationship persists indefinitely once established. temporal = relationship is bound to a time window (has start/end semantics). ephemeral = relationship exists only during a transaction/session and is dropped after completion."
+    },
+    "governance_considerations": {
+      "type": "string",
+      "description": "What governance implications this relationship carries \u2014 e.g. 'requires manager approval to establish', 'Shield policy binding required', 'audit-logged on change'. Describes the governance contract, not the implementation."
+    },
+    "privacy_implications": {
+      "type": "string",
+      "description": "What privacy considerations apply \u2014 e.g. 'no PII in relationship metadata', 'tenant-isolated, never cross-tenant', 'consent required for AI inference'. Enforces Privacy-by-Design at the semantic layer."
+    },
+    "lifecycle_behaviour": {
+      "type": "string",
+      "enum": [
+        "immutable",
+        "evolvable",
+        "versioned"
+      ],
+      "description": "immutable = once established, cannot be changed (only severed). evolvable = can be modified over time. versioned = changes create new versions, preserving history for audit."
+    },
+    "ai_may_infer": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the Orbit Intelligence Fabric may infer this relationship from operational data without explicit human confirmation. false = must be explicitly established by a human or governed workflow. Enforces the Behavioural Framework's human-authority principle."
+    },
+    "human_must_confirm": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether a human must confirm this relationship before it is treated as established. true = AI may suggest but not establish; requires human approval gate. Enforces the Uncertainty-Inverse Autonomy principle."
+    },
+    "pack_key": {
+      "type": "string",
+      "description": "For industry-layer (Layer 3) relationships only: the industry pack this relationship belongs to e.g. 'fnb', 'healthcare'. Null for universal and cross_domain layers."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Inactive relationships are not resolved by the intelligence layer \u2014 even if historical instances exist. The runtime semantic kill-switch."
+    },
+    "is_system_default": {
+      "type": "boolean",
+      "default": true,
+      "description": "True for platform-seeded definitions (tenant_id='system'). Read-only for non-admins. Serve as fallback when a tenant has no custom override."
+    },
+    "version": {
+      "type": "string",
+      "default": "1.0.0",
+      "description": "Semantic version of this relationship definition. Bump when the contract (meaning, governance, privacy rules) changes for audit traceability."
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "relationship_key",
+    "layer",
+    "display_name",
+    "description"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.tenant_id": "system"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
