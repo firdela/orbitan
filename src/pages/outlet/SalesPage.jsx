@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useToast } from '@/components/ui/use-toast';
 import AccessButton from '@/components/shared/AccessButton';
 import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 
 
@@ -29,6 +30,7 @@ export default function SalesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { can } = useModuleAccess('sales');
+  const { formatAmount, currencyConfig } = useCurrency();
   const [reconciliations, setReconciliations] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -108,7 +110,7 @@ export default function SalesPage() {
         />
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard title="Total Revenue" value={`S$${totalRevenue.toLocaleString()}`} subtitle="All records" icon={TrendingUp} color="green" help={{ content: 'Sum of total revenue across all daily reconciliation records for this outlet.' }} />
+          <StatCard title="Total Revenue" value={formatAmount(totalRevenue, { decimals: 2 })} subtitle="All records" icon={TrendingUp} color="green" help={{ content: 'Sum of total revenue across all daily reconciliation records for this outlet.' }} />
           <StatCard title="Avg Gross Margin" value={`${avgMargin}%`} subtitle="F&B target: 65-75%" icon={BarChart2} color="blue" help={{ content: 'Average gross margin across all records. A healthy F&B margin sits between 65–75%.', tips: ['If margin drops below 60%, review your COGS and recipe pricing.'] }} />
           <StatCard title="Xero Synced" value={reconciliations.filter(r => r.xero_sync_status === 'synced').length} subtitle={`of ${reconciliations.length} records`} icon={RefreshCw} color="purple" help={{ content: 'Records that have been successfully pushed to your Xero ledger. Connect Xero via the Integrations module to enable sync.' }} />
           <StatCard title="Approved" value={reconciliations.filter(r => r.status === 'approved').length} subtitle="Days reconciled" icon={CheckCircle2} color="green" help={{ content: 'Reconciliations that a manager has reviewed and approved. Only approved records are eligible for Xero sync.' }} />
@@ -177,9 +179,9 @@ export default function SalesPage() {
                     <td className="px-4 py-3.5 font-medium text-foreground">
                       {format(new Date(rec.date + 'T00:00:00'), 'd MMM yyyy')}
                     </td>
-                    <td className="px-4 py-3.5 text-right font-semibold text-orbitan-green">S${rec.total_revenue?.toLocaleString()}</td>
-                    <td className="px-4 py-3.5 text-right text-muted-foreground hidden sm:table-cell">S${rec.total_cogs?.toLocaleString()}</td>
-                    <td className="px-4 py-3.5 text-right font-semibold">S${rec.gross_profit?.toLocaleString()}</td>
+                    <td className="px-4 py-3.5 text-right font-semibold text-orbitan-green">{formatAmount(rec.total_revenue)}</td>
+                    <td className="px-4 py-3.5 text-right text-muted-foreground hidden sm:table-cell">{formatAmount(rec.total_cogs)}</td>
+                    <td className="px-4 py-3.5 text-right font-semibold">{formatAmount(rec.gross_profit)}</td>
                     <td className="px-4 py-3.5 text-right text-muted-foreground hidden md:table-cell">{rec.gross_margin_pct}%</td>
                     <td className="px-4 py-3.5 text-center"><StatusBadge status={rec.status} /></td>
                     <td className="px-4 py-3.5 text-center"><StatusBadge status={rec.xero_sync_status} /></td>
@@ -215,25 +217,25 @@ export default function SalesPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs mb-1 block">Total Revenue (S$)</Label>
+                <Label className="text-xs mb-1 block">Total Revenue (${currencyConfig.symbol})</Label>
                 <Input type="number" value={form.total_revenue} onChange={e => setForm(p => ({ ...p, total_revenue: e.target.value }))} placeholder="0.00" />
               </div>
               <div>
-                <Label className="text-xs mb-1 block">Total COGS (S$)</Label>
+                <Label className="text-xs mb-1 block">Total COGS (${currencyConfig.symbol})</Label>
                 <Input type="number" value={form.total_cogs} onChange={e => setForm(p => ({ ...p, total_cogs: e.target.value }))} placeholder="0.00" />
               </div>
               <div>
-                <Label className="text-xs mb-1 block">Cash Sales (S$)</Label>
+                <Label className="text-xs mb-1 block">Cash Sales (${currencyConfig.symbol})</Label>
                 <Input type="number" value={form.cash_sales} onChange={e => setForm(p => ({ ...p, cash_sales: e.target.value }))} placeholder="0.00" />
               </div>
               <div>
-                <Label className="text-xs mb-1 block">Card Sales (S$)</Label>
+                <Label className="text-xs mb-1 block">Card Sales (${currencyConfig.symbol})</Label>
                 <Input type="number" value={form.card_sales} onChange={e => setForm(p => ({ ...p, card_sales: e.target.value }))} placeholder="0.00" />
               </div>
             </div>
             {form.total_revenue && (
               <div className="bg-muted rounded-xl p-4 space-y-1 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Gross Profit</span><span className="font-semibold text-orbitan-green">S${grossProfit.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Gross Profit</span><span className="font-semibold text-orbitan-green">{formatAmount(grossProfit)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Gross Margin</span><span className="font-semibold">{margin}%</span></div>
               </div>
             )}

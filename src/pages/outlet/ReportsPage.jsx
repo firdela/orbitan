@@ -10,10 +10,12 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import PerformanceHeatmap from '@/components/reporting/PerformanceHeatmap';
 import RegistryMetrics from '@/components/reporting/RegistryMetrics';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 
 
 export default function ReportsPage() {
+  const { formatAmount } = useCurrency();
   const { data: reconciliations = [], isLoading: recLoading } = useQuery({
     queryKey: ['outlet-reconciliations'],
     queryFn: () => base44.entities.DailyReconciliation.list('-date', 30),
@@ -74,8 +76,8 @@ export default function ReportsPage() {
           <>
             {/* KPI Stats — real data only, zero when empty */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <StatCard title="Total Revenue" value={`S$${totalRevenue.toLocaleString()}`} subtitle={reconciliations.length > 0 ? `${reconciliations.length} records` : 'No data yet'} icon={TrendingUp} color="green" help={{ content: 'Total revenue from all daily reconciliation records. Shows zero when no reconciliations exist — no data is fabricated.' }} />
-              <StatCard title="Gross Profit" value={`S$${grossProfit.toLocaleString()}`} subtitle={reconciliations.length > 0 ? 'After COGS' : 'No data yet'} icon={DollarSign} color="blue" help={{ content: 'Revenue minus COGS across all reconciliation records — the actual profit generated before operating expenses.' }} />
+              <StatCard title="Total Revenue" value={formatAmount(totalRevenue)} subtitle={reconciliations.length > 0 ? `${reconciliations.length} records` : 'No data yet'} icon={TrendingUp} color="green" help={{ content: 'Total revenue from all daily reconciliation records. Shows zero when no reconciliations exist — no data is fabricated.' }} />
+              <StatCard title="Gross Profit" value={formatAmount(grossProfit)} subtitle={reconciliations.length > 0 ? 'After COGS' : 'No data yet'} icon={DollarSign} color="blue" help={{ content: 'Revenue minus COGS across all reconciliation records — the actual profit generated before operating expenses.' }} />
               <StatCard title="Avg Margin" value={reconciliations.length > 0 ? `${avgMargin}%` : '—'} subtitle="F&B target: 65-75%" icon={BarChart2} color="purple" help={{ content: 'Average gross margin percentage. A healthy F&B operation targets 65–75%.', tips: ['Below 60% indicates COGS or pricing needs attention.'] }} />
               <StatCard title="Active Staff" value={activeStaff} subtitle={`${completedTasks} tasks done`} icon={CheckCircle2} color="amber" help={{ content: 'Number of employees currently marked active, with completed task count for context on workforce productivity.' }} />
             </div>
@@ -107,7 +109,7 @@ export default function ReportsPage() {
                     <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
                     <Tooltip
                       contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
-                      formatter={(v) => [`S$${v.toLocaleString()}`, '']}
+                      formatter={(v) => [formatAmount(v), '']}
                     />
                     <Bar dataKey="revenue" fill="#2563EB" radius={[4, 4, 0, 0]} name="Revenue" />
                     <Bar dataKey="cogs" fill="#F97316" radius={[4, 4, 0, 0]} name="COGS" />

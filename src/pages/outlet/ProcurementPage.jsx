@@ -17,10 +17,12 @@ import { ShieldGuard } from '@/lib/ShieldGuard';
 import GovernanceOverrideModal from '@/components/shield/GovernanceOverrideModal';
 import AccessButton from '@/components/shared/AccessButton';
 import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
+import { useCurrency } from '@/lib/CurrencyContext';
 
 export default function ProcurementPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { formatAmount, currencyConfig } = useCurrency();
   const [pos, setPos] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -210,7 +212,7 @@ export default function ProcurementPage() {
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
         <PageHeader
           title="Purchase Orders"
-          subtitle={`${pos.length} orders · ${pendingApprovalCount} pending approval${pendingApprovalCount > 0 ? ` · S$${totalPendingValue.toFixed(2)} awaiting review` : ''}`}
+          subtitle={`${pos.length} orders · ${pendingApprovalCount} pending approval${pendingApprovalCount > 0 ? ` · ${formatAmount(totalPendingValue)} awaiting review` : ''}`}
           help={{
             title: 'Purchase Orders',
             content: 'Create and manage orders to your suppliers. Each PO moves through Draft → Pending Approval → Approved → Received, and the Shield enforces a governance threshold on spend.',
@@ -253,7 +255,7 @@ export default function ProcurementPage() {
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className="text-right">
-                    <p className="text-lg font-display font-bold text-foreground">S${po.total_amount?.toFixed(2)}</p>
+                    <p className="text-lg font-display font-bold text-foreground">{formatAmount(po.total_amount)}</p>
                   </div>
                   <div className="flex gap-1.5">
                     {po.status === 'draft' && (
@@ -341,7 +343,7 @@ export default function ProcurementPage() {
             </div>
 
             <div className="bg-muted rounded-xl p-4 text-right">
-              <p className="text-sm font-semibold">Total: <span className="text-lg font-display font-bold text-foreground">S${subtotal.toFixed(2)}</span></p>
+              <p className="text-sm font-semibold">Total: <span className="text-lg font-display font-bold text-foreground">{formatAmount(subtotal)}</span></p>
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">

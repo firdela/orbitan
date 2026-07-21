@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
+import { useCurrency } from '@/lib/CurrencyContext';
 import { Receipt, Plus, DollarSign, TrendingDown, Loader2, Paperclip, CheckCircle2, XCircle } from 'lucide-react';
 
 const CATEGORIES = [
@@ -35,6 +36,7 @@ export default function ExpensePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { formatAmount, currencyConfig } = useCurrency();
   const [showForm, setShowForm] = useState(false);
   const [filterMonth, setFilterMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [form, setForm] = useState({
@@ -147,7 +149,7 @@ export default function ExpensePage() {
     <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
       <PageHeader
         title="Expense Tracking"
-        subtitle={`${expenses.length} records · S$${totalMonth.toLocaleString()} this month`}
+        subtitle={`${expenses.length} records · ${formatAmount(totalMonth)} this month`}
         actions={
           <Button size="sm" className="gap-1.5" onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4" /> Log Expense
@@ -156,7 +158,7 @@ export default function ExpensePage() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="This Month" value={`S$${totalMonth.toLocaleString()}`} subtitle={format(new Date(filterMonth + '-01'), 'MMMM')} icon={DollarSign} color="blue" />
+        <StatCard title="This Month" value={formatAmount(totalMonth)} subtitle={format(new Date(filterMonth + '-01'), 'MMMM')} icon={DollarSign} color="blue" />
         <StatCard title="Pending Approval" value={pendingCount} subtitle="Awaiting review" icon={TrendingDown} color="amber" />
         <StatCard title="Categories" value={byCategory.length} subtitle="Active this month" icon={Receipt} color="purple" />
         <StatCard title="Departments" value={byDepartment.length} subtitle="Cost centres" icon={Receipt} color="green" />
@@ -200,7 +202,7 @@ export default function ExpensePage() {
                         <td className="px-4 py-3 font-medium">{exp.description}</td>
                         <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell capitalize">{exp.category?.replace('_', ' ')}</td>
                         <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{exp.department || '—'}</td>
-                        <td className="px-4 py-3 text-right font-semibold">S${exp.amount?.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-right font-semibold">{formatAmount(exp.amount)}</td>
                         <td className="px-4 py-3 text-center"><StatusBadge status={exp.status} /></td>
                         {isManager && exp.status === 'pending' && (
                           <td className="px-4 py-3 text-right">
@@ -236,7 +238,7 @@ export default function ExpensePage() {
                     <div key={cat}>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="font-medium capitalize">{cat?.replace('_', ' ')}</span>
-                        <span className="text-muted-foreground">S${amt.toLocaleString()}</span>
+                        <span className="text-muted-foreground">{formatAmount(amt)}</span>
                       </div>
                       <div className="h-2 rounded-full bg-muted overflow-hidden">
                         <div className="h-full rounded-full bg-primary" style={{ width: `${(amt / totalMonth) * 100}%` }} />
@@ -256,7 +258,7 @@ export default function ExpensePage() {
                     <div key={dept}>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="font-medium">{dept}</span>
-                        <span className="text-muted-foreground">S${amt.toLocaleString()}</span>
+                        <span className="text-muted-foreground">{formatAmount(amt)}</span>
                       </div>
                       <div className="h-2 rounded-full bg-muted overflow-hidden">
                         <div className="h-full rounded-full bg-orbitan-green" style={{ width: `${(amt / totalMonth) * 100}%` }} />
@@ -280,7 +282,7 @@ export default function ExpensePage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs mb-1 block">Amount (S$)</Label>
+                <Label className="text-xs mb-1 block">Amount ({currencyConfig.symbol})</Label>
                 <Input type="number" value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} placeholder="0.00" />
               </div>
               <div>

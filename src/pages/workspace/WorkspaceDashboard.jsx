@@ -16,6 +16,7 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import EditableDashboardGrid from '@/components/dashboard/EditableDashboardGrid';
 import TrustScoreWidget from '@/components/dashboard/TrustScoreWidget';
 import { hasModule } from '@/lib/use-tenant';
+import { useCurrency } from '@/lib/CurrencyContext';
 import {
   Package, ShoppingCart, FileText, CheckSquare, Users,
   AlertTriangle, ArrowRight, Shield,
@@ -23,6 +24,7 @@ import {
 
 export default function WorkspaceDashboard() {
   const { tenant, tenantId } = useOutletContext() || {};
+  const { formatAmount } = useCurrency();
   const [inventoryItems, setInventoryItems] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -84,7 +86,7 @@ export default function WorkspaceDashboard() {
     { id: 'kpi_inventory', title: 'Inventory Items', icon: Package,
       render: () => <StatCard title="Inventory Items" value={loading ? '—' : inventoryItems.length} icon={Package} color="blue" to={`${base}/inventory`} help={{ content: "Total tracked inventory items across your outlets. Click to view the full inventory list and manage stock levels.", title: "Inventory Items" }} /> },
     { id: 'kpi_sales', title: "Today's Sales", icon: FileText,
-      render: () => <StatCard title="Today's Sales" value={loading ? '—' : todaysSales.length} subtitle={`S$${todaysRevenue.toFixed(2)} revenue`} icon={FileText} color="green" to={`${base}/sales`} help={{ content: "Sales invoices recorded today and the total revenue from those transactions. Click to open daily sales reconciliation.", title: "Today's Sales" }} /> },
+      render: () => <StatCard title="Today's Sales" value={loading ? '—' : todaysSales.length} subtitle={`${formatAmount(todaysRevenue)} revenue`} icon={FileText} color="green" to={`${base}/sales`} help={{ content: "Sales invoices recorded today and the total revenue from those transactions. Click to open daily sales reconciliation.", title: "Today's Sales" }} /> },
     { id: 'kpi_pos', title: 'Open Purchase Orders', icon: ShoppingCart,
       render: () => <StatCard title="Open Purchase Orders" value={loading ? '—' : pendingPOs.length} icon={ShoppingCart} color="amber" to={`${base}/procurement`} help={{ content: "Purchase orders in draft or pending approval status. Click to manage procurement and approve orders.", title: "Open Purchase Orders" }} /> },
     { id: 'kpi_tasks', title: 'Pending Tasks', icon: CheckSquare,

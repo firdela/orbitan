@@ -24,12 +24,14 @@ import ForecastingPanel from '@/components/inventory/ForecastingPanel';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
 import { useAuth } from '@/lib/AuthContext';
+import { useCurrency } from '@/lib/CurrencyContext';
 import { TrendingUp, ClipboardCheck } from 'lucide-react';
 
 
 
 export default function InventoryPage() {
   const { user } = useAuth();
+  const { formatAmount, currencyConfig } = useCurrency();
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
   const [filterLow, setFilterLow] = useState(false);
@@ -206,7 +208,7 @@ export default function InventoryPage() {
             <StatCard title="Total Items" value={items.length} subtitle="In catalog" icon={Boxes} color="blue" help={{ content: 'Every active inventory item recorded for this outlet, including ingredients and supplies.' }} />
             <StatCard title="Low Stock" value={lowStock.length} subtitle="Below par level" icon={AlertTriangle} color={lowStock.length > 0 ? 'amber' : 'green'} help={lowStock.length > 0 ? { content: 'Items at or below their par level. Click to view only these items and raise purchase orders.', tips: ['Raise a purchase order from the Procurement module to replenish.'] } : { content: 'No items are below par level — your stock is healthy.' }} onClick={lowStock.length > 0 ? () => { setActiveTab('items'); setFilterLow(true); } : undefined} />
             <StatCard title="Categories" value={categories.length} subtitle="Item groupings" icon={Tags} color="purple" help={{ content: 'Distinct categories you have assigned to items (e.g. Proteins, Produce, Dry Goods).' }} />
-            <StatCard title="Stock Value" value={`S$${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} subtitle="Total inventory cost" icon={DollarSign} color="green" help={{ content: 'Sum of (current stock × cost per unit) across all items — the capital currently tied up in inventory.' }} />
+            <StatCard title="Stock Value" value={formatAmount(totalValue, { decimals: 0 })} subtitle="Total inventory cost" icon={DollarSign} color="green" help={{ content: 'Sum of (current stock × cost per unit) across all items — the capital currently tied up in inventory.' }} />
           </div>
         )}
 
@@ -311,7 +313,7 @@ export default function InventoryPage() {
                         )}
                       </td>
                       <td className="px-4 py-3.5 text-right text-muted-foreground hidden md:table-cell tabular-nums">{item.par_level} {item.unit}</td>
-                      <td className="px-4 py-3.5 text-right text-muted-foreground hidden md:table-cell">S${item.cost_per_unit?.toFixed(2)}</td>
+                      <td className="px-4 py-3.5 text-right text-muted-foreground hidden md:table-cell">{formatAmount(item.cost_per_unit)}</td>
                       <td className="px-4 py-3.5 text-center">
                         {isLow ? (
                           <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-orbitan-amber-light text-orbitan-amber px-2 py-0.5 rounded-full">
@@ -377,7 +379,7 @@ export default function InventoryPage() {
               { key: 'unit', label: 'Unit (e.g. kg, pack)', type: 'text' },
               { key: 'current_stock', label: 'Current Stock', type: 'number' },
               { key: 'par_level', label: 'Par Level (min stock)', type: 'number' },
-              { key: 'cost_per_unit', label: 'Cost per Unit (S$)', type: 'number' },
+              { key: 'cost_per_unit', label: `Cost per Unit (${currencyConfig.symbol})`, type: 'number' },
             ].map(field => (
               <div key={field.key}>
                 <Label className="text-xs mb-1 block">{field.label}</Label>
