@@ -69,7 +69,7 @@ export default function TaskTransitionBar({ task, onTransitioned }) {
           );
         })}
       </div>
-      {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+      {error && <p role="alert" className="text-sm text-destructive mt-2">{error}</p>}
 
       <Dialog open={!!activeTarget} onOpenChange={(o) => { if (!o) { setActiveTarget(null); setReason(''); setBlockerReason(''); setError(null); } }}>
         <DialogContent className="max-w-md">
@@ -77,14 +77,14 @@ export default function TaskTransitionBar({ task, onTransitioned }) {
           <div className="space-y-3 py-2">
             {activeTarget === 'blocked' && (
               <div>
-                <Label className="text-xs mb-1 block">Blocker Reason *</Label>
-                <Textarea value={blockerReason} onChange={e => setBlockerReason(e.target.value)} rows={2} placeholder="What is blocking this task?" />
+                <Label htmlFor="tb-blocker" className="text-xs mb-1 block">Blocker Reason *</Label>
+                <Textarea id="tb-blocker" value={blockerReason} onChange={e => setBlockerReason(e.target.value)} rows={2} placeholder="What is blocking this task?" aria-invalid={!blockerReason.trim()} />
               </div>
             )}
             {['cancelled', 'archived'].includes(activeTarget) && (
               <div>
-                <Label className="text-xs mb-1 block">Reason *</Label>
-                <Textarea value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder="Reason for this action..." />
+                <Label htmlFor="tb-reason" className="text-xs mb-1 block">Reason *</Label>
+                <Textarea id="tb-reason" value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder="Reason for this action..." aria-invalid={!reason.trim()} />
               </div>
             )}
           </div>

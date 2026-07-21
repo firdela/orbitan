@@ -9,6 +9,7 @@ export default function TaskCard({ task, onClick }) {
   return (
     <button
       onClick={onClick}
+      aria-label={`${task.title}, status ${task.status}, priority ${task.priority}${task.responsible_agent_name ? `, assigned to ${task.responsible_agent_name}` : ''}`}
       className="w-full text-left bg-card border border-border rounded-xl px-5 py-4 flex items-center gap-4 hover:shadow-sm hover:border-primary/30 transition-all"
     >
       <div className={cn(

@@ -76,6 +76,7 @@ import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
 import AuditLogPage from '@/pages/platform/AuditLogPage';
 import AccessControlPage from '@/pages/platform/AccessControlPage';
 import CapabilityManager from '@/pages/platform/CapabilityManager';
+import TaskTestSuite from '@/pages/dev/TaskTestSuite';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -199,6 +200,9 @@ const AuthenticatedApp = () => {
       <Route path="/platform/audit-logs" element={<AuditLogPage />} />
       <Route path="/platform/access-control" element={<AccessControlPage />} />
       <Route path="/platform/capabilities" element={<CapabilityManager />} />
+
+      {/* Dev — Automated Test Suites */}
+      <Route path="/dev/task-tests" element={<TaskTestSuite />} />
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />

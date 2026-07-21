@@ -58,34 +58,34 @@ export default function TaskCreateDialog({ open, onOpenChange, employees, tenant
         <DialogHeader><DialogTitle>Create Task</DialogTitle></DialogHeader>
         <div className="space-y-3 py-2">
           <div>
-            <Label className="text-xs mb-1 block">Task Title *</Label>
-            <Input value={form.title} onChange={e => update({ title: e.target.value })} placeholder="e.g. Complete morning prep" />
+            <Label htmlFor="tc-title" className="text-xs mb-1 block">Task Title *</Label>
+            <Input id="tc-title" value={form.title} onChange={e => update({ title: e.target.value })} placeholder="e.g. Complete morning prep" aria-invalid={!!error && !form.title.trim()} />
           </div>
           <div>
-            <Label className="text-xs mb-1 block">Description</Label>
-            <Textarea value={form.description} onChange={e => update({ description: e.target.value })} rows={2} placeholder="What needs to be done..." />
+            <Label htmlFor="tc-desc" className="text-xs mb-1 block">Description</Label>
+            <Textarea id="tc-desc" value={form.description} onChange={e => update({ description: e.target.value })} rows={2} placeholder="What needs to be done..." />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs mb-1 block">Responsible Agent</Label>
+              <Label htmlFor="tc-resp" className="text-xs mb-1 block">Responsible Agent</Label>
               <Select value={form.responsible_agent_id} onValueChange={pickEmployee}>
-                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectTrigger id="tc-resp"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>{employees.map(e => <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs mb-1 block">Accountable (optional)</Label>
+              <Label htmlFor="tc-acct" className="text-xs mb-1 block">Accountable (optional)</Label>
               <Select value={form.accountable_agent_id} onValueChange={pickAccountable}>
-                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectTrigger id="tc-acct"><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>{employees.map(e => <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs mb-1 block">Priority</Label>
+              <Label htmlFor="tc-prio" className="text-xs mb-1 block">Priority</Label>
               <Select value={form.priority} onValueChange={v => update({ priority: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="tc-prio"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="low">Low</SelectItem>
                   <SelectItem value="medium">Medium</SelectItem>
@@ -95,9 +95,9 @@ export default function TaskCreateDialog({ open, onOpenChange, employees, tenant
               </Select>
             </div>
             <div>
-              <Label className="text-xs mb-1 block">Verification</Label>
+              <Label htmlFor="tc-verify" className="text-xs mb-1 block">Verification</Label>
               <Select value={form.verification_mode} onValueChange={v => update({ verification_mode: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="tc-verify"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None (auto-complete)</SelectItem>
                   <SelectItem value="self">Self-verify</SelectItem>
@@ -109,25 +109,25 @@ export default function TaskCreateDialog({ open, onOpenChange, employees, tenant
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs mb-1 block">Due Date</Label>
-              <Input type="date" value={form.due_date} onChange={e => update({ due_date: e.target.value })} />
+              <Label htmlFor="tc-date" className="text-xs mb-1 block">Due Date</Label>
+              <Input id="tc-date" type="date" value={form.due_date} onChange={e => update({ due_date: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs mb-1 block">Due Time</Label>
-              <Input type="time" value={form.due_time} onChange={e => update({ due_time: e.target.value })} />
+              <Label htmlFor="tc-time" className="text-xs mb-1 block">Due Time</Label>
+              <Input id="tc-time" type="time" value={form.due_time} onChange={e => update({ due_time: e.target.value })} />
             </div>
           </div>
           <div>
-            <Label className="text-xs mb-1 block">Module Context</Label>
-            <Input value={form.module_context} onChange={e => update({ module_context: e.target.value })} placeholder="e.g. compliance, inventory, kitchen" />
+            <Label htmlFor="tc-module" className="text-xs mb-1 block">Module Context</Label>
+            <Input id="tc-module" value={form.module_context} onChange={e => update({ module_context: e.target.value })} placeholder="e.g. compliance, inventory, kitchen" />
           </div>
           {form.verification_mode !== 'none' && (
             <div>
-              <Label className="text-xs mb-1 block">Completion Requirements</Label>
-              <Textarea value={form.completion_requirements} onChange={e => update({ completion_requirements: e.target.value })} rows={2} placeholder="What must be satisfied before submission..." />
+              <Label htmlFor="tc-reqs" className="text-xs mb-1 block">Completion Requirements</Label>
+              <Textarea id="tc-reqs" value={form.completion_requirements} onChange={e => update({ completion_requirements: e.target.value })} rows={2} placeholder="What must be satisfied before submission..." />
             </div>
           )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>

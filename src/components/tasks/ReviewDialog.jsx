@@ -49,9 +49,9 @@ export default function ReviewDialog({ open, onOpenChange, task, onReviewed }) {
         <DialogHeader><DialogTitle>Review Task</DialogTitle></DialogHeader>
         <div className="space-y-3 py-2">
           <div>
-            <Label className="text-xs mb-1 block">Review Decision</Label>
+            <Label htmlFor="rd-result" className="text-xs mb-1 block">Review Decision</Label>
             <Select value={form.review_result} onValueChange={v => update({ review_result: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="rd-result"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="approved">Approve (Verify)</SelectItem>
                 <SelectItem value="changes_required">Request Changes</SelectItem>
@@ -60,26 +60,26 @@ export default function ReviewDialog({ open, onOpenChange, task, onReviewed }) {
             </Select>
           </div>
           <div>
-            <Label className="text-xs mb-1 block">Comments</Label>
-            <Textarea value={form.comments} onChange={e => update({ comments: e.target.value })} rows={2} placeholder="General review comments..." />
+            <Label htmlFor="rd-comments" className="text-xs mb-1 block">Comments</Label>
+            <Textarea id="rd-comments" value={form.comments} onChange={e => update({ comments: e.target.value })} rows={2} placeholder="General review comments..." />
           </div>
           <div>
-            <Label className="text-xs mb-1 block">Detailed Feedback</Label>
-            <Textarea value={form.feedback} onChange={e => update({ feedback: e.target.value })} rows={3} placeholder="Specific feedback for the assignee..." />
+            <Label htmlFor="rd-feedback" className="text-xs mb-1 block">Detailed Feedback</Label>
+            <Textarea id="rd-feedback" value={form.feedback} onChange={e => update({ feedback: e.target.value })} rows={3} placeholder="Specific feedback for the assignee..." />
           </div>
           {form.review_result === 'approved' && (
             <div>
-              <Label className="text-xs mb-1 block">{task?.verification_mode === 'approval_gated' ? 'Approval Reason *' : 'Approval Reason'}</Label>
-              <Textarea value={form.approval_reason} onChange={e => update({ approval_reason: e.target.value })} rows={2} placeholder="Why is this approved?" />
+              <Label htmlFor="rd-approval" className="text-xs mb-1 block">{task?.verification_mode === 'approval_gated' ? 'Approval Reason *' : 'Approval Reason'}</Label>
+              <Textarea id="rd-approval" value={form.approval_reason} onChange={e => update({ approval_reason: e.target.value })} rows={2} placeholder="Why is this approved?" />
             </div>
           )}
           {form.review_result === 'rejected' && (
             <div>
-              <Label className="text-xs mb-1 block">Rejection Reason *</Label>
-              <Textarea value={form.rejection_reason} onChange={e => update({ rejection_reason: e.target.value })} rows={2} placeholder="Why is this rejected?" />
+              <Label htmlFor="rd-rejection" className="text-xs mb-1 block">Rejection Reason *</Label>
+              <Textarea id="rd-rejection" value={form.rejection_reason} onChange={e => update({ rejection_reason: e.target.value })} rows={2} placeholder="Why is this rejected?" aria-invalid={!form.rejection_reason.trim()} />
             </div>
           )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>

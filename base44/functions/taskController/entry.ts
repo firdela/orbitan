@@ -359,6 +359,9 @@ async function handleAcknowledge(base44, user, body) {
   if (assignment.agent_id !== user.id) {
     return Response.json({ error: 'Only the assigned agent may acknowledge' }, { status: 403 });
   }
+  if (!assignment.is_active) {
+    return Response.json({ error: 'This assignment is no longer active and cannot be acknowledged' }, { status: 422 });
+  }
 
   const updated = await base44.entities.TaskAssignment.update(assignment_id, {
     acknowledgement_status: decision,

@@ -33,6 +33,7 @@ export default function TaskDetailSheet({ task, open, onOpenChange, onTransition
   if (!task) return null;
 
   const canReview = task.status === 'submitted_for_review';
+  const sectionLabel = 'text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5';
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -51,15 +52,13 @@ export default function TaskDetailSheet({ task, open, onOpenChange, onTransition
 
         <ScrollArea className="flex-1">
           <div className="px-6 py-5 space-y-6">
-            {/* Description */}
             {task.description && (
               <div>
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Description</h4>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Description</h3>
                 <p className="text-sm text-foreground whitespace-pre-wrap">{task.description}</p>
               </div>
             )}
 
-            {/* Meta grid */}
             <div className="grid grid-cols-2 gap-4">
               <DetailItem label="Responsible" value={task.responsible_agent_name || 'Unassigned'} />
               <DetailItem label="Accountable" value={task.accountable_agent_name || '—'} />
@@ -68,21 +67,20 @@ export default function TaskDetailSheet({ task, open, onOpenChange, onTransition
               {task.module_context && <DetailItem label="Module" value={task.module_context} />}
               {task.completion_requirements && (
                 <div className="col-span-2">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Completion Requirements</h4>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Completion Requirements</h3>
                   <p className="text-sm text-foreground">{task.completion_requirements}</p>
                 </div>
               )}
               {task.blocker_reason && (
                 <div className="col-span-2">
-                  <h4 className="text-xs font-semibold text-orbitan-red uppercase tracking-wide mb-1">Current Blocker</h4>
+                  <h3 className="text-xs font-semibold text-orbitan-red uppercase tracking-wide mb-1">Current Blocker</h3>
                   <p className="text-sm text-foreground bg-orbitan-red-light/40 rounded-lg px-3 py-2">{task.blocker_reason}</p>
                 </div>
               )}
             </div>
 
-            {/* Actions */}
             <div>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Actions</h4>
+              <h3 className={sectionLabel}><CheckSquare className="w-3.5 h-3.5" />Actions</h3>
               <TaskTransitionBar task={task} onTransitioned={onTransitioned} />
               {canReview && (
                 <Button size="sm" variant="default" className="mt-2 gap-1.5" onClick={() => setReviewOpen(true)}>
@@ -91,11 +89,8 @@ export default function TaskDetailSheet({ task, open, onOpenChange, onTransition
               )}
             </div>
 
-            {/* Assignment history */}
             <div>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <UserCog className="w-3.5 h-3.5" /> Assignment History
-              </h4>
+              <h3 className={sectionLabel}><UserCog className="w-3.5 h-3.5" />Assignment History</h3>
               {loading ? <p className="text-xs text-muted-foreground">Loading...</p> : assignments.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No assignments yet.</p>
               ) : (
@@ -119,12 +114,9 @@ export default function TaskDetailSheet({ task, open, onOpenChange, onTransition
               )}
             </div>
 
-            {/* Review history */}
             {reviews.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                  <FileCheck className="w-3.5 h-3.5" /> Reviews
-                </h4>
+                <h3 className={sectionLabel}><FileCheck className="w-3.5 h-3.5" />Reviews</h3>
                 <div className="space-y-1.5">
                   {reviews.map(r => (
                     <div key={r.id} className="text-xs border border-border rounded-lg px-3 py-2">
@@ -140,11 +132,8 @@ export default function TaskDetailSheet({ task, open, onOpenChange, onTransition
               </div>
             )}
 
-            {/* Timeline */}
             <div>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <History className="w-3.5 h-3.5" /> Activity Timeline
-              </h4>
+              <h3 className={sectionLabel}><History className="w-3.5 h-3.5" />Activity Timeline</h3>
               {loading ? <p className="text-xs text-muted-foreground">Loading...</p> : timeline.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No activity recorded.</p>
               ) : (
@@ -171,7 +160,7 @@ export default function TaskDetailSheet({ task, open, onOpenChange, onTransition
 function DetailItem({ label, value }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">{label}</h4>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">{label}</p>
       <p className="text-sm text-foreground">{value}</p>
     </div>
   );
