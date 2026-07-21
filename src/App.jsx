@@ -75,6 +75,7 @@ import ShieldCommandCenter from '@/pages/platform/ShieldCommandCenter';
 import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
 import AuditLogPage from '@/pages/platform/AuditLogPage';
 import AccessControlPage from '@/pages/platform/AccessControlPage';
+import CapabilityManager from '@/pages/platform/CapabilityManager';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -197,6 +198,7 @@ const AuthenticatedApp = () => {
       <Route path="/platform/integrations" element={<IntegrationHubPage />} />
       <Route path="/platform/audit-logs" element={<AuditLogPage />} />
       <Route path="/platform/access-control" element={<AccessControlPage />} />
+      <Route path="/platform/capabilities" element={<CapabilityManager />} />
 
       {/* Worker Portal */}
       <Route path="/worker" element={<WorkerPortal />} />
