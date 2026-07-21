@@ -203,6 +203,14 @@ Full ADR/ODR content is preserved in the legacy directory `src/docs/knowledge-hu
 - **Future Review:** 2026-08-04
 - **Legacy Path:** `src/docs/knowledge-hub/decision-records/0045-github-integration-verification-checkpoint.md`
 
+### ADR-0046: Capability-Tiered Orchestrator (Registry-Driven Intelligence)
+- **Date:** 2026-07-21
+- **Status:** Accepted
+- **Impacted Modules:** NexusCapabilityRegistry, nexus, all AI capabilities, OrbitanWallet, OrbitUsageTracker, sanitizationGate
+- **Summary:** Transition the `nexus` gateway from a hardcoded `SERVICE_REGISTRY` constant to a registry-driven dispatcher backed by the new `NexusCapabilityRegistry` entity. Capabilities are tiered: Tier 1 (Deterministic Regulator, stateless), Tier 2 (Assistant Synthesizer, Shield-gated LLM), Tier 3 (Autonomous Delegate, enterprise + high trust). Every capability declares its sanitization mode (ADR-0044 Zero-PII), governance domain binding, plan tier requirement, and fallback capability. The legacy static constant is preserved as an in-memory `LEGACY_FALLBACK_REGISTRY` for zero-downtime migration and outage resilience. Adding/swapping an AI capability = one database row, not a code deploy.
+- **Future Review:** 2026-10-01
+- **Legacy Path:** `src/docs/knowledge-hub/decision-records/0046-capability-tiered-orchestrator.md`
+
 ## ADR Template
 
 ```markdown

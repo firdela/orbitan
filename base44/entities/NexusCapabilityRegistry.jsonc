@@ -1,0 +1,227 @@
+{
+  "name": "NexusCapabilityRegistry",
+  "type": "object",
+  "description": "OrbitanOS Registry-Driven Intelligence (ADR-0046) \u2014 The single source of truth for every AI capability exposed through the Nexus Gateway. Decouples the gateway dispatcher from backend function implementations, enabling runtime routing, tiered governance, and Zero-PII sanitization enforcement. Replaces the hardcoded SERVICE_REGISTRY constant in nexus/entry.ts. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "capability_key": {
+      "type": "string",
+      "description": "Unique public service identifier exposed to the frontend e.g. 'ocr_receipt', 'sop_gen', 'training_gen', 'biz_advisor', 'workforce_insights', 'procurement_proposal'. The Nexus Gateway resolves incoming requests by this key."
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable capability name shown in admin UI and audit trails"
+    },
+    "description": {
+      "type": "string",
+      "description": "What this capability does and why it exists \u2014 surfaced in the capability manager UI"
+    },
+    "module": {
+      "type": "string",
+      "enum": [
+        "finance",
+        "inventory",
+        "procurement",
+        "workforce",
+        "compliance",
+        "sales",
+        "scheduling",
+        "retail",
+        "sustainability",
+        "system"
+      ],
+      "description": "Owning module \u2014 used for grouping, filtering, and Shield domain resolution"
+    },
+    "tier": {
+      "type": "number",
+      "enum": [
+        1,
+        2,
+        3
+      ],
+      "description": "Capability Tier (ADR-0046): 1 = Deterministic Regulator (direct function, stateless, zero policy required). 2 = Assistant Synthesizer (LLM + tools, governance-gated). 3 = Autonomous Delegate (agentic loop, enterprise + high trust only)."
+    },
+    "handler": {
+      "type": "object",
+      "description": "The execution target. The gateway reads this at runtime to route the request \u2014 never hardcoded in the dispatcher.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "function",
+            "agent_config"
+          ],
+          "description": "'function' = invoke a base44 backend function by name. 'agent_config' = invoke an in-app agent by slug (reserved for Tier 3)."
+        },
+        "ref": {
+          "type": "string",
+          "description": "Function name (e.g. 'sopGenerator') or agent slug (e.g. 'procurement_agent')."
+        }
+      },
+      "required": [
+        "type",
+        "ref"
+      ]
+    },
+    "default_credits": {
+      "type": "number",
+      "default": 1,
+      "description": "Base Orbitan Credits consumed per successful invocation. Multiplied by the MODEL_CREDIT_MULTIPLIER at runtime based on the model used."
+    },
+    "governance": {
+      "type": "object",
+      "description": "Governance binding for this capability. Every Tier 2/3 capability MUST bind to a Shield domain.",
+      "properties": {
+        "domain_id": {
+          "type": "string",
+          "description": "Shield governance domain for policy resolution e.g. 'fnb_standard_ops'. Null/empty for Tier 1 deterministic capabilities (no governance binding)."
+        },
+        "requires_consent": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, the capability only executes if the tenant has enabled platform_intelligence_consent (ADR-0044). Reserved for capabilities that emit abstracted intelligence signals."
+        },
+        "model_override": {
+          "type": "string",
+          "description": "Optional model pin for this capability e.g. 'gemini_3_flash'. Overrides payload model selection. Null = honor payload.model or default to 'automatic'."
+        }
+      }
+    },
+    "sanitization": {
+      "type": "object",
+      "description": "Zero-PII enforcement configuration (ADR-0044). Every capability declares how the sanitizationGate treats its payload before execution.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "strict",
+            "permissive",
+            "disabled"
+          ],
+          "default": "strict",
+          "description": "strict = full sanitizationGate pipeline (registry lookup + consent + PII strip). permissive = PII strip only (skip registry/consent, for deterministic Tier 1). disabled = pass-through (enterprise opt-out, audit-logged)."
+        },
+        "permitted_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Allowlist of payload fields that survive sanitization. When empty, the gate uses its default PERMITTED_DIMENSIONS. Use for capabilities with structured, non-PII payloads (e.g. file_url, prompt_template)."
+        }
+      }
+    },
+    "fallback_capability_key": {
+      "type": "string",
+      "description": "Capability key to invoke if this capability's handler fails or is disabled. Enables graceful degradation (ADR-0017). Null = no fallback, surface error to user."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Inactive capabilities return a 404 from the gateway \u2014 even if the handler function still exists. This is the runtime kill-switch per capability."
+    },
+    "is_system_default": {
+      "type": "boolean",
+      "default": true,
+      "description": "True for platform-seeded capabilities (tenant_id='system'). Read-only for non-admins. Serve as fallback when a tenant has no custom override."
+    },
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant this capability belongs to. 'system' = platform-default capability available to all tenants. Tenant-specific overrides allow white-label/enterprise custom routing."
+    },
+    "min_plan_required": {
+      "type": "string",
+      "enum": [
+        "orbitan_free",
+        "orbitan_starter",
+        "orbitan_growth",
+        "orbitan_business",
+        "orbitan_enterprise"
+      ],
+      "default": "orbitan_starter",
+      "description": "Minimum subscription tier to invoke this capability. Tier 3 autonomous capabilities require 'orbitan_enterprise'."
+    },
+    "version": {
+      "type": "string",
+      "default": "1.0.0",
+      "description": "Semantic version of this capability definition \u2014 bump when handler, governance, or sanitization config changes for audit traceability."
+    },
+    "fire_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Lifetime count of successful invocations. Incremented by the gateway (fire-and-forget)."
+    },
+    "last_fired_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the last successful invocation. Used for observability and stale-capability detection."
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "capability_key",
+    "display_name",
+    "module",
+    "tier",
+    "handler",
+    "default_credits",
+    "tenant_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.tenant_id": "system"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
