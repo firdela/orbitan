@@ -46,16 +46,33 @@ Deno.serve(async (req) => {
     // the tenant was provisioned under (fnb_standard_ops, etc.)
     // without requiring every caller to know the domain upfront.
     let resolvedDomainId = domain_id;
+    let tenantRecord = null;
     if (!resolvedDomainId) {
       try {
         const tenants = await base44.asServiceRole.entities.Tenant.filter({ id: resolvedTenantId });
         if (tenants[0]?.governance_domain) {
           resolvedDomainId = tenants[0].governance_domain;
         }
+        // ADR-0044: Capture tenant record for product-context tagging.
+        // Used to emit Zero-PII intelligence signals (industry, pack, shield_mode).
+        // The raw tenant record is NEVER transmitted — only abstracted context.
+        tenantRecord = tenants[0] || null;
       } catch {
         // Fail-open: proceed without domain scoping if lookup fails
       }
     }
+
+    // ── ADR-0044: PRODUCT CONTEXT (Zero-PII Intelligence Signal) ────────
+    // Every Shield evaluation is tagged with abstracted product context.
+    // This enables platform self-optimization WITHOUT transmitting PII.
+    // Fields retained: industry, enabled_packs, governance_domain, shield_mode.
+    // Fields NEVER included: tenant_id, tenant name, actor_id, entity content.
+    const productContext = tenantRecord ? {
+      industry: tenantRecord.industry || null,
+      enabled_packs: tenantRecord.enabled_packs || [],
+      governance_domain: resolvedDomainId || null,
+      subscription_plan: tenantRecord.subscription_plan || null
+    } : null;
 
     // SUBSCRIPTION POLICY CHECK: Enforce resource limits before governance policies
     // This blocks actions that exceed subscription tier limits (employees, outlets, brands)
@@ -182,7 +199,10 @@ Deno.serve(async (req) => {
             actor_type: resolvedActorType,
             agent_name: agent_name || null,
             shadow_audit: inShadowAudit,
-            native_effect: policy.effect
+            native_effect: policy.effect,
+            // ADR-0044: Zero-PII product context for platform intelligence.
+            // Attached locally; never transmitted as identifying data.
+            product_context: productContext
           }
         });
 
@@ -240,6 +260,8 @@ Deno.serve(async (req) => {
             blocked_action: action,
             blocked_record_state: data,
             audit_log_id: critical._audit_log_id || null,
+            // ADR-0044: Zero-PII product context for platform intelligence.
+            product_context: productContext,
             captured_at: new Date().toISOString()
           },
           linked_entity_type: critical._audit_log_id ? 'AuditLog' : 'GovernancePolicy',

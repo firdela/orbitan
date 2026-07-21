@@ -1,0 +1,203 @@
+{
+  "name": "OperationalMetric",
+  "type": "object",
+  "description": "OrbitanOS Platform Intelligence Registry (ADR-0044) \u2014 Sovereign Intelligence Model. Registry of privacy-gated, zero-PII operational signals emitted by tenant execution contexts for platform self-optimization. Every metric enforces the Data Transparency Manifest: if a signal key is not registered here, the Sanitization Gate drops the emission. Local-First Evaluation: raw tenant data never leaves the tenant boundary; only abstracted signal patterns keyed by industry/pack/module are aggregated centrally. Tenant consent (platform_intelligence_consent) governs whether even abstracted signals are emitted. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant this metric definition belongs to. 'system' = platform-default metric available to all tenants. Tenant-specific overrides allow white-label/enterprise customisation of aggregation rules."
+    },
+    "metric_key": {
+      "type": "string",
+      "description": "Unique signal identifier e.g. 'shield_evaluation_latency_ms', 'policy_hit_rate', 'shadow_audit_ratio', 'procurement_approval_p95'. The Sanitization Gate validates emissions against this key before allowing transmission."
+    },
+    "module": {
+      "type": "string",
+      "enum": [
+        "finance",
+        "inventory",
+        "procurement",
+        "workforce",
+        "compliance",
+        "sales",
+        "scheduling",
+        "retail",
+        "sustainability",
+        "system"
+      ],
+      "description": "Owning module \u2014 used for signal grouping and Shield domain resolution"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "performance",
+        "engagement",
+        "governance",
+        "anomaly"
+      ],
+      "default": "performance",
+      "description": "Signal classification for the Orbit Nexus internal intelligence dashboard"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable name shown in the Data Transparency Manifest UI"
+    },
+    "description": {
+      "type": "string",
+      "description": "What this signal measures and why it matters \u2014 surfaced in the tenant-accessible Transparency Manifest"
+    },
+    "unit": {
+      "type": "string",
+      "enum": [
+        "milliseconds",
+        "count",
+        "percentage",
+        "ratio",
+        "none"
+      ],
+      "default": "count",
+      "description": "Unit of the abstracted signal value"
+    },
+    "aggregation_rules": {
+      "type": "object",
+      "description": "How signals are aggregated at the central intelligence hub. Defines the rollup strategy (sum, avg, p50, p95, frequency_count) and the grouping dimensions (industry, pack, module \u2014 NEVER tenant_id).",
+      "properties": {
+        "rollup_mode": {
+          "type": "string",
+          "enum": [
+            "sum",
+            "avg",
+            "p50",
+            "p95",
+            "p99",
+            "frequency_count"
+          ],
+          "default": "avg"
+        },
+        "group_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "industry",
+              "pack",
+              "module",
+              "shield_mode"
+            ]
+          },
+          "default": [
+            "industry",
+            "module"
+          ],
+          "description": "Dimensions for central aggregation. tenant_id is NEVER a valid group_by dimension \u2014 this is the Zero-PII enforcement at the schema level."
+        }
+      }
+    },
+    "is_privacy_gated": {
+      "type": "boolean",
+      "default": true,
+      "description": "ADR-0044: Must ALWAYS be true. Prevents non-anonymized data from being registered. A validation function must reject any record with is_privacy_gated: false. This is the hard schema-level enforcement of the Zero-PII principle."
+    },
+    "requires_tenant_consent": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, this signal is only emitted if the tenant has explicitly enabled platform_intelligence_consent. When false, the signal is emitted under the default TOS (still Zero-PII). Enterprise tenants may override to true for all signals."
+    },
+    "emission_frequency": {
+      "type": "string",
+      "enum": [
+        "per_event",
+        "hourly",
+        "daily",
+        "weekly"
+      ],
+      "default": "per_event",
+      "description": "How often this signal is emitted from the tenant execution context to the central hub"
+    },
+    "sanitization_rule": {
+      "type": "string",
+      "description": "Human-readable description of what the Sanitization Gate strips before emission e.g. 'Strips tenant_id, outlet_id, actor_id, entity content; retains only: industry, pack, module, signal_value'"
+    },
+    "documentation_url": {
+      "type": "string",
+      "description": "Link to the Data Transparency Manifest entry explaining this metric to tenants. The Manifest is auto-generated from this registry at query time."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Inactive metrics are dropped by the Sanitization Gate even if a function attempts to emit them"
+    },
+    "is_system_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for platform-seeded definitions (tenant_id='system'). Read-only for non-admins; serve as fallback when a tenant has no custom override."
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "metric_key",
+    "module",
+    "category",
+    "is_privacy_gated"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.tenant_id": "system"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
