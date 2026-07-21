@@ -11,6 +11,7 @@ import { MODULES, INDUSTRY_LABELS, SUBSCRIPTION_PLANS } from '@/lib/orbitan-conf
 import { PlanBadge } from '@/components/shared/PackBadge';
 import { CapabilityBadge, CapabilityStack } from '@/components/shared/CapabilityBadge';
 import StatusBadge from '@/components/shared/StatusBadge';
+import ShieldStatusBadge from '@/components/leader/ShieldStatusBadge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -69,7 +70,6 @@ export default function TenantCommandCard({ tenant, manifest, activating, onActi
   // Manifest-Driven Navigation: route to the tenant's real workspace via UUID
   const workspaceRoute = realTenantId ? `/workspace/${realTenantId}` : null;
   const isActivating  = activating === manifestRef || activating === 'all';
-  const shieldActive  = shieldPolicyCount > 0;
 
   // Locked modules = all modules NOT in enabled list, capped at 4
   const allModuleKeys   = Object.keys(MODULES);
@@ -103,20 +103,11 @@ export default function TenantCommandCard({ tenant, manifest, activating, onActi
               {tenant.max_employees ? ` · Up to ${tenant.max_employees} employees` : ''}
             </p>
             <PlanBadge plan={plan} />
-            {/* Shield Status Indicator — governance enforcement visibility */}
-            <span className={cn(
-              "inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium border",
-              shieldActive
-                ? "bg-orbitan-green-light text-orbitan-green border-green-200"
-                : "bg-amber-50 text-amber-600 border-amber-200"
-            )}
-              title={shieldActive
-                ? `${shieldPolicyCount} governance polic${shieldPolicyCount === 1 ? 'y' : 'ies'} active — Shield enforcement live`
-                : 'No governance policies registered — Shield not enforcing for this tenant'}
-            >
-              <Shield className="w-3 h-3" />
-              {shieldActive ? `${shieldPolicyCount}` : 'No Gates'}
-            </span>
+            {/* Shield Status Indicator — hover for governance posture, ADR-0030 */}
+            <ShieldStatusBadge
+              policyCount={shieldPolicyCount}
+              governanceDomain={tenant.governance_domain}
+            />
           </div>
 
           {/* Actions */}

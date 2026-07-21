@@ -52,9 +52,9 @@ export default function LeaderOrg() {
           base44.entities.Tenant.list('-created_date', 50),
           base44.entities.GovernancePolicy.filter({ is_active: true })
         ]);
-        // Map tenant name → real UUID for workspace navigation
+        // Map tenant name → full record for workspace nav + governance domain
         const byName = {};
-        dbTenants.forEach(t => { byName[t.name] = t.id; });
+        dbTenants.forEach(t => { byName[t.name] = t; });
         // Count active policies per tenant_id
         const counts = {};
         policies.forEach(p => { counts[p.tenant_id] = (counts[p.tenant_id] || 0) + 1; });
@@ -248,12 +248,14 @@ export default function LeaderOrg() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {tenants.map(tenant => {
                 const mRef = TENANT_MANIFEST_REF[tenant.id];
-                const realTenantId = realTenants[tenant.name];
+                const realTenant = realTenants[tenant.name];
+                const realTenantId = realTenant?.id;
                 const shieldPolicyCount = realTenantId ? (policyCounts[realTenantId] || 0) : 0;
+                const governanceDomain = realTenant?.governance_domain;
                 return (
                   <TenantCommandCard
                     key={tenant.id}
-                    tenant={tenant}
+                    tenant={{ ...tenant, governance_domain: governanceDomain }}
                     manifest={manifestByRef[mRef]}
                     activating={activating}
                     onActivate={handleActivate}
