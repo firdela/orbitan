@@ -1,0 +1,238 @@
+{
+  "name": "TaskAssignment",
+  "type": "object",
+  "description": "OrbitanOS Task Assignment History (ADR-0047 OSF). Effective-dated assignment records that preserve the full provenance of who was ASSIGNED_TO, RESPONSIBLE_FOR, and ACCOUNTABLE_FOR a Task over time \u2014 never overwritten. The Task entity caches only the current responsible/accountable for query efficiency; this entity is the authoritative history. Supports reassignment, temporary assignment, organisational-unit assignment (before an individual is selected), acknowledgement, and removal without losing historical provenance. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "The Task this assignment belongs to"
+    },
+    "assignee_type": {
+      "type": "string",
+      "enum": [
+        "agent",
+        "organisational_unit"
+      ],
+      "default": "agent",
+      "description": "agent = assigned to an individual (Employee/User). organisational_unit = assigned to an Outlet/Company/Department before a specific individual is selected."
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "Employee/User id when assignee_type is agent. Null for organisational_unit assignments."
+    },
+    "organisational_unit_id": {
+      "type": "string",
+      "description": "Outlet/Company id when assignee_type is organisational_unit. Null for agent assignments."
+    },
+    "assignee_name": {
+      "type": "string",
+      "description": "Cached display name of the assignee (person or unit)"
+    },
+    "assignment_role": {
+      "type": "string",
+      "enum": [
+        "assigned",
+        "responsible",
+        "accountable"
+      ],
+      "description": "assigned = operationally allocated to perform; responsible = expected to perform/coordinate/manage; accountable = ultimately answerable for the outcome. A person may hold one, two, or all three roles."
+    },
+    "assigned_by": {
+      "type": "string",
+      "description": "User id of the actor who created this assignment"
+    },
+    "assigned_by_name": {
+      "type": "string"
+    },
+    "assigned_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the assignment record was created"
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this assignment becomes operationally effective. Defaults to assigned_at."
+    },
+    "effective_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this assignment ceases to be effective. Null while active. Set on removal/reassignment."
+    },
+    "acknowledgement_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "pending",
+        "acknowledged",
+        "declined"
+      ],
+      "default": "none",
+      "description": "none = acknowledgement not required (responsible/accountable roles); pending = awaiting assignee acknowledgement (assigned role); acknowledged/declined = assignee response."
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "removal_reason": {
+      "type": "string",
+      "description": "Reason this assignment was ended \u2014 reassignment, completion, termination, etc. Required when is_active flips to false."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "False once the assignment is superseded or removed. Historical records are retained (is_active=false) for provenance; they are never deleted."
+    },
+    "version": {
+      "type": "number",
+      "default": 1,
+      "description": "Optimistic lock for acknowledgement/removal updates."
+    }
+  },
+  "required": [
+    "tenant_id",
+    "task_id",
+    "assignment_role"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "data.agent_id": "{{user.id}}"
+            },
+            {
+              "$and": [
+                {
+                  "data.outlet_id": "{{user.data.outlet_id}}"
+                },
+                {
+                  "$or": [
+                    {
+                      "user_condition": {
+                        "role": "outlet_manager"
+                      }
+                    },
+                    {
+                      "user_condition": {
+                        "role": "supervisor"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "data.agent_id": "{{user.id}}"
+            },
+            {
+              "$and": [
+                {
+                  "data.outlet_id": "{{user.data.outlet_id}}"
+                },
+                {
+                  "$or": [
+                    {
+                      "user_condition": {
+                        "role": "outlet_manager"
+                      }
+                    },
+                    {
+                      "user_condition": {
+                        "role": "supervisor"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

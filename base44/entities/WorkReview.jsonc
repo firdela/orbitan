@@ -1,0 +1,239 @@
+{
+  "name": "WorkReview",
+  "type": "object",
+  "description": "OrbitanOS Reusable Review & Verification Record (ADR-0047 OSF). Captures a governed review/verification DECISION performed by an authorised agent \u2014 distinct from evidence (ArtifactRecord) which only holds supporting material. Reusable across the platform: task verification, SOP execution review, inventory reconciliation, compliance inspection, procurement approval, quality assurance, and maintenance activity review. The first implementation serves Tasks; the model does not prevent future reuse. Links to an immutable AuditLog entry for provenance. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "review_type": {
+      "type": "string",
+      "enum": [
+        "task_verification",
+        "sop_execution",
+        "inventory_reconciliation",
+        "compliance_inspection",
+        "procurement_approval",
+        "quality_assurance",
+        "maintenance_activity",
+        "other"
+      ],
+      "description": "What kind of work is being reviewed. Determines UI rendering and policy resolution. task_verification is the MVP use case."
+    },
+    "target_entity": {
+      "type": "string",
+      "description": "Entity type under review e.g. 'Task', 'PurchaseOrder', 'StockCount'. Enables polymorphic linkage."
+    },
+    "target_record_id": {
+      "type": "string",
+      "description": "Record id of the entity under review"
+    },
+    "submission_id": {
+      "type": "string",
+      "description": "Optional identifier of the specific submission/version being reviewed (e.g. a Task version snapshot). Null when reviewing the current state directly."
+    },
+    "submission_version": {
+      "type": "number",
+      "description": "Version number of the submission snapshot, when applicable"
+    },
+    "reviewer_id": {
+      "type": "string",
+      "description": "User id of the authorised agent performing the review"
+    },
+    "reviewer_name": {
+      "type": "string"
+    },
+    "reviewer_role": {
+      "type": "string",
+      "description": "Role of the reviewer at time of review (outlet_manager, supervisor, tenant_admin, etc.)"
+    },
+    "review_result": {
+      "type": "string",
+      "enum": [
+        "approved",
+        "rejected",
+        "changes_required",
+        "escalated"
+      ],
+      "description": "The verification decision. approved \u2192 target reaches verified; rejected \u2192 target returns to a failure state; changes_required \u2192 target returns to changes_required; escalated \u2192 routed to higher authority."
+    },
+    "review_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "comments": {
+      "type": "string",
+      "description": "Reviewer's general comments"
+    },
+    "feedback": {
+      "type": "string",
+      "description": "Detailed feedback, especially when changes_required or rejected"
+    },
+    "evidence_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs of evidence artifacts reviewed (ArtifactRecord storage_urls or attachment URLs). Evidence is reviewed, not stored, here."
+    },
+    "evidence_artifact_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "ArtifactRecord ids of evidence reviewed, for audit-bundle linkage"
+    },
+    "approval_reason": {
+      "type": "string",
+      "description": "Reason recorded for approval (required by some governance policies)"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Reason for rejection (required when review_result is rejected)"
+    },
+    "policy_id": {
+      "type": "string",
+      "description": "GovernancePolicy id that authorised or governed this review. Resolved by the transition engine via shieldInterceptor."
+    },
+    "policy_name": {
+      "type": "string"
+    },
+    "prior_state": {
+      "type": "string",
+      "description": "State of the target entity before this review (e.g. 'submitted_for_review')"
+    },
+    "resulting_state": {
+      "type": "string",
+      "description": "State the target entity transitioned to as a result of this review (e.g. 'verified' or 'changes_required')"
+    },
+    "provenance_audit_log_id": {
+      "type": "string",
+      "description": "Immutable AuditLog entry recording this review decision. Populated by the transition engine."
+    },
+    "self_verification": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when the reviewer is the same agent who was responsible for the work. Only permitted when the governing policy allows self-verification (verification_mode='self')."
+    },
+    "version": {
+      "type": "number",
+      "default": 1,
+      "description": "Optimistic lock"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "target_entity",
+    "target_record_id",
+    "reviewer_id",
+    "review_result"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            },
+            {
+              "data.reviewer_id": "{{user.id}}"
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "data.reviewer_id": "{{user.id}}"
+            },
+            {
+              "$and": [
+                {
+                  "data.outlet_id": "{{user.data.outlet_id}}"
+                },
+                {
+                  "$or": [
+                    {
+                      "user_condition": {
+                        "role": "outlet_manager"
+                      }
+                    },
+                    {
+                      "user_condition": {
+                        "role": "supervisor"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
