@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, AlertTriangle, CheckCircle, XCircle, Clock, FileText, Search } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, XCircle, Clock, FileText, Search, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,7 @@ import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
 import AIKillSwitchPanel from '@/components/platform/AIKillSwitchPanel';
 import EvolutionProposalsPanel from '@/components/platform/EvolutionProposalsPanel';
+import ShieldActivityFeed from '@/components/shield/ShieldActivityFeed';
 import { Lock, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -183,6 +184,20 @@ export default function ShieldCommandCenter() {
         {/* Orbit Evolution Proposals */}
         <div className="mb-8">
           <EvolutionProposalsPanel />
+        </div>
+
+        {/* Shield Activity Feed — Registry-Driven Governance Observability (ADR-0046 + ADR-0029) */}
+        <div className="mb-8">
+          <div className="mb-4">
+            <h2 className="text-xl font-display font-semibold flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              Shield Activity
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Real-time stream of governance evaluations — hard blocks, shadow audit calibration events (ADR-0029), and soft notifies. The observability complement to registry-driven intelligence (ADR-0046).
+            </p>
+          </div>
+          <ShieldActivityFeed maxResults={50} />
         </div>
 
         {/* Stats Cards */}
