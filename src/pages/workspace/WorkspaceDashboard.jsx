@@ -161,6 +161,7 @@ function ModuleCard({ mod }) {
 }
 
 function LowStockCard({ items, loading }) {
+  const base = `/workspace`;
   return (
     <div className="bg-amber-50 border border-amber-500/30 rounded-xl p-4 h-full flex flex-col">
       <div className="flex items-center gap-2 mb-2">
@@ -174,9 +175,11 @@ function LowStockCard({ items, loading }) {
       ) : (
         <ul className="space-y-1 text-xs flex-1 overflow-y-auto max-h-32">
           {items.slice(0, 5).map(item => (
-            <li key={item.id} className="flex justify-between text-amber-900/80 gap-2">
-              <span className="truncate">{item.name}</span>
-              <span className="tabular-nums flex-shrink-0">{item.current_stock}/{item.par_level} {item.unit}</span>
+            <li key={item.id}>
+              <Link to={`${base}/inventory`} className="flex justify-between text-amber-900/80 hover:text-amber-900 hover:bg-amber-100/60 rounded px-1.5 py-0.5 -mx-1.5 transition-colors gap-2">
+                <span className="truncate">{item.name}</span>
+                <span className="tabular-nums flex-shrink-0">{item.current_stock}/{item.par_level} {item.unit}</span>
+              </Link>
             </li>
           ))}
         </ul>

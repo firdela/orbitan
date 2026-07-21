@@ -1,7 +1,7 @@
 {
   "name": "MetricDefinition",
   "type": "object",
-  "description": "OrbitanOS Metrics & Analytics Registry (ADR-0033) \u2014 Single source of truth for every quantitative KPI across the platform. Each record declares a metric's formula reference, source entities, aggregation mode, and display metadata. The metricsEngine backend function evaluates a definition and returns a standardised result. Prevents conflicting inline calculations across dashboards. Tenant-overridable for white-label/enterprise customisation. Observability Stream: threshold_config lets a metric emit a breach event to actionDispatcher, making the registry an event source for the Action Engine (ADR-0032) rather than a parallel action executor. Exit-Ready: pure schema, portable to any stack.",
+  "description": "OrbitanOS Metrics & Analytics Registry (ADR-0033) \u2014 Single source of truth for every quantitative KPI across the platform. Each record declares a metric's formula reference, source entities, aggregation mode, and display metadata. The metricsEngine backend function evaluates a definition and returns a standardised result. Prevents conflicting inline calculations across dashboards. Tenant-overridable for white-label/enterprise customisation. Observability Stream: threshold_config lets a metric emit a breach event to actionDispatcher, making the registry an event source for the Action Engine (ADR-0032) rather than a parallel action executor. Drill-Down Config (ADR-0040): each metric declares its own navigation destination and interaction pattern, enabling registry-driven dashboard drill-downs with zero hardcoded routing in the UI layer. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string",
@@ -90,6 +90,29 @@
       "type": "string",
       "default": "1.0.0",
       "description": "Semantic version of the formula \u2014 bump when computation logic changes for audit traceability."
+    },
+    "drilldown_config": {
+      "type": "object",
+      "description": "ADR-0040 Registry-Driven Drill-Down: declares the navigation destination and interaction pattern for this metric's dashboard widget. The WorkspaceDashboard reads this to wire StatCard `to`/`onClick` props dynamically \u2014 zero hardcoded routing in the UI layer. Omit for pure display metrics with no drill-down.",
+      "properties": {
+        "route": {
+          "type": "string",
+          "description": "Destination route path. Use ':tenantId' placeholder for tenant-scoped navigation e.g. '/workspace/:tenantId/inventory'. The dashboard resolves this to the active tenant at render time."
+        },
+        "pattern": {
+          "type": "string",
+          "enum": [
+            "navigate",
+            "side_sheet"
+          ],
+          "default": "navigate",
+          "description": "navigate = standard page navigation (default, best for full-screen views like PO editing). side_sheet = contextual drawer overlay (best for high-frequency quick-look actions where dashboard context must persist)."
+        },
+        "query_params": {
+          "type": "object",
+          "description": "Optional context-aware query parameters appended to the route for pre-filtered landing e.g. {status: 'pending', filter: 'low_stock'}. The destination page reads these via URLSearchParams to show only relevant records."
+        }
+      }
     },
     "threshold_config": {
       "type": "object",

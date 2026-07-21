@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ContextualHelp from '@/components/shared/ContextualHelp';
 
@@ -39,7 +39,7 @@ export default function StatCard({ title, value, subtitle, icon: Icon, color = '
       onKeyDown={handleKeyDown}
       aria-label={isInteractive ? `${title} — view details` : undefined}
       className={cn(
-        "bg-card border border-border rounded-xl p-5 transition-shadow duration-200",
+        "group bg-card border border-border rounded-xl p-5 transition-shadow duration-200",
         isInteractive && "cursor-pointer hover:shadow-md hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         className
       )}
@@ -55,12 +55,17 @@ export default function StatCard({ title, value, subtitle, icon: Icon, color = '
           </div>
         )}
       </div>
-      <p className="text-2xl font-heading font-bold text-foreground mb-0.5">{value ?? '—'}</p>
-      <div className="flex items-center gap-1">
-        <p className="text-sm font-medium text-foreground/80">{title}</p>
-        {help && <ContextualHelp {...(typeof help === 'string' ? { content: help } : help)} />}
+      <div className="relative">
+        <p className="text-2xl font-heading font-bold text-foreground mb-0.5">{value ?? '—'}</p>
+        <div className="flex items-center gap-1">
+          <p className="text-sm font-medium text-foreground/80">{title}</p>
+          {help && <ContextualHelp {...(typeof help === 'string' ? { content: help } : help)} />}
+        </div>
+        {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
+        {isInteractive && (
+          <ChevronRight className="absolute -right-1 bottom-0 w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+        )}
       </div>
-      {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
     </div>
   );
 }
