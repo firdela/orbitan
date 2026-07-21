@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { PLATFORM_IDENTITY, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, OPERATING_CYCLE } from '@/lib/orbitan-config';
@@ -41,6 +41,31 @@ export default function LeaderOrg() {
   const [activating, setActivating] = useState(null);
   const [reports, setReports] = useState({});
   const [advisorOpen, setAdvisorOpen] = useState(false);
+  // Live tenant data from DB — enables manifest-driven navigation + Shield status
+  const [realTenants, setRealTenants] = useState({});
+  const [policyCounts, setPolicyCounts] = useState({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [dbTenants, policies] = await Promise.all([
+          base44.entities.Tenant.list('-created_date', 50),
+          base44.entities.GovernancePolicy.filter({ is_active: true })
+        ]);
+        // Map tenant name → real UUID for workspace navigation
+        const byName = {};
+        dbTenants.forEach(t => { byName[t.name] = t.id; });
+        // Count active policies per tenant_id
+        const counts = {};
+        policies.forEach(p => { counts[p.tenant_id] = (counts[p.tenant_id] || 0) + 1; });
+        setRealTenants(byName);
+        setPolicyCounts(counts);
+      } catch (e) {
+        // Fail gracefully — cards fall back to "Pages Coming Soon"
+        console.error('[LeaderOrg] Failed to load tenant/policy data:', e.message);
+      }
+    })();
+  }, []);
 
   const tenants = DEMO_TENANTS;
   const totalTenants = tenants.length;
@@ -223,6 +248,8 @@ export default function LeaderOrg() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {tenants.map(tenant => {
                 const mRef = TENANT_MANIFEST_REF[tenant.id];
+                const realTenantId = realTenants[tenant.name];
+                const shieldPolicyCount = realTenantId ? (policyCounts[realTenantId] || 0) : 0;
                 return (
                   <TenantCommandCard
                     key={tenant.id}
@@ -231,6 +258,8 @@ export default function LeaderOrg() {
                     activating={activating}
                     onActivate={handleActivate}
                     report={reports[mRef]}
+                    realTenantId={realTenantId}
+                    shieldPolicyCount={shieldPolicyCount}
                   />
                 );
               })}

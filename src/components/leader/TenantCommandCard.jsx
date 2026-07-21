@@ -57,7 +57,7 @@ const TENANT_MANIFEST_REF = {
   tenant_izaliqa:  'izaliqa_bakes',
 };
 
-export default function TenantCommandCard({ tenant, manifest, activating, onActivate, report }) {
+export default function TenantCommandCard({ tenant, manifest, activating, onActivate, report, realTenantId, shieldPolicyCount = 0 }) {
   const [expanded, setExpanded] = useState(false);
 
   const activeModules = tenant.enabled_modules || [];
@@ -66,9 +66,10 @@ export default function TenantCommandCard({ tenant, manifest, activating, onActi
   const upgrade       = UPGRADE_PROMPTS[plan];
   const accentColor   = INDUSTRY_ACCENT[tenant.industry] || '#2563EB';
   const manifestRef   = TENANT_MANIFEST_REF[tenant.id];
-  const route         = TENANT_ROUTES[tenant.id] || '/leader-org';
-  const hasRoute      = route !== '/leader-org';
+  // Manifest-Driven Navigation: route to the tenant's real workspace via UUID
+  const workspaceRoute = realTenantId ? `/workspace/${realTenantId}` : null;
   const isActivating  = activating === manifestRef || activating === 'all';
+  const shieldActive  = shieldPolicyCount > 0;
 
   // Locked modules = all modules NOT in enabled list, capped at 4
   const allModuleKeys   = Object.keys(MODULES);
@@ -102,12 +103,26 @@ export default function TenantCommandCard({ tenant, manifest, activating, onActi
               {tenant.max_employees ? ` · Up to ${tenant.max_employees} employees` : ''}
             </p>
             <PlanBadge plan={plan} />
+            {/* Shield Status Indicator — governance enforcement visibility */}
+            <span className={cn(
+              "inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium border",
+              shieldActive
+                ? "bg-orbitan-green-light text-orbitan-green border-green-200"
+                : "bg-amber-50 text-amber-600 border-amber-200"
+            )}
+              title={shieldActive
+                ? `${shieldPolicyCount} governance polic${shieldPolicyCount === 1 ? 'y' : 'ies'} active — Shield enforcement live`
+                : 'No governance policies registered — Shield not enforcing for this tenant'}
+            >
+              <Shield className="w-3 h-3" />
+              {shieldActive ? `${shieldPolicyCount}` : 'No Gates'}
+            </span>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {hasRoute ? (
-              <Link to={route}>
+            {workspaceRoute ? (
+              <Link to={workspaceRoute}>
                 <Button variant="outline" size="sm" className="gap-1 text-xs h-8">
                   Open <ExternalLink className="w-3 h-3" />
                 </Button>
