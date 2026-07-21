@@ -84,10 +84,14 @@ Deno.serve(async (req) => {
       (p.trigger_action === 'all' || p.trigger_action === action)
     );
 
-    // If domain_id resolved (explicit OR from tenant.governance_domain), filter to
-    // only that domain's policies (Domain-First architecture).
+    // If domain_id resolved (explicit OR from tenant.governance_domain), keep
+    // domain-specific policies PLUS platform-wide policies (domain_id null/empty)
+    // as cross-domain fallback. Domain-First architecture, but platform policies
+    // are universal guardrails (e.g. no_audit_log_deletion) that must always apply.
     if (resolvedDomainId) {
-      applicablePolicies = applicablePolicies.filter(p => p.domain_id === resolvedDomainId);
+      applicablePolicies = applicablePolicies.filter(p =>
+        p.domain_id === resolvedDomainId || p.domain_id === null || p.domain_id === undefined || p.domain_id === ''
+      );
     }
 
     // ── AGENTIC GOVERNANCE FILTER (ADR-0029) ──────────────────
