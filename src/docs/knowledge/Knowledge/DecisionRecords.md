@@ -195,6 +195,14 @@ Full ADR/ODR content is preserved in the legacy directory `src/docs/knowledge-hu
 - **Future Review:** 2026-09-30
 - **Legacy Path:** `src/docs/knowledge-hub/decision-records/0023-orbit-core-adapter-pattern.md`
 
+### ADR-0045: GitHub Integration Verification Checkpoint
+- **Date:** 2026-07-21
+- **Status:** Accepted
+- **Impacted Modules:** GitHub sync, platform governance, audit trail
+- **Summary:** Periodic verification checkpoint confirming two-way GitHub code sync remains active (repo `firdela/orbitan`, private, `main` branch) and the GitHub API Connector is intentionally NOT authorised to minimise external dependency. ADR-0038 remains the master strategy document — this ADR avoids duplication and records a dated audit snapshot. Also documents the concurrent Shield procurement threshold calibration (300→50 SGD for 48h) per ADR-0043.
+- **Future Review:** 2026-08-04
+- **Legacy Path:** `src/docs/knowledge-hub/decision-records/0045-github-integration-verification-checkpoint.md`
+
 ## ADR Template
 
 ```markdown
