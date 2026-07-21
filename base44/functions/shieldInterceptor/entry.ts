@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
         const auditDetails = inShadowAudit
           ? `SHADOW AUDIT: policy [${policy.policy_name}] WOULD have blocked action [${action}] — effect downgraded to notify for threshold calibration${resolvedActorType === 'agent' ? ` — agent: ${agent_name || 'unknown'}` : ''}`
           : `Shield triggered policy [${policy.policy_name}] — effect: ${effectiveEffect} — action: ${action}${resolvedActorType === 'agent' ? ` — agent: ${agent_name || 'unknown'}` : ''}`;
-        base44.asServiceRole.entities.AuditLog.create({
+        const auditLogPromise = base44.asServiceRole.entities.AuditLog.create({
           tenant_id: resolvedTenantId,
           actor_id: user.id,
           actor_name: user.full_name,
@@ -180,7 +180,19 @@ Deno.serve(async (req) => {
             shadow_audit: inShadowAudit,
             native_effect: policy.effect
           }
-        }).catch(() => {});
+        });
+
+        // For block violations, await the AuditLog to capture its ID for forensic
+        // artifact linkage (ADR-0041). For notify/remediate, keep fire-and-forget
+        // to preserve interceptor latency on the common path.
+        if (effectiveEffect === 'block') {
+          try {
+            const auditLog = await auditLogPromise;
+            violations[violations.length - 1]._audit_log_id = auditLog.id;
+          } catch { /* fail-open: block still returned, artifact skipped */ }
+        } else {
+          auditLogPromise.catch(() => {});
+        }
       }
     }
 
@@ -195,6 +207,52 @@ Deno.serve(async (req) => {
 
     if (blockViolations.length > 0) {
       const critical = blockViolations[0];
+
+      // ── FORENSIC ARTIFACT (ADR-0041) ──────────────────────────
+      // Capture the blocked record state as a tamper-evident
+      // ArtifactRecord for SOC 2 audit-bundle evidence. Enters
+      // 'in_review' — requires manager approval (Regulate principle).
+      // Linked to the Shield AuditLog via linked_entity_id.
+      try {
+        await base44.asServiceRole.entities.ArtifactRecord.create({
+          tenant_id: resolvedTenantId,
+          artifact_type: 'incident_evidence',
+          title: `Shield Block — ${critical.policy_name} — ${new Date().toISOString()}`,
+          description: `Governance gate blocked a ${action} on ${entity_name}. Policy: ${critical.policy_name}. Actor: ${user.full_name || 'unknown'}${resolvedActorType === 'agent' ? ` (agent: ${agent_name || 'unknown'})` : ''}.`,
+          status: 'in_review',
+          metadata: {
+            shield_outcome: 'blocked',
+            policy_name: critical.policy_name,
+            policy_id: critical.id,
+            governance_domain: critical.domain_id,
+            condition_triggered: critical.condition_json,
+            actor_id: user.id,
+            actor_name: user.full_name,
+            actor_role: user.role,
+            actor_type: resolvedActorType,
+            agent_name: agent_name || null,
+            shadow_audit: critical._shadow_audit || false,
+            blocked_entity: entity_name,
+            blocked_action: action,
+            blocked_record_state: data,
+            audit_log_id: critical._audit_log_id || null,
+            captured_at: new Date().toISOString()
+          },
+          linked_entity_type: critical._audit_log_id ? 'AuditLog' : 'GovernancePolicy',
+          linked_entity_id: critical._audit_log_id || critical.id,
+          governance_policy_id: critical.id,
+          uploaded_by: user.id,
+          uploaded_by_name: user.full_name,
+          uploaded_date: new Date().toISOString(),
+          tags: ['shield_block', 'soc2_evidence', critical.domain_id || 'ungated'],
+          is_ai_generated: false
+        });
+      } catch (e) {
+        // Fail-open: the block response is still returned even if the
+        // forensic artifact write fails — the AuditLog already captured the event.
+        console.error('[shieldInterceptor] Forensic artifact write failed:', e.message);
+      }
+
       return Response.json({
         allowed: false,
         effect: 'block',
