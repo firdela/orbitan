@@ -27,8 +27,14 @@ const STATUS_CONFIG = {
   in_progress: { label: 'In Progress', classes: 'bg-orbitan-purple-light text-orbitan-purple border-purple-100' },
   completed: { label: 'Completed', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
   absent: { label: 'Absent', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
-  // Task
+  // Task (governed lifecycle — ADR-0047 OSF)
   'in-progress': { label: 'In Progress', classes: 'bg-orbitan-purple-light text-orbitan-purple border-purple-100' },
+  assigned: { label: 'Assigned', classes: 'bg-orbitan-blue-light text-orbitan-blue border-blue-100' },
+  acknowledged: { label: 'Acknowledged', classes: 'bg-orbitan-purple-light text-orbitan-purple border-purple-100' },
+  blocked: { label: 'Blocked', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
+  submitted_for_review: { label: 'Submitted', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
+  changes_required: { label: 'Changes Required', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
+  verified: { label: 'Verified', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
   // Compliance
   submitted: { label: 'Submitted', classes: 'bg-orbitan-blue-light text-orbitan-blue border-blue-100' },
   in_review: { label: 'In Review', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },

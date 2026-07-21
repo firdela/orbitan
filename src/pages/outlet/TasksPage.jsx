@@ -1,90 +1,83 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { format } from 'date-fns';
+import { useTenant } from '@/lib/use-tenant';
+import { useGlobalOutlet } from '@/lib/GlobalOutletContext';
 import PageHeader from '@/components/shared/PageHeader';
-import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import {
-  CheckSquare, Plus, Home, Package, ShoppingCart, FileText,
-  Users, Calendar, BarChart2, Shield, Layers, Building2,
-  CheckCircle2, Clock, AlertCircle
-} from 'lucide-react';
-
-
-
-const PRIORITY_COLORS = { low: 'bg-secondary text-muted-foreground', medium: 'bg-orbitan-blue-light text-orbitan-blue', high: 'bg-orbitan-amber-light text-orbitan-amber', urgent: 'bg-orbitan-red-light text-orbitan-red' };
+import { Plus, CheckSquare } from 'lucide-react';
+import TaskCard from '@/components/tasks/TaskCard';
+import TaskCreateDialog from '@/components/tasks/TaskCreateDialog';
+import TaskDetailSheet from '@/components/tasks/TaskDetailSheet';
+import { TASK_STATUS_LABELS } from '@/components/tasks/TaskStatusConfig';
 
 export default function TasksPage() {
+  const { currentTenant } = useTenant();
+  const { activeOutlet } = useGlobalOutlet();
   const [tasks, setTasks] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [selectedTask, setSelectedTask] = useState(null);
 
-  React.useEffect(() => {
+  const tenantId = currentTenant?.id;
+  const outletId = activeOutlet?.id || null;
+
+  useEffect(() => {
+    if (!tenantId) return;
+    setLoading(true);
+    const taskFilter = outletId ? { tenant_id: tenantId, outlet_id: outletId } : { tenant_id: tenantId };
     Promise.all([
-      base44.entities.Task.list('-created_date', 100),
-      base44.entities.Employee.list('-created_date', 100),
+      base44.entities.Task.filter(taskFilter, '-updated_date', 200),
+      base44.entities.Employee.filter({ tenant_id: tenantId }, '-created_date', 100),
     ])
       .then(([taskData, empData]) => {
         setTasks(taskData || []);
         setEmployees(empData || []);
       })
-      .catch(() => {
-        setTasks([]);
-        setEmployees([]);
-      })
+      .catch(() => { setTasks([]); setEmployees([]); })
       .finally(() => setLoading(false));
-  }, []);
-  const [showAdd, setShowAdd] = useState(false);
-  const [filter, setFilter] = useState('all');
-  const [newTask, setNewTask] = useState({ title: '', priority: 'medium', assigned_to_name: '', due_date: new Date().toISOString().split('T')[0] });
+  }, [tenantId, outletId]);
+
+  const statusOrder = ['draft', 'assigned', 'acknowledged', 'in_progress', 'blocked', 'submitted_for_review', 'changes_required', 'completed', 'verified', 'cancelled', 'archived'];
+
+  const counts = statusOrder.reduce((acc, s) => {
+    acc[s] = tasks.filter(t => t.status === s).length;
+    return acc;
+  }, {});
 
   const filtered = filter === 'all' ? tasks : tasks.filter(t => t.status === filter);
-  const counts = { pending: tasks.filter(t => t.status === 'pending').length, in_progress: tasks.filter(t => t.status === 'in_progress').length, completed: tasks.filter(t => t.status === 'completed').length };
 
-  const handleAdd = async () => {
-    const task = { ...newTask, status: 'pending' };
-    const created = await base44.entities.Task.create(task);
-    setTasks(prev => [created, ...prev]);
-    setShowAdd(false);
-    setNewTask({ title: '', priority: 'medium', assigned_to_name: '', due_date: new Date().toISOString().split('T')[0] });
+  const handleCreated = (task) => {
+    setTasks(prev => [task, ...prev]);
   };
 
-  const updateStatus = async (id, status) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
-    try {
-      await base44.entities.Task.update(id, { status });
-    } catch {
-      setTasks(prev => prev.map(t => t.id === id ? { ...t, status: t.status === 'completed' ? 'pending' : 'completed' } : t));
-    }
+  const handleTransitioned = (updated) => {
+    setTasks(prev => prev.map(t => t.id === updated.id ? { ...updated } : t));
+    setSelectedTask(updated);
   };
+
+  const filterTabs = [
+    { key: 'all', label: `All (${tasks.length})` },
+    ...statusOrder.filter(s => counts[s] > 0).map(s => ({ key: s, label: `${TASK_STATUS_LABELS[s]} (${counts[s]})` })),
+  ];
 
   return (
     <>
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
         <PageHeader
           title="Tasks"
-          subtitle={`${counts.pending} pending · ${counts.in_progress} in progress · ${counts.completed} completed`}
+          subtitle={`${counts.assigned || 0} assigned · ${counts.in_progress || 0} in progress · ${counts.submitted_for_review || 0} awaiting review · ${counts.verified || 0} verified`}
           actions={
             <Button size="sm" className="gap-1.5" onClick={() => setShowAdd(true)}>
-              <Plus className="w-4 h-4" />
-              Add Task
+              <Plus className="w-4 h-4" /> Add Task
             </Button>
           }
         />
 
-        {/* Filter tabs */}
         <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
-          {[
-            { key: 'all', label: 'All Tasks' },
-            { key: 'pending', label: `Pending (${counts.pending})` },
-            { key: 'in_progress', label: `In Progress (${counts.in_progress})` },
-            { key: 'completed', label: `Completed (${counts.completed})` },
-          ].map(tab => (
+          {filterTabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => setFilter(tab.key)}
@@ -95,78 +88,43 @@ export default function TasksPage() {
           ))}
         </div>
 
-        <div className="space-y-2">
-          {filtered.map(task => (
-            <div key={task.id} className="bg-card border border-border rounded-xl px-5 py-4 flex items-center gap-4 hover:shadow-sm transition-shadow">
-              <button
-                onClick={() => updateStatus(task.id, task.status === 'completed' ? 'pending' : 'completed')}
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${task.status === 'completed' ? 'bg-orbitan-green border-orbitan-green' : 'border-border hover:border-orbitan-green'}`}
-              >
-                {task.status === 'completed' && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-              </button>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium ${task.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                  {task.title}
-                </p>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  {task.assigned_to_name && <span className="text-xs text-muted-foreground">{task.assigned_to_name}</span>}
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs text-muted-foreground">{task.due_date}</span>
-                  {task.module_context && (
-                    <span className="text-[10px] bg-secondary text-muted-foreground px-1.5 py-0.5 rounded-full">{task.module_context}</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span>
-                <StatusBadge status={task.status} />
-              </div>
-            </div>
-          ))}
-          {filtered.length === 0 && <EmptyState icon={CheckSquare} title="No tasks" description="Add your first task to get started." action={() => setShowAdd(true)} actionLabel="Add Task" />}
-        </div>
+        {loading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map(i => <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />)}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map(task => (
+              <TaskCard key={task.id} task={task} onClick={() => setSelectedTask(task)} />
+            ))}
+            {filtered.length === 0 && (
+              <EmptyState
+                icon={CheckSquare}
+                title="No tasks"
+                description={filter === 'all' ? "Create your first task to start tracking work." : "No tasks in this state."}
+                actionLabel="Add Task"
+                onAction={() => setShowAdd(true)}
+              />
+            )}
+          </div>
+        )}
       </div>
 
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Add Task</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <div>
-              <Label className="text-xs mb-1 block">Task Title</Label>
-              <Input value={newTask.title} onChange={e => setNewTask(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Complete morning prep" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs mb-1 block">Assign To</Label>
-                <Select value={newTask.assigned_to_name} onValueChange={v => setNewTask(p => ({ ...p, assigned_to_name: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                  <SelectContent>{employees.map(e => <SelectItem key={e.id} value={e.full_name}>{e.full_name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs mb-1 block">Priority</Label>
-                <Select value={newTask.priority} onValueChange={v => setNewTask(p => ({ ...p, priority: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <Label className="text-xs mb-1 block">Due Date</Label>
-              <Input type="date" value={newTask.due_date} onChange={e => setNewTask(p => ({ ...p, due_date: e.target.value }))} />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button onClick={handleAdd} disabled={!newTask.title}>Add Task</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <TaskCreateDialog
+        open={showAdd}
+        onOpenChange={setShowAdd}
+        employees={employees}
+        tenantId={tenantId}
+        outletId={outletId}
+        onCreated={handleCreated}
+      />
+
+      <TaskDetailSheet
+        task={selectedTask}
+        open={!!selectedTask}
+        onOpenChange={(o) => { if (!o) setSelectedTask(null); }}
+        onTransitioned={handleTransitioned}
+      />
     </>
   );
 }
