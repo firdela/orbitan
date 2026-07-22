@@ -81,13 +81,16 @@ export default function GoodsReceiptDialog({
 
   const handleConfirm = async () => {
     if (!po || !tenantId || !outletId) return;
+    // The receipt belongs to the PO's outlet (more accurate than the user's
+    // assigned outlet, which is null for tenant_admins acting across outlets).
+    const effectiveOutletId = po.outlet_id || outletId;
     setSaving(true);
     try {
       // 1. Create the GoodsReceipt record (immutable receipt).
       const receiptNumber = `GR-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
       const goodsReceipt = await base44.entities.GoodsReceipt.create({
         tenant_id: tenantId,
-        outlet_id: outletId,
+        outlet_id: effectiveOutletId,
         po_id: po.id,
         po_number: po.po_number,
         receipt_number: receiptNumber,
@@ -134,7 +137,7 @@ export default function GoodsReceiptDialog({
             // Audit the stock increment.
             await auditFrontend({
               tenant_id: tenantId,
-              outlet_id: outletId,
+              outlet_id: effectiveOutletId,
               actor_id: identity?.id,
               actor_name: identity?.full_name || identity?.email,
               actor_role: activeRole || identity?.platform_role,
@@ -159,7 +162,7 @@ export default function GoodsReceiptDialog({
       // 4. Audit the goods received event.
       await auditFrontend({
         tenant_id: tenantId,
-        outlet_id: outletId,
+        outlet_id: effectiveOutletId,
         actor_id: identity?.id,
         actor_name: identity?.full_name || identity?.email,
         actor_role: activeRole || identity?.platform_role,
