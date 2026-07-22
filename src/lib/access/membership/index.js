@@ -14,16 +14,3 @@ export {
   createPermissionResolver,
   derivePermissions,
 } from './PermissionResolver.js';
-
-// Milestone 3.1 — Temporal foundation
-export {
-  MEMBERSHIP_VALIDATOR_VERSION,
-  validateMembership,
-  createMembershipValidator,
-} from './MembershipValidator.js';
-export {
-  ROLE_ASSIGNMENT_RESOLVER_VERSION,
-  ASSIGNMENT_STATUS,
-  resolveActiveAssignments,
-  createRoleAssignmentResolver,
-} from './RoleAssignmentResolver.js';
