@@ -92,6 +92,8 @@ export function translateEmployee(employee) {
  */
 export function createMembershipResolver({ resolveEmployee } = {}) {
   return Object.freeze({
+    // Resolver metadata — recorded in audit logs (ADR future).
+    name: 'MembershipResolver',
     version: MEMBERSHIP_RESOLVER_VERSION,
 
     /**
