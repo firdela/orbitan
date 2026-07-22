@@ -21,3 +21,19 @@ export {
 
 export { POLICY_ENGINE_VERSION, createPolicyEngine } from './PolicyEngine.js';
 export { resolvePrecedence, scopeCovers, isAncestorScope, PRECEDENCE_VERSION } from './precedence.js';
+
+// Milestone 2 — Permission Packs & Membership compatibility layer
+export {
+  PERMISSION_PACKS_VERSION,
+  PERMISSION_PACKS,
+  PERMISSION_KEYS,
+  ROLE_PACKS,
+  permissionsForRole,
+} from './PermissionPacks.js';
+export {
+  createMembershipResolver,
+  translateEmployee,
+  normalizeMembershipStatus,
+  createPermissionResolver,
+  derivePermissions,
+} from './membership/index.js';
