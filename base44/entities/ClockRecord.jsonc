@@ -1,7 +1,7 @@
 {
   "name": "ClockRecord",
   "type": "object",
-  "description": "Corporate-grade clock-in/out records with GPS, photo verification, and productivity metrics. Source of truth for attendance and payroll. EXIT-READY: pure schema, portable to any stack.",
+  "description": "Corporate-grade clock-in/out records with GPS, photo verification, break tracking, and productivity metrics. Source of truth for attendance and payroll. Breaks are tracked as real events (break_start_time / break_end_time); break_duration_mins is calculated from actual events. Manager validation_status gates payroll inclusion. EXIT-READY: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -98,11 +98,12 @@
     "scheduled_start": {
       "type": "string",
       "format": "date-time",
-      "description": "Scheduled shift start time for lateness calculation"
+      "description": "Scheduled shift start time for lateness calculation. Populated from linked Shift on clock_in."
     },
     "scheduled_end": {
       "type": "string",
-      "format": "date-time"
+      "format": "date-time",
+      "description": "Scheduled shift end time for early-departure and missed-clock-out detection."
     },
     "late_mins": {
       "type": "number",
@@ -113,13 +114,24 @@
       "type": "number",
       "default": 0
     },
-    "total_hours_worked": {
-      "type": "number",
-      "description": "Calculated hours between clock-in and clock-out minus breaks"
+    "break_start_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when break started (real event, not inferred)"
+    },
+    "break_end_time": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when break ended (real event, not inferred)"
     },
     "break_duration_mins": {
       "type": "number",
-      "default": 30
+      "default": 0,
+      "description": "Calculated from break_end_time - break_start_time. 0 if no break taken."
+    },
+    "total_hours_worked": {
+      "type": "number",
+      "description": "Calculated hours between clock-in and clock-out minus break duration"
     },
     "overtime_hours": {
       "type": "number",
@@ -127,7 +139,7 @@
     },
     "labour_cost": {
       "type": "number",
-      "description": "total_hours_worked * pay_rate"
+      "description": "total_hours_worked * pay_rate (regular hours)"
     },
     "overtime_cost": {
       "type": "number",
@@ -157,7 +169,7 @@
         "disputed"
       ],
       "default": "pending",
-      "description": "Manager validation state \u2014 must be approved before payroll inclusion"
+      "description": "Manager validation state \u2014 must be approved before payroll inclusion. Updated transactionally by attendanceReview backend function."
     },
     "tasks_assigned": {
       "type": "number",
@@ -194,6 +206,11 @@
       "type": "boolean",
       "default": false,
       "description": "True once included in a locked PayrollSnapshot \u2014 immutable"
+    },
+    "payroll_export_eligible": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once validation_status is approved and the record is ready for payroll export"
     },
     "notes": {
       "type": "string"
