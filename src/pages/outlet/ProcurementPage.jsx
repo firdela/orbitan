@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/shared/PageHeader';
@@ -22,6 +23,7 @@ import { useCurrency } from '@/lib/CurrencyContext';
 export default function ProcurementPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { tenantId } = useOutletContext() || {};
   const { formatAmount, currencyConfig } = useCurrency();
   const [pos, setPos] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -32,7 +34,6 @@ export default function ProcurementPage() {
   const [overrideContext, setOverrideContext] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const tenantId = user?.data?.tenant_id || user?.tenant_id || null;
   const outletId = user?.data?.outlet_id || user?.outlet_id || null;
 
   const updateLine = (idx, field, value) => {
@@ -47,9 +48,10 @@ export default function ProcurementPage() {
   };
 
   useEffect(() => {
+    if (!tenantId) { setPos([]); setSuppliers([]); setLoading(false); return; }
     Promise.all([
-      base44.entities.PurchaseOrder.list('-created_date', 50),
-      base44.entities.Supplier.list('-created_date', 50),
+      base44.entities.PurchaseOrder.filter({ tenant_id: tenantId }, '-created_date', 50),
+      base44.entities.Supplier.filter({ tenant_id: tenantId }, '-created_date', 50),
     ])
       .then(([poData, supData]) => {
         setPos(poData || []);
@@ -60,7 +62,7 @@ export default function ProcurementPage() {
         setSuppliers([]);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [tenantId]);
 
   const addLine = () => setNewPO(prev => ({ ...prev, items: [...prev.items, { item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] }));
   const removeLine = (idx) => setNewPO(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== idx) }));

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/shared/PageHeader';
@@ -16,19 +17,23 @@ import { useCurrency } from '@/lib/CurrencyContext';
 
 export default function ReportsPage() {
   const { formatAmount } = useCurrency();
+  const { tenantId } = useOutletContext() || {};
   const { data: reconciliations = [], isLoading: recLoading } = useQuery({
-    queryKey: ['outlet-reconciliations'],
-    queryFn: () => base44.entities.DailyReconciliation.list('-date', 30),
+    queryKey: ['outlet-reconciliations', tenantId],
+    queryFn: () => base44.entities.DailyReconciliation.filter({ tenant_id: tenantId }, '-date', 30),
+    enabled: !!tenantId,
   });
 
   const { data: employees = [], isLoading: empLoading } = useQuery({
-    queryKey: ['outlet-employees'],
-    queryFn: () => base44.entities.Employee.list('-created_date', 100),
+    queryKey: ['outlet-employees', tenantId],
+    queryFn: () => base44.entities.Employee.filter({ tenant_id: tenantId }, '-created_date', 100),
+    enabled: !!tenantId,
   });
 
   const { data: tasks = [], isLoading: taskLoading } = useQuery({
-    queryKey: ['outlet-tasks'],
-    queryFn: () => base44.entities.Task.list('-created_date', 100),
+    queryKey: ['outlet-tasks', tenantId],
+    queryFn: () => base44.entities.Task.filter({ tenant_id: tenantId }, '-created_date', 100),
+    enabled: !!tenantId,
   });
 
   const loading = recLoading || empLoading || taskLoading;

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -12,17 +13,17 @@ const MATERIAL_COLORS = ['#16A34A', '#2563EB', '#F97316', '#8B5CF6', '#EAB308', 
 
 export default function SustainabilityPage() {
   const { user } = useAuth();
-  const tenantId = user?.data?.tenant_id || user?.tenant_id;
+  const { tenantId } = useOutletContext() || {};
 
   const { data: collections = [], isLoading } = useQuery({
     queryKey: ['material-collections', tenantId],
-    queryFn: () => base44.entities.MaterialCollection.list('-collection_date', 200),
+    queryFn: () => base44.entities.MaterialCollection.filter({ tenant_id: tenantId }, '-collection_date', 200),
     enabled: !!tenantId,
   });
 
   const { data: complianceRecords = [] } = useQuery({
     queryKey: ['sustainability-compliance', tenantId],
-    queryFn: () => base44.entities.ComplianceRecord.filter({ category: 'environmental' }),
+    queryFn: () => base44.entities.ComplianceRecord.filter({ tenant_id: tenantId, category: 'environmental' }),
     enabled: !!tenantId,
   });
 

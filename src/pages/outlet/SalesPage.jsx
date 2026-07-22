@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
 import PageHeader from '@/components/shared/PageHeader';
@@ -28,6 +28,7 @@ import { useCurrency } from '@/lib/CurrencyContext';
 export default function SalesPage() {
   const { currentTenant } = useTenant();
   const { user } = useAuth();
+  const { tenantId } = useOutletContext() || {};
   const { toast } = useToast();
   const { can } = useModuleAccess('sales');
   const { formatAmount, currencyConfig } = useCurrency();
@@ -37,15 +38,15 @@ export default function SalesPage() {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], total_revenue: '', total_cogs: '', cash_sales: '', card_sales: '' });
 
-  const tenantId = user?.data?.tenant_id || user?.tenant_id || currentTenant?.id || null;
   const outletId = user?.data?.outlet_id || user?.outlet_id || null;
 
   useEffect(() => {
-    base44.entities.DailyReconciliation.list('-created_date', 50)
+    if (!tenantId) { setReconciliations([]); setLoading(false); return; }
+    base44.entities.DailyReconciliation.filter({ tenant_id: tenantId }, '-created_date', 50)
       .then(data => setReconciliations(data || []))
       .catch(() => setReconciliations([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [tenantId]);
 
   const grossProfit = (parseFloat(form.total_revenue) || 0) - (parseFloat(form.total_cogs) || 0);
   const margin = form.total_revenue ? ((grossProfit / parseFloat(form.total_revenue)) * 100).toFixed(1) : 0;

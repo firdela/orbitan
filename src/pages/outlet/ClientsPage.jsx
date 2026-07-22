@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/shared/PageHeader';
@@ -32,6 +33,7 @@ const EMPTY_FORM = {
 
 export default function ClientsPage() {
   const { user } = useAuth();
+  const { tenantId } = useOutletContext() || {};
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -39,12 +41,11 @@ export default function ClientsPage() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
-  const tenantId = user?.data?.tenant_id || user?.tenant_id;
   const companyId = user?.data?.company_id || null;
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['clients', tenantId],
-    queryFn: () => base44.entities.Client.list('-created_date', 200),
+    queryFn: () => base44.entities.Client.filter({ tenant_id: tenantId }, '-created_date', 200),
     enabled: !!tenantId,
   });
 

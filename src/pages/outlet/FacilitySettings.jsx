@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -22,14 +23,15 @@ const defaultWeeklyHours = () => {
 
 export default function FacilitySettings() {
   const { user } = useAuth();
+  const { tenantId } = useOutletContext() || {};
   const queryClient = useQueryClient();
-  const tenantId = user?.tenant_id || user?.data?.tenant_id;
   const userOutletId = user?.outlet_id || user?.data?.outlet_id;
   const canEdit = ['admin', 'tenant_admin', 'outlet_manager'].includes(user?.role);
 
   const { data: outlets = [], isLoading } = useQuery({
-    queryKey: ['facility-outlets'],
-    queryFn: () => base44.entities.Outlet.list('-created_date', 100),
+    queryKey: ['facility-outlets', tenantId],
+    queryFn: () => base44.entities.Outlet.filter({ tenant_id: tenantId }, '-created_date', 100),
+    enabled: !!tenantId,
   });
 
   const [selectedId, setSelectedId] = useState(null);

@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { ArrowLeftRight, LayoutGrid, CalendarClock } from 'lucide-react';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
 import ShiftBoard from '@/components/scheduling/ShiftBoard';
@@ -34,6 +34,7 @@ const AVATAR_COLORS = [
 
 export default function SchedulingPage() {
   const { user } = useAuth();
+  const { tenantId } = useOutletContext() || {};
   const queryClient = useQueryClient();
   const { can } = useModuleAccess('scheduling');
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -41,17 +42,18 @@ export default function SchedulingPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [newShift, setNewShift] = useState({ employee_id: '', date: new Date().toISOString().split('T')[0], start_time: '09:00', end_time: '17:00' });
 
-  const tenantId = user?.tenant_id || user?.data?.tenant_id;
   const outletId = user?.outlet_id || user?.data?.outlet_id;
 
   const { data: employees = [], isLoading: loadingEmps } = useQuery({
-    queryKey: ['outlet-employees'],
-    queryFn: () => base44.entities.Employee.list('-created_date', 100),
+    queryKey: ['outlet-employees', tenantId],
+    queryFn: () => base44.entities.Employee.filter({ tenant_id: tenantId }, '-created_date', 100),
+    enabled: !!tenantId,
   });
 
   const { data: shifts = [], isLoading: loadingShifts } = useQuery({
-    queryKey: ['outlet-shifts'],
-    queryFn: () => base44.entities.Shift.list('-created_date', 200),
+    queryKey: ['outlet-shifts', tenantId],
+    queryFn: () => base44.entities.Shift.filter({ tenant_id: tenantId }, '-created_date', 200),
+    enabled: !!tenantId,
   });
 
   const createShiftMutation = useMutation({

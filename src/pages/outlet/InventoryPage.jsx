@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -31,6 +32,7 @@ import { TrendingUp, ClipboardCheck } from 'lucide-react';
 
 export default function InventoryPage() {
   const { user } = useAuth();
+  const { tenantId } = useOutletContext() || {};
   const { formatAmount, currencyConfig } = useCurrency();
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
@@ -47,11 +49,12 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    base44.entities.InventoryItem.list('-created_date', 100)
+    if (!tenantId) { setItems([]); setLoading(false); return; }
+    base44.entities.InventoryItem.filter({ tenant_id: tenantId }, '-created_date', 100)
       .then(data => setItems(data || []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [tenantId]);
 
   const lowStock = items.filter(i => i.par_level && i.current_stock < i.par_level);
   const totalValue = items.reduce((s, i) => s + (i.current_stock || 0) * (i.cost_per_unit || 0), 0);

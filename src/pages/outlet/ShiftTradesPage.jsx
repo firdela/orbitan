@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/shared/PageHeader';
@@ -19,6 +20,7 @@ import { ArrowLeftRight, Check, X, Loader2, Users, Clock } from 'lucide-react';
 
 export default function ShiftTradesPage() {
   const { user } = useAuth();
+  const { tenantId } = useOutletContext() || {};
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -26,13 +28,12 @@ export default function ShiftTradesPage() {
   const [targetEmployee, setTargetEmployee] = useState('');
   const [reason, setReason] = useState('');
 
-  const tenantId = user?.data?.tenant_id || user?.tenant_id;
   const outletId = user?.data?.outlet_id || user?.outlet_id;
   const isManager = ['admin', 'tenant_admin', 'outlet_manager', 'supervisor'].includes(user?.role);
 
   const { data: tradeRequests = [], isLoading } = useQuery({
     queryKey: ['shift-trades', tenantId],
-    queryFn: () => base44.entities.ShiftTradeRequest.list('-created_date', 100),
+    queryFn: () => base44.entities.ShiftTradeRequest.filter({ tenant_id: tenantId }, '-created_date', 100),
     enabled: !!tenantId,
   });
 
@@ -44,7 +45,7 @@ export default function ShiftTradesPage() {
 
   const { data: employees = [] } = useQuery({
     queryKey: ['outlet-employees-for-trade', tenantId],
-    queryFn: () => base44.entities.Employee.list('-created_date', 100),
+    queryFn: () => base44.entities.Employee.filter({ tenant_id: tenantId }, '-created_date', 100),
     enabled: !!tenantId,
   });
 

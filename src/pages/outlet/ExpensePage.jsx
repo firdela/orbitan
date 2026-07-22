@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/shared/PageHeader';
@@ -34,6 +35,7 @@ const CATEGORIES = [
 
 export default function ExpensePage() {
   const { user } = useAuth();
+  const { tenantId } = useOutletContext() || {};
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { formatAmount, currencyConfig } = useCurrency();
@@ -45,13 +47,12 @@ export default function ExpensePage() {
   });
   const [uploading, setUploading] = useState(false);
 
-  const tenantId = user?.data?.tenant_id || user?.tenant_id;
   const outletId = user?.data?.outlet_id || user?.outlet_id;
   const isManager = ['admin', 'tenant_admin', 'outlet_manager', 'supervisor'].includes(user?.role);
 
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: ['expenses', tenantId],
-    queryFn: () => base44.entities.ExpenseRecord.list('-expense_date', 200),
+    queryFn: () => base44.entities.ExpenseRecord.filter({ tenant_id: tenantId }, '-expense_date', 200),
     enabled: !!tenantId,
   });
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/shared/PageHeader';
 import StatCard from '@/components/shared/StatCard';
@@ -17,8 +18,8 @@ import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
 
 export default function RecipesPage() {
   const { user } = useAuth();
+  const { tenantId } = useOutletContext() || {};
   const { toast } = useToast();
-  const tenantId = user?.data?.tenant_id;
   const tenantName = user?.data?.tenant_name || 'OrbitanOS';
 
   const [recipes, setRecipes] = useState([]);
@@ -35,13 +36,14 @@ export default function RecipesPage() {
     user?.role === 'admin' || user?.role === 'tenant_admin' || user?.role === 'outlet_manager';
 
   useEffect(() => {
+    if (!tenantId) { setRecipes([]); setLoading(false); return; }
     loadRecipes();
-  }, []);
+  }, [tenantId]);
 
   const loadRecipes = async () => {
     setLoading(true);
     try {
-      const data = await base44.entities.Recipe.list('-updated_date', 200);
+      const data = await base44.entities.Recipe.filter({ tenant_id: tenantId }, '-updated_date', 200);
       setRecipes(data || []);
     } catch {
       setRecipes([]);

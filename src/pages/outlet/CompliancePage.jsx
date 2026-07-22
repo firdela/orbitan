@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/shared/PageHeader';
@@ -31,26 +32,28 @@ const STATUS_ICONS = {
 
 export default function CompliancePage() {
   const queryClient = useQueryClient();
+  const { tenantId } = useOutletContext() || {};
   const [showAdd, setShowAdd] = useState(false);
   const [signRecord, setSignRecord] = useState(null);
   const [newRec, setNewRec] = useState({ title: '', type: '', category: 'food_safety', due_date: '', status: 'pending' });
 
   const { data: records = [], isLoading } = useQuery({
-    queryKey: ['outlet-compliance'],
-    queryFn: () => base44.entities.ComplianceRecord.list('-created_date', 100),
+    queryKey: ['outlet-compliance', tenantId],
+    queryFn: () => base44.entities.ComplianceRecord.filter({ tenant_id: tenantId }, '-created_date', 100),
+    enabled: !!tenantId,
   });
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.ComplianceRecord.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['outlet-compliance'] });
+      queryClient.invalidateQueries({ queryKey: ['outlet-compliance', tenantId] });
       setShowAdd(false);
       setNewRec({ title: '', type: '', category: 'food_safety', due_date: '', status: 'pending' });
     },
   });
 
   const onSigned = () => {
-    queryClient.invalidateQueries({ queryKey: ['outlet-compliance'] });
+    queryClient.invalidateQueries({ queryKey: ['outlet-compliance', tenantId] });
   };
 
   const approved = records.filter(r => r.status === 'approved').length;

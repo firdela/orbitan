@@ -8,10 +8,10 @@
 // pilot data. Scales to any customer.
 // ============================================================
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { useWorkforceCounts } from '@/lib/workforceQueries';
+import { useDashboardSnapshot } from '@/lib/useTenantQueries';
 import StatCard from '@/components/shared/StatCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EditableDashboardGrid from '@/components/dashboard/EditableDashboardGrid';
@@ -26,44 +26,19 @@ import {
 export default function WorkspaceDashboard() {
   const { tenant, tenantId } = useOutletContext() || {};
   const { formatAmount } = useCurrency();
-  // Workforce counts come from the canonical query layer — tenant-scoped,
-  // realtime-synced, and shared with the Workforce Control Room so the
-  // dashboard and the directory can never disagree (ADR: Dashboard Consistency).
-  const { employees, active: activeEmployees } = useWorkforceCounts(tenantId);
+  // Workforce counts — canonical, tenant-scoped, realtime (ADR-0048).
+  const { active: activeEmployees } = useWorkforceCounts(tenantId);
 
-  const [inventoryItems, setInventoryItems] = useState([]);
-  const [purchaseOrders, setPurchaseOrders] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [salesInvoices, setSalesInvoices] = useState([]);
-  const [shifts, setShifts] = useState([]);
-  const [complianceRecords, setComplianceRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Operational snapshot — tenant-scoped, fail-closed, realtime (ADR-0049).
+  // No query runs without an explicit active tenant; platform admins see
+  // only the selected tenant's data, never platform-wide totals.
+  const {
+    inventoryItems, purchaseOrders, tasks, salesInvoices, shifts,
+    complianceRecords, isLoading: loading, error: snapshotError,
+  } = useDashboardSnapshot(tenantId);
+  const error = snapshotError?.message || snapshotError || null;
 
   const base = `/workspace/${tenantId}`;
-
-  useEffect(() => {
-    if (!tenantId) return;
-    setLoading(true);
-    setError(null);
-    Promise.all([
-      base44.entities.InventoryItem.list('-created_date', 50),
-      base44.entities.PurchaseOrder.list('-created_date', 20),
-      base44.entities.Task.list('-created_date', 50),
-      base44.entities.SalesInvoice.list('-created_date', 20),
-      base44.entities.Shift.list('-date', 30),
-      base44.entities.ComplianceRecord.list('-created_date', 30),
-    ]).then(([inv, po, t, sales, shft, comp]) => {
-      setInventoryItems(inv || []);
-      setPurchaseOrders(po || []);
-      setTasks(t || []);
-      setSalesInvoices(sales || []);
-      setShifts(shft || []);
-      setComplianceRecords(comp || []);
-    }).catch((err) => {
-      setError(err?.message || 'Unable to load dashboard data. Please try again.');
-    }).finally(() => setLoading(false));
-  }, [tenantId]);
 
   const lowStockItems = inventoryItems.filter(i => i.par_level && i.current_stock < i.par_level);
   const pendingPOs = purchaseOrders.filter(p => ['draft', 'pending_approval'].includes(p.status));
