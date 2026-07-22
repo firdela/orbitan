@@ -37,18 +37,3 @@ export {
   createPermissionResolver,
   derivePermissions,
 } from './membership/index.js';
-
-// Milestone 3.1 — Temporal pipeline: Validator + RoleAssignmentResolver
-export {
-  createSystemClock,
-  createFixedClock,
-  resolveClock,
-  createInvalidMembership,
-  isInvalidMembership,
-  validateMembership,
-  createMembershipValidator,
-  ASSIGNMENT_STATUS,
-  computeAssignmentStatus,
-  resolveActiveAssignments,
-  createRoleAssignmentResolver,
-} from './membership/index.js';
