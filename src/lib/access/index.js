@@ -37,3 +37,41 @@ export {
   createPermissionResolver,
   derivePermissions,
 } from './membership/index.js';
+
+// Milestone 3.1 — Temporal foundation
+export {
+  CLOCK_VERSION,
+  createSystemClock,
+  createFixedClock,
+} from './clock.js';
+export {
+  MEMBERSHIP_VALIDATOR_VERSION,
+  validateMembership,
+  createMembershipValidator,
+} from './membership/MembershipValidator.js';
+export {
+  ROLE_ASSIGNMENT_RESOLVER_VERSION,
+  ASSIGNMENT_STATUS,
+  resolveActiveAssignments,
+  createRoleAssignmentResolver,
+} from './membership/RoleAssignmentResolver.js';
+
+// Milestone 3.2 — Membership Provider abstraction + pipeline
+export {
+  MEMBERSHIP_PROVIDER_CONTRACT_VERSION,
+  PROVIDER_CONTRACT,
+  assertProvider,
+  EMPLOYEE_BASE44_PROVIDER_VERSION,
+  createEmployeeBase44Provider,
+  MOCK_PROVIDER_VERSION,
+  createMockMembershipProvider,
+} from './providers/index.js';
+export {
+  ACCESS_PIPELINE_VERSION,
+  createAccessPipeline,
+} from './pipeline.js';
+
+// Test runners (pure, no framework)
+export { runTemporalTests } from './__tests__/runTemporalTests.js';
+export { runProviderIntegrationTests } from './__tests__/runProviderIntegrationTests.js';
+export { runPipelineTests } from './__tests__/runPipelineTests.js';

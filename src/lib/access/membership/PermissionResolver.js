@@ -61,6 +61,7 @@ export function derivePermissions(membership) {
  */
 export function createPermissionResolver(_opts = {}) {
   return Object.freeze({
+    name: 'PermissionResolver',
     version: PERMISSION_RESOLVER_VERSION,
     packsVersion: PERMISSION_PACKS_VERSION,
 

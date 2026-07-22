@@ -34,6 +34,9 @@ export const DENIAL_REASONS = Object.freeze({
   FEATURE_DISABLED: 'feature_disabled',
   POLICY_BLOCKED: 'policy_blocked',
   EVALUATION_ERROR: 'evaluation_error',
+  // M3.2 — provider/translation/validation fail-closed paths (ADR-0050 §M3.2)
+  PROVIDER_ERROR: 'provider_error',
+  INVALID_MEMBERSHIP: 'invalid_membership',
 });
 
 /**
