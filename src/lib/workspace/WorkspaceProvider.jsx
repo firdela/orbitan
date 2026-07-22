@@ -29,6 +29,7 @@ import React, {
   useEffect,
   useCallback,
   useContext,
+  useMemo,
   useRef,
 } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -60,6 +61,9 @@ const membershipResolver = createMembershipResolver({
  * should consume useWorkspace() — never readAuth() for tenant/outlet/role.
  */
 export function WorkspaceProvider({ children }) {
+  // ════════════════════════════════════════════════════════════
+  // SECTION: Identity
+  // ════════════════════════════════════════════════════════════
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const queryClient = useQueryClient();
 
@@ -72,6 +76,9 @@ export function WorkspaceProvider({ children }) {
       }
     : null;
 
+  // ════════════════════════════════════════════════════════════
+  // SECTION: Membership
+  // ════════════════════════════════════════════════════════════
   // ── Stage: Load Memberships ──────────────────────────────────
   // Fetches all Employee records for this identity and translates
   // them into the normalized Membership shape via the Access Engine.
@@ -88,6 +95,9 @@ export function WorkspaceProvider({ children }) {
     staleTime: 60 * 1000, // 1 min — memberships don't change often
   });
 
+  // ════════════════════════════════════════════════════════════
+  // SECTION: Workspace
+  // ════════════════════════════════════════════════════════════
   // ── Stage: Select Workspace ──────────────────────────────────
   // The active membership is resolved from the URL :tenantId by the
   // WorkspaceLayout. Here we track the currently active membership
@@ -120,6 +130,9 @@ export function WorkspaceProvider({ children }) {
     enabled: !!activeTenantId && isAuthenticated,
   });
 
+  // ════════════════════════════════════════════════════════════
+  // SECTION: Outlet
+  // ════════════════════════════════════════════════════════════
   // ── Stage: Resolve Outlets for the active tenant ─────────────
   const { data: outlets = [] } = useQuery({
     queryKey: ['workspace-outlets', activeTenantId],
@@ -138,10 +151,17 @@ export function WorkspaceProvider({ children }) {
 
   // ── Stage: Resolve Permissions ──────────────────────────────
   // Derives the scoped permission snapshot from the active membership.
-  const permissionSnapshot = activeMembership
-    ? derivePermissions(activeMembership)
-    : [];
+  // Memoised: derivation only recalculates when activeMembership changes.
+  // Permission Packs, Policy Engine, ABAC, and Subscription Policies
+  // will make this more expensive — guard it now.
+  const permissionSnapshot = useMemo(
+    () => (activeMembership ? derivePermissions(activeMembership) : []),
+    [activeMembership]
+  );
 
+  // ════════════════════════════════════════════════════════════
+  // SECTION: Subscription
+  // ════════════════════════════════════════════════════════════
   // ── Stage: Resolve Subscription / Feature Flags (placeholder) ─
   // M4 will wire SubscriptionPolicy + Tenant.feature_flags. For MVP
   // we surface the tenant plan + enabled modules as a baseline.
@@ -156,6 +176,9 @@ export function WorkspaceProvider({ children }) {
 
   const featureFlags = tenant?.feature_flags || {};
 
+  // ════════════════════════════════════════════════════════════
+  // SECTION: Actions
+  // ════════════════════════════════════════════════════════════
   // ── Outlet scope helpers ────────────────────────────────────
   const activeOutlet =
     outletScope === SCOPE_ALL
@@ -176,8 +199,14 @@ export function WorkspaceProvider({ children }) {
   }, []);
 
   // ── Stage: In-session Workspace Switch ──────────────────────
-  // The premium switching experience. Invalidates only tenant-scoped
-  // query cache; preserves session, UI shell, and websocket.
+  // The premium switching experience. Invalidates ONLY tenant-scoped
+  // query cache; preserves session, UI shell, websocket, AND the
+  // identity-bound memberships cache.
+  //
+  // Memberships belong to the authenticated identity, not the active
+  // workspace. Removing them on every switch creates unnecessary DB
+  // work. They are refreshed only by: login, logout, invitation
+  // accepted/revoked, membership changed, or explicit refresh.
   const switchWorkspace = useCallback(
     (tenantId) => {
       manualOverride.current = true;
@@ -186,10 +215,10 @@ export function WorkspaceProvider({ children }) {
       );
       if (!target) return false;
 
-      // Invalidate tenant-scoped cache so the new workspace loads fresh.
+      // Invalidate ONLY tenant-scoped cache (dashboard, inventory,
+      // procurement, reports, outlet list, tenant record).
       queryClient.invalidateQueries({ queryKey: ['workspace-tenant'] });
       queryClient.invalidateQueries({ queryKey: ['workspace-outlets'] });
-      queryClient.removeQueries({ queryKey: ['workspace-memberships'] });
 
       setActiveMembership(target);
       setActiveTenantId(target.organisation_id);
@@ -199,27 +228,49 @@ export function WorkspaceProvider({ children }) {
     [memberships, queryClient]
   );
 
+  // ── Stage: Refresh Memberships (identity-bound cache) ───────
+  // Called after invitation accepted/revoked, membership role changed,
+  // or explicit user refresh. NOT called during normal workspace switch.
+  const refreshMemberships = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['workspace-memberships'] });
+  }, [queryClient]);
+
+  // ════════════════════════════════════════════════════════════
+  // SECTION: Lifecycle
+  // ════════════════════════════════════════════════════════════
   // ── Compose the active role for convenience ──────────────────
   const activeRole = activeMembership?.role_assignments?.[0]?.role || null;
 
   const isLoadingWorkspace =
     isLoadingAuth || membershipsLoading || (activeTenantId && tenantLoading);
 
+  // ── Derived State ───────────────────────────────────────────
   const value = {
-    // ── Identity (pass-through from AuthContext) ──
+    // ── Identity ──
     identity,
     isAuthenticated,
 
-    // ── Memberships ──
+    // ── Membership ──
     memberships,
     activeMembership,
+    refreshMemberships,
 
     // ── Workspace ──
     tenant,
     activeTenantId,
     activeRole,
+    switchWorkspace,
 
-    // ── Outlet scope ──
+    // ── Permissions ──
+    permissionSnapshot,
+
+    // ── Subscription ──
+    subscription,
+
+    // ── Feature Flags ──
+    featureFlags,
+
+    // ── Outlet ──
     outlets,
     outletScope,
     activeOutlet,
@@ -228,17 +279,7 @@ export function WorkspaceProvider({ children }) {
     switchToOutlet,
     switchToGlobal,
 
-    // ── Permissions ──
-    permissionSnapshot,
-
-    // ── Subscription & Feature Flags ──
-    subscription,
-    featureFlags,
-
-    // ── Switching ──
-    switchWorkspace,
-
-    // ── Loading ──
+    // ── Lifecycle ──
     isLoadingWorkspace,
     membershipsLoading,
     tenantLoading,

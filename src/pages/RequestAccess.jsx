@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { useWorkspace } from '@/lib/workspace';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -265,6 +266,7 @@ function SuccessView({ workplace, submittedRole, onDone }) {
 export default function RequestAccessPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
+  const { refreshMemberships } = useWorkspace();
   const userEmail = user?.email || '';
   const userFullName = user?.full_name || 'Worker';
 
@@ -304,16 +306,19 @@ export default function RequestAccessPage() {
     onSuccess: () => setPhase('success'),
   });
 
-  // Real-time subscription: listen for AccessRequest status changes
+  // Real-time subscription: listen for AccessRequest status changes.
+  // On approval, refresh the identity-bound memberships cache (in-session)
+  // so the new membership is available without a full page reload.
   useEffect(() => {
     if (!userEmail) return;
     const unsubscribe = base44.entities.AccessRequest.subscribe((event) => {
       if (event.type === 'update' && event.data?.email === userEmail && event.data?.status === 'approved') {
         setLiveRequest(event.data);
+        refreshMemberships();
       }
     });
     return unsubscribe;
-  }, [userEmail]);
+  }, [userEmail, refreshMemberships]);
 
   const handleWorkplaceSelect = (workplace) => {
     setSelectedWorkplace(workplace);
@@ -355,7 +360,10 @@ export default function RequestAccessPage() {
           <p className="text-slate-400 text-sm">
             Your access to <span className="text-white font-semibold">{liveRequest.company_name}</span> has been approved as <span className="text-white capitalize">{(liveRequest.role_requested || 'worker').replace(/_/g, ' ')}</span>.
           </p>
-          <Button onClick={() => window.location.href = '/workspace'} className="bg-[#3B82F6] hover:bg-[#2563EB] gap-2">
+          <Button
+            onClick={() => navigate('/workspace', { replace: true })}
+            className="bg-[#3B82F6] hover:bg-[#2563EB] gap-2"
+          >
             Continue to Workspace <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </motion.div>
