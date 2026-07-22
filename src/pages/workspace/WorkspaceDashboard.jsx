@@ -9,7 +9,8 @@
 // ============================================================
 
 import React from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useWorkspace } from '@/lib/workspace';
 import { useWorkforceCounts } from '@/lib/workforceQueries';
 import { useDashboardSnapshot } from '@/lib/useTenantQueries';
 import StatCard from '@/components/shared/StatCard';
@@ -24,7 +25,9 @@ import {
 } from 'lucide-react';
 
 export default function WorkspaceDashboard() {
-  const { tenant, tenantId } = useOutletContext() || {};
+  // Stage D: consume the unified Workspace context (ADR-0050).
+  // Components MUST use useWorkspace() — never useAuth() for tenant/role.
+  const { tenant, activeTenantId: tenantId } = useWorkspace();
   const { formatAmount } = useCurrency();
   // Workforce counts — canonical, tenant-scoped, realtime (ADR-0048).
   const { active: activeEmployees } = useWorkforceCounts(tenantId);

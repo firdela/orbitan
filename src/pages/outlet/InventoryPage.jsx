@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { useWorkspace } from '@/lib/workspace';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -24,15 +24,13 @@ import ReconciliationDialog from '@/components/inventory/ReconciliationDialog';
 import ForecastingPanel from '@/components/inventory/ForecastingPanel';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
-import { useAuth } from '@/lib/AuthContext';
 import { useCurrency } from '@/lib/CurrencyContext';
 import { TrendingUp, ClipboardCheck } from 'lucide-react';
 
 
 
 export default function InventoryPage() {
-  const { user } = useAuth();
-  const { tenantId } = useOutletContext() || {};
+  const { identity, activeTenantId: tenantId, activeRole } = useWorkspace();
   const { formatAmount, currencyConfig } = useCurrency();
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
@@ -110,9 +108,9 @@ export default function InventoryPage() {
     auditFrontend({
       tenant_id: item.tenant_id,
       outlet_id: item.outlet_id,
-      actor_id: user?.id,
-      actor_name: user?.full_name || user?.email,
-      actor_role: user?.role,
+      actor_id: identity?.id,
+      actor_name: identity?.full_name || identity?.email,
+      actor_role: activeRole || identity?.platform_role,
       action_type: ACTION_TYPES.STOCK_ADJUSTED,
       module: 'inventory',
       target_entity: 'InventoryItem',

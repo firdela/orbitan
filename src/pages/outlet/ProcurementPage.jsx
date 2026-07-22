@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { useAuth } from '@/lib/AuthContext';
+import { useWorkspace } from '@/lib/workspace';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -19,22 +18,23 @@ import GovernanceOverrideModal from '@/components/shield/GovernanceOverrideModal
 import AccessButton from '@/components/shared/AccessButton';
 import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
 import { useCurrency } from '@/lib/CurrencyContext';
+import GoodsReceiptDialog from '@/components/procurement/GoodsReceiptDialog';
 
 export default function ProcurementPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { tenantId } = useOutletContext() || {};
+  const { identity, activeTenantId: tenantId, activeMembership, activeRole } = useWorkspace();
   const { formatAmount, currencyConfig } = useCurrency();
   const [pos, setPos] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [receivingId, setReceivingId] = useState(null);
+  const [receivingPO, setReceivingPO] = useState(null);
   const [creating, setCreating] = useState(false);
   const [newPO, setNewPO] = useState({ supplier_id: '', supplier_name: '', items: [{ item_name: '', quantity: '', unit: 'unit', unit_price: '', total: 0 }] });
   const [overrideContext, setOverrideContext] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const outletId = user?.data?.outlet_id || user?.outlet_id || null;
+  const outletId = activeMembership?.role_assignments?.[0]?.scope?.outlet_id || null;
 
   const updateLine = (idx, field, value) => {
     setNewPO(prev => {
@@ -144,58 +144,75 @@ export default function ProcurementPage() {
     await base44.entities.PurchaseOrder.update(id, { status });
     setPos(prev => prev.map(p => p.id === id ? { ...p, status } : p));
 
-    // When a PO is received, emit a `po.received` event to the Action Dispatcher
-    // (ADR-0032). The dispatcher resolves the matching AutomationRule and executes
-    // the wallet debit — Procurement no longer calls walletEngine directly.
-    if (status === 'received') {
-      const po = pos.find(p => p.id === id);
-      if (!po) return;
-      setReceivingId(id);
-      try {
-        const res = await base44.functions.invoke('actionDispatcher', {
-          trigger_event: 'po.received',
-          tenant_id: po.tenant_id,
-          outlet_id: po.outlet_id,
-          entity_id: po.id,
-          entity_type: 'PurchaseOrder',
-          data: {
-            po_number: po.po_number,
-            supplier_name: po.supplier_name,
-            supplier_id: po.supplier_id,
-            total_amount: po.total_amount || 0,
-            items: po.items,
-            status: 'received',
-          },
-        });
-        const data = res.data || res;
-        const fired = (data.fired || [])[0];
-        const walletResult = fired?.result || {};
-        if (walletResult.above_threshold) {
-          toast({
-            title: 'Governance Threshold Exceeded',
-            description: `PO SGD ${po.total_amount?.toFixed(2)} exceeds threshold (SGD ${walletResult.threshold_applied}). Manager approval required.`,
-            variant: 'destructive',
-          });
-        } else if (fired) {
-          toast({
-            title: 'Goods Received — Wallet Debited',
-            description: `SGD ${po.total_amount?.toFixed(2)} posted to wallet ledger. Threshold: SGD ${walletResult.threshold_applied}.`,
-          });
-        } else {
-          toast({
-            title: 'Goods Received',
-            description: 'No automation rule matched — wallet not debited.',
-          });
-        }
-      } catch (err) {
+  };
+
+  // ── Receive flow: Shield gate → GoodsReceiptDialog → wallet dispatch ──
+  // The dialog creates the GoodsReceipt record and increments inventory.
+  // After confirmation, the wallet debit is dispatched to actionDispatcher.
+  const handleReceiveClick = async (poRecord) => {
+    const shieldResult = await ShieldGuard.check(base44, {
+      entity_name: 'PurchaseOrder',
+      action: 'update',
+      data: { id: poRecord.id, status: 'received', total_amount: poRecord.total_amount, tenant_id: poRecord.tenant_id },
+      tenant_id: poRecord.tenant_id || tenantId,
+    });
+    if (!shieldResult.allowed) {
+      setOverrideContext(shieldResult.override_context);
+      toast({
+        title: 'Governance Threshold Exceeded',
+        description: shieldResult.reason || 'This action requires manager approval.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setReceivingPO(poRecord);
+  };
+
+  const handleGoodsReceived = async () => {
+    const poRecord = receivingPO;
+    if (!poRecord) return;
+    setPos(prev => prev.map(p => p.id === poRecord.id ? { ...p, status: 'received' } : p));
+    setReceivingId(poRecord.id);
+    try {
+      const res = await base44.functions.invoke('actionDispatcher', {
+        trigger_event: 'po.received',
+        tenant_id: poRecord.tenant_id,
+        outlet_id: poRecord.outlet_id,
+        entity_id: poRecord.id,
+        entity_type: 'PurchaseOrder',
+        data: {
+          po_number: poRecord.po_number,
+          supplier_name: poRecord.supplier_name,
+          supplier_id: poRecord.supplier_id,
+          total_amount: poRecord.total_amount || 0,
+          items: poRecord.items,
+          status: 'received',
+        },
+      });
+      const data = res.data || res;
+      const fired = (data.fired || [])[0];
+      const walletResult = fired?.result || {};
+      if (walletResult.above_threshold) {
         toast({
-          title: 'Action Dispatch Failed',
-          description: err?.response?.data?.error || err?.message || 'Could not dispatch the procurement event.',
+          title: 'Governance Threshold Exceeded',
+          description: `PO SGD ${poRecord.total_amount?.toFixed(2)} exceeds threshold (SGD ${walletResult.threshold_applied}). Manager approval required.`,
           variant: 'destructive',
         });
-      } finally {
-        setReceivingId(null);
+      } else if (fired) {
+        toast({
+          title: 'Wallet Debited',
+          description: `SGD ${poRecord.total_amount?.toFixed(2)} posted to wallet ledger. Threshold: SGD ${walletResult.threshold_applied}.`,
+        });
       }
+    } catch (err) {
+      toast({
+        title: 'Action Dispatch Failed',
+        description: err?.response?.data?.error || err?.message || 'Could not dispatch the procurement event.',
+        variant: 'destructive',
+      });
+    } finally {
+      setReceivingId(null);
+      setReceivingPO(null);
     }
   };
 
@@ -278,7 +295,7 @@ export default function ProcurementPage() {
                         variant="outline"
                         className="text-xs"
                         disabled={receivingId === po.id}
-                        onClick={() => updateStatus(po.id, 'received')}
+                        onClick={() => handleReceiveClick(po)}
                       >
                         {receivingId === po.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Receive'}
                       </AccessButton>
@@ -356,6 +373,18 @@ export default function ProcurementPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Goods Receipt Dialog — receive flow with inventory increment */}
+      <GoodsReceiptDialog
+        open={!!receivingPO}
+        onOpenChange={(open) => { if (!open) setReceivingPO(null); }}
+        po={receivingPO}
+        tenantId={tenantId}
+        outletId={outletId}
+        identity={identity}
+        activeRole={activeRole}
+        onReceived={handleGoodsReceived}
+      />
     </>
   );
 }
