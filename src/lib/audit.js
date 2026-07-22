@@ -73,6 +73,10 @@ export const ACTION_TYPES = {
   CLOCK_OUT:            'clock_out',
   SHIFT_AMENDED:        'shift_amended',
   PRODUCTIVITY_FLAGGED: 'productivity_flagged',
+  ATTENDANCE_EXCEPTION_DETECTED: 'attendance_exception_detected',
+  ATTENDANCE_APPROVED:  'attendance_approved',
+  ATTENDANCE_REJECTED:  'attendance_rejected',
+  ATTENDANCE_JUSTIFIED: 'attendance_justified',
 
   // Compliance
   COMPLIANCE_SUBMITTED: 'compliance_submitted',

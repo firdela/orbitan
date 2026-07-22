@@ -4,6 +4,9 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, isToday } from 'date-fns';
 import { useAuth } from '@/lib/AuthContext';
+import { evaluateClockRecord } from '@/lib/policies/attendancePolicy';
+import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
+import { useToast } from '@/components/ui/use-toast';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -18,7 +21,7 @@ import {
   Clock, CheckSquare, Calendar, LogIn, LogOut,
   ChevronRight, MapPin, CheckCircle2, Flame, Trophy, Shield,
   MessageSquarePlus, Home, ListChecks, User,
-  RotateCcw, Utensils, Zap, X
+  RotateCcw, Utensils, Zap, X, Loader2
 } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -380,6 +383,8 @@ export default function WorkerPortal() {
   const [feedbackPreset, setFeedbackPreset] = useState(null);
   const [reportIssueOpen, setReportIssueOpen] = useState(false);
   const [elapsed, setElapsed] = useState('0:00:00');
+  const [clocking, setClocking] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -434,6 +439,144 @@ export default function WorkerPortal() {
     queryFn: () => base44.entities.ClockRecord.filter({ tenant_id: tenantId, employee_id: workerId }),
     enabled: !!tenantId && !!workerId,
   });
+
+  // ── Real clock status from clockController backend function ──────────────
+  const { data: clockStatus } = useQuery({
+    queryKey: ['worker-clock-status', tenantId, workerId],
+    queryFn: async () => {
+      const response = await base44.functions.invoke('clockController', {
+        action: 'get_status',
+      });
+      return response.data;
+    },
+    enabled: !!tenantId && !!workerId,
+    refetchInterval: 30000,
+  });
+
+  const isClockedIn = clockStatus?.status === 'clocked_in' || clockStatus?.status === 'on_break';
+
+  useEffect(() => {
+    if (clockStatus?.record?.clock_in_time) {
+      setClockInTime(new Date(clockStatus.record.clock_in_time));
+      setClockedIn(isClockedIn);
+    } else {
+      setClockedIn(false);
+      setClockInTime(null);
+    }
+  }, [clockStatus, isClockedIn]);
+
+  // ── Clock In / Clock Out handlers (real backend persistence) ─────────────
+  const handleClockIn = async () => {
+    setClocking(true);
+    try {
+      const shiftId = todayShift?.id || '';
+      const response = await base44.functions.invoke('clockController', {
+        action: 'clock_in',
+        shift_id: shiftId,
+      });
+      const res = response.data;
+      if (res?.error) throw new Error(res.error);
+      setClockedIn(true);
+      setClockInTime(new Date());
+      toast({ title: '✓ Clocked In', description: `Your shift started at ${format(new Date(), 'HH:mm')}.` });
+      queryClient.invalidateQueries({ queryKey: ['worker-clock-status'] });
+      queryClient.invalidateQueries({ queryKey: ['worker-clockrecords'] });
+      await auditFrontend({
+        tenant_id: tenantId,
+        outlet_id: outletId,
+        actor_id: workerId,
+        actor_name: workerName,
+        actor_role: 'worker',
+        action_type: ACTION_TYPES.CLOCK_IN,
+        module: 'workforce',
+        target_entity: 'ClockRecord',
+        target_record_id: res?.record?.id || '',
+        details: `${workerName} clocked in at ${format(new Date(), 'HH:mm')}`,
+      });
+    } catch (err) {
+      toast({ title: 'Clock In Failed', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setClocking(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    setClocking(true);
+    try {
+      const response = await base44.functions.invoke('clockController', {
+        action: 'clock_out',
+      });
+      const res = response.data;
+      if (res?.error) throw new Error(res.error);
+      setClockedIn(false);
+      setClockInTime(null);
+      const summary = res?.summary || {};
+      toast({
+        title: '✓ Clocked Out',
+        description: `Worked ${summary.hours_worked || 0} hrs${summary.overtime_hours > 0 ? ` (${summary.overtime_hours} OT)` : ''}.`,
+      });
+
+      // ── Policy Engine: detect attendance exceptions on clock-out ────────
+      const record = res?.record;
+      if (record) {
+        const scheduledStart = todayShift
+          ? new Date(`${todayShift.date}T${todayShift.start_time}:00`).toISOString()
+          : null;
+        const scheduledEnd = todayShift
+          ? new Date(`${todayShift.date}T${todayShift.end_time}:00`).toISOString()
+          : null;
+        const enrichedRecord = {
+          ...record,
+          scheduled_start: scheduledStart,
+          scheduled_end: scheduledEnd,
+        };
+        const detected = evaluateClockRecord(enrichedRecord, undefined, { shift: todayShift });
+        if (detected.length > 0) {
+          await base44.entities.AttendanceException.bulkCreate(
+            detected.map((exc) => ({
+              tenant_id: tenantId,
+              outlet_id: outletId,
+              employee_id: workerId,
+              employee_name: workerName,
+              employee_role: 'worker',
+              shift_id: todayShift?.id || '',
+              clock_record_id: record.id,
+              exception_type: exc.exception_type,
+              severity: exc.severity,
+              detected_at: exc.detected_at,
+              details: exc.details,
+              policy_version: exc.policy_version,
+              status: 'pending_review',
+            }))
+          );
+          toast({
+            title: 'Attendance exception detected',
+            description: `${detected.length} exception(s) flagged for manager review.`,
+            variant: 'default',
+          });
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['worker-clock-status'] });
+      queryClient.invalidateQueries({ queryKey: ['worker-clockrecords'] });
+      await auditFrontend({
+        tenant_id: tenantId,
+        outlet_id: outletId,
+        actor_id: workerId,
+        actor_name: workerName,
+        actor_role: 'worker',
+        action_type: ACTION_TYPES.CLOCK_OUT || 'clock_out',
+        module: 'workforce',
+        target_entity: 'ClockRecord',
+        target_record_id: record?.id || '',
+        details: `${workerName} clocked out after ${summary.hours_worked || 0} hrs`,
+      });
+    } catch (err) {
+      toast({ title: 'Clock Out Failed', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setClocking(false);
+    }
+  };
 
   const attendancePct = computeAttendancePct(clockRecords);
   const productivityPct = computeProductivityPct(liveTasks);
@@ -576,10 +719,11 @@ export default function WorkerPortal() {
                 </div>
               )}
               <button
-                onClick={() => { if (clockedIn) { setClockedIn(false); setClockInTime(null); } else { setClockedIn(true); setClockInTime(new Date()); } }}
-                className="w-full bg-white/20 hover:bg-white/30 active:scale-[0.98] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all border border-white/20">
-                {clockedIn ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
-                {clockedIn ? 'Clock Out' : 'Clock In Now'}
+                onClick={clockedIn ? handleClockOut : handleClockIn}
+                disabled={clocking}
+                className="w-full bg-white/20 hover:bg-white/30 active:scale-[0.98] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all border border-white/20 disabled:opacity-50">
+                {clocking ? <Loader2 className="w-4 h-4 animate-spin" /> : clockedIn ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
+                {clocking ? 'Please wait...' : clockedIn ? 'Clock Out' : 'Clock In Now'}
               </button>
             </div>
 
@@ -647,8 +791,8 @@ export default function WorkerPortal() {
             clockedIn={clockedIn}
             clockInTime={clockInTime}
             elapsed={elapsed}
-            onClockIn={() => { setClockedIn(true); setClockInTime(new Date()); }}
-            onClockOut={() => { setClockedIn(false); setClockInTime(null); }}
+            onClockIn={handleClockIn}
+            onClockOut={handleClockOut}
           />
         )}
 

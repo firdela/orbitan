@@ -11,11 +11,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AccessRequestQueue from '@/components/workforce/AccessRequestQueue';
 import InvitationPanel from '@/components/workforce/InvitationPanel';
+import AttendanceExceptionQueue from '@/components/workforce/AttendanceExceptionQueue';
 import PerformanceHeatmap from '@/components/reporting/PerformanceHeatmap';
 import {
   Users, Search, Home, Package, ShoppingCart, FileText,
   Calendar, CheckSquare, BarChart2, Shield, Layers, Building2,
-  Mail, Briefcase, UserCheck, Clock, UserPlus, UserCog, Activity
+  Mail, Briefcase, UserCheck, Clock, UserPlus, UserCog, Activity,
+  AlertTriangle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
@@ -98,6 +100,11 @@ export default function WorkforcePage() {
                 <UserPlus className="w-3.5 h-3.5" /> Invitations
               </TabsTrigger>
             </AccessGuard>
+            <AccessGuard can={can} action="update">
+              <TabsTrigger value="attendance" className="gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" /> Attendance Exceptions
+              </TabsTrigger>
+            </AccessGuard>
             <TabsTrigger value="punctuality" className="gap-1.5">
               <Activity className="w-3.5 h-3.5" /> Punctuality & Performance
             </TabsTrigger>
@@ -170,6 +177,13 @@ export default function WorkforcePage() {
           <TabsContent value="invitations">
             <AccessGuard can={can} action="create" fallback={<EmptyState icon={UserPlus} title="Invitations" description="Only managers can invite new team members." color="slate" />}>
               <InvitationPanel tenantId={tenantId} />
+            </AccessGuard>
+          </TabsContent>
+
+          {/* Attendance Exceptions tab */}
+          <TabsContent value="attendance">
+            <AccessGuard can={can} action="update" fallback={<EmptyState icon={AlertTriangle} title="Attendance Exceptions" description="Only managers can review attendance exceptions." color="slate" />}>
+              <AttendanceExceptionQueue tenantId={tenantId} />
             </AccessGuard>
           </TabsContent>
 
