@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '@/lib/use-tenant';
+import { useWorkforceCounts } from '@/lib/workforceQueries';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import StatCard from '@/components/shared/StatCard';
@@ -41,19 +42,8 @@ export default function WorkforcePage() {
   const [activeTab, setActiveTab] = useState('directory');
   const { can } = useModuleAccess('workforce');
 
-  // Tenant-scoped query — prevents cross-tenant data exposure
-  const { data: employees = [], isLoading } = useQuery({
-    queryKey: ['outlet-employees', tenantId],
-    queryFn: () => base44.entities.Employee.filter({ tenant_id: tenantId }),
-    enabled: !!tenantId,
-  });
-
-  // Pending access requests count for the badge
-  const { data: pendingRequests = [] } = useQuery({
-    queryKey: ['access-requests-count', tenantId],
-    queryFn: () => base44.entities.AccessRequest.filter({ tenant_id: tenantId, status: 'pending' }),
-    enabled: !!tenantId,
-  });
+  // Canonical Workforce reads — shared with the dashboard so counts can never disagree.
+  const { employees = [], totalStaff, active, onLeave, pendingRequests, isLoading } = useWorkforceCounts(tenantId);
 
   const filtered = employees.filter(e =>
     !search ||
@@ -61,15 +51,12 @@ export default function WorkforcePage() {
     e.position?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const active = employees.filter(e => e.status === 'active').length;
-  const onLeave = employees.filter(e => e.status === 'on_leave').length;
-
   return (
     <>
       <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
         <PageHeader
           title="Workforce Control Room"
-          subtitle={`${employees.length} members · ${active} active`}
+          subtitle={`${totalStaff} members · ${active} active`}
           help={{
             title: 'Workforce Control Room',
             content: 'Your central hub for managing staff, onboarding new team members, and monitoring attendance and performance across this outlet.',
@@ -83,7 +70,7 @@ export default function WorkforcePage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard title="Total Staff" value={employees.length} icon={Users} color="blue" help={{ content: 'Every employee record in this organisation, including active, on-leave, and inactive staff.' }} />
+          <StatCard title="Total Staff" value={totalStaff} icon={Users} color="blue" help={{ content: 'Every employee record in this organisation, including active, on-leave, and inactive staff.' }} />
           <StatCard title="Active" value={active} icon={UserCheck} color="green" help={{ content: 'Staff currently available for shifts and tasks. Inactive or terminated employees are excluded.' }} />
           <StatCard title="On Leave" value={onLeave} icon={Clock} color="amber" help={{ content: 'Staff with an "on_leave" status — they cannot be assigned new shifts until their status returns to active.' }} />
           <StatCard title="Pending Requests" value={pendingRequests.length} icon={UserCog} color="purple" help={{ content: 'Users who have requested access to your organisation and are awaiting your approval in the Access Requests tab.' }} onClick={can('create') ? () => setActiveTab('requests') : undefined} />

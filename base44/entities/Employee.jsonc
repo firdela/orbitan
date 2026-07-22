@@ -1,7 +1,7 @@
 {
   "name": "Employee",
   "type": "object",
-  "description": "OrbitanOS Workforce Module \u2014 Centralised staff directory record. Stores employee profiles, contact information, organisational assignments (Company \u2192 Brand \u2192 Outlet \u2192 Department \u2192 Team), roles, employment status, skills, certifications, emergency contacts, and employment history. Governed by RBAC and tenant isolation (ADR-0027). Exit-Ready: pure schema, portable to any stack.",
+  "description": "OrbitanOS Workforce Module \u2014 Centralised staff directory record. Stores employee profiles, contact information, organisational assignments (Company \u2192 Brand \u2192 Outlet \u2192 Department \u2192 Team), roles, employment status, skills, certifications, emergency contacts, and employment history. Governed by RBAC and tenant isolation (ADR-0027). Orbit Identity Model: the User entity is the global identity; an Employee record is a tenant-scoped membership. One User may hold many Employee records (one per tenant/organisation), linked via `user_id`. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -11,6 +11,10 @@
     },
     "company_id": {
       "type": "string"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Orbit Identity Model link to the global User account. Nullable for directory entries whose owner has not yet registered/claimed their account. On registration or invitation redemption, the onboarding flow links the User to the matching Employee record by email."
     },
     "full_name": {
       "type": "string"

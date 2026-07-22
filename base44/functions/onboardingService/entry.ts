@@ -416,6 +416,38 @@ async function provisionOrganisation(base44, body, user) {
       outlet_id: outletRec.id,
     });
 
+    // 6.5. Orbit Identity Model — create the founder's Employee membership
+    // in the new tenant. The User is the global identity; the Employee record
+    // is the tenant-scoped membership. This guarantees the founder appears in
+    // their own Workforce directory immediately (no manual sync required).
+    try {
+      const founderName = user.full_name || tenant.contact_name || (user.email ? user.email.split('@')[0] : "Founder");
+      const founderEmployee = await base44.asServiceRole.entities.Employee.create({
+        tenant_id: tenantRec.id,
+        outlet_id: outletRec.id,
+        company_id: companyRec.id,
+        user_id: user.id,
+        full_name: founderName,
+        email: user.email || tenant.contact_email || null,
+        role: "tenant_admin",
+        position: "Founder",
+        status: "active",
+        employment_type: "full_time",
+        hire_date: new Date().toISOString().split('T')[0],
+        employment_history: [{
+          position: "Founder",
+          outlet_id: outletRec.id,
+          outlet_name: outletRec.name,
+          role: "tenant_admin",
+          start_date: new Date().toISOString().split('T')[0],
+          change_reason: "Organisation provisioning (founder onboarding)",
+        }],
+      });
+      report.records_created.push({ entity: "Employee", id: founderEmployee.id, title: `${founderName} (Founder)` });
+    } catch (err) {
+      report.errors.push({ step: "founder_membership", error: err.message });
+    }
+
     // 7. Seed the industry blueprint (resolved in step 0 from ActivationRegistry)
     const dueDate = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
     const seeds = [
