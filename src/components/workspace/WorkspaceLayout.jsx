@@ -22,6 +22,7 @@ import { useParams, Navigate, Outlet } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { useWorkspace } from '@/lib/workspace';
 import { useTenant } from '@/lib/use-tenant';
 import AppShell from '@/components/layout/AppShell';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
@@ -32,8 +33,27 @@ import { Building2 } from 'lucide-react';
 export default function WorkspaceLayout() {
   const { tenantId } = useParams();
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
+  const {
+    memberships,
+    activeMembership,
+    switchWorkspace,
+    isLoadingWorkspace,
+  } = useWorkspace();
   const { switchTenant } = useTenant();
-  const userEmail = user?.email || '';
+
+  // ── Membership check: verify the user belongs to this tenant ──
+  // The Access Engine resolves memberships; here we enforce that the
+  // tenantId in the URL matches one of the user's memberships.
+  const membershipForTenant = memberships.find(
+    (m) => m.organisation_id === tenantId
+  );
+
+  // Auto-select the matching workspace on URL entry (in-session switch).
+  useEffect(() => {
+    if (membershipForTenant && activeMembership?.organisation_id !== tenantId) {
+      switchWorkspace(tenantId);
+    }
+  }, [tenantId, membershipForTenant, activeMembership, switchWorkspace]);
 
   // ── Resolve the Tenant record from the database ─────────
   const { data: tenantRecord, isLoading: tenantLoading } = useQuery({
@@ -49,33 +69,18 @@ export default function WorkspaceLayout() {
     enabled: !!tenantId && isAuthenticated,
   });
 
-  // ── Resolve Employee record for role-based access control ──
-  // Workers are not permitted to access the management workspace.
-  // They are redirected to the Worker Portal.
-  const { data: employeeRecord, isLoading: empLoading } = useQuery({
-    queryKey: ['workspace-layout-employee', userEmail],
-    queryFn: async () => {
-      if (!userEmail) return null;
-      const results = await base44.entities.Employee.filter({ email: userEmail });
-      return results.length > 0 ? results[0] : null;
-    },
-    enabled: !!userEmail && isAuthenticated,
-  });
-
   // ── HYDRATE: Fetch manifest + subscription policy ────────
   // Runs as soon as the tenant record is resolved.
   const { navigation, source, isLoading: navLoading } = useManifestHydration(tenantId, tenantRecord);
 
-  // Sync the active tenant in context for downstream consumers.
-  // Pass the full tenant record so switchTenant can set it directly
-  // even if the DB id doesn't match a hardcoded DEMO_TENANTS entry.
+  // Sync the active tenant in the legacy context for downstream consumers.
   // (Declared before any early return so hook order stays stable.)
   useEffect(() => {
     if (tenantRecord) switchTenant(tenantRecord);
   }, [tenantRecord, switchTenant]);
 
   // ── Boot: wait for auth ──────────────────────────────────
-  if (isLoadingAuth) {
+  if (isLoadingAuth || isLoadingWorkspace) {
     return <OrbitanLoader size="fullscreen" message="Loading OrbitanOS..." />;
   }
 
@@ -83,26 +88,35 @@ export default function WorkspaceLayout() {
     return <Navigate to="/auth/gateway" replace />;
   }
 
+  // Platform admin bypass — may access any tenant workspace.
+  const isPlatformAdmin = user?.role === 'admin';
+  const userTenantId = user?.tenant_id || user?.data?.tenant_id || null;
+
   // ── Access control (Regulate principle) ─────────────────
   // Workers are restricted to the Worker Portal — they cannot access
   // the management workspace even via direct URL entry.
-  if (employeeRecord && employeeRecord.role === 'worker') {
+  const activeRole =
+    membershipForTenant?.role_assignments?.[0]?.role || null;
+  if (activeRole === 'worker') {
     return <Navigate to="/worker" replace />;
   }
 
-  const userTenantId = user?.tenant_id || user?.data?.tenant_id || null;
-  const isPlatformAdmin = user?.role === 'admin';
-  const isAuthorized = isPlatformAdmin || userTenantId === tenantId;
+  const isAuthorized =
+    isPlatformAdmin || !!membershipForTenant || userTenantId === tenantId;
 
   if (!isAuthorized) {
+    // Fail-closed: redirect to their own workspace or the join flow.
+    if (activeMembership?.organisation_id) {
+      return <Navigate to={`/workspace/${activeMembership.organisation_id}`} replace />;
+    }
     if (userTenantId) {
       return <Navigate to={`/workspace/${userTenantId}`} replace />;
     }
-    return <Navigate to="/workspace" replace />;
+    return <Navigate to="/join" replace />;
   }
 
   // ── Resolve tenant (DB record → unresolved) ─────────────
-  if (tenantLoading || navLoading || empLoading) {
+  if (tenantLoading || navLoading) {
     return <OrbitanLoader size="fullscreen" message="Resolving workspace..." />;
   }
 

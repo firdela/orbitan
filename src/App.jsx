@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { TenantProvider } from '@/lib/use-tenant.jsx';
 import { GlobalOutletProvider } from '@/lib/GlobalOutletContext';
+import { WorkspaceProvider } from '@/lib/workspace';
 import { CurrencyProvider } from '@/lib/CurrencyContext';
 import SystemGuard from '@/components/layout/SystemGuard';
 import RoleGateway from '@/components/auth/RoleGateway';
@@ -223,6 +224,7 @@ function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
+        <WorkspaceProvider>
         <TenantProvider>
         <CurrencyProvider tenantDefaultCurrency="SGD">
         <GlobalOutletProvider>
@@ -236,6 +238,7 @@ function App() {
           <Toaster />
         </CurrencyProvider>
         </TenantProvider>
+        </WorkspaceProvider>
       </QueryClientProvider>
     </AuthProvider>
   );
