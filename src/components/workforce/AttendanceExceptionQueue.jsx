@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
-import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
-import { useAuth } from '@/lib/AuthContext';
+
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,6 @@ const SEVERITY_COLORS = {
 };
 
 export default function AttendanceExceptionQueue({ tenantId }) {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState(null);
   const [decision, setDecision] = useState('');
@@ -55,35 +53,18 @@ export default function AttendanceExceptionQueue({ tenantId }) {
 
   const resolveMutation = useMutation({
     mutationFn: async ({ exceptionId, decision: mgrDecision, notes }) => {
-      const updated = await base44.entities.AttendanceException.update(exceptionId, {
-        status: mgrDecision,
-        manager_decision: mgrDecision,
+      const response = await base44.functions.invoke('attendanceReview', {
+        exception_id: exceptionId,
+        decision: mgrDecision,
         manager_notes: notes,
-        reviewer_id: user?.id,
-        reviewer_name: user?.full_name,
-        reviewer_role: user?.role,
-        reviewed_at: new Date().toISOString(),
       });
-
-      await auditFrontend({
-        tenant_id: tenantId,
-        actor_id: user?.id,
-        actor_name: user?.full_name,
-        actor_role: user?.role,
-        action_type: mgrDecision === 'approved'
-          ? ACTION_TYPES.ATTENDANCE_APPROVED || 'attendance_approved'
-          : ACTION_TYPES.ATTENDANCE_REJECTED || 'attendance_rejected',
-        module: 'workforce',
-        target_entity: 'AttendanceException',
-        target_record_id: exceptionId,
-        new_state: { status: mgrDecision, manager_notes: notes },
-        details: `Attendance exception (${updated.exception_type}) ${mgrDecision} by ${user?.full_name}`,
-      });
-
-      return updated;
+      const res = response.data;
+      if (res?.error) throw new Error(res.error);
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendance-exceptions'] });
+      queryClient.invalidateQueries({ queryKey: ['worker-clockrecords'] });
       setSelected(null);
       setDecision('');
       setManagerNotes('');

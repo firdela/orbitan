@@ -107,12 +107,35 @@ Every operational domain — Attendance, Leave, Procurement, Inventory, Approval
 
 ---
 
-## First Application
+## First Application — Attendance Vertical Slice (Phase 1 Complete)
 
-**Attendance Policy (this milestone):**
-- `src/lib/policies/attendancePolicy.js` exports `ORBITAN_DEFAULT_ATTENDANCE_POLICY` and `evaluateClockRecord(record, policy)`.
-- `WorkerPortal.jsx` calls the engine after clock-out to detect exceptions.
-- `clockController/entry.ts` will be refactored to import the shared policy module in a subsequent pass (currently the thresholds are embedded; this is logged as technical debt).
+### Canonical Policy Module
+- `base44/shared/attendancePolicy.ts` — **Backend canonical** policy + evaluation engine. Imported by `clockController`, `attendanceReconciliation`, and `attendanceReview`. This is the system of record.
+- `src/lib/policies/attendancePolicy.js` — **Frontend mirror** for immediate UI feedback only. Exceptions created by the frontend are no longer authoritative; the backend creates them.
+
+### Backend Functions (Authoritative Execution Path)
+| Function | Role | Lifecycle Point |
+|---|---|---|
+| `clockController` | Clock in/out + break tracking + **policy evaluation** | On clock_out — evaluates ClockRecord, creates AttendanceExceptions server-side |
+| `attendanceReview` | Transactional manager approval | Updates AttendanceException + linked ClockRecord (validation_status, verified_by) + AuditLog → marks timesheet_updated |
+| `employeeJustify` | Employee justification (field-safe) | Validates user owns the exception, writes only employee-controlled fields |
+| `attendanceReconciliation` | Scheduled detection of conditions not caught at clock-out | Every 15 min: missed clock-out, absence, duplicate clocks |
+
+### Break Tracking (Real Events)
+- `start_break` → sets `break_start_time`, status → `on_break`
+- `end_break` → sets `break_end_time`, calculates `break_duration_mins` from actual timestamps
+- `break_duration_mins` default changed from 30 to 0 — now derived from real events, not inferred
+
+### RLS Enforcement
+- `AttendanceException.update` RLS **denies employees**. Employees can only READ their own exceptions and must use the `employeeJustify` backend function to submit justifications. This prevents field-level privilege escalation (e.g., self-approving exceptions).
+- `ClockRecord` gained `payroll_export_eligible` — set to true by `attendanceReview` when a manager approves, gating payroll inclusion.
+
+### Scheduled Automation
+- `attendanceReconciliation` runs every 15 minutes via a scheduled automation. It uses `base44.asServiceRole` to scan all tenants' shifts for missed clock-outs and absences.
+
+### Verification Status
+- 🟡 Build verification: backend functions deployed and tested via `test_backend_function` (all return expected responses). Frontend changes require browser runtime verification.
+- 🟡 Acceptance test: end-to-end worker→manager flow requires a live tenant with scheduled shifts to demonstrate the full acceptance scenario.
 
 **Future domains:**
 - Leave Policy (accrual rates, carry-forward, notice periods)

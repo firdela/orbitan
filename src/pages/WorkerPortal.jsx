@@ -4,8 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, isToday } from 'date-fns';
 import { useAuth } from '@/lib/AuthContext';
-import { evaluateClockRecord } from '@/lib/policies/attendancePolicy';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
+import MyAttendanceExceptions from '@/components/worker/MyAttendanceExceptions';
 import { useToast } from '@/components/ui/use-toast';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -516,45 +516,13 @@ export default function WorkerPortal() {
         description: `Worked ${summary.hours_worked || 0} hrs${summary.overtime_hours > 0 ? ` (${summary.overtime_hours} OT)` : ''}.`,
       });
 
-      // ── Policy Engine: detect attendance exceptions on clock-out ────────
+      // Backend (clockController) now evaluates policy and creates exceptions authoritatively (ADR-0052).
       const record = res?.record;
-      if (record) {
-        const scheduledStart = todayShift
-          ? new Date(`${todayShift.date}T${todayShift.start_time}:00`).toISOString()
-          : null;
-        const scheduledEnd = todayShift
-          ? new Date(`${todayShift.date}T${todayShift.end_time}:00`).toISOString()
-          : null;
-        const enrichedRecord = {
-          ...record,
-          scheduled_start: scheduledStart,
-          scheduled_end: scheduledEnd,
-        };
-        const detected = evaluateClockRecord(enrichedRecord, undefined, { shift: todayShift });
-        if (detected.length > 0) {
-          await base44.entities.AttendanceException.bulkCreate(
-            detected.map((exc) => ({
-              tenant_id: tenantId,
-              outlet_id: outletId,
-              employee_id: workerId,
-              employee_name: workerName,
-              employee_role: 'worker',
-              shift_id: todayShift?.id || '',
-              clock_record_id: record.id,
-              exception_type: exc.exception_type,
-              severity: exc.severity,
-              detected_at: exc.detected_at,
-              details: exc.details,
-              policy_version: exc.policy_version,
-              status: 'pending_review',
-            }))
-          );
-          toast({
-            title: 'Attendance exception detected',
-            description: `${detected.length} exception(s) flagged for manager review.`,
-            variant: 'default',
-          });
-        }
+      if (summary.exceptions_created > 0) {
+        toast({
+          title: 'Attendance exception detected',
+          description: `${summary.exceptions_created} exception(s) flagged for manager review.`,
+        });
       }
 
       queryClient.invalidateQueries({ queryKey: ['worker-clock-status'] });
@@ -573,6 +541,36 @@ export default function WorkerPortal() {
       });
     } catch (err) {
       toast({ title: 'Clock Out Failed', description: err.message || 'Please try again.', variant: 'destructive' });
+    } finally {
+      setClocking(false);
+    }
+  };
+
+  const handleStartBreak = async () => {
+    setClocking(true);
+    try {
+      const response = await base44.functions.invoke('clockController', { action: 'start_break' });
+      const res = response.data;
+      if (res?.error) throw new Error(res.error);
+      toast({ title: '☕ Break Started', description: 'Your break has started. Remember to resume when ready.' });
+      queryClient.invalidateQueries({ queryKey: ['worker-clock-status'] });
+    } catch (err) {
+      toast({ title: 'Break Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setClocking(false);
+    }
+  };
+
+  const handleEndBreak = async () => {
+    setClocking(true);
+    try {
+      const response = await base44.functions.invoke('clockController', { action: 'end_break' });
+      const res = response.data;
+      if (res?.error) throw new Error(res.error);
+      toast({ title: '✓ Break Ended', description: `Break: ${res.break_duration_mins || 0} min. Back to work!` });
+      queryClient.invalidateQueries({ queryKey: ['worker-clock-status'] });
+    } catch (err) {
+      toast({ title: 'Break Failed', description: err.message, variant: 'destructive' });
     } finally {
       setClocking(false);
     }
@@ -701,7 +699,9 @@ export default function WorkerPortal() {
               <div className="relative flex items-start justify-between mb-4">
                 <div>
                   <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Work Status</p>
-                  <p className="text-xl font-display font-bold mt-0.5">{clockedIn ? 'Clocked In ✓' : 'Not Clocked In'}</p>
+                  <p className="text-xl font-display font-bold mt-0.5">
+                    {clockStatus?.status === 'on_break' ? 'On Break ☕' : clockedIn ? 'Clocked In ✓' : 'Not Clocked In'}
+                  </p>
                   {clockedIn
                     ? <p className="text-white/80 text-xs mt-1">Duration: <span className="font-mono font-bold">{elapsed}</span></p>
                     : <p className="text-white/60 text-xs mt-1">Tap below to start your shift</p>
@@ -725,7 +725,26 @@ export default function WorkerPortal() {
                 {clocking ? <Loader2 className="w-4 h-4 animate-spin" /> : clockedIn ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
                 {clocking ? 'Please wait...' : clockedIn ? 'Clock Out' : 'Clock In Now'}
               </button>
+              {clockStatus?.status === 'clocked_in' && (
+                <button
+                  onClick={handleStartBreak}
+                  disabled={clocking}
+                  className="w-full bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all border border-white/15 disabled:opacity-50 mt-2">
+                  <Utensils className="w-3.5 h-3.5" /> Start Break
+                </button>
+              )}
+              {clockStatus?.status === 'on_break' && (
+                <button
+                  onClick={handleEndBreak}
+                  disabled={clocking}
+                  className="w-full bg-white/20 hover:bg-white/30 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all border border-white/20 disabled:opacity-50 mt-2">
+                  <RotateCcw className="w-3.5 h-3.5" /> End Break & Resume
+                </button>
+              )}
             </div>
+
+            {/* My Attendance Exceptions — employee justification */}
+            <MyAttendanceExceptions tenantId={tenantId} employeeId={workerId} employeeName={workerName} />
 
             {/* Top urgent tasks */}
             {liveTasks.filter(t => t.status !== 'completed').slice(0, 3).length > 0 && (
