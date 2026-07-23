@@ -1,8 +1,13 @@
 # Orbitan Build Manifest v1.0
 
 > **Status:** Accepted — 2026-07-23
-> **Mode:** BUILD MODE ON (Discussion Mode OFF)
+> **Mode:** PRODUCT DELIVERY MODE ON
+> **Foundation Discussion Mode:** OFF (Architecture Locked)
 > **Predecessors:** RA-0000 (frozen), RA-0004 (frozen), RA-0005 (frozen)
+>
+> **Operating model:** Foundation Discussion Mode OFF → Architecture Locked →
+> Product Delivery Mode ON. Foundational architecture is frozen; normal product
+> management (discovery, UX, prioritisation, roadmap, industry packs) continues.
 
 ## Purpose
 
@@ -65,29 +70,56 @@ passes its quality gate.
 3. RLS tenant-isolation tests pass (no `$in` operator in user_condition).
 4. Build compiles with zero unresolved imports.
 
-## Build Mode Operating Rules
+## Build Mode Operating Rules (Formalised)
 
-1. **No silent redesign.** Do not redesign frozen architecture unless Product Authority
-   explicitly reopens it.
-2. **Implementation-first.** Every feature starts with implementation, not discussion.
-3. **AFR compliance.** Every merge must satisfy the agreed Architecture Fitness Rules.
-4. **Docs with code.** Documentation is updated alongside code — never afterward.
-5. **Governed change.** New architectural concepts require ADRs and, if necessary, new
-   Reference Architectures (RA-0006+) — never silent changes.
+Foundations are treated as **contracts**. These rules are permanent:
 
-## When Discussion Mode Turns Back On
+1. **Frozen foundations are treated as contracts.** No foundational architecture redesign.
+2. **Every feature ships with tests.**
+3. **Every feature updates documentation** — architecture refs (only when required),
+   product docs, user docs, developer docs, and changelog. Docs evolve with
+   implementation, never trail behind.
+4. **No silent architectural changes.**
+5. **Every architectural deviation requires an ADR.**
+6. **Every release must satisfy Architecture Fitness Rules.**
+7. **Evidence before governance.** Every production issue that reveals an architectural
+   weakness results in evidence first, then governance — not immediate redesign.
 
-Discussion Mode is re-activated ONLY for matters that genuinely affect the platform's
-foundation:
-- A new Reference Architecture
-- A major security redesign
-- A significant identity model change
-- A platform-wide product strategy shift
-- A Product Authority decision
+New architectural concepts require ADRs and, if necessary, new Reference Architectures
+(RA-0006+) — never silent changes.
 
-Routine engineering questions stay in Build Mode.
+## Foundation Discussion Mode vs Product Delivery Mode
 
-## Git Baseline
+- **Foundation Discussion Mode:** OFF. Architecture is locked. No foundational redesign.
+- **Product Delivery Mode:** ON. Normal product management continues — product
+  discovery, UX refinements, feature prioritisation, roadmap decisions, and future
+  industry packs flow through normal product governance, not foundational review.
+- **Routine engineering questions** stay in Build Mode.
+- **Foundation Discussion Mode returns only for:** a new Reference Architecture, a major
+  security redesign, a significant identity model change, a platform-wide product
+  strategy shift, or a Product Authority decision.
 
-- **Tag:** `v1.0-foundation-freeze` — permanent reference for the frozen foundation.
+## Success Metrics (Shifted to Delivered Capability)
+
+From this point, Orbitan's progress is measured by **delivered capability**, not by the
+number of governance documents:
+
+- Working features
+- Stable architecture
+- User adoption
+- Performance
+- Security
+- Reliability
+- Accessibility
+- Pilot tenant feedback
+- Engineering velocity
+
+## Git Baseline & Milestones
+
+- **`v1.0-foundation-freeze`** — last architectural baseline (frozen foundations).
+- **`v1.0-build-start`** — first engineering baseline (Build Mode start).
+
+Two consecutive milestones make future regression analysis clearer: the foundation
+freeze is the architectural anchor; the build start is the engineering anchor.
+
 - **Repository:** Private GitHub repo, `main` branch, two-way Base44 synchronisation enabled.

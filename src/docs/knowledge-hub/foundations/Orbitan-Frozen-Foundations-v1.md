@@ -1,7 +1,8 @@
 # Orbitan Frozen Foundations v1.0
 
 > **Status:** FROZEN — 2026-07-23
-> **Git Tag:** `v1.0-foundation-freeze`
+> **Git Milestones:** `v1.0-foundation-freeze` (last architectural baseline) → `v1.0-build-start` (first engineering baseline)
+> **Operating Model:** Foundation Discussion Mode OFF → Architecture Locked → Product Delivery Mode ON
 > **Authority:** Product Authority (Muhammad Firdaus Bin Ismail)
 
 ## Purpose
@@ -48,5 +49,8 @@ Any change to a frozen RA requires a governed exception (ADR + Product Authority
 Frozen Foundations v1.0 may only be superseded by:
 - A formal Product Authority decision to unfreeze, OR
 - A new Reference Architecture (RA-0006+) accepted through the RA-0000 ADL process.
+
+From this point, progress is measured by **delivered capability**, not by the number of
+governance documents. See the [Build Manifest](./Build-Manifest.md) for success metrics.
 
 Until then, this is the single source of truth for Orbitan's architecture.

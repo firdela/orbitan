@@ -2,8 +2,9 @@
 
 > The commercial, scalable, multi-tenant SaaS **Workforce Operating System** for the Orbit ecosystem.
 
-[![Status: Build Mode ON](https://img.shields.io/badge/status-Build%20Mode%20ON-blue)]()
+[![Status: Product Delivery Mode ON](https://img.shields.io/badge/status-Product%20Delivery%20Mode%20ON-blue)]()
 [![Foundation: Frozen v1.0](https://img.shields.io/badge/foundation-frozen%20v1.0-111827)]()
+[![Foundation Discussion: OFF](https://img.shields.io/badge/foundation%20discussion-OFF-111827)]()
 
 ---
 
@@ -43,8 +44,10 @@ tenant-scoped `Employee` is membership.
 
 ## Frozen Foundations v1.0 — 2026-07-23
 
-The foundational architecture is **frozen**. Build Mode is **ON**. Git baseline tag:
-`v1.0-foundation-freeze`.
+The foundational architecture is **frozen**. **Foundation Discussion Mode is OFF;
+Architecture Locked; Product Delivery Mode ON.** Git milestones:
+`v1.0-foundation-freeze` (last architectural baseline) → `v1.0-build-start` (first
+engineering baseline). See [CHANGELOG](src/docs/knowledge-hub/CHANGELOG.md).
 
 - 🧊 [Orbitan Frozen Foundations v1.0](src/docs/knowledge-hub/foundations/Orbitan-Frozen-Foundations-v1.md)
 - 🎯 [Orbitan MVP Charter](src/docs/knowledge-hub/foundations/MVP-Charter.md)
