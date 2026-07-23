@@ -3,6 +3,30 @@
 > **The single source of truth for the Orbit ecosystem.**
 > This directory is the "brain" behind Orbitan's evolution.
 
+---
+
+## 🧊 Frozen Foundations v1.0 — 2026-07-23
+
+The three foundational Reference Architectures are **FROZEN**. Build Mode is **ON**.
+Git baseline tag: `v1.0-foundation-freeze`.
+
+| Pillar | ID | Status | Document |
+| :--- | :--- | :--- | :--- |
+| Architecture Governance | RA-0000 | Frozen | [RA-0000.md](./decision-records/RA-0000.md) |
+| Platform Services | RA-0004 | Frozen | [RA-0004.md](./decision-records/RA-0004.md) |
+| Identity Architecture | RA-0005 | Frozen | [RA-0005.md](./decision-records/RA-0005.md) |
+
+**Foundation documents:**
+- [Orbitan Frozen Foundations v1.0](./foundations/Orbitan-Frozen-Foundations-v1.md)
+- [Orbitan MVP Charter](./foundations/MVP-Charter.md)
+- [Orbitan Build Manifest v1.0](./foundations/Build-Manifest.md)
+
+> **Build Mode rules:** No silent redesign. Implementation-first. AFR compliance per
+> merge. Docs updated alongside code. New architecture requires governed ADRs.
+> Discussion Mode returns only for foundational changes.
+
+---
+
 ## Purpose
 
 The Knowledge Hub stores architecture decisions, master vision, product principles,
@@ -20,7 +44,14 @@ knowledge-hub/
 ├── golden-ui-ux-standard.md    ← non-negotiable design & accessibility standards
 ├── mvp-roadmap.md               ← sprint plan, scope, build philosophy
 ├── pilot-tenants.md             ← pilot tenant registry (validation only, not the product)
-├── decision-records/            ← Architecture Decision Records (ADRs)
+├── foundations/                 ← 🧊 Frozen Foundations v1.0
+│   ├── Orbitan-Frozen-Foundations-v1.md
+│   ├── MVP-Charter.md
+│   └── Build-Manifest.md
+├── decision-records/            ← Architecture Decision Records (ADRs) + Reference Architectures
+│   ├── RA-0000.md               ← Architecture Governance Framework (FROZEN)
+│   ├── RA-0004.md               ← Platform Services Architecture (FROZEN)
+│   ├── RA-0005.md               ← Identity Architecture (FROZEN)
 │   ├── 0001-registry-driven-architecture.md
 │   ├── 0002-wallet-native-ledger.md
 │   ├── 0003-shield-governance-interceptor.md
@@ -94,4 +125,4 @@ Until then, these documents serve as human-readable institutional memory.
 ---
 
 **Product Owner:** Muhammad Firdaus Bin Ismail
-**Last Updated:** 2026-07-21
+**Last Updated:** 2026-07-23 (Frozen Foundations v1.0 — Build Mode ON)

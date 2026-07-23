@@ -119,7 +119,18 @@ Future customers are the primary market.
 - **Language:** English (with multi-language readiness)
 - **Communication:** Direct, practical, no over-explanation. Build when enough info exists.
 
+## Frozen Foundations v1.0 (2026-07-23)
+- **RA-0000** Architecture Governance Framework — FROZEN
+- **RA-0004** Platform Services Architecture — FROZEN (Platform vs Domain layering, PCP-001..005)
+- **RA-0005** Identity Architecture — FROZEN (Orbit Identity Model, global User vs tenant Employee)
+- **Orbitan Frozen Foundations v1.0**, **MVP Charter**, **Build Manifest v1.0** — Published
+- **Git tag:** `v1.0-foundation-freeze`
+- **Discussion Mode:** OFF. **Build Mode:** ON.
+- Build rules: no silent redesign; implementation-first; AFR compliance per merge; docs with code; new architecture via governed ADRs only.
+- See: `src/docs/knowledge-hub/foundations/` and `src/docs/knowledge-hub/decision-records/RA-0000|0004|0005.md`
+
 ## Prompt History
 - Sprint 5 planning: Approved 50/30/20 weighting (Stability/Onboarding/Intelligence)
 - Naming architecture: Approved "Orbit" prefix for shared services, "Orbitan" for brand
 - Knowledge Hub: Approved Decision Records system and Markdown-based knowledge store
+- Foundation Freeze: RA-0000, RA-0004, RA-0005 accepted and frozen; Build Mode authorised
