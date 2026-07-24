@@ -54,6 +54,50 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #12 (Sales Execution + Multi-Tenant Xero)
+
+### Added — Sales Execution (Parts F/G)
+- **`salesEngine` backend function** — transactional sales on
+  `SalesInvoice`: POS create (line items, discounts, tax %, service charge %,
+  payment method, customer), cancel (credit note), refund (partial/full with
+  explicit restock decision). Validates finished-goods availability
+  (deterministic: completed ProductionBatch − paid invoice lines — never
+  negative), computes COGS/gross profit/margin, audit-logs, enqueues
+  `FinanceSyncQueue` (`invoice_sync` / `credit_note`, Xero-shaped).
+- **`SaleCreateDialog`** + **`SalesInvoiceList`** — POS entry + order
+  history with cancel/refund actions; added to Sales page alongside the
+  existing DailyReconciliation workflow (not replacing it).
+
+### Added — Finance Integration UI (Parts D/E)
+- **`FinanceIntegrationPage`** at `/workspace/:tenantId/finance-integration`:
+  Xero connection status (Not Connected / Not Configured / Connected /
+  Expired / Disconnected), Connect / Reconnect / Disconnect / Sync Now,
+  OAuth callback handler (state = tenant_id, cross-tenant substitution
+  prevented), sync-queue summary + history + Retry, account mapping
+  manager. Admin/tenant_admin gated.
+- **`AccountMappingManager`** — per-tenant Xero chart-of-accounts mapping
+  CRUD + 13-category template loader + incomplete-mapping validation that
+  blocks automatic sync.
+
+### Reused (not rebuilt)
+- `xeroOAuth` (full OAuth flow, multi-tenant, server-side tokens, audit) —
+  Parts A/B/C + security already implemented.
+- `financeSyncProcessor` (queue consumer, Shield gate, retry/backoff,
+  FinanceMapping, audit) — Parts H/I already implemented.
+- `IntegrationCredential` (per-tenant token vault), `AccountMapping`,
+  `FinanceSyncQueue`, `SalesInvoice`.
+
+### Honest status (Part P)
+- Architecture, OAuth flow, connection UI, mappings, queue, processor,
+  sales execution: implemented. Live Xero authorisation + live sync:
+  **pending XERO_CLIENT_ID/SECRET credentials** — no Xero responses
+  fabricated; UI degrades to a setup prompt.
+
+### Documentation
+- `implementation-notes/build-package-12-sales-xero.md` — per-part status,
+  honest implementation table, F&B Pack ~94%, overall MVP ~83%, next-package
+  recommendation.
+
 ## [Unreleased] — Build Package #11 (Production Operations + Sales Execution)
 
 ### Added — Recipe Production module (Parts A/B/C)

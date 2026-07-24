@@ -81,6 +81,7 @@ import TaskTestSuite from '@/pages/dev/TaskTestSuite';
 import AccessEngineValidation from '@/pages/dev/AccessEngineValidation';
 import TimesheetManager from '@/pages/workforce/TimesheetManager';
 import ProductionPage from '@/pages/outlet/ProductionPage';
+import FinanceIntegrationPage from '@/pages/workspace/FinanceIntegrationPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -149,6 +150,7 @@ const AuthenticatedApp = () => {
         <Route path="artifacts" element={<ArtifactRegistry />} />
         <Route path="timesheets" element={<TimesheetManager />} />
         <Route path="production" element={<ProductionPage />} />
+        <Route path="finance-integration" element={<FinanceIntegrationPage />} />
       </Route>
 
       {/* Self-Serve Business Installation Wizard — Create Organisation */}

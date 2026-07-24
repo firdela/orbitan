@@ -7,6 +7,8 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import StatCard from '@/components/shared/StatCard';
 import EmptyState from '@/components/shared/EmptyState';
 import FinanceReviewQueue from '@/components/finance/FinanceReviewQueue';
+import SaleCreateDialog from '@/components/sales/SaleCreateDialog';
+import SalesInvoiceList from '@/components/sales/SalesInvoiceList';
 import { useTenant } from '@/lib/use-tenant';
 import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -117,6 +119,19 @@ export default function SalesPage() {
           <StatCard title="Approved" value={reconciliations.filter(r => r.status === 'approved').length} subtitle="Days reconciled" icon={CheckCircle2} color="green" help={{ content: 'Reconciliations that a manager has reviewed and approved. Only approved records are eligible for Xero sync.' }} />
         </div>
 
+        {/* ── Sales Invoices (POS) — transactional sales ──────────── */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4 text-orbitan-blue" />
+              <h2 className="font-heading font-semibold text-sm text-foreground">Sales Invoices (POS)</h2>
+              <span className="text-xs text-muted-foreground">— transactional sales, auto-deduct finished goods, queue finance sync</span>
+            </div>
+            <SaleCreateDialog tenantId={tenantId} outletId={outletId} />
+          </div>
+          <SalesInvoiceList tenantId={tenantId} />
+        </div>
+
         {/* ── Reconciliation Inbox ─────────────────────────────────── */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
@@ -199,9 +214,9 @@ export default function SalesPage() {
           <div>
             <p className="text-sm font-semibold text-orbitan-blue">Xero Integration</p>
             <p className="text-xs text-blue-700 mt-0.5">Connect your Xero account via the Integrations module to automatically sync daily reconciliations and generate accounting entries.</p>
-            <Link to="/platform/integrations">
+            <Link to="finance-integration">
               <Button variant="outline" size="sm" className="mt-2 text-xs border-orbitan-blue text-orbitan-blue hover:bg-orbitan-blue hover:text-white">
-                Connect Xero
+                Configure Xero
               </Button>
             </Link>
           </div>
