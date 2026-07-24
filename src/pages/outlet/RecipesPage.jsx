@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/shared/PageHeader';
 import StatCard from '@/components/shared/StatCard';
@@ -131,11 +131,18 @@ export default function RecipesPage() {
         subtitle="Sovereign Asset Container · Live COGS · IP Protection (ADR-0026)"
         action={
           canManage && (
-            <Button
-              onClick={() => { setEditing(null); setShowForm(true); }}
-            >
-              <Plus className="h-4 w-4 mr-1" /> New Recipe
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link to="production">
+                <Button variant="outline" size="sm">
+                  <ChefHat className="h-4 w-4 mr-1" /> Production
+                </Button>
+              </Link>
+              <Button
+                onClick={() => { setEditing(null); setShowForm(true); }}
+              >
+                <Plus className="h-4 w-4 mr-1" /> New Recipe
+              </Button>
+            </div>
           )
         }
       />

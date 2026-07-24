@@ -54,6 +54,48 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #11 (Production Operations + Sales Execution)
+
+### Added — Recipe Production module (Parts A/B/C)
+- **`ProductionBatch` entity** — finished-goods ledger: batch number,
+  recipe link, quantity/yield, production/expiry dates, shelf life,
+  production cost, immutable ingredient-consumption snapshot, status
+  lifecycle, RLS (manager write, broader read).
+- **`productionEngine` backend function** — transactional production:
+  `preview` (consumption + cost + sufficiency), `confirm` (validate
+  sufficiency → deduct inventory never-negative → rollback on failure →
+  create batch → audit each deduction + batch → enqueue FinanceSyncQueue
+  `journal_entry`), `cancel`. Uses `asServiceRole` for ledger integrity.
+- **Production page** `/workspace/:tenantId/production` — New Batch /
+  History / Finished Goods tabs + KPIs (Batches, Completed, Items Produced,
+  Production Cost). Live ingredient-consumption preview with insufficient-
+  stock blocking; confirmation; audit + finance queue.
+- **`ProductionBatchForm`** + **`ProductionHistory`** components.
+- **Recipes → Production** discoverability link.
+
+### Completed — Inventory integration (Part E, production side)
+- Recipe production now auto-deducts ingredient inventory (the core gap from
+  Build #10). Validated, rolled back on failure, audit-logged, never negative.
+
+### Completed — Finance integration (Part F, production side)
+- Production cost → `FinanceSyncQueue` (`journal_entry`, Xero-ready) enqueued
+  by `productionEngine`; drained by existing `financeSyncProcessor`.
+
+### Completed — Reports (Part H, production)
+- `FBOperationsReports` extended with Production (Batch Output) report:
+  items produced, production cost, top recipes — live from `ProductionBatch`.
+
+### Deferred (documented)
+- Sales execution (Part D): POS/invoicing UI on `SalesInvoice` not built.
+- Sales-driven finished-goods deduction / revenue / COGS / margin (Part E).
+- Xero connector authorisation + live sync.
+- Operational dashboard widgets + sales/COGS/margin/waste/daily-ops reports
+  (Parts G/H) — depend on Sales data.
+
+### Documentation
+- `implementation-notes/build-package-11-production-operations.md` — full
+  per-part status, F&B Pack ~88%, overall MVP ~78%, next-package recommendation.
+
 ## [Unreleased] — Build Package #10 (F&B Operations MVP)
 
 ### Completed — F&B Operational Reports (Part F)

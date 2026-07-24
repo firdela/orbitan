@@ -16,7 +16,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useCurrency } from '@/lib/CurrencyContext';
-import { Loader2, Package, ShoppingCart, Truck, ChefHat, AlertTriangle, DollarSign } from 'lucide-react';
+import { Loader2, Package, ShoppingCart, Truck, ChefHat, AlertTriangle, DollarSign, Layers } from 'lucide-react';
 
 const STATUS_COLORS = {
   draft: 'bg-muted text-muted-foreground',
@@ -44,8 +44,13 @@ export default function FBOperationsReports({ tenantId }) {
     queryFn: () => base44.entities.Recipe.filter({ tenant_id: tenantId }, '-updated_date', 200),
     enabled: !!tenantId,
   });
+  const { data: batches = [], isLoading: batchLoading } = useQuery({
+    queryKey: ['fb-rep-production', tenantId],
+    queryFn: () => base44.entities.ProductionBatch.filter({ tenant_id: tenantId }, '-production_date', 100),
+    enabled: !!tenantId,
+  });
 
-  const loading = invLoading || poLoading || recipeLoading;
+  const loading = invLoading || poLoading || recipeLoading || batchLoading;
 
   if (loading) {
     return (
@@ -79,6 +84,11 @@ export default function FBOperationsReports({ tenantId }) {
     supplierSpend[name] = (supplierSpend[name] || 0) + (p.total_amount || 0);
   });
   const topSuppliers = Object.entries(supplierSpend).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  // ── Production ──
+  const completedBatches = batches.filter(b => b.status === 'completed');
+  const itemsProduced = completedBatches.reduce((s, b) => s + (b.quantity_produced || 0), 0);
+  const productionCost = completedBatches.reduce((s, b) => s + (b.production_cost || 0), 0);
 
   // ── Food / Recipe Cost ──
   const totalCOGS = recipes.reduce((s, r) => s + (r.total_cogs || 0), 0);
@@ -174,6 +184,31 @@ export default function FBOperationsReports({ tenantId }) {
               ))}
             </div>
           ) : <p className="text-xs text-muted-foreground">No received purchase orders yet.</p>}
+        </ReportCard>
+
+        {/* Production */}
+        <ReportCard icon={Layers} title="Production (Batch Output)" color="blue">
+          <div className="flex items-baseline justify-between mb-3">
+            <span className="text-2xl font-display font-bold text-foreground">{itemsProduced}</span>
+            <span className="text-xs text-muted-foreground">{completedBatches.length} batches</span>
+          </div>
+          {completedBatches.length > 0 ? (
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs">
+                <span className="text-muted-foreground">Production Cost</span>
+                <span className="font-medium tabular-nums">{formatAmount(productionCost, { decimals: 0 })}</span>
+              </div>
+              {Object.entries(completedBatches.reduce((acc, b) => {
+                acc[b.recipe_name] = (acc[b.recipe_name] || 0) + (b.quantity_produced || 0);
+                return acc;
+              }, {})).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([name, qty]) => (
+                <div key={name} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground truncate flex-1">{name}</span>
+                  <span className="font-medium tabular-nums ml-2">{qty}</span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-xs text-muted-foreground">No production batches yet.</p>}
         </ReportCard>
 
         {/* Food / Recipe Cost */}

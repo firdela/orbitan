@@ -1,0 +1,237 @@
+{
+  "name": "ProductionBatch",
+  "type": "object",
+  "description": "OrbitanOS F&B Production \u2014 finished-goods ledger. Each record is a production run of a Recipe: confirms ingredient consumption (auto-deducted from InventoryItem by productionEngine), records yield, batch number, production/expiry dates, shelf life, and production cost. Acts as the finished-goods inventory ledger (completed batches = sellable stock). Transactional integrity enforced by the productionEngine (pre-validation + rollback). Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "batch_number": {
+      "type": "string",
+      "description": "Unique batch reference e.g. PB-2026-0001"
+    },
+    "recipe_id": {
+      "type": "string",
+      "description": "Linked Recipe record produced"
+    },
+    "recipe_name": {
+      "type": "string"
+    },
+    "quantity_produced": {
+      "type": "number",
+      "description": "Units produced (servings/pcs/kg)"
+    },
+    "yield_unit": {
+      "type": "string",
+      "description": "Unit of produced quantity e.g. servings, pcs"
+    },
+    "production_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "expiry_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Calculated expiry = production_date + shelf_life_days"
+    },
+    "shelf_life_days": {
+      "type": "number",
+      "default": 0
+    },
+    "production_cost": {
+      "type": "number",
+      "description": "Total ingredient cost consumed (live, from InventoryItem.cost_per_unit)"
+    },
+    "ingredient_consumption": {
+      "type": "array",
+      "description": "Snapshot of ingredients consumed (immutable audit of what was deducted)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "inventory_item_id": {
+            "type": "string"
+          },
+          "inventory_item_name": {
+            "type": "string"
+          },
+          "quantity_required_per_unit": {
+            "type": "number"
+          },
+          "total_consumed": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unit_cost": {
+            "type": "number"
+          },
+          "line_cost": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "in_progress",
+        "completed",
+        "cancelled"
+      ],
+      "default": "completed",
+      "description": "Production lifecycle. completed = ingredients consumed + finished goods available."
+    },
+    "produced_by": {
+      "type": "string"
+    },
+    "produced_by_name": {
+      "type": "string"
+    },
+    "produced_by_role": {
+      "type": "string"
+    },
+    "cancelled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cancel_reason": {
+      "type": "string"
+    },
+    "finance_sync_queued": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once a FinanceSyncQueue entry was created for this batch"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "outlet_id",
+    "recipe_id",
+    "recipe_name",
+    "quantity_produced",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "supervisor"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "worker"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

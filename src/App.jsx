@@ -80,6 +80,7 @@ import CapabilityManager from '@/pages/platform/CapabilityManager';
 import TaskTestSuite from '@/pages/dev/TaskTestSuite';
 import AccessEngineValidation from '@/pages/dev/AccessEngineValidation';
 import TimesheetManager from '@/pages/workforce/TimesheetManager';
+import ProductionPage from '@/pages/outlet/ProductionPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -147,6 +148,7 @@ const AuthenticatedApp = () => {
         <Route path="facility-settings" element={<FacilitySettings />} />
         <Route path="artifacts" element={<ArtifactRegistry />} />
         <Route path="timesheets" element={<TimesheetManager />} />
+        <Route path="production" element={<ProductionPage />} />
       </Route>
 
       {/* Self-Serve Business Installation Wizard — Create Organisation */}
