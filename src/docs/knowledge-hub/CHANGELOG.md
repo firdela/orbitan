@@ -56,6 +56,19 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased] — Phase 1 Foundation Layer (Inc. #3)
 
+### Security — Evidence-First RLS Audit (per Product Authority correction)
+- Aligned to the evidence-first sequence: built `rlsStructureValidator`,
+  ran it, captured findings, fixed only **confirmed** structural violations
+  (AFR #4: no `$in` in `user_condition`; guide: `user_condition` alone in its
+  object). No behavioural assumptions drove any rewrite.
+- **`FoodSafetyLog`** RLS remediated (create/read/update used `$in` inside
+  `user_condition`); rewritten to documented `$or`-of-plain form,
+  semantically identical.
+- **Verified compliant (no change):** `InventoryItem`, `PurchaseOrder`,
+  `SalesInvoice`, `ExpenseRecord` — plain `user_condition` across all ops.
+- Harness extended with `FoodSafetyLog` before/after fixtures (pre-fix
+  flagged `operator_in_user_condition`; post-fix clean).
+
 ### Fixed — Tenant Isolation: RLS Hardening (Attendance/Compliance Cluster)
 - **`ClockRecord`, `Shift`, `ComplianceRecord`** RLS remediated. All used
   `user_condition: { "role": { "$in": [...] } }`, which is undocumented (the

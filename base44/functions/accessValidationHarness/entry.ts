@@ -178,6 +178,35 @@ Deno.serve(async (_req) => {
     eq(r, []);
   });
 
+  // FoodSafetyLog — Cluster 2 finding (same defect class, lone $in)
+  const PRE_FIX_FOODSAFETY_READ = {
+    'data.tenant_id': '{{user.data.tenant_id}}',
+    'data.outlet_id': '{{user.data.outlet_id}}',
+    '$or': [
+      { 'user_condition': { 'role': 'admin' } },
+      { 'user_condition': { 'role': { '$in': ['tenant_admin', 'outlet_manager', 'supervisor', 'worker'] } } },
+    ],
+  };
+  const POST_FIX_FOODSAFETY_READ = {
+    '$and': [
+      { 'data.tenant_id': '{{user.data.tenant_id}}' },
+      { 'data.outlet_id': '{{user.data.outlet_id}}' },
+      { '$or': [
+        { 'user_condition': { 'role': 'admin' } },
+        { 'user_condition': { 'role': 'tenant_admin' } },
+        { 'user_condition': { 'role': 'outlet_manager' } },
+        { 'user_condition': { 'role': 'supervisor' } },
+        { 'user_condition': { 'role': 'worker' } },
+      ] },
+    ],
+  };
+  test('rls: PRE-fix FoodSafetyLog read flagged operator_in_user_condition', () => {
+    ok(validateRls(PRE_FIX_FOODSAFETY_READ).some((x) => x.code === 'operator_in_user_condition'));
+  });
+  test('rls: POST-fix FoodSafetyLog read is structurally valid', () => {
+    eq(validateRls(POST_FIX_FOODSAFETY_READ), []);
+  });
+
   const total = tests.length;
   const pass_rate = total ? Math.round((passed / total) * 100) + '%' : '0%';
   return Response.json({ summary: { total, passed, failed, pass_rate }, tests });

@@ -18,6 +18,7 @@ core:
 | `ClockRecord` | create, read, update | `user_condition: { role: { $in: [...] } }` **and** `user_condition` placed alongside `data.outlet_id` in the same object |
 | `Shift` | read | `user_condition: { role: { $in: [...] } }` alongside `data.outlet_id` |
 | `ComplianceRecord` | create, read, update | `user_condition: { role: { $in: [...] } }` (alone in its object, but still an operator inside `user_condition`) |
+| `FoodSafetyLog` | create, read, update | `user_condition: { role: { $in: [...] } }` (lone `$in` inside `user_condition`) |
 
 **Risk:** The guide only documents **plain-value** `user_condition` (exact
 equality). `$in` inside `user_condition` is undocumented. If the RLS engine
@@ -70,6 +71,24 @@ working rules — deliberately **deferred** to a separate hardening pass. The
 validator intentionally does **not** flag the logical-operator-alone rule to
 avoid noisy false positives on working rules; it enforces only the two
 `user_condition`-specific hard rules.
+
+## Cluster 2 — Operational/Financial (audited, evidence-first)
+
+Following the evidence-first sequence (build validator → run → capture → fix
+only confirmed → re-run), the operational/financial cluster was audited against
+the same validator:
+
+| Entity | Result |
+| :--- | :--- |
+| `InventoryItem` | ✅ Compliant — plain `user_condition` in `$or` across all ops. No change. |
+| `PurchaseOrder` | ✅ Compliant — plain `user_condition`. No change. |
+| `SalesInvoice` | ✅ Compliant — plain `user_condition`. No change. |
+| `ExpenseRecord` | ✅ Compliant — plain `user_condition` + `created_by_id` ownership. No change. |
+| `FoodSafetyLog` | ❌ Confirmed violation — `$in` inside `user_condition` (create/read/update). **Fixed** to documented `$or`-of-plain form; semantics identical. |
+
+Harness evidence: `accessValidationHarness` runs the FoodSafetyLog before/after
+fixtures (pre-fix flagged `operator_in_user_condition`; post-fix clean). See
+`/dev/access-validation`.
 
 ## Remaining technical debt
 
