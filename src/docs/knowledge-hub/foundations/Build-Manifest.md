@@ -88,6 +88,25 @@ Foundations are treated as **contracts**. These rules are permanent:
 New architectural concepts require ADRs and, if necessary, new Reference Architectures
 (RA-0006+) — never silent changes.
 
+## Build Mode is not Feature Factory Mode
+
+Build Mode increases delivery speed — **not** by reducing engineering discipline, but by
+removing foundational re-litigation. Every feature still satisfies the same quality
+gates before it ships:
+
+1. **Product validation** — the feature serves a real pilot workflow, not speculative scope.
+2. **UX review** — conforms to the Golden UI/UX Standard and Orbitan design tokens.
+3. **Accessibility** — WCAG 2.1 (keyboard nav, ARIA, contrast, focus management).
+4. **Security review** — RLS tenant isolation, least privilege, no secret leakage.
+5. **Privacy review** — Privacy-by-Design; Zero-PII sanitization on every AI boundary.
+6. **Performance expectations** — defined budgets for latency and bundle size.
+7. **Documentation updates** — architecture (only when required), product, user,
+   developer docs, and changelog updated alongside code.
+8. **Automated tests** — handler/controller coverage; `taskControllerTestSuite` green.
+
+A feature that skips any gate is not "shipped faster" — it is technical debt with a UI.
+Build Mode trades foundational debate for disciplined execution, never discipline itself.
+
 ## Foundation Discussion Mode vs Product Delivery Mode
 
 - **Foundation Discussion Mode:** OFF. Architecture is locked. No foundational redesign.
