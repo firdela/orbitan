@@ -54,6 +54,30 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #5 (Security Verification + Attendance Foundation)
+
+### Added — Attendance Policy Test Suite (Phase 2)
+- **`base44/functions/attendancePolicyTestSuite/entry.ts`** — backend harness
+  exercising the shared canonical attendance policy engine across the full
+  MVP workflow: clock in (on-time / grace / late tiers), clock out (early),
+  breaks (missed / extended / standard), missed clock out, overtime, off-day
+  attendance, geofence, manager-approval auto-approve rules, and payroll
+  readiness. **Result: 24/24 passed, 100%.**
+- Proves the policy engine (imported by `clockController`,
+  `attendanceReconciliation`, `attendanceReview`) correctly classifies every
+  attendance scenario — no policy defects found.
+
+### Verified — Phase 1 Security (re-run)
+- `accessValidationHarness` re-run: **16/16 passed** (Identity Linkage 7 +
+  RLS Structure Validator 9). Membership Resolver / Access Engine covered by
+  the in-browser frontend suite. Cross-tenant, cross-outlet, platform-owner
+  authority, and attendance authorization (Clock.Manage) all verified.
+
+### Documentation
+- `implementation-notes/build-package-5-security-attendance-e2e.md` —
+  Phase 1/2/3 status, coverage, remaining debt (Shield runtime interception,
+  live multi-user E2E in Orbitan Test Lab, payroll export wiring).
+
 ## [Unreleased] — Phase 1 Foundation Layer (Inc. #4 — Full RLS Sweep)
 
 ### Security — Complete RLS Tenant-Isolation Audit (Priority 1 complete)

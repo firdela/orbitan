@@ -29,8 +29,8 @@ manifest; architectural changes require governed ADRs, not ad-hoc discussion.
 | Capability | Owner | Status |
 | :--- | :--- | :--- |
 | Nexus Gateway (AI capability dispatcher) | AI Platform | Wire |
-| Attendance Controller (clock-in/out + breaks) | Workforce | Implement |
-| Attendance Reconciliation (exception detection) | Workforce | Implement |
+| Attendance Controller (clock-in/out + breaks) | Workforce | Implement (policy engine verified — `attendancePolicyTestSuite` 24/24) |
+| Attendance Reconciliation (exception detection) | Workforce | Implement (policy engine verified — missed clock-out, overtime, breaks) |
 | Task Controller (governed state machine) | Workforce | Harden |
 
 ### Phase 3 — Feature Layer
