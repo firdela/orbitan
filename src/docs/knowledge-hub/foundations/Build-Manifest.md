@@ -22,7 +22,7 @@ manifest; architectural changes require governed ADRs, not ad-hoc discussion.
 | :--- | :--- | :--- |
 | Orbit Identity Model (User ↔ Employee link) | Identity Engine | Implemented (linkage service `identityLinkage` + canonical `user_id` lookup in EmployeeBase44Provider) |
 | Audit Engine (immutable AuditLog) | Platform | Harden |
-| Shield Interceptor (policy evaluation) | Compliance | Harden |
+| Shield Interceptor (policy evaluation) | Compliance | Harden (decision contract verified — `shieldPolicyTestSuite` 29/29) |
 | MembershipResolver + Access Engine | Platform | Implemented (validation harness — `accessValidationHarness` backend + frontend suite; `Clock.Manage` pack bug found & fixed) |
 
 ### Phase 2 — Capability Layer

@@ -54,6 +54,31 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #6 (Shield Runtime Decision Contract + Regression)
+
+### Added — Shield Policy Test Suite (Phase 2 / Part D)
+- **`base44/functions/shieldPolicyTestSuite/entry.ts`** — backend harness
+  testing the Shield policy-evaluation decision contract (the pure logic
+  `shieldInterceptor` implements): role/amount/field conditions, block /
+  notify / auto_remediate effects, Shadow Audit downgrade + expiry,
+  tenant/domain/actor/trigger filtering, subscription-limit gating
+  (employee/outlet/brand + enterprise unlimited), admin bypass, and
+  highest-severity outcome resolution. **Result: 29/29 passed, 100%.**
+- Live-handler integration testing deferred to Orbitan Test Lab (the
+  handler short-circuits for platform admin + needs seeded policy records);
+  the decision contract itself is now verified deterministically.
+
+### Verified — Integration Regression (Part E)
+- `accessValidationHarness` 16/16, `attendancePolicyTestSuite` 24/24,
+  `shieldPolicyTestSuite` 29/29 → **69/69 passed (100%)**.
+- `taskControllerTestSuite` blocked (platform-admin caller has no tenant) —
+  harness limitation, not a code defect; needs Test Lab non-admin user.
+
+### Documentation
+- `implementation-notes/build-package-6-shield-runtime.md` — Part D/E/G
+  evidence, scoped Parts A/B/C/F, prioritised debt, conservative MVP
+  estimate (~55–60%), next-package recommendation (Test Lab Live E2E).
+
 ## [Unreleased] — Build Package #5 (Security Verification + Attendance Foundation)
 
 ### Added — Attendance Policy Test Suite (Phase 2)
