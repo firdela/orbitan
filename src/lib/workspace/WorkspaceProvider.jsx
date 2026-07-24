@@ -77,21 +77,51 @@ export function WorkspaceProvider({ children }) {
     : null;
 
   // ════════════════════════════════════════════════════════════
+  // SECTION: Identity Linkage (RA-0005 — Orbit Identity Model)
+  // ════════════════════════════════════════════════════════════
+  // ── Stage: Link global User → tenant-scoped Employee records ─
+  // Stamps user_id onto every Employee record whose email matches
+  // the authenticated user (idempotent, conflict-guarded, audited).
+  // Runs once per session BEFORE membership resolution so the
+  // canonical user_id link is established. Failures degrade
+  // gracefully — the email fallback still resolves memberships.
+  const linkageQuery = useQuery({
+    queryKey: ['identity-linkage', identity?.id],
+    queryFn: async () => {
+      try {
+        return await base44.functions.invoke('identityLinkage', {});
+      } catch (err) {
+        console.error('[WorkspaceProvider] identity linkage failed:', err);
+        return null;
+      }
+    },
+    enabled: !!identity?.id && isAuthenticated,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+  const linkageReady =
+    linkageQuery.isSuccess || linkageQuery.isError || !identity?.id;
+
+  // ════════════════════════════════════════════════════════════
   // SECTION: Membership
   // ════════════════════════════════════════════════════════════
   // ── Stage: Load Memberships ──────────────────────────────────
-  // Fetches all Employee records for this identity and translates
-  // them into the normalized Membership shape via the Access Engine.
+  // Fetches all Employee records for this identity (canonical
+  // user_id first, email fallback for unlinked records) and
+  // translates them into the normalized Membership shape via the
+  // Access Engine. Gated on linkage completion so the user_id link
+  // is present before resolution.
   const { data: memberships = [], isLoading: membershipsLoading } = useQuery({
-    queryKey: ['workspace-memberships', identity?.email],
+    queryKey: ['workspace-memberships', identity?.id || identity?.email],
     queryFn: async () => {
-      if (!identity?.email) return [];
+      if (!identity?.id && !identity?.email) return [];
       const employees = await resolveAllEmployees(identity);
       return employees
         .map(translateEmployee)
         .filter((m) => m && m.status === 'active');
     },
-    enabled: !!identity?.email && isAuthenticated,
+    enabled:
+      (!!identity?.email || !!identity?.id) && isAuthenticated && linkageReady,
     staleTime: 60 * 1000, // 1 min — memberships don't change often
   });
 

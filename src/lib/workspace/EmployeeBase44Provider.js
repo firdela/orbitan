@@ -25,14 +25,23 @@ import { base44 } from '@/api/base44Client';
  * @returns {Promise<Object|null>} Employee record or null
  */
 export async function resolveEmployee(identity, ctx = {}) {
-  if (!identity?.email) return null;
+  if (!identity?.id && !identity?.email) return null;
 
   try {
-    // Platform admins may not have an Employee record — that's valid;
-    // the Access Engine handles platform_owner_authority separately.
-    const results = await base44.entities.Employee.filter({
-      email: identity.email,
-    });
+    let results = [];
+
+    // ── Canonical link: user_id (RA-0005 Orbit Identity Model) ──
+    // After identity linkage, Employee records carry the User id.
+    if (identity.id) {
+      results = await base44.entities.Employee.filter({ user_id: identity.id });
+    }
+
+    // ── Discovery fallback: email (pre-linkage / unlinked records) ──
+    // Platform admins may have no Employee record — that's valid; the
+    // Access Engine handles platform_owner_authority separately.
+    if ((!results || results.length === 0) && identity.email) {
+      results = await base44.entities.Employee.filter({ email: identity.email });
+    }
 
     if (!results || results.length === 0) return null;
 
@@ -61,12 +70,24 @@ export async function resolveEmployee(identity, ctx = {}) {
  * @returns {Promise<Array>} Employee records (empty array on failure)
  */
 export async function resolveAllEmployees(identity) {
-  if (!identity?.email) return [];
+  if (!identity?.id && !identity?.email) return [];
   try {
-    const results = await base44.entities.Employee.filter({
-      email: identity.email,
+    // Canonical user_id lookup + email fallback, merged & deduped.
+    // Catches both linked (user_id stamped) and not-yet-linked records.
+    const byId = identity.id
+      ? await base44.entities.Employee.filter({ user_id: identity.id })
+      : [];
+    const byEmail = identity.email
+      ? await base44.entities.Employee.filter({ email: identity.email })
+      : [];
+
+    const merged = [...(byId || []), ...(byEmail || [])];
+    const seen = new Set();
+    return merged.filter((e) => {
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      return true;
     });
-    return results || [];
   } catch (err) {
     console.error('[EmployeeBase44Provider] resolveAllEmployees failed:', err);
     return [];

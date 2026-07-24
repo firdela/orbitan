@@ -20,7 +20,7 @@ manifest; architectural changes require governed ADRs, not ad-hoc discussion.
 ### Phase 1 — Foundation Layer
 | Capability | Owner | Status |
 | :--- | :--- | :--- |
-| Orbit Identity Model (User ↔ Employee link) | Identity Engine | Implement |
+| Orbit Identity Model (User ↔ Employee link) | Identity Engine | Implemented (linkage service `identityLinkage` + canonical `user_id` lookup in EmployeeBase44Provider) |
 | Audit Engine (immutable AuditLog) | Platform | Harden |
 | Shield Interceptor (policy evaluation) | Compliance | Harden |
 | MembershipResolver + Access Engine | Platform | Implement |
