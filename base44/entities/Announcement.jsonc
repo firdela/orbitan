@@ -24,8 +24,7 @@
         "urgent",
         "critical"
       ],
-      "default": "info",
-      "description": "info = routine update | important = action may be needed | urgent = immediate attention | critical = emergency"
+      "default": "info"
     },
     "category": {
       "type": "string",
@@ -48,8 +47,7 @@
         "retail",
         "all"
       ],
-      "default": "all",
-      "description": "Controls which industry pack workers see this announcement"
+      "default": "all"
     },
     "published_by_id": {
       "type": "string"
@@ -66,29 +64,24 @@
     },
     "requires_acknowledgement": {
       "type": "boolean",
-      "default": false,
-      "description": "If true, workers must tap 'Got it' before dismissing"
+      "default": false
     },
     "acknowledged_by": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Array of user IDs who have acknowledged this announcement"
+      }
     },
     "expiry_date": {
       "type": "string",
-      "format": "date-time",
-      "description": "Announcement auto-hides after this date/time"
+      "format": "date-time"
     },
     "linked_document_id": {
-      "type": "string",
-      "description": "Optional: linked AIDocument (SOP/training) for Shield-validated broadcasts"
+      "type": "string"
     },
     "pinned": {
       "type": "boolean",
-      "default": false,
-      "description": "Pinned announcements always appear at top of feed"
+      "default": false
     },
     "views_count": {
       "type": "number",
@@ -103,22 +96,28 @@
   ],
   "rls": {
     "create": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
             }
-          }
+          ]
         }
       ]
     },
@@ -135,37 +134,49 @@
       ]
     },
     "update": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "delete": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": "tenant_admin"
-          }
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
         }
       ]
     }
