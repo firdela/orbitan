@@ -164,7 +164,7 @@ function TasksScreen({ tasks, updateTask }) {
                 )}
                 {selected.status === 'completed' && (
                   <Button variant="outline" className="flex-1 gap-1.5 h-11" onClick={() => {
-                    updateTask.mutate({ id: selected.id, status: 'pending' });
+                    updateTask.mutate({ id: selected.id, status: 'in_progress' });
                     setSelected(null);
                   }}>
                     <RotateCcw className="w-4 h-4" /> Undo
@@ -418,26 +418,32 @@ export default function WorkerPortal() {
   const tenantId = employee?.tenant_id || '';
   const outletId = employee?.outlet_id || '';
   const workerId = employee?.id || '';
+  // Operational entities (Task, Shift, ClockRecord) key on the GLOBAL User id
+  // — per their RLS `{{user.id}}` templates and clockController — NOT the
+  // Employee record id. Use userId for scoped reads so workers actually see
+  // their assigned tasks, shifts and clock records. workerId (Employee.id)
+  // remains for component props / display only.
+  const userId = user?.id || '';
   const workerName = employee?.full_name || user?.full_name || 'Worker';
   const workerFirstName = workerName.split(' ')[0];
   const workerInitials = getInitials(workerName);
 
   const { data: liveTasks = [] } = useQuery({
-    queryKey: ['worker-tasks', tenantId, workerId],
-    queryFn: () => base44.entities.Task.filter({ tenant_id: tenantId, assigned_to: workerId }),
-    enabled: !!tenantId && !!workerId,
+    queryKey: ['worker-tasks', tenantId, userId],
+    queryFn: () => base44.entities.Task.filter({ tenant_id: tenantId, responsible_agent_id: userId }),
+    enabled: !!tenantId && !!userId,
   });
 
   const { data: liveShifts = [] } = useQuery({
-    queryKey: ['worker-shifts', tenantId, workerId],
-    queryFn: () => base44.entities.Shift.filter({ tenant_id: tenantId, employee_id: workerId }),
-    enabled: !!tenantId && !!workerId,
+    queryKey: ['worker-shifts', tenantId, userId],
+    queryFn: () => base44.entities.Shift.filter({ tenant_id: tenantId, employee_id: userId }),
+    enabled: !!tenantId && !!userId,
   });
 
   const { data: clockRecords = [] } = useQuery({
-    queryKey: ['worker-clockrecords', tenantId, workerId],
-    queryFn: () => base44.entities.ClockRecord.filter({ tenant_id: tenantId, employee_id: workerId }),
-    enabled: !!tenantId && !!workerId,
+    queryKey: ['worker-clockrecords', tenantId, userId],
+    queryFn: () => base44.entities.ClockRecord.filter({ tenant_id: tenantId, employee_id: userId }),
+    enabled: !!tenantId && !!userId,
   });
 
   // ── Real clock status from clockController backend function ──────────────
@@ -584,7 +590,7 @@ export default function WorkerPortal() {
       status,
       completed_date: status === 'completed' ? new Date().toISOString().split('T')[0] : null
     }),
-    onSuccess: () => queryClient.invalidateQueries(['worker-tasks', tenantId, workerId]),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['worker-tasks', tenantId, userId] }),
   });
 
   // ── Compliance Gate: check if any clock record needs manager verification ──

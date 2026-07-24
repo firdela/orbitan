@@ -54,6 +54,33 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #7 (MVP Product Completion — Worker Portal data-wiring)
+
+### Fixed — Worker Portal silently showed no tasks/shifts/clock records (critical)
+- **`src/pages/WorkerPortal.jsx`** — four verified data-wiring bugs on the
+  frontline worker's primary screen:
+  1. Task query used a non-existent field `assigned_to` and keyed on
+     `employee.id`; fixed to `responsible_agent_id` keyed on global `user.id`
+     (per Task RLS `{{user.id}}` + clockController). Workers now see their tasks.
+  2. Shift query keyed on `employee.id`; fixed to `user.id` (per Shift RLS).
+     Workers now see their schedule.
+  3. ClockRecord query keyed on `employee.id` while `clockController` writes
+     `user.id`; fixed to `user.id` (per ClockRecord RLS). Attendance %, pending
+     verification gate, and timesheet history now populate.
+  4. Task "Undo" wrote invalid status `'pending'` (not in Task enum); fixed to
+     `'in_progress'`.
+- Root cause: operational entities (Task/Shift/ClockRecord) key on the global
+  `user.id` (per their RLS `{{user.id}}` templates + clockController), but the
+  portal queried by the Employee record id. The live clock *status* worked
+  (backend uses `user.id` internally); the direct entity reads did not.
+- Impact: the worker portal's Tasks, Shifts, and attendance history were
+  empty for every worker despite a correct, wired backend.
+
+### Documentation
+- `implementation-notes/build-package-7-product-completion.md` — bug
+  analysis, fix rationale, scoped remaining product work, revised MVP
+  estimate (~62%), next-package recommendation (Manager Workforce + Payroll).
+
 ## [Unreleased] — Build Package #6 (Shield Runtime Decision Contract + Regression)
 
 ### Added — Shield Policy Test Suite (Phase 2 / Part D)
