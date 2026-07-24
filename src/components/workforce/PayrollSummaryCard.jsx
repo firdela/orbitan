@@ -4,12 +4,12 @@
 // EXIT-READY: Pure presentational component.
 // ============================================================
 import React from 'react';
-import { CheckCircle2, Lock, AlertCircle, User, Clock, DollarSign } from 'lucide-react';
+import { CheckCircle2, Lock, Unlock, AlertCircle, User, Clock, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-export default function PayrollSummaryCard({ snapshot, onLock, onDispute, loading }) {
+export default function PayrollSummaryCard({ snapshot, onLock, onDispute, onReopen, loading }) {
   const isLocked = snapshot.status === 'locked';
   const isPaid = snapshot.status === 'paid';
   const isDisputed = snapshot.status === 'disputed';
@@ -124,9 +124,21 @@ export default function PayrollSummaryCard({ snapshot, onLock, onDispute, loadin
       )}
 
       {isLocked && (
-        <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 rounded-lg p-2">
-          <Lock className="w-3 h-3" />
-          <span>Locked by <strong>{snapshot.locked_by_name}</strong> · {snapshot.locked_date ? format(new Date(snapshot.locked_date), 'd MMM, h:mm a') : ''}</span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 rounded-lg p-2">
+            <Lock className="w-3 h-3" />
+            <span>Locked by <strong>{snapshot.locked_by_name}</strong> · {snapshot.locked_date ? format(new Date(snapshot.locked_date), 'd MMM, h:mm a') : ''}</span>
+          </div>
+          {onReopen && (
+            <Button
+              variant="outline"
+              className="w-full h-8 text-xs gap-1.5"
+              onClick={() => onReopen(snapshot)}
+              disabled={loading}
+            >
+              <Unlock className="w-3 h-3" /> Reopen for Editing
+            </Button>
+          )}
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenant } from '@/lib/use-tenant';
@@ -17,7 +18,7 @@ import {
   Users, Search, Home, Package, ShoppingCart, FileText,
   Calendar, CheckSquare, BarChart2, Shield, Layers, Building2,
   Mail, Briefcase, UserCheck, Clock, UserPlus, UserCog, Activity,
-  AlertTriangle
+  AlertTriangle, ClipboardList
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useModuleAccess } from '@/lib/hooks/useModuleAccess';
@@ -183,6 +184,11 @@ export default function WorkforcePage() {
           {/* Attendance Exceptions tab */}
           <TabsContent value="attendance">
             <AccessGuard can={can} action="update" fallback={<EmptyState icon={AlertTriangle} title="Attendance Exceptions" description="Only managers can review attendance exceptions." color="slate" />}>
+              <div className="flex justify-end mb-3">
+                <Link to="timesheets" className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-border bg-background hover:bg-accent transition-colors">
+                  <ClipboardList className="w-3.5 h-3.5" /> Timesheets & Payroll
+                </Link>
+              </div>
               <AttendanceExceptionQueue tenantId={tenantId} />
             </AccessGuard>
           </TabsContent>

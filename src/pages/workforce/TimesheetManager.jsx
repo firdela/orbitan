@@ -12,7 +12,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { OrbitanQuery } from '@/lib/services/OrbitanQuery';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks } from 'date-fns';
-import AppShell from '@/components/layout/AppShell';
 import TimesheetValidationRow from '@/components/workforce/TimesheetValidationRow';
 import PayrollSummaryCard from '@/components/workforce/PayrollSummaryCard';
 import { Button } from '@/components/ui/button';
@@ -24,24 +23,6 @@ import {
   AlertTriangle, ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const NAV = [
-  { type: 'section', label: 'F&B Operations' },
-  { label: 'Dashboard', href: '/t1/dashboard', icon: LayoutDashboard },
-  { label: 'Inventory', href: '/t1/inventory', icon: Package },
-  { label: 'Procurement', href: '/t1/procurement', icon: ShoppingCart },
-  { label: 'Sales & Invoicing', href: '/t1/sales', icon: DollarSign },
-  { type: 'section', label: 'People' },
-  { label: 'Workforce', href: '/t1/workforce', icon: Users },
-  { label: 'Scheduling', href: '/t1/scheduling', icon: Clock },
-  { label: 'Clock In / Out', href: '/t1/clockin', icon: Timer },
-  { label: 'Timesheets', href: '/t1/timesheets', icon: ClipboardList },
-  { label: 'Tasks', href: '/t1/tasks', icon: CheckSquare },
-  { type: 'section', label: 'Governance' },
-  { label: 'Compliance', href: '/t1/compliance', icon: Shield },
-  { label: 'Reporting', href: '/t1/reporting', icon: BarChart2 },
-  { label: 'Xero Sync', href: '/t1/xero', icon: DollarSign },
-];
 
 const PERIOD_OPTIONS = [
   { label: 'This Week', value: 'this_week' },
@@ -250,6 +231,29 @@ export default function TimesheetManager() {
     await loadData();
   };
 
+  // ── Payroll Reopen (Part C): unlock a locked snapshot back to draft, with Audit Log ──
+  const handleReopenSnapshot = async (snapshot) => {
+    setActionLoading(true);
+    await q.update('PayrollSnapshot', snapshot.id, {
+      status: 'draft',
+      locked_by: '',
+      locked_by_name: '',
+      locked_date: null,
+    });
+    // Unlock all included ClockRecords so they can be re-edited / re-validated
+    for (const clockId of (snapshot.validated_clock_record_ids || [])) {
+      await q.update('ClockRecord', clockId, { payroll_locked: false, payroll_snapshot_id: '' });
+    }
+    await base44.functions.invoke('auditEngine', {
+      action_type: 'payroll_reopened',
+      target_entity: 'PayrollSnapshot',
+      target_record_id: snapshot.id,
+      details: `Payroll (S$${snapshot.gross_pay}) for ${snapshot.employee_name} reopened by ${user.full_name} (was locked)`,
+    });
+    await loadData();
+    setActionLoading(false);
+  };
+
   // ── Derived Stats ───────────────────────────────────────────
   const pendingCount = records.filter(r => !r.verified_by && r.status === 'clocked_out').length;
   const approvedCount = records.filter(r => r.validation_status === 'approved').length;
@@ -267,8 +271,7 @@ export default function TimesheetManager() {
   const periodSnapshots = snapshots.filter(s => s.period_start === from);
 
   return (
-    <AppShell navigation={NAV} title="Timesheet Manager">
-      <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -443,6 +446,7 @@ export default function TimesheetManager() {
                     snapshot={snap}
                     onLock={handleLockSnapshot}
                     onDispute={handleDisputeSnapshot}
+                    onReopen={handleReopenSnapshot}
                     loading={actionLoading}
                   />
                 ))}
@@ -476,6 +480,5 @@ export default function TimesheetManager() {
         )}
 
       </div>
-    </AppShell>
   );
 }

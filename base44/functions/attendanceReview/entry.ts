@@ -23,8 +23,45 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { exception_id, decision, manager_notes, resolution } = body;
 
+    // 'request_clarification' is a non-decisive review action: it moves the
+    // exception to employee_justified so the worker can submit/revise a
+    // reason, without approving or rejecting it. (Part B: request clarification)
+    if (decision === 'request_clarification') {
+      if (!manager_notes) {
+        return Response.json({ error: 'manager_notes required when requesting clarification' }, { status: 400 });
+      }
+      const exceptions = await base44.entities.AttendanceException.filter({ id: exception_id });
+      if (exceptions.length === 0) return Response.json({ error: 'Exception not found' }, { status: 404 });
+      const exception = exceptions[0];
+      if (exception.tenant_id !== user.data?.tenant_id && user.role !== 'admin') {
+        return Response.json({ error: 'Cross-tenant access denied' }, { status: 403 });
+      }
+      const updated = await base44.entities.AttendanceException.update(exception_id, {
+        status: 'employee_justified',
+        manager_notes,
+        reviewer_id: user.id,
+        reviewer_name: user.full_name,
+        reviewer_role: user.role,
+        reviewed_at: new Date().toISOString(),
+      });
+      try {
+        await base44.entities.AuditLog.create({
+          tenant_id: exception.tenant_id,
+          outlet_id: exception.outlet_id || '',
+          actor_id: user.id, actor_name: user.full_name, actor_role: user.role,
+          action_type: 'attendance_clarification_requested',
+          module: 'workforce',
+          target_entity: 'AttendanceException',
+          target_record_id: exception_id,
+          details: `Manager ${user.full_name} requested clarification for ${exception.employee_name}: ${manager_notes}`,
+          shield_outcome: 'not_evaluated',
+        });
+      } catch { /* audit best-effort */ }
+      return Response.json({ success: true, decision: 'request_clarification', exception: updated });
+    }
+
     if (!exception_id || !decision || !['approved', 'rejected'].includes(decision)) {
-      return Response.json({ error: 'exception_id and decision (approved|rejected) required' }, { status: 400 });
+      return Response.json({ error: 'exception_id and decision (approved|rejected|request_clarification) required' }, { status: 400 });
     }
 
     // ── Load the exception ──

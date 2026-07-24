@@ -54,6 +54,31 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #8 (Manager Operations + Payroll MVP)
+
+### Completed — Manager attendance review + payroll loop (reachable + complete)
+- **TimesheetManager mounted** at `/workspace/:tenantId/timesheets` (was
+  orphaned — used legacy `AppShell` with `/t1/*` nav that 404'd). Refactored
+  to drop `AppShell` + legacy `NAV` and render inside `WorkspaceLayout`.
+  Managers can now validate clock records → approve/reject → audit.
+- **Payroll reopen with audit** (`TimesheetManager.handleReopenSnapshot` +
+  `PayrollSummaryCard` "Reopen for Editing"): locked snapshots return to
+  `draft`, included ClockRecords unlock, and a `payroll_reopened` AuditLog
+  is written — completing the lock/reopen audit loop (Part C).
+- **"Request clarification" review action** (`attendanceReview` backend +
+  `AttendanceExceptionQueue`): non-decisive review moving an exception to
+  `employee_justified` for the worker to revise, with mandatory manager
+  notes + `attendance_clarification_requested` audit (Part B).
+- **Workforce → Timesheets link**: WorkforcePage Attendance Exceptions tab
+  now links to the Timesheets & Payroll page.
+- **Payroll-from-approved-only** reaffirmed (no unapproved records feed
+  payroll) — verified existing behaviour, no change.
+
+### Documentation
+- `implementation-notes/build-package-8-manager-operations-payroll.md` —
+  what was reused, what was completed, scoped remaining work, MVP estimate
+  (~68%), next-package recommendation.
+
 ## [Unreleased] — Build Package #7 (MVP Product Completion — Worker Portal data-wiring)
 
 ### Fixed — Worker Portal silently showed no tasks/shifts/clock records (critical)

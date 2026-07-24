@@ -198,6 +198,13 @@ export default function AttendanceExceptionQueue({ tenantId }) {
                   Cancel
                 </Button>
                 <Button
+                  variant="outline"
+                  onClick={() => setDecision('request_clarification')}
+                  className={decision === 'request_clarification' ? 'ring-2 ring-amber-400' : ''}
+                >
+                  <FileText className="w-4 h-4" /> Request Clarification
+                </Button>
+                <Button
                   variant="destructive"
                   onClick={() => setDecision('rejected')}
                   className={decision === 'rejected' ? 'ring-2 ring-destructive' : ''}
@@ -215,7 +222,7 @@ export default function AttendanceExceptionQueue({ tenantId }) {
               {decision && (
                 <div className="flex items-center justify-end gap-2 pt-1 border-t border-border">
                   <p className="text-xs text-muted-foreground">
-                    Confirm: {decision === 'approved' ? 'Approve' : 'Reject'} this exception?
+                    Confirm: {decision === 'approved' ? 'Approve' : decision === 'rejected' ? 'Reject' : 'Request clarification for'} this exception?
                   </p>
                   <Button
                     size="sm"

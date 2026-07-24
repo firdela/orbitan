@@ -79,6 +79,7 @@ import AccessControlPage from '@/pages/platform/AccessControlPage';
 import CapabilityManager from '@/pages/platform/CapabilityManager';
 import TaskTestSuite from '@/pages/dev/TaskTestSuite';
 import AccessEngineValidation from '@/pages/dev/AccessEngineValidation';
+import TimesheetManager from '@/pages/workforce/TimesheetManager';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -145,6 +146,7 @@ const AuthenticatedApp = () => {
         <Route path="sustainability" element={<SustainabilityPage />} />
         <Route path="facility-settings" element={<FacilitySettings />} />
         <Route path="artifacts" element={<ArtifactRegistry />} />
+        <Route path="timesheets" element={<TimesheetManager />} />
       </Route>
 
       {/* Self-Serve Business Installation Wizard — Create Organisation */}
