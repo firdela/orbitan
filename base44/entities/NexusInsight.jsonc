@@ -1,0 +1,273 @@
+{
+  "name": "NexusInsight",
+  "type": "object",
+  "description": "OrbitanOS Nexus Intelligence \u2014 persisted grounded insight record (Build Package #13, Part N). Created by nexusIntelligence / nexusCopilot. Each insight carries evidence, source entities/records, metric snapshots, sufficiency flag, and a governed lifecycle (open \u2192 acknowledged \u2192 resolved/dismissed). No sensitive source data stored. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "Null = tenant/company-wide insight"
+    },
+    "insight_type": {
+      "type": "string",
+      "enum": [
+        "operational_health",
+        "daily_briefing",
+        "weekly_briefing",
+        "anomaly",
+        "margin_analysis",
+        "recommendation",
+        "copilot_answer",
+        "predictive_scaffold"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "info"
+    },
+    "confidence": {
+      "type": "number",
+      "description": "0-1. 1 = deterministic; <1 = LLM-synthesised"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "acknowledged",
+        "resolved",
+        "dismissed"
+      ],
+      "default": "open"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Supporting evidence items linking to source records"
+    },
+    "source_entities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "source_record_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metric_snapshot": {
+      "type": "object",
+      "description": "Frozen metric values at generation time"
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "recommended_actions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Available authorised actions with target + impact + confirmation_required"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "data_period": {
+      "type": "string",
+      "description": "e.g. 'today', 'last_7d', 'last_30d'"
+    },
+    "data_freshness": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "acknowledged_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "acknowledged_by": {
+      "type": "string"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "resolved_by": {
+      "type": "string"
+    },
+    "dismissed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "dismissed_by": {
+      "type": "string"
+    },
+    "model_or_rule_version": {
+      "type": "string",
+      "description": "Version of the rule set or model that produced this insight"
+    },
+    "generation_method": {
+      "type": "string",
+      "enum": [
+        "deterministic",
+        "llm_synthesis",
+        "hybrid"
+      ],
+      "default": "deterministic"
+    },
+    "data_sufficiency": {
+      "type": "boolean",
+      "default": true,
+      "description": "False when insufficient data to produce a reliable insight"
+    },
+    "insufficient_data_reason": {
+      "type": "string"
+    },
+    "generation_metadata": {
+      "type": "object",
+      "description": "Latency, model used, role scope, etc. No secrets."
+    }
+  },
+  "required": [
+    "tenant_id",
+    "insight_type",
+    "title",
+    "severity",
+    "generated_at"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "supervisor"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

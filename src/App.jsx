@@ -82,6 +82,7 @@ import AccessEngineValidation from '@/pages/dev/AccessEngineValidation';
 import TimesheetManager from '@/pages/workforce/TimesheetManager';
 import ProductionPage from '@/pages/outlet/ProductionPage';
 import FinanceIntegrationPage from '@/pages/workspace/FinanceIntegrationPage';
+import NexusIntelligencePage from '@/pages/workspace/NexusIntelligencePage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -151,6 +152,7 @@ const AuthenticatedApp = () => {
         <Route path="timesheets" element={<TimesheetManager />} />
         <Route path="production" element={<ProductionPage />} />
         <Route path="finance-integration" element={<FinanceIntegrationPage />} />
+        <Route path="nexus-intelligence" element={<NexusIntelligencePage />} />
       </Route>
 
       {/* Self-Serve Business Installation Wizard — Create Organisation */}

@@ -54,6 +54,62 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #13 (Orbit Nexus Grounded Intelligence + Pilot Hardening)
+
+### Added — Orbit Nexus Intelligence Layer (Parts A–N)
+- **`nexusIntelligence`** backend function — the ONE governed intelligence
+  service: `health_score` (deterministic 0-100 across 10 weighted categories),
+  `daily_briefing` (deterministic metrics + grounded LLM synthesis with
+  deterministic fallback), `anomalies` (10 rule-based detectors, labelled
+  "not ML"), `recommendations` (rule-based, labelled "Rule-Based"),
+  `margin_analysis` (expected vs actual recipe margin). Every response
+  honours the Data Grounding Contract + Data Sufficiency; never fabricates
+  numbers; insufficient-data returns a flag + reason.
+- **`nexusCopilot`** backend function — grounded Business Copilot (retrieve →
+  InvokeLLM with strict "use only provided data" + JSON schema →
+  Answer/Evidence/Recommended Actions/Available Actions). **Never executes
+  actions** — action-safety enforced; confirmation required via existing
+  governed flows. Graceful deterministic fallback.
+- **`NexusInsight`** entity — insight persistence with full lifecycle
+  (open → acknowledged → resolved/dismissed), evidence, source records,
+  metric snapshot, sufficiency flag, model/rule version. RLS: supervisor+
+  read, manager+ write, admin/tenant_admin delete.
+- **`NexusIntelligencePage`** at `/workspace/:tenantId/nexus-intelligence` —
+  tabbed dashboard (Overview, Briefing, Anomalies, Margin, Copilot) with
+  loading/empty/insufficient-data states, responsive.
+- Nexus UI components: `OperationalHealthScore`, `DailyBriefing`,
+  `AnomalyList`, `NexusCopilot`.
+
+### Reused (not rebuilt)
+- `nexus` gateway (capability registry/plan/sanitisation/Shield/credit
+  billing) — `nexusIntelligence`/`nexusCopilot` are handlers it can route to.
+- `metricsEngine` + `MetricDefinition`; operational entities
+  (`SalesInvoice`, `InventoryItem`, `ProductionBatch`, `AttendanceException`,
+  `ClockRecord`, `Task`, `PurchaseOrder`, `FinanceSyncQueue`, `Recipe`,
+  `ComplianceRecord`, `ComplianceSnapshot`); `AuditLog`; existing role
+  architecture; `InvokeLLM` integration.
+
+### Pilot Hardening — Navigation Completion (Part R)
+- Added Production, Finance Integration, and Orbit Nexus Intelligence to the
+  manifest-driven sidebar (`FALLBACK_NAV` + `STANDARD_WORKSPACE_MODULES` in
+  ManifestHydrator) — all completed MVP modules now one click away for every
+  tenant. Sales + Reports already present. Locked manifest architecture
+  preserved; role visibility intact.
+
+### Honest status (Part W)
+- Deterministic intelligence: implemented + operational + engine deploys.
+- LLM synthesis (briefing/copilot): implemented; graceful deterministic
+  fallback verified.
+- Business Copilot: implemented.
+- Predictive scaffolding: contracts documented; **not operational** — no
+  pilot history yet. No accuracy percentages fabricated; no forecasts shown.
+- Predictive models: NOT operational (correctly deferred pending pilot data).
+
+### Documentation
+- `implementation-notes/build-package-13-nexus-intelligence.md` — per-part
+  status, honest implementation table, F&B Pack ~96%, overall MVP ~88%,
+  pilot readiness ~70%, next-package recommendation.
+
 ## [Unreleased] — Build Package #12 (Sales Execution + Multi-Tenant Xero)
 
 ### Added — Sales Execution (Parts F/G)
