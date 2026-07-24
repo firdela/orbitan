@@ -11,6 +11,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import PerformanceHeatmap from '@/components/reporting/PerformanceHeatmap';
 import RegistryMetrics from '@/components/reporting/RegistryMetrics';
+import FBOperationsReports from '@/components/reporting/FBOperationsReports';
 import { useCurrency } from '@/lib/CurrencyContext';
 
 
@@ -101,6 +102,11 @@ export default function ReportsPage() {
                   { metric_key: 'po_pending_count', fallbackTitle: 'POs Pending Approval', icon: ShoppingCart, color: 'amber', drillTo: 'procurement', tips: ['Approve promptly to avoid supply chain delays', 'Breaching the threshold triggers an automated alert'] },
                 ]}
               />
+            </div>
+
+            {/* F&B Operations Reports — Inventory valuation, PO summary, supplier spend, food cost, stock variance */}
+            <div className="mb-6">
+              <FBOperationsReports tenantId={tenantId} />
             </div>
 
             {/* Revenue vs COGS Chart — only when real data exists */}

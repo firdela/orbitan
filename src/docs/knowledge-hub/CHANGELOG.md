@@ -54,6 +54,36 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #10 (F&B Operations MVP)
+
+### Completed — F&B Operational Reports (Part F)
+- **`FBOperationsReports` component** mounted on the Reports page:
+  Inventory Valuation (total + top-5 categories), Purchase Summary (count +
+  value by status), Supplier Spend (top-5 by received spend), Food/Recipe
+  Cost (total COGS, avg margin, top-5 by cost), Stock Variance (items below
+  par with gap). Computed live from `InventoryItem` / `PurchaseOrder` /
+  `Recipe` — no fabricated metrics; zero-when-empty; loading + no-data
+  states; responsive; currency-aware.
+
+### Verified operational (reused, not rebuilt)
+- **Inventory** — CRUD, search, low-stock, KPIs, stock adjustment
+  (audited), reconciliation, forecasting. (Part A)
+- **Suppliers** — CRUD, search, preferred/critical-F&B flags, payment
+  terms, lead times, performance tab. (Part B)
+- **Procurement** — Shield-gated PO flow; `GoodsReceiptDialog` increments
+  inventory by name match + audits + dispatches wallet debit. (Parts C + E)
+- **Recipes** — CRUD, live COGS via `calculateRecipeCost`, margin, IP
+  protection. (Part D)
+
+### Integration status (Part E)
+- Goods receipt → inventory increment ✅; waste → stock adjustment ✅;
+  recipe production → inventory deduction ❌ (deferred to Build #11).
+
+### Documentation
+- `implementation-notes/build-package-10-fnb-operations.md` — per-module
+  assessment, what was completed, deferred gaps, F&B Pack ~80%, overall
+  MVP ~74%, next-package recommendation.
+
 ## [Unreleased] — Build Package #9 (MVP Completion Audit + Workflow Integration)
 
 ### Fixed — Navigation: dead/forbidden `/leader-org` link for non-admins
