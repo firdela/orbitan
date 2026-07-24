@@ -1,24 +1,21 @@
 // ============================================================
-// ORBITANOS — Access Engine Validation Harness (Phase 1 Inc. #2)
-// Backend runner for the Orbit Identity Model linkage classifier.
+// ORBITANOS — Access Engine Validation Harness (Phase 1 Inc. #2/#3)
+// Backend runner.
 //
-// Follows the taskControllerTestSuite precedent: a backend function
-// executes a pure suite server-side so results are capturable via
-// the dev page and the platform test runner.
+// Tier 1 — Identity Linkage classifier (shared canonical):
+//   success, idempotency, conflict (point 8), multi-tenant, fail-closed.
 //
-// Scope (server-side, shared canonical module):
-//   - Successful linkage (unlinked → linked)
-//   - Idempotency (already-linked → skipped)
-//   - Identity conflict (existing different user_id → never overwritten)
-//   - Multi-tenant membership classification
-//   - Fail-closed null safety
+// Tier 2 — RLS Structure Validator (AFR rule #4):
+//   before/after evidence for the ClockRecord RLS hardening
+//   ($in-in-user_condition + user_condition-not-alone → documented form).
 //
-// The Access Engine membership / precedence / platform-owner tests
-// run in the frontend suite (src/lib/access/__tests__/...) because
-// that pure logic currently resides in src/lib/access (ADR-0050).
+// The Access Engine membership / precedence tests run in the frontend
+// suite (src/lib/access/__tests__/...) because that pure logic
+// currently resides in src/lib/access (ADR-0050).
 // ============================================================
 
 import { classifyLinkage } from '../../shared/identityLinkage.ts';
+import { validateRls } from '../../shared/rlsStructureValidator.ts';
 
 Deno.serve(async (_req) => {
   const tests = [];
@@ -32,10 +29,11 @@ Deno.serve(async (_req) => {
     if (JSON.stringify(a) !== JSON.stringify(e))
       throw new Error(`${m || ''} got ${JSON.stringify(a)} expected ${JSON.stringify(e)}`);
   }
+  function ok(v, m) { if (!v) throw new Error(m || 'expected truthy'); }
 
   const user = { id: 'u_1', email: 'ali@orbitan.dev' };
 
-  // ── 1. Successful linkage ────────────────────────────────────
+  // ═══ Tier 1 — Identity Linkage classifier ═══════════════════
   test('linkage: unlinked employee → linked', () => {
     const r = classifyLinkage(
       [{ id: 'e1', user_id: null, email: 'ali@orbitan.dev', tenant_id: 't1', role: 'worker' }],
@@ -47,7 +45,6 @@ Deno.serve(async (_req) => {
     eq(r.conflicts.length, 0);
   });
 
-  // ── Idempotency ──────────────────────────────────────────────
   test('linkage: already-linked → skipped (idempotent)', () => {
     const r = classifyLinkage(
       [{ id: 'e1', user_id: 'u_1', email: 'ali@orbitan.dev', tenant_id: 't1' }],
@@ -59,7 +56,6 @@ Deno.serve(async (_req) => {
     eq(r.conflicts.length, 0);
   });
 
-  // ── Identity conflict (point 8: never overrides existing user_id) ─
   test('linkage: conflicting user_id → conflict, never overwritten', () => {
     const r = classifyLinkage(
       [{ id: 'e1', user_id: 'u_other', email: 'ali@orbitan.dev', tenant_id: 't1' }],
@@ -70,7 +66,6 @@ Deno.serve(async (_req) => {
     eq(r.conflicts[0].existing_user_id, 'u_other');
   });
 
-  // ── Multi-tenant membership (one user, many tenants) ─────────
   test('linkage: one user resolves multiple tenant memberships', () => {
     const r = classifyLinkage(
       [
@@ -83,7 +78,6 @@ Deno.serve(async (_req) => {
     eq(r.linked.map((l) => l.tenant_id).sort(), ['t1', 't2']);
   });
 
-  // ── Mixed set classification ──────────────────────────────────
   test('linkage: mixed set classified correctly', () => {
     const r = classifyLinkage(
       [
@@ -99,13 +93,89 @@ Deno.serve(async (_req) => {
     eq(r.conflicts.length, 1);
   });
 
-  // ── Fail-closed null safety ──────────────────────────────────
   test('linkage: null/empty employees → empty result', () => {
     eq(classifyLinkage(null, user).linked.length, 0);
     eq(classifyLinkage([], user).linked.length, 0);
   });
   test('linkage: null user → empty result (fail-closed)', () => {
     eq(classifyLinkage([{ id: 'e1', user_id: null }], null).linked.length, 0);
+  });
+
+  // ═══ Tier 2 — RLS Structure Validator (before/after) ════════
+  // Pre-fix ClockRecord read: $in inside user_condition + user_condition
+  // sharing an object with a record field (both undocumented / AFR #4).
+  const PRE_FIX_CLOCK_READ = {
+    'data.tenant_id': '{{user.data.tenant_id}}',
+    '$or': [
+      { 'user_condition': { 'role': 'admin' } },
+      { 'data.employee_id': '{{user.id}}' },
+      {
+        'data.outlet_id': '{{user.data.outlet_id}}',
+        'user_condition': { 'role': { '$in': ['tenant_admin', 'outlet_manager', 'supervisor'] } },
+      },
+    ],
+  };
+
+  // Post-fix ClockRecord read: documented form — top-level $and wrapping
+  // tenant boundary + $or; the outlet-scoped manager/supervisor grant is
+  // an $and of outlet-match + $or of plain user_condition branches.
+  const POST_FIX_CLOCK_READ = {
+    '$and': [
+      { 'data.tenant_id': '{{user.data.tenant_id}}' },
+      { '$or': [
+        { 'user_condition': { 'role': 'admin' } },
+        { 'data.employee_id': '{{user.id}}' },
+        { '$and': [
+          { 'data.outlet_id': '{{user.data.outlet_id}}' },
+          { '$or': [
+            { 'user_condition': { 'role': 'tenant_admin' } },
+            { 'user_condition': { 'role': 'outlet_manager' } },
+            { 'user_condition': { 'role': 'supervisor' } },
+          ] },
+        ] },
+      ] },
+    ],
+  };
+
+  test('rls: PRE-fix ClockRecord read flagged operator_in_user_condition', () => {
+    const v = validateRls(PRE_FIX_CLOCK_READ);
+    ok(v.some((x) => x.code === 'operator_in_user_condition'), 'expected operator_in_user_condition');
+  });
+  test('rls: PRE-fix ClockRecord read flagged user_condition_not_alone', () => {
+    const v = validateRls(PRE_FIX_CLOCK_READ);
+    ok(v.some((x) => x.code === 'user_condition_not_alone'), 'expected user_condition_not_alone');
+  });
+  test('rls: POST-fix ClockRecord read is structurally valid', () => {
+    eq(validateRls(POST_FIX_CLOCK_READ), []);
+  });
+  test('rls: POST-fix ClockRecord read preserves tenant boundary', () => {
+    // The corrected rule still gates on data.tenant_id at the top $and.
+    ok(JSON.stringify(POST_FIX_CLOCK_READ).includes('"data.tenant_id"'), 'tenant boundary retained');
+  });
+  test('rls: validator rejects a lone $in inside user_condition (ComplianceRecord-style)', () => {
+    const r = validateRls({
+      '$and': [
+        { 'data.tenant_id': '{{user.data.tenant_id}}' },
+        { '$or': [
+          { 'user_condition': { 'role': 'admin' } },
+          { 'user_condition': { 'role': { '$in': ['outlet_manager', 'supervisor'] } } },
+        ] },
+      ],
+    });
+    ok(r.some((x) => x.code === 'operator_in_user_condition'), 'should flag $in in user_condition');
+  });
+  test('rls: validator accepts plain multi-role $or (documented form)', () => {
+    const r = validateRls({
+      '$and': [
+        { 'data.tenant_id': '{{user.data.tenant_id}}' },
+        { '$or': [
+          { 'user_condition': { 'role': 'admin' } },
+          { 'user_condition': { 'role': 'outlet_manager' } },
+          { 'user_condition': { 'role': 'supervisor' } },
+        ] },
+      ],
+    });
+    eq(r, []);
   });
 
   const total = tests.length;

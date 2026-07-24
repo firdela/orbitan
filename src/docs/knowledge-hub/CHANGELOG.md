@@ -54,6 +54,35 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Phase 1 Foundation Layer (Inc. #3)
+
+### Fixed — Tenant Isolation: RLS Hardening (Attendance/Compliance Cluster)
+- **`ClockRecord`, `Shift`, `ComplianceRecord`** RLS remediated. All used
+  `user_condition: { "role": { "$in": [...] } }`, which is undocumented (the
+  Base44 RLS guide only supports plain-value `user_condition`) and violates
+  AFR rule #4. `ClockRecord` and `Shift` also placed `user_condition` alongside
+  a record field in the same object (guide requires it to be the only key).
+  Rewrote to the documented `$or`-of-plain-`user_condition` form, wrapped
+  top-level in explicit `$and`; semantics identical (tenant + outlet
+  boundaries preserved). Worst-case impact of the old form: outlet
+  managers/supervisors silently denied read access to their own outlet's
+  clock/shift/compliance records — breaking timesheet review and compliance
+  oversight.
+
+### Added
+- **`base44/shared/rlsStructureValidator.ts`** — pure validator enforcing the
+  two hard RLS rules (`user_condition` alone in its object; no operators
+  inside `user_condition`). Importable by backend functions + harnesses.
+- **`accessValidationHarness`** extended with RLS before/after evidence:
+  pre-fix `ClockRecord` read flagged (`operator_in_user_condition` +
+  `user_condition_not_alone`); post-fix validates clean; tenant boundary
+  retained.
+
+### Verified
+- `accessValidationHarness` backend suite executes green (linkage classifier
+  + RLS structure validator). See `/dev/access-validation` and
+  `implementation-notes/phase1-tenant-isolation-rls-audit.md`.
+
 ## [v1.0-build-start] — 2026-07-23
 
 Build Mode begins. Foundation Discussion Mode is OFF; Architecture is locked; Product
