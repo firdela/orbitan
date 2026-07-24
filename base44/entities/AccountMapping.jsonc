@@ -7,8 +7,7 @@
       "type": "string"
     },
     "category_name": {
-      "type": "string",
-      "description": "OrbitanOS category label (e.g. Food - Meat, Beverages, Packaging, Labour)"
+      "type": "string"
     },
     "category_type": {
       "type": "string",
@@ -18,16 +17,13 @@
         "expense",
         "labour",
         "asset"
-      ],
-      "description": "Determines how this mapping is used in journal entries"
+      ]
     },
     "xero_account_code": {
-      "type": "string",
-      "description": "Xero Chart of Accounts code (e.g. 200, 310, 400)"
+      "type": "string"
     },
     "xero_account_name": {
-      "type": "string",
-      "description": "Human-readable Xero account name (e.g. Sales, Cost of Goods Sold)"
+      "type": "string"
     },
     "xero_account_type": {
       "type": "string",
@@ -38,23 +34,19 @@
         "OVERHEADS",
         "CURRENT",
         "FIXED"
-      ],
-      "description": "Xero account class for validation"
+      ]
     },
     "tax_type": {
       "type": "string",
-      "description": "Xero tax type (e.g. OUTPUT, INPUT, NONE, EXEMPTOUTPUT)",
       "default": "NONE"
     },
     "tax_rate_pct": {
       "type": "number",
-      "description": "Applicable tax rate percentage (e.g. 9 for 9% GST)",
       "default": 0
     },
     "is_default": {
       "type": "boolean",
-      "default": false,
-      "description": "If true, used as fallback when no specific mapping is found"
+      "default": false
     },
     "is_active": {
       "type": "boolean",
@@ -71,67 +63,91 @@
   ],
   "rls": {
     "create": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": "tenant_admin"
-          }
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
         }
       ]
     },
     "read": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "update": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": "tenant_admin"
-          }
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
         }
       ]
     },
     "delete": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": "tenant_admin"
-          }
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
         }
       ]
     }
