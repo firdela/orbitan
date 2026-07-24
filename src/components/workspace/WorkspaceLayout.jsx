@@ -144,7 +144,7 @@ export default function WorkspaceLayout() {
       navigation={[]}
       title={title}
       tenant={effectiveTenant}
-      manifestNav={<ManifestNav navigation={navigation} />}
+      manifestNav={<ManifestNav navigation={isPlatformAdmin ? navigation : navigation.filter(i => i.module_key !== 'leader_org')} />}
       manifestSource={source}
     >
       <Outlet context={{ tenant: effectiveTenant, tenantId }} />

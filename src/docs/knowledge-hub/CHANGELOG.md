@@ -54,6 +54,37 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #9 (MVP Completion Audit + Workflow Integration)
+
+### Fixed — Navigation: dead/forbidden `/leader-org` link for non-admins
+- `ManifestHydrator.buildManifestNav` appended an "OrbitanOS Console"
+  (`/leader-org`) link to **every** tenant's nav, but `LeaderOrg` has no
+  role guard and exposes platform-wide tenant + governance data — a
+  dead/forbidden link for non-admin managers. `WorkspaceLayout` now
+  filters the `leader_org` nav item out for non-platform-admins; admins
+  still see it. (Part E nav audit.)
+
+### Audit — MVP completion pass (no new features built)
+- Verified clean: `App.jsx` routing surface, `WorkspaceLayout`, `RoleGateway`,
+  `ManifestNav`/`ManifestHydrator` (manifest + fallback nav both route to
+  `/workspace/:tenantId/*`), `WorkspaceDashboard` (real live data via
+  `useDashboardSnapshot`, loading/error/empty states), `WorkforcePage`,
+  `TimesheetManager` reachability (Package #8).
+- Confirmed remaining gaps (documented, deferred): legacy `/company` +
+  `/outlet` standalone routes (orphan candidates — inbound-link verification
+  required before removal); missing attendance KPI widgets on the manager
+  dashboard (`useDashboardSnapshot` does not fetch ClockRecord/AttendanceException);
+  `LeaderOrg` lacks a client-side role gate (RLS still prevents data leakage);
+  notification round-trip not confirmed end-to-end; F&B module CRUD
+  completeness not exhaustively verified.
+- No dead code removed — no removal was "confirmed dead" without
+  inbound-link verification.
+
+### Documentation
+- `implementation-notes/build-package-9-mvp-completion-audit.md` — full
+  Parts A–H audit, findings, deferred items, conservative MVP estimate
+  (~70%), next-package recommendation.
+
 ## [Unreleased] — Build Package #8 (Manager Operations + Payroll MVP)
 
 ### Completed — Manager attendance review + payroll loop (reachable + complete)
