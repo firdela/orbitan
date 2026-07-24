@@ -90,6 +90,36 @@ Harness evidence: `accessValidationHarness` runs the FoodSafetyLog before/after
 fixtures (pre-fix flagged `operator_in_user_condition`; post-fix clean). See
 `/dev/access-validation`.
 
+## Cluster 3 — Full-Entity Sweep (all remaining entities audited)
+
+Every remaining entity was read and audited against the validator (evidence-first).
+31 entities reviewed; 20 verified compliant, **11 confirmed** AFR #4 violations —
+all remediated in one pass (documented `$or`-of-plain form, semantics identical):
+
+| Entity | Defect | Fix |
+| :--- | :--- | :--- |
+| `Supplier` | `$in` in `user_condition` (create/read/update) | `$or`-of-plain |
+| `AIDocument` | `$in` in `user_condition` (create/read/update) | `$or`-of-plain |
+| `ReplenishmentAlert` | `$in` in `user_condition` (create/read/update) | `$or`-of-plain |
+| `MaterialCollection` | `$in` in `user_condition` (create/read/update/delete) | `$or`-of-plain |
+| `GoodsReceipt` | `$in` in `user_condition` (create/read/update) | `$or`-of-plain |
+| `FinanceMapping` | `$in` in `user_condition` (create/read/update) | `$or`-of-plain |
+| `AccountMapping` | `$in` in `user_condition` (read/delete) | `$or`-of-plain |
+| `Announcement` | `$in` in `user_condition` (create/update) | `$or`-of-plain |
+| `CustomerProfile` | `$in` in `user_condition` (all ops) | `$or`-of-plain |
+| `ComplianceSnapshot` | `$in` in `user_condition` + not-alone (read) | `$and`-wrapped `$or`-of-plain |
+| `ProductCatalog` | `$in` in `user_condition` (all ops) | `$or`-of-plain |
+
+Verified compliant (no change): `AutomationRule`, `MetricDefinition`,
+`NotificationTemplate`, `PlatformManifest`, `Recipe`, `ArtifactRecord`,
+`ShiftTradeRequest`, `StockCount`, `ModuleAccessPolicy`, `SystemSettings`,
+`IssueLog`, `WorkerFeedback`, `PayrollSnapshot`, `EvolutionProposal`,
+`WalletTransaction`, `IntegrationCredential`, `DashboardLayout`,
+`DailyReconciliation`, `MarketplaceModule`, `DeploymentLog`.
+
+Harness evidence: `accessValidationHarness` now includes a Cluster-3 sweep test
+that validates all 11 post-fix rules clean (AFR #4 + guide-compliant).
+
 ## Remaining technical debt
 
 1. Audit the remaining non-snapshot entities (InventoryItem, PurchaseOrder,

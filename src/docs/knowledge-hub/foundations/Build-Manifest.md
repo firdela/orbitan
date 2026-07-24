@@ -67,7 +67,7 @@ passes its quality gate.
 ### Automated Validation (per merge to `main`)
 1. `taskControllerTestSuite` passes.
 2. Shield domain integrity checks pass.
-3. RLS tenant-isolation tests pass (no `$in` operator in `user_condition`) — enforced by `base44/shared/rlsStructureValidator.ts` (run via `accessValidationHarness`); ClockRecord/Shift/ComplianceRecord/FoodSafetyLog remediated to the documented `$or`-of-plain-`user_condition` form; InventoryItem/PurchaseOrder/SalesInvoice/ExpenseRecord audited compliant.
+3. RLS tenant-isolation tests pass (no `$in` operator in `user_condition`) — enforced by `base44/shared/rlsStructureValidator.ts` (run via `accessValidationHarness`); **all entities audited** — 15 remediated (ClockRecord, Shift, ComplianceRecord, FoodSafetyLog, Supplier, AIDocument, ReplenishmentAlert, MaterialCollection, GoodsReceipt, FinanceMapping, AccountMapping, Announcement, CustomerProfile, ComplianceSnapshot, ProductCatalog) to the documented `$or`-of-plain-`user_condition` form; remaining entities verified compliant.
 4. Build compiles with zero unresolved imports.
 
 ## Build Mode Operating Rules (Formalised)

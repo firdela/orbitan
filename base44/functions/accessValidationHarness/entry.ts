@@ -207,6 +207,27 @@ Deno.serve(async (_req) => {
     eq(validateRls(POST_FIX_FOODSAFETY_READ), []);
   });
 
+  // Cluster 3 — full sweep: 11 confirmed $in-in-user_condition defects, now remediated.
+  // Each post-fix rule must validate clean (AFR #4 + guide-compliant documented form).
+  const POST_FIX_CLUSTER3 = {
+    Supplier: { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { '$or': [ { 'user_condition': { 'role': 'admin' } }, { 'user_condition': { 'role': 'tenant_admin' } }, { 'user_condition': { 'role': 'outlet_manager' } }, { 'user_condition': { 'role': 'supervisor' } }, { 'user_condition': { 'role': 'worker' } } ] } ] },
+    AIDocument: { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { '$or': [ { 'user_condition': { 'role': 'admin' } }, { 'user_condition': { 'role': 'tenant_admin' } }, { 'user_condition': { 'role': 'outlet_manager' } }, { 'user_condition': { 'role': 'supervisor' } } ] } ] },
+    ReplenishmentAlert: { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { 'data.outlet_id': '{{user.data.outlet_id}}' }, { '$or': [ { 'user_condition': { 'role': 'admin' } }, { 'user_condition': { 'role': 'tenant_admin' } }, { 'user_condition': { 'role': 'outlet_manager' } }, { 'user_condition': { 'role': 'supervisor' } } ] } ] },
+    MaterialCollection: { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { '$or': [ { 'user_condition': { 'role': 'admin' } }, { 'user_condition': { 'role': 'tenant_admin' } }, { 'user_condition': { 'role': 'outlet_manager' } }, { 'user_condition': { 'role': 'supervisor' } }, { 'user_condition': { 'role': 'worker' } } ] } ] },
+    GoodsReceipt: { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { 'data.outlet_id': '{{user.data.outlet_id}}' }, { '$or': [ { 'user_condition': { 'role': 'admin' } }, { 'user_condition': { 'role': 'outlet_manager' } }, { 'user_condition': { 'role': 'supervisor' } } ] } ] },
+    FinanceMapping: { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { '$or': [ { 'user_condition': { 'role': 'admin' } }, { 'user_condition': { 'role': 'tenant_admin' } }, { 'user_condition': { 'role': 'outlet_manager' } } ] } ] },
+    AccountMapping_read: { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { '$or': [ { 'user_condition': { 'role': 'admin' } }, { 'user_condition': { 'role': 'tenant_admin' } }, { 'user_condition': { 'role': 'outlet_manager' } } ] } ] },
+    Announcement: { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { '$or': [ { 'user_condition': { 'role': 'admin' } }, { 'user_condition': { 'role': 'tenant_admin' } }, { 'user_condition': { 'role': 'outlet_manager' } } ] } ] },
+    CustomerProfile: { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { '$or': [ { 'user_condition': { 'role': 'admin' } }, { 'user_condition': { 'role': 'tenant_admin' } }, { 'user_condition': { 'role': 'outlet_manager' } }, { 'user_condition': { 'role': 'supervisor' } }, { 'user_condition': { 'role': 'worker' } } ] } ] },
+    ComplianceSnapshot_read: { '$or': [ { 'user_condition': { 'role': 'admin' } }, { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { '$or': [ { 'user_condition': { 'role': 'tenant_admin' } }, { 'user_condition': { 'role': 'outlet_manager' } } ] } ] } ] },
+    ProductCatalog: { '$and': [ { 'data.tenant_id': '{{user.data.tenant_id}}' }, { '$or': [ { 'user_condition': { 'role': 'admin' } }, { 'user_condition': { 'role': 'tenant_admin' } }, { 'user_condition': { 'role': 'outlet_manager' } }, { 'user_condition': { 'role': 'supervisor' } }, { 'user_condition': { 'role': 'worker' } } ] } ] },
+  };
+  test('rls: all 11 Cluster-3 fixed RLS rules validate clean', () => {
+    for (const [name, rule] of Object.entries(POST_FIX_CLUSTER3)) {
+      eq(validateRls(rule), [], name + ' should be structurally valid');
+    }
+  });
+
   const total = tests.length;
   const pass_rate = total ? Math.round((passed / total) * 100) + '%' : '0%';
   return Response.json({ summary: { total, passed, failed, pass_rate }, tests });

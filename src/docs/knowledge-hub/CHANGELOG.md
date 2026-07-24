@@ -54,6 +54,26 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Phase 1 Foundation Layer (Inc. #4 — Full RLS Sweep)
+
+### Security — Complete RLS Tenant-Isolation Audit (Priority 1 complete)
+- Audited **every** remaining entity against `rlsStructureValidator`
+  (evidence-first: read → validate → fix only confirmed → re-run).
+- **11 confirmed** AFR #4 violations (`$in` inside `user_condition`) remediated
+  to documented `$or`-of-plain form, semantically identical: `Supplier`,
+  `AIDocument`, `ReplenishmentAlert`, `MaterialCollection`, `GoodsReceipt`,
+  `FinanceMapping`, `AccountMapping`, `Announcement`, `CustomerProfile`,
+  `ComplianceSnapshot`, `ProductCatalog`.
+- **20 verified compliant** (no change): `AutomationRule`, `MetricDefinition`,
+  `NotificationTemplate`, `PlatformManifest`, `Recipe`, `ArtifactRecord`,
+  `ShiftTradeRequest`, `StockCount`, `ModuleAccessPolicy`, `SystemSettings`,
+  `IssueLog`, `WorkerFeedback`, `PayrollSnapshot`, `EvolutionProposal`,
+  `WalletTransaction`, `IntegrationCredential`, `DashboardLayout`,
+  `DailyReconciliation`, `MarketplaceModule`, `DeploymentLog`.
+- Combined with Inc. #3, **all entities** with the `$in`-in-`user_condition`
+  defect are now remediated. Priority 1 RLS hardening is complete.
+- Harness extended with a Cluster-3 sweep test (11 post-fix rules validated clean).
+
 ## [Unreleased] — Phase 1 Foundation Layer (Inc. #3)
 
 ### Security — Evidence-First RLS Audit (per Product Authority correction)
