@@ -18,8 +18,7 @@
         "shift_brief",
         "incident_report",
         "compliance_checklist"
-      ],
-      "description": "Type of AI-generated document"
+      ]
     },
     "title": {
       "type": "string"
@@ -34,8 +33,7 @@
         "education",
         "logistics",
         "other"
-      ],
-      "description": "Industry the document was generated for \u2014 injects context into AI prompts"
+      ]
     },
     "principle": {
       "type": "string",
@@ -46,24 +44,19 @@
         "refine",
         "regulate",
         "reach"
-      ],
-      "description": "Which OrbitanOS Operating Cycle principle this document serves"
+      ]
     },
     "content_markdown": {
-      "type": "string",
-      "description": "Full AI-generated document content in Markdown format"
+      "type": "string"
     },
     "source_context": {
-      "type": "object",
-      "description": "Structured data injected into the AI prompt (e.g. ComplianceRecord, task list, AuditLog events)"
+      "type": "object"
     },
     "model_used": {
-      "type": "string",
-      "description": "AI model identifier used for generation e.g. claude_sonnet_4_6, gemini_3_1_pro, gpt_5_4"
+      "type": "string"
     },
     "ai_confidence_score": {
-      "type": "number",
-      "description": "0-100 self-assessed confidence score from the AI"
+      "type": "number"
     },
     "status": {
       "type": "string",
@@ -75,17 +68,14 @@
         "archived",
         "auto_published"
       ],
-      "default": "in_review",
-      "description": "Review state \u2014 all AI docs enter in_review. auto_published only for low-risk tasks when auto_publish_enabled=true on tenant"
+      "default": "in_review"
     },
     "auto_publish_eligible": {
       "type": "boolean",
-      "default": false,
-      "description": "True for low-risk doc types (training tips, shift briefs) that can bypass manager review if tenant setting allows"
+      "default": false
     },
     "reviewed_by": {
-      "type": "string",
-      "description": "User ID of manager who reviewed"
+      "type": "string"
     },
     "reviewed_by_name": {
       "type": "string"
@@ -98,27 +88,23 @@
       "type": "string"
     },
     "linked_compliance_id": {
-      "type": "string",
-      "description": "Linked ComplianceRecord if generated from compliance context"
+      "type": "string"
     },
     "linked_employee_ids": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Employees this training module is assigned to"
+      }
     },
     "tags": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "e.g. food_safety, onboarding, clock_out_review"
+      }
     },
     "version": {
       "type": "number",
-      "default": 1,
-      "description": "Document version \u2014 incremented on re-generation"
+      "default": 1
     },
     "notes": {
       "type": "string"
@@ -131,78 +117,106 @@
   ],
   "rls": {
     "create": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "read": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager",
-                "supervisor"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "update": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "delete": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": "tenant_admin"
-          }
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
         }
       ]
     }
