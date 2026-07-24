@@ -10,8 +10,7 @@
       "type": "string"
     },
     "collection_reference": {
-      "type": "string",
-      "description": "Unique collection job reference number"
+      "type": "string"
     },
     "collection_date": {
       "type": "string",
@@ -56,8 +55,7 @@
       "default": "commercial"
     },
     "source_name": {
-      "type": "string",
-      "description": "Name of the collection source / client"
+      "type": "string"
     },
     "source_address": {
       "type": "string"
@@ -69,16 +67,13 @@
       "type": "number"
     },
     "gross_weight_kg": {
-      "type": "number",
-      "description": "Total weight collected (kg)"
+      "type": "number"
     },
     "net_weight_kg": {
-      "type": "number",
-      "description": "Net recoverable weight after contamination deduction (kg)"
+      "type": "number"
     },
     "contamination_pct": {
       "type": "number",
-      "description": "Estimated contamination percentage (0-100)",
       "default": 0
     },
     "processing_status": {
@@ -103,7 +98,6 @@
     },
     "recovered_materials": {
       "type": "array",
-      "description": "Breakdown of recovered material types from this collection",
       "items": {
         "type": "object",
         "properties": {
@@ -117,26 +111,22 @@
             "type": "number"
           },
           "disposed_via": {
-            "type": "string",
-            "description": "e.g. Recycled, Upcycled, Landfill"
+            "type": "string"
           }
         }
       }
     },
     "co2_saved_kg": {
-      "type": "number",
-      "description": "Estimated CO2 equivalent saved (kg) from recycling this batch"
+      "type": "number"
     },
     "trees_saved_equivalent": {
-      "type": "number",
-      "description": "Equivalent trees saved \u2014 used in sustainability reports"
+      "type": "number"
     },
     "water_saved_litres": {
       "type": "number"
     },
     "sustainability_score": {
-      "type": "number",
-      "description": "0-100 composite sustainability impact score"
+      "type": "number"
     },
     "assigned_driver_id": {
       "type": "string"
@@ -148,12 +138,10 @@
       "type": "string"
     },
     "supplier_partner_id": {
-      "type": "string",
-      "description": "Linked Supplier/Partner record"
+      "type": "string"
     },
     "linked_inventory_items": {
       "type": "array",
-      "description": "Inventory items created or updated from this collection",
       "items": {
         "type": "string"
       }
@@ -162,20 +150,16 @@
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Photos taken at collection site"
+      }
     },
     "certificate_url": {
-      "type": "string",
-      "description": "Recycling certificate or disposal certificate URL"
+      "type": "string"
     },
     "revenue_sgd": {
-      "type": "number",
-      "description": "Revenue generated from sale of recovered materials"
+      "type": "number"
     },
     "cost_sgd": {
-      "type": "number",
-      "description": "Collection and processing cost"
+      "type": "number"
     },
     "net_value_sgd": {
       "type": "number"
@@ -198,87 +182,131 @@
   ],
   "rls": {
     "create": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager",
-                "supervisor",
-                "worker"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "worker"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "read": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager",
-                "supervisor",
-                "worker"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "worker"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "update": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager",
-                "supervisor"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
             }
-          }
+          ]
         }
       ]
     },
     "delete": {
-      "data.tenant_id": "{{user.data.tenant_id}}",
-      "$or": [
+      "$and": [
         {
-          "user_condition": {
-            "role": "admin"
-          }
+          "data.tenant_id": "{{user.data.tenant_id}}"
         },
         {
-          "user_condition": {
-            "role": {
-              "$in": [
-                "tenant_admin",
-                "outlet_manager"
-              ]
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
             }
-          }
+          ]
         }
       ]
     }
