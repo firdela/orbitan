@@ -25,9 +25,34 @@ adheres to [Semantic Versioning](https://semver.org/).
   on `user_id` and are gated on linkage completion. Graceful degradation:
   if linkage errors, the email fallback still resolves memberships.
 
+### Added — MembershipResolver + Access Engine Validation Harness (Phase 1 Inc. #2)
+- **`base44/shared/identityLinkage.ts`** — pure `classifyLinkage` classifier,
+  the single source of the linkage decision contract (success / idempotent /
+  conflict / multi-tenant). Backend-importable, no duplication.
+- **`identityLinkage` backend function** — refactored to delegate decisions to
+  the shared classifier; stamps + per-record audit applied only to linkable records.
+- **`accessValidationHarness` backend function** — server-side suite runner for
+  the linkage classifier (success, idempotency, conflict, multi-tenant,
+  fail-closed). Capturable via the dev page / platform test runner.
+- **`src/lib/access/__tests__/accessEngineValidationHarness.js`** — frontend
+  pure suite covering all 9 directive points (canonical `user_id` resolution,
+  multi-tenant memberships, active context selection, least-privilege
+  default-deny, inactive/revoked denial, cross-tenant/outlet denial,
+  platform-owner authority separation) + a `Clock.Manage` pack regression.
+- **`src/pages/dev/AccessEngineValidation.jsx`** + route `/dev/access-validation`
+  — runs both tiers; evidence visible in the preview.
+
+### Fixed
+- **`Clock.Manage` permission pack was undefined.** The `worker` role
+  referenced it but no pack existed, so workers silently lost `clockrecord.manage`
+  and could not clock in/out through the Access Engine. Added the pack; locked
+  with a regression test.
+
 ### Verified
 - `identityLinkage` test invocation returns 200 with the structured
   linkage report (`{ linked, skipped, conflicts, total }`).
+- `accessValidationHarness` backend suite + frontend Access Engine suite
+  execute green (see `/dev/access-validation`).
 
 ## [v1.0-build-start] — 2026-07-23
 

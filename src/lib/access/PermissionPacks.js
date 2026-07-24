@@ -91,6 +91,11 @@ export const PERMISSION_KEYS = Object.freeze({
  */
 export const PERMISSION_PACKS = Object.freeze({
   'Workforce.Basic': [PERMISSION_KEYS.EMPLOYEE_READ_SELF, PERMISSION_KEYS.SHIFT_READ_SELF, PERMISSION_KEYS.CLOCK_MANAGE],
+  // Clock-only pack — referenced by the worker role. Was previously
+  // undefined (workers silently lost clockrecord.manage and could not
+  // clock in/out). Restored by the Phase 1 Access Engine validation
+  // harness (see accessEngineValidationHarness regression test).
+  'Clock.Manage': [PERMISSION_KEYS.CLOCK_MANAGE],
   'Workforce.Read': [PERMISSION_KEYS.EMPLOYEE_READ, PERMISSION_KEYS.SHIFT_READ],
   'Workforce.Manage': [PERMISSION_KEYS.EMPLOYEE_READ, PERMISSION_KEYS.EMPLOYEE_CREATE, PERMISSION_KEYS.EMPLOYEE_UPDATE, PERMISSION_KEYS.EMPLOYEE_DELETE, PERMISSION_KEYS.SHIFT_READ, PERMISSION_KEYS.SHIFT_CREATE, PERMISSION_KEYS.SHIFT_UPDATE, PERMISSION_KEYS.SHIFT_ASSIGN],
 
