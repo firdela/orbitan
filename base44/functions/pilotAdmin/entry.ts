@@ -60,6 +60,24 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, tenant: { id: tenant.id, name: tenant.name, trial_ends_date: tenant.trial_ends_date } });
     }
 
+    // ── DEPLOYMENT HISTORY — timeline of pilot lifecycle events ─────────
+    if (action === 'deployment_history') {
+      const { tenant_id } = body;
+      const filter = tenant_id
+        ? { tenant_id, action_type: { $in: ['pilot_tenant_created', 'pilot_activated', 'pilot_suspended', 'pilot_extended', 'pilot_converted_to_paid', 'pilot_archived', 'sandbox_tenant_deleted'] } }
+        : { action_type: { $in: ['pilot_tenant_created', 'pilot_activated', 'pilot_suspended', 'pilot_extended', 'pilot_converted_to_paid', 'pilot_archived', 'sandbox_tenant_deleted'] } };
+      const events = await E.AuditLog.filter(filter, '-created_date', 100).catch(() => []);
+      return Response.json({
+        events: events.map(e => ({
+          id: e.id, tenant_id: e.tenant_id, action_type: e.action_type,
+          details: e.details, actor_name: e.actor_name, actor_role: e.actor_role,
+          previous_state: e.previous_state, new_state: e.new_state,
+          timestamp: e.created_date,
+        })),
+        total: events.length,
+      });
+    }
+
     // ── State-change actions (require tenant_id) ─────────────────────────
     const tenantId = body.tenant_id;
     if (!tenantId) return Response.json({ error: 'tenant_id is required' }, { status: 400 });

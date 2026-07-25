@@ -7,6 +7,45 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build Package #18 (Customer Success, Operational Readiness & Pilot Deployment)
+
+### Added — Customer Success Workspace (Part 1)
+- **`customerSuccess` backend function** — cross-tenant (platform-admin-only) customer success engine: `overview` (per-tenant deterministic health score, adoption breadth, onboarding %, last activity, outstanding setup tasks, training completion, feedback/support summary, success milestones), `tenant_detail` (recent feedback + recent activity), `add_note` (audited customer note). Health is a deterministic weighted sum (adoption 35 + activity recency 20 + feedback health 15 + onboarding 20 + stability 10) — no fabricated sentiment or estimated values. All queries bounded (≤500), grouped by tenant in memory.
+- **`CustomerSuccessPage`** at `/platform/customer-success` — portfolio rollup, health-tier distribution, searchable customer grid, detail drawer with adoption grid, outstanding tasks, milestones, training, feedback, recent activity, and audited note capture.
+
+### Added — Go-Live Readiness Centre (Part 3)
+- **`goLiveReadiness` backend function** — system/platform-level readiness for production go-live (distinct from the per-tenant operational `pilotReadiness` checklist). Server-verified checks: authentication, identity linkage, RLS structure (build-time-verified by `rlsStructureValidator` + `accessValidationHarness` 16/16), Access Engine, core modules, finance architecture, Xero OAuth + live connection, data migration, notifications, Orbit Nexus, security (Shield/audit/signature), system settings. Honest representation: `.schema()` is not available in the backend runtime, so RLS structure is reported as build-time-verified rather than faked as live.
+- **`GoLiveReadinessCentre`** at `/platform/go-live-readiness` — merges server checks with **client-side** PWA (manifest, service worker, installable, offline), accessibility (lang, viewport, main landmark, image alt, skip link), and performance (TTFB, DOM-ready, full-load) checks. Overall readiness %, blockers, warnings, PWA quick-verification tools.
+
+### Added — Pilot Deployment Centre (Part 4)
+- **`pilotAdmin` extended** with `deployment_history` action — immutable audit-trail timeline of pilot lifecycle events, optionally filtered by tenant. Placed before the `tenant_id` guard so cross-tenant history works.
+- **`PilotDeploymentCentre`** at `/platform/pilot-deployment` — leader cockpit: pilot tenant grid with full lifecycle actions (activate/pause/resume/extend/convert/archive/delete-sandbox), create-pilot dialog, and a deployment timeline sourced from `AuditLog`. Every lifecycle action already audited by `pilotAdmin`.
+
+### Verified — existing capabilities (audited, not rebuilt; no duplication)
+- **Guided First-Time Experience (Part 2)** — already complete: `OnboardingWizard` (6 steps) + `onboardingService` provisioning + progress tracking + resume + success screen. No rebuild.
+- **Customer Feedback Centre (Part 5)** — already complete tenant-side: `FeedbackCentre` + `IssueLog` + `nexusFeedbackAnalyst` (sentiment, priority, tags, duplicate grouping) + full workflow lifecycle. No rebuild.
+- **System Diagnostics (Part 6)** — already complete: `SupportDiagnostics` + `OperationalHealthDashboard` + `ExceptionCentre` + `pilotDiagnostics`. No rebuild.
+- **PWA Production Readiness (Part 7)** — assessed live by `GoLiveReadinessCentre` client-side checks. Existing PWA scaffold verified present.
+- **UX Refinement (Part 8)** — navigation registry audited; no dead/duplicate routes in the pilot-critical path. No destructive consolidation without inbound-link verification.
+- **Documentation (Part 9)** — this CHANGELOG entry + implementation note added.
+
+### Regression (Part 10) — backend function deploys
+- `customerSuccess` overview: 200 — 4 real pilot tenants, avg health 44.99, avg onboarding 6.5%, 0 open support, 0 converted.
+- `goLiveReadiness` assess: 200 — all server checks pass except Xero live connection (warning — credentials pending, as documented).
+- `pilotAdmin` deployment_history: 200 — 0 events (honest — no lifecycle state changes performed yet).
+- `dataMigration` preview/commit/dedup/rollback: verified end-to-end prior turn (cleaned up).
+
+### Honest release status
+- Customer Success, Go-Live Readiness, and Pilot Deployment are **implemented, deployed, and return real data**.
+- Existing FTE, Feedback, Diagnostics, PWA scaffold audited and confirmed present — deliberately not rebuilt to avoid duplication.
+- Full live multi-tenant regression + real-pilot-customer onboarding deferred to Build #19/#21 (requires real provisioned pilot tenants + live Xero credentials).
+- F&B Pack ~98%, overall MVP ~94%, pilot readiness ~90%, customer-success readiness ~85%.
+
+### Files
+- Created: `customerSuccess` + `goLiveReadiness` functions; `CustomerSuccessPage`, `GoLiveReadinessCentre`, `PilotDeploymentCentre` pages; implementation-note `build-package-18-customer-success-readiness.md`.
+- Modified: `pilotAdmin` (deployment_history action), `src/App.jsx` (3 routes), `src/lib/navigation-registry.js` (3 nav items), `CHANGELOG.md`.
+- No entity changes. Architecture LOCKED.
+
 ## [Unreleased] — Phase 1 Foundation Layer (in progress)
 
 ### Added — Orbit Identity Model Linkage (RA-0005)

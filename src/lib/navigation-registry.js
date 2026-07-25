@@ -134,6 +134,27 @@ export const PLATFORM_NAVIGATION = {
           permission: "admin",
         },
         {
+          key: "pilot-deployment",
+          label: "Pilot Deployment Centre",
+          route: "/platform/pilot-deployment",
+          description: "Activate, pause, resume, close pilots · deployment timeline · audit trail",
+          permission: "admin",
+        },
+        {
+          key: "customer-success",
+          label: "Customer Success",
+          route: "/platform/customer-success",
+          description: "Cross-tenant health, adoption, onboarding, feedback & milestones",
+          permission: "admin",
+        },
+        {
+          key: "go-live-readiness",
+          label: "Go-Live Readiness Centre",
+          route: "/platform/go-live-readiness",
+          description: "Unified system readiness — auth, RBAC, PWA, accessibility, performance, security",
+          permission: "admin",
+        },
+        {
           key: "operational-health",
           label: "Operational Health",
           route: "/platform/operational-health",

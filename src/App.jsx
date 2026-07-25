@@ -90,6 +90,9 @@ import OperationalHealthDashboard from '@/pages/platform/OperationalHealthDashbo
 import ExceptionCentrePage from '@/pages/platform/ExceptionCentrePage';
 import PilotActivationPage from '@/pages/platform/PilotActivationPage';
 import DataMigrationPage from '@/pages/workspace/DataMigrationPage';
+import CustomerSuccessPage from '@/pages/platform/CustomerSuccessPage';
+import GoLiveReadinessCentre from '@/pages/platform/GoLiveReadinessCentre';
+import PilotDeploymentCentre from '@/pages/platform/PilotDeploymentCentre';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -224,6 +227,9 @@ const AuthenticatedApp = () => {
       <Route path="/platform/operational-health" element={<OperationalHealthDashboard />} />
       <Route path="/platform/exception-centre" element={<ExceptionCentrePage />} />
       <Route path="/platform/pilot-activation" element={<PilotActivationPage />} />
+      <Route path="/platform/customer-success" element={<CustomerSuccessPage />} />
+      <Route path="/platform/go-live-readiness" element={<GoLiveReadinessCentre />} />
+      <Route path="/platform/pilot-deployment" element={<PilotDeploymentCentre />} />
 
       {/* Dev — Automated Test Suites */}
       <Route path="/dev/task-tests" element={<TaskTestSuite />} />
