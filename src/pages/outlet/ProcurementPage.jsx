@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/use-toast';
 import {
   ShoppingCart, Plus, Trash2, Loader2
 } from 'lucide-react';
+import LoadingState from '@/components/shared/LoadingState';
 import { ShieldGuard } from '@/lib/ShieldGuard';
 import GovernanceOverrideModal from '@/components/shield/GovernanceOverrideModal';
 import AccessButton from '@/components/shared/AccessButton';
@@ -250,11 +251,7 @@ export default function ProcurementPage() {
         />
 
         <div className="space-y-3">
-          {loading && (
-            <div className="flex justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
+          {loading && <LoadingState message="Loading purchase orders..." />}
           {pos.map(po => (
             <div key={po.id} className="bg-card border border-border rounded-xl overflow-hidden hover:shadow-md transition-shadow">
               <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -349,7 +346,7 @@ export default function ProcurementPage() {
                       <Input placeholder="Price" type="number" value={item.unit_price} onChange={e => updateLine(idx, 'unit_price', e.target.value)} className="text-xs" />
                     </div>
                     <div className="col-span-1">
-                      <button onClick={() => removeLine(idx)} className="text-muted-foreground hover:text-destructive">
+                      <button onClick={() => removeLine(idx)} aria-label={`Remove line ${idx + 1}`} className="text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>

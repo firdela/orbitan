@@ -8,6 +8,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import {
   BarChart2, TrendingUp, DollarSign, Package, CheckCircle2, Loader2, Activity, ShoppingCart, Layers,
 } from 'lucide-react';
+import LoadingState from '@/components/shared/LoadingState';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import PerformanceHeatmap from '@/components/reporting/PerformanceHeatmap';
 import RegistryMetrics from '@/components/reporting/RegistryMetrics';
@@ -74,10 +75,7 @@ export default function ReportsPage() {
         />
 
         {loading ? (
-          <div className="flex items-center justify-center py-20 gap-2.5">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Loading reports…</span>
-          </div>
+          <LoadingState message="Loading reports…" size="lg" />
         ) : (
           <>
             {/* KPI Stats — real data only, zero when empty */}
@@ -158,10 +156,10 @@ export default function ReportsPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Date</th>
-                        <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Revenue</th>
-                        <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Profit</th>
-                        <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Margin</th>
+                        <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Date</th>
+                        <th scope="col" className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Revenue</th>
+                        <th scope="col" className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Profit</th>
+                        <th scope="col" className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Margin</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">

@@ -26,6 +26,8 @@ import {
 import { Card } from '@/components/ui/card';
 import ReportIssueModal from '@/components/shared/ReportIssueModal';
 import EmptyState from '@/components/shared/EmptyState';
+import LoadingState from '@/components/shared/LoadingState';
+import StatusBadge from '@/components/shared/StatusBadge';
 import PageHeader from '@/components/shared/PageHeader';
 import {
   MessageSquare, Sparkles, TrendingUp, CheckCircle2, Loader2,
@@ -64,12 +66,7 @@ const WORKFLOW_STEPS = [
 
 const WORKFLOW_FILTERS = ['all', ...WORKFLOW_STEPS.map(s => s.key)];
 
-const SEVERITY_STYLES = {
-  low: 'bg-green-100 text-green-700 border-green-200',
-  medium: 'bg-amber-100 text-amber-700 border-amber-200',
-  high: 'bg-orange-100 text-orange-700 border-orange-200',
-  critical: 'bg-red-100 text-red-700 border-red-200',
-};
+// Severity badges now use the shared StatusBadge component (keys: low/medium/high/critical)
 
 const SENTIMENT_STYLES = {
   positive: { icon: '😊', color: 'text-green-600' },
@@ -147,8 +144,8 @@ export default function FeedbackCentre() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="py-4">
+        <LoadingState message="Loading feedback..." />
       </div>
     );
   }
@@ -307,9 +304,7 @@ function FeedbackCard({ issue }) {
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-sm font-semibold text-foreground truncate">{issue.title}</h3>
             {issue.severity && (
-              <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded border flex-shrink-0', SEVERITY_STYLES[issue.severity] || SEVERITY_STYLES.medium)}>
-                {issue.severity}
-              </span>
+              <StatusBadge status={issue.severity} className="flex-shrink-0" />
             )}
           </div>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -420,6 +415,8 @@ function FeedbackCard({ issue }) {
       {issue.description && (
         <button
           onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-controls={`issue-detail-${issue.id}`}
           className="mt-3 text-xs text-orbitan-blue hover:underline flex items-center gap-1"
         >
           {expanded ? 'Hide details' : 'Show details'}
@@ -427,7 +424,7 @@ function FeedbackCard({ issue }) {
         </button>
       )}
       {expanded && issue.description && (
-        <p className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap bg-muted/50 rounded-lg p-3">
+        <p id={`issue-detail-${issue.id}`} className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap bg-muted/50 rounded-lg p-3">
           {issue.description}
         </p>
       )}

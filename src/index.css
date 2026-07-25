@@ -72,6 +72,13 @@
     --orbitan-purple: 263 70% 50%;
     --orbitan-purple-light: 263 70% 96%;
 
+    /* ── WCAG AA text variants — darker shades for text on light backgrounds (Build #19B-3) ── */
+    --orbitan-blue-700: 221 83% 35%;
+    --orbitan-green-700: 138 72% 28%;
+    --orbitan-amber-700: 38 85% 30%;
+    --orbitan-red-700: 0 72% 38%;
+    --orbitan-purple-700: 263 60% 38%;
+
     /* ── Marketing Dark Surfaces — public-facing pages (Landing, Auth Gateway) ── */
     --marketing-bg: 222 47% 5%;           /* #0A0F1A — main marketing dark background */
     --marketing-surface: 222 40% 8%;      /* #0F172A — card / phone surface */

@@ -73,6 +73,11 @@ module.exports = {
           'red-light': 'hsl(var(--orbitan-red-light))',
           purple: 'hsl(var(--orbitan-purple))',
           'purple-light': 'hsl(var(--orbitan-purple-light))',
+          'blue-700': 'hsl(var(--orbitan-blue-700))',
+          'green-700': 'hsl(var(--orbitan-green-700))',
+          'amber-700': 'hsl(var(--orbitan-amber-700))',
+          'red-700': 'hsl(var(--orbitan-red-700))',
+          'purple-700': 'hsl(var(--orbitan-purple-700))',
         },
         // Subscription plan colours
         plan: {

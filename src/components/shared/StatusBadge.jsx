@@ -3,69 +3,72 @@ import { cn } from '@/lib/utils';
 
 const STATUS_CONFIG = {
   // Generic
-  active: { label: 'Active', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
+  active: { label: 'Active', classes: 'bg-orbitan-green-light text-orbitan-green-700 border-green-100' },
   inactive: { label: 'Inactive', classes: 'bg-muted text-muted-foreground border-border' },
   // Tenant
-  onboarding: { label: 'Onboarding', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
-  suspended: { label: 'Suspended', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
-  trial: { label: 'Trial', classes: 'bg-orbitan-purple-light text-orbitan-purple border-purple-100' },
+  onboarding: { label: 'Onboarding', classes: 'bg-orbitan-amber-light text-orbitan-amber-700 border-amber-100' },
+  suspended: { label: 'Suspended', classes: 'bg-orbitan-red-light text-orbitan-red-700 border-red-100' },
+  trial: { label: 'Trial', classes: 'bg-orbitan-purple-light text-orbitan-purple-700 border-purple-100' },
   cancelled: { label: 'Cancelled', classes: 'bg-muted text-muted-foreground border-border' },
   // PO
   draft: { label: 'Draft', classes: 'bg-muted text-muted-foreground border-border' },
-  pending_approval: { label: 'Pending Approval', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
-  approved: { label: 'Approved', classes: 'bg-orbitan-blue-light text-orbitan-blue border-blue-100' },
-  sent: { label: 'Sent', classes: 'bg-orbitan-purple-light text-orbitan-purple border-purple-100' },
-  partially_received: { label: 'Partial', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
-  received: { label: 'Received', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
+  pending_approval: { label: 'Pending Approval', classes: 'bg-orbitan-amber-light text-orbitan-amber-700 border-amber-100' },
+  approved: { label: 'Approved', classes: 'bg-orbitan-blue-light text-orbitan-blue-700 border-blue-100' },
+  sent: { label: 'Sent', classes: 'bg-orbitan-purple-light text-orbitan-purple-700 border-purple-100' },
+  partially_received: { label: 'Partial', classes: 'bg-orbitan-amber-light text-orbitan-amber-700 border-amber-100' },
+  received: { label: 'Received', classes: 'bg-orbitan-green-light text-orbitan-green-700 border-green-100' },
   // Invoice
-  paid: { label: 'Paid', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
-  pending: { label: 'Pending', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
-  overdue: { label: 'Overdue', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
+  paid: { label: 'Paid', classes: 'bg-orbitan-green-light text-orbitan-green-700 border-green-100' },
+  pending: { label: 'Pending', classes: 'bg-orbitan-amber-light text-orbitan-amber-700 border-amber-100' },
+  overdue: { label: 'Overdue', classes: 'bg-orbitan-red-light text-orbitan-red-700 border-red-100' },
   // Shift
-  scheduled: { label: 'Scheduled', classes: 'bg-orbitan-blue-light text-orbitan-blue border-blue-100' },
-  confirmed: { label: 'Confirmed', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
-  in_progress: { label: 'In Progress', classes: 'bg-orbitan-purple-light text-orbitan-purple border-purple-100' },
-  completed: { label: 'Completed', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
-  absent: { label: 'Absent', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
+  scheduled: { label: 'Scheduled', classes: 'bg-orbitan-blue-light text-orbitan-blue-700 border-blue-100' },
+  confirmed: { label: 'Confirmed', classes: 'bg-orbitan-green-light text-orbitan-green-700 border-green-100' },
+  in_progress: { label: 'In Progress', classes: 'bg-orbitan-purple-light text-orbitan-purple-700 border-purple-100' },
+  completed: { label: 'Completed', classes: 'bg-orbitan-green-light text-orbitan-green-700 border-green-100' },
+  absent: { label: 'Absent', classes: 'bg-orbitan-red-light text-orbitan-red-700 border-red-100' },
   // Task (governed lifecycle — ADR-0047 OSF)
-  'in-progress': { label: 'In Progress', classes: 'bg-orbitan-purple-light text-orbitan-purple border-purple-100' },
-  assigned: { label: 'Assigned', classes: 'bg-orbitan-blue-light text-orbitan-blue border-blue-100' },
-  acknowledged: { label: 'Acknowledged', classes: 'bg-orbitan-purple-light text-orbitan-purple border-purple-100' },
-  blocked: { label: 'Blocked', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
-  submitted_for_review: { label: 'Submitted', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
-  changes_required: { label: 'Changes Required', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
-  verified: { label: 'Verified', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
+  'in-progress': { label: 'In Progress', classes: 'bg-orbitan-purple-light text-orbitan-purple-700 border-purple-100' },
+  assigned: { label: 'Assigned', classes: 'bg-orbitan-blue-light text-orbitan-blue-700 border-blue-100' },
+  acknowledged: { label: 'Acknowledged', classes: 'bg-orbitan-purple-light text-orbitan-purple-700 border-purple-100' },
+  blocked: { label: 'Blocked', classes: 'bg-orbitan-red-light text-orbitan-red-700 border-red-100' },
+  submitted_for_review: { label: 'Submitted', classes: 'bg-orbitan-amber-light text-orbitan-amber-700 border-amber-100' },
+  changes_required: { label: 'Changes Required', classes: 'bg-orbitan-amber-light text-orbitan-amber-700 border-amber-100' },
+  verified: { label: 'Verified', classes: 'bg-orbitan-green-light text-orbitan-green-700 border-green-100' },
   // Compliance
-  submitted: { label: 'Submitted', classes: 'bg-orbitan-blue-light text-orbitan-blue border-blue-100' },
-  in_review: { label: 'In Review', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
-  rejected: { label: 'Rejected', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
-  flagged: { label: 'Flagged', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
+  submitted: { label: 'Submitted', classes: 'bg-orbitan-blue-light text-orbitan-blue-700 border-blue-100' },
+  in_review: { label: 'In Review', classes: 'bg-orbitan-amber-light text-orbitan-amber-700 border-amber-100' },
+  rejected: { label: 'Rejected', classes: 'bg-orbitan-red-light text-orbitan-red-700 border-red-100' },
+  flagged: { label: 'Flagged', classes: 'bg-orbitan-red-light text-orbitan-red-700 border-red-100' },
   // Xero
   not_synced: { label: 'Not Synced', classes: 'bg-muted text-muted-foreground border-border' },
-  synced: { label: 'Synced', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
-  error: { label: 'Sync Error', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
+  synced: { label: 'Synced', classes: 'bg-orbitan-green-light text-orbitan-green-700 border-green-100' },
+  error: { label: 'Sync Error', classes: 'bg-orbitan-red-light text-orbitan-red-700 border-red-100' },
   // Shift Trades
-  denied: { label: 'Denied', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
-  cancelled: { label: 'Cancelled', classes: 'bg-muted text-muted-foreground border-border' },
+  denied: { label: 'Denied', classes: 'bg-orbitan-red-light text-orbitan-red-700 border-red-100' },
   expired: { label: 'Expired', classes: 'bg-muted text-muted-foreground border-border' },
   // Expenses
-  reimbursed: { label: 'Reimbursed', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
+  reimbursed: { label: 'Reimbursed', classes: 'bg-orbitan-green-light text-orbitan-green-700 border-green-100' },
   // Stock Count
-  counted: { label: 'Counted', classes: 'bg-orbitan-blue-light text-orbitan-blue border-blue-100' },
-  reviewed: { label: 'Reviewed', classes: 'bg-orbitan-purple-light text-orbitan-purple border-purple-100' },
-  adjusted: { label: 'Adjusted', classes: 'bg-orbitan-green-light text-orbitan-green border-green-100' },
-  flagged: { label: 'Flagged', classes: 'bg-orbitan-red-light text-orbitan-red border-red-100' },
+  counted: { label: 'Counted', classes: 'bg-orbitan-blue-light text-orbitan-blue-700 border-blue-100' },
+  reviewed: { label: 'Reviewed', classes: 'bg-orbitan-purple-light text-orbitan-purple-700 border-purple-100' },
+  adjusted: { label: 'Adjusted', classes: 'bg-orbitan-green-light text-orbitan-green-700 border-green-100' },
   // Client
-  prospective: { label: 'Prospective', classes: 'bg-orbitan-amber-light text-orbitan-amber border-amber-100' },
+  prospective: { label: 'Prospective', classes: 'bg-orbitan-amber-light text-orbitan-amber-700 border-amber-100' },
   archived: { label: 'Archived', classes: 'bg-muted text-muted-foreground border-border' },
+  // Severity (feedback / issue tracking — Build #19B-3)
+  low: { label: 'Low', classes: 'bg-orbitan-green-light text-orbitan-green-700 border-green-100' },
+  medium: { label: 'Medium', classes: 'bg-orbitan-amber-light text-orbitan-amber-700 border-amber-100' },
+  high: { label: 'High', classes: 'bg-orange-50 text-orbitan-amber-700 border-orange-200' },
+  critical: { label: 'Critical', classes: 'bg-orbitan-red-light text-orbitan-red-700 border-red-100' },
 };
 
-export default function StatusBadge({ status, label, size = 'sm' }) {
+export default function StatusBadge({ status, label, size = 'sm', className }) {
   const config = STATUS_CONFIG[status] || { label: label || status, classes: 'bg-muted text-muted-foreground border-border' };
   const sizeClass = size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-sm px-2.5 py-1';
 
   return (
-    <span className={`inline-flex items-center rounded-full border font-medium ${config.classes} ${sizeClass}`}>
+    <span className={cn('inline-flex items-center rounded-full border font-medium', config.classes, sizeClass, className)}>
       {config.label}
     </span>
   );

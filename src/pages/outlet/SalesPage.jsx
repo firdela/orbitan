@@ -19,6 +19,7 @@ import {
   Plus, Home, Users, Calendar, ShoppingCart, CheckSquare,
   BarChart2, Shield, Layers, Building2, RefreshCw, Inbox, Loader2
 } from 'lucide-react';
+import LoadingState from '@/components/shared/LoadingState';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import AccessButton from '@/components/shared/AccessButton';
@@ -142,8 +143,8 @@ export default function SalesPage() {
           {currentTenant?.id ? (
             <FinanceReviewQueue tenantId={currentTenant.id} />
           ) : (
-            <div className="bg-card border border-dashed border-border rounded-xl p-8 text-center">
-              <p className="text-sm text-muted-foreground">No tenant context available. Please complete onboarding to access the Reconciliation Inbox.</p>
+            <div className="bg-card border border-dashed border-border rounded-xl">
+              <EmptyState icon={Inbox} title="No tenant context" description="Please complete onboarding to access the Reconciliation Inbox." color="slate" />
             </div>
           )}
         </div>
@@ -156,23 +157,20 @@ export default function SalesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Date</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Revenue</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground hidden sm:table-cell">COGS</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Gross Profit</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground hidden md:table-cell">Margin</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground">Status</th>
-                  <th className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground">Xero</th>
+                  <th scope="col" className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Date</th>
+                  <th scope="col" className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Revenue</th>
+                  <th scope="col" className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground hidden sm:table-cell">COGS</th>
+                  <th scope="col" className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Gross Profit</th>
+                  <th scope="col" className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground hidden md:table-cell">Margin</th>
+                  <th scope="col" className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground">Status</th>
+                  <th scope="col" className="text-center px-4 py-3 text-xs font-semibold text-muted-foreground">Xero</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {loading && (
                   <tr>
-                    <td colSpan={7} className="py-16">
-                      <div className="flex items-center justify-center gap-2.5">
-                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">Loading reconciliations…</span>
-                      </div>
+                    <td colSpan={7}>
+                      <LoadingState message="Loading reconciliations…" />
                     </td>
                   </tr>
                 )}

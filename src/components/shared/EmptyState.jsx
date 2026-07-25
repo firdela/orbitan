@@ -26,11 +26,14 @@ export default function EmptyState({
   const isLarge = size === 'large';
 
   return (
-    <div className={cn(
-      'flex flex-col items-center justify-center text-center py-16 px-6 animate-fade-in',
-      isLarge && 'py-24',
-      className
-    )}>
+    <div
+      role="status"
+      className={cn(
+        'flex flex-col items-center justify-center text-center py-16 px-6 animate-fade-in',
+        isLarge && 'py-24',
+        className
+      )}
+    >
       {Icon && (
         <div className={cn(
           'rounded-2xl flex items-center justify-center mb-5',
