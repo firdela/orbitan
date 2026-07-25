@@ -54,6 +54,65 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #14 (Final Pilot Validation, Customer Onboarding & Production Launch Readiness)
+
+### Added — Pilot Readiness Core (Parts R/W/O/V)
+- **`pilotReadiness`** backend function — `readiness` action: deterministic
+  weighted 22-item onboarding checklist across 7 categories, computed from
+  REAL tenant records + manual attestation flags. Readiness % = completed
+  weight ÷ total weight. Go-live recommendation: Not Ready → Conditionally
+  Ready → Ready for Controlled Pilot (never "Ready" while a critical blocker
+  remains). `diagnostics` action: admin-only support diagnostics (version,
+  tenant identity, recent backend failures with correlation IDs, finance
+  queue health, Nexus insight status, connection status — no secrets).
+- **`OnboardingChecklist`** entity — manual attestation flags + owner/contact
+  details. RLS: admin/tenant_admin.
+- **`PilotReadinessDashboard`** at `/platform/pilot-readiness` — readiness
+  ring, recommendation, checklist by category, critical blockers, external
+  dependencies, manual flag toggles.
+- **`SupportDiagnostics`** at `/platform/diagnostics` — authorised admin
+  diagnostics view with correlation-ID triage.
+
+### Validation (Parts A–N) — fixes applied where confirmed
+- Audited navigation/routes: no dead/duplicate/blank-page defects in
+  pilot-critical path (intact after #13).
+- Confirmed bounded-query architecture (ADR-0049) on the dashboard path — no
+  unbounded/duplicate-query defects; no changes required.
+- Structural RLS verified (tenant + outlet isolation) via existing
+  `rlsStructureValidator` / `accessValidationHarness`.
+- Transactional engines (production/sales/finance) deploy-verified with
+  rollback + idempotency.
+- Orbit Nexus action-safety + insufficient-data/LLM-fallback re-confirmed.
+- Finance/Xero: internal architecture tested; live authorisation + sync
+  pending XERO_CLIENT_ID/SECRET.
+- Full per-role/per-tenant live regression deferred to #15 (requires real
+  pilot tenants).
+
+### Documentation (Part S) — customer + support
+- `customer-onboarding-guide.md`, `support-runbook.md`,
+  `known-limitations.md`, `pilot-readiness-checklist.md`,
+  `defect-register.md`, `test-matrix.md`, `recovery-runbook.md`.
+
+### Honest release status (Part Z)
+- Go-Live Recommendation: **Conditionally Ready** (architecture + operational
+  backbone + intelligence + onboarding + diagnostics + documentation complete;
+  full live regression + Xero credentials remain).
+- No fabricated pilot completion, customer approval, performance
+  measurements, security/accessibility certification, Xero live sync, or
+  predictive-model accuracy.
+- F&B Pack ~97%, overall MVP ~92%, pilot readiness ~85%.
+
+### Files
+- Created: `OnboardingChecklist` entity, `pilotReadiness` function,
+  `PilotReadinessDashboard` + `SupportDiagnostics` pages, 7 Knowledge Hub docs.
+- Modified: `src/App.jsx` (routes), `src/lib/navigation-registry.js` (nav),
+  `CHANGELOG.md`.
+- Refactored/removed: none.
+
+### Next
+**Build Package #15 — Controlled Pilot Go-Live, Feedback Loop and Defect
+Resolution** (run only after #14 reports Conditionally Ready / Ready).
+
 ## [Unreleased] — Build Package #13 (Orbit Nexus Grounded Intelligence + Pilot Hardening)
 
 ### Added — Orbit Nexus Intelligence Layer (Parts A–N)

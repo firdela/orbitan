@@ -1,0 +1,158 @@
+{
+  "name": "OnboardingChecklist",
+  "type": "object",
+  "description": "OrbitanOS Pilot Readiness \u2014 per-tenant onboarding checklist manual attestation (Build Package #14, Parts R/W). Auto-detected items (tenant/outlet/inventory/sales/etc.) are computed by the pilotReadiness function from real data; this entity stores only the manual-attestation flags (permissions reviewed, security review complete, pilot owner confirmed, support contact confirmed, Xero status reviewed) plus owner/contact details. Readiness % is deterministic and explainable. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "manual_flags": {
+      "type": "object",
+      "description": "Boolean attestation flags: permissions_reviewed, security_review_complete, pilot_owner_confirmed, support_contact_confirmed, xero_status_reviewed",
+      "properties": {
+        "permissions_reviewed": {
+          "type": "boolean",
+          "default": false
+        },
+        "security_review_complete": {
+          "type": "boolean",
+          "default": false
+        },
+        "pilot_owner_confirmed": {
+          "type": "boolean",
+          "default": false
+        },
+        "support_contact_confirmed": {
+          "type": "boolean",
+          "default": false
+        },
+        "xero_status_reviewed": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "pilot_owner_name": {
+      "type": "string"
+    },
+    "support_contact_name": {
+      "type": "string"
+    },
+    "support_contact_email": {
+      "type": "string"
+    },
+    "support_contact_phone": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "last_computed_readiness_pct": {
+      "type": "number",
+      "description": "Cached readiness % from the last pilotReadiness run"
+    },
+    "last_computed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_by": {
+      "type": "string"
+    },
+    "updated_by_name": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "tenant_id"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

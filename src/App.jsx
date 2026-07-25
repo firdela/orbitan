@@ -83,6 +83,8 @@ import TimesheetManager from '@/pages/workforce/TimesheetManager';
 import ProductionPage from '@/pages/outlet/ProductionPage';
 import FinanceIntegrationPage from '@/pages/workspace/FinanceIntegrationPage';
 import NexusIntelligencePage from '@/pages/workspace/NexusIntelligencePage';
+import PilotReadinessDashboard from '@/pages/platform/PilotReadinessDashboard';
+import SupportDiagnostics from '@/pages/platform/SupportDiagnostics';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -210,6 +212,8 @@ const AuthenticatedApp = () => {
       <Route path="/platform/audit-logs" element={<AuditLogPage />} />
       <Route path="/platform/access-control" element={<AccessControlPage />} />
       <Route path="/platform/capabilities" element={<CapabilityManager />} />
+      <Route path="/platform/pilot-readiness" element={<PilotReadinessDashboard />} />
+      <Route path="/platform/diagnostics" element={<SupportDiagnostics />} />
 
       {/* Dev — Automated Test Suites */}
       <Route path="/dev/task-tests" element={<TaskTestSuite />} />
