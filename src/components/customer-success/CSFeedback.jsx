@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import EmptyState from '@/components/shared/EmptyState';
-import { MessageSquare, ThumbsUp, ThumbsDown, Frown, Meh, Smile } from 'lucide-react';
+import { MessageSquare, ThumbsDown, Frown, Meh, Smile } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SENTIMENT_META = {

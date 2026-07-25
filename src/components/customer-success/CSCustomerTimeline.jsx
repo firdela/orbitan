@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import EmptyState from '@/components/shared/EmptyState';
 import LoadingState from '@/components/shared/LoadingState';
-import { History, MessageSquare, Activity, StickyNote, Flag, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { History, MessageSquare, Activity, StickyNote, Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TYPE_META = {

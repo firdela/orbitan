@@ -3,7 +3,6 @@ import { Card } from '@/components/ui/card';
 import EmptyState from '@/components/shared/EmptyState';
 import CSHealthBadge from './CSHealthBadge';
 import { ClipboardCheck, AlertTriangle, CheckCircle2, Clock, UserCog } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 // Section 3 — Onboarding Progress: portfolio-wide outstanding setup tasks + per-tenant checklist
 export default function CSOnboardingProgress({ customers, onSelectCustomer }) {

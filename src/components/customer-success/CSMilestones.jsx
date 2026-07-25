@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import EmptyState from '@/components/shared/EmptyState';
-import { Flag, CheckCircle2, Calendar } from 'lucide-react';
+import { Flag, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MILESTONE_LABELS = {

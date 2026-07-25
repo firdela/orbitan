@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import CSHealthBadge, { HEALTH_TIERS } from './CSHealthBadge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -17,7 +17,7 @@ const FACTOR_META = [
 
 // Section 4 — Health Score: composite breakdown per tenant
 export default function CSHealthScore({ customers, onSelectCustomer, selectedId }) {
-  const sorted = [...customers].sort((a, b) => a.health - b.health);
+  const sorted = useMemo(() => [...customers].sort((a, b) => a.health - b.health), [customers]);
 
   return (
     <div className="space-y-6 animate-fade-in">

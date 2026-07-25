@@ -3,21 +3,17 @@ import { Card } from '@/components/ui/card';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
 import { LifeBuoy, AlertTriangle, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 // Section 8 — Support Overview: portfolio-wide ticket summary + resolution metrics + recent issues
 export default function CSSupportOverview({ customers, onSelectCustomer }) {
   const stats = useMemo(() => {
-    let open = 0, escalations = 0, resolved = 0, total = 0;
-    const recent = [];
-    const tenantTicketMap = {};
+    let open = 0, escalations = 0, total = 0;
     for (const c of customers) {
       open += c.feedback.open;
       escalations += c.feedback.escalations;
       total += c.feedback.total;
-      tenantTicketMap[c.tenant_id] = c.feedback;
     }
-    return { open, escalations, total, customers };
+    return { open, escalations, total };
   }, [customers]);
 
   const avgResolution = customers.length ? customers.filter(c => c.feedback.avg_resolution_days != null).reduce((s, c) => s + c.feedback.avg_resolution_days, 0) / Math.max(1, customers.filter(c => c.feedback.avg_resolution_days != null).length) : 0;

@@ -1,14 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import CSHealthBadge from './CSHealthBadge';
 import StatusBadge from '@/components/shared/StatusBadge';
 import LoadingState from '@/components/shared/LoadingState';
 import { X, Activity, MessageSquare, StickyNote, Flag, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 // Enhanced detail drawer — tabs for timeline, notes, milestones, feedback
 export default function CSDetailDrawer({ selected, detail, detailLoading, onClose, onAddNote, savingNote }) {
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selected, onClose]);
+
   if (!selected) return null;
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -112,7 +119,7 @@ function DetailNotes({ detail, onAddNote, savingNote, tenantId }) {
   const notes = detail?.notes || [];
   const [quickNote, setQuickNote] = React.useState('');
   return <div className="space-y-3">
-    <textarea value={quickNote} onChange={e => setQuickNote(e.target.value)} rows={2} placeholder="Add a quick note…" className="w-full rounded-md border border-input bg-transparent p-3 text-sm" aria-label="Quick note" />
+    <Textarea value={quickNote} onChange={e => setQuickNote(e.target.value)} rows={2} placeholder="Add a quick note…" aria-label="Quick note" />
     <Button size="sm" onClick={() => { onAddNote?.(tenantId, quickNote.trim(), 'medium', []); setQuickNote(''); }} disabled={!quickNote.trim() || savingNote} className="gap-1.5">{savingNote ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}Save Note</Button>
     {notes.length === 0 ? <p className="text-sm text-muted-foreground">No notes yet.</p> :
       <div className="space-y-2">{notes.map(n => <div key={n.id} className="border-l-2 border-orbitan-amber/40 pl-3"><p className="text-sm">{n.details}</p><p className="text-[10px] text-muted-foreground">{n.actor_name} · {new Date(n.created_date).toLocaleString()}</p></div>)}</div>}

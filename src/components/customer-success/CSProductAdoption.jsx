@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import EmptyState from '@/components/shared/EmptyState';
 import { Package, ShoppingCart, Factory, CalendarClock, ListTodo, Users, CheckCircle2, Sparkles, TrendingUp } from 'lucide-react';
@@ -18,12 +18,12 @@ const MODULE_META = [
 // Section 5 — Product Adoption: module adoption + DAU/WAU + per-tenant usage
 export default function CSProductAdoption({ customers }) {
   // Aggregate module adoption across portfolio
-  const moduleCounts = MODULE_META.map(m => {
+  const moduleCounts = useMemo(() => MODULE_META.map(m => {
     const count = customers.filter(c => c.adoption.module_flags?.[m.key]).length;
     return { ...m, count, pct: customers.length ? Math.round((count / customers.length) * 100) : 0 };
-  });
-  const totalDau = customers.filter(c => c.dau).length;
-  const totalWau = customers.filter(c => c.wau).length;
+  }), [customers]);
+  const totalDau = useMemo(() => customers.filter(c => c.dau).length, [customers]);
+  const totalWau = useMemo(() => customers.filter(c => c.wau).length, [customers]);
 
   return (
     <div className="space-y-6 animate-fade-in">
