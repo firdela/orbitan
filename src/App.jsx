@@ -94,6 +94,16 @@ import CustomerSuccessPage from '@/pages/platform/CustomerSuccessPage';
 import GoLiveReadinessCentre from '@/pages/platform/GoLiveReadinessCentre';
 import PilotDeploymentCentre from '@/pages/platform/PilotDeploymentCentre';
 
+// Legacy route redirects — all consolidated module routes redirect to the
+// dynamic workspace resolver. Data-driven to keep App.jsx maintainable.
+const LEGACY_REDIRECTS = [
+  '/outlet/inventory', '/outlet/procurement', '/outlet/hbb', '/outlet/scheduling',
+  '/outlet/sales', '/outlet/tasks', '/outlet/workforce', '/outlet/compliance',
+  '/outlet/reports', '/outlet/feedback', '/outlet/expenses', '/outlet/shift-trades',
+  '/outlet/clients', '/outlet/sustainability',
+  '/expenses', '/shift-trades', '/clients', '/sustainability-impact',
+];
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
@@ -181,25 +191,10 @@ const AuthenticatedApp = () => {
       {/* Outlet (legacy standalone dashboard — kept for direct access) */}
       <Route path="/outlet" element={<OutletDashboard />} />
 
-      {/* Legacy route redirects — all module routes consolidated to workspace-scoped paths */}
-      <Route path="/outlet/inventory" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/procurement" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/hbb" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/scheduling" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/sales" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/tasks" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/workforce" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/compliance" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/reports" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/feedback" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/expenses" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/shift-trades" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/clients" element={<Navigate to="/workspace" replace />} />
-      <Route path="/outlet/sustainability" element={<Navigate to="/workspace" replace />} />
-      <Route path="/expenses" element={<Navigate to="/workspace" replace />} />
-      <Route path="/shift-trades" element={<Navigate to="/workspace" replace />} />
-      <Route path="/clients" element={<Navigate to="/workspace" replace />} />
-      <Route path="/sustainability-impact" element={<Navigate to="/workspace" replace />} />
+      {/* Legacy route redirects — consolidated, all redirect to the dynamic workspace */}
+      {LEGACY_REDIRECTS.map((from) => (
+        <Route key={from} path={from} element={<Navigate to="/workspace" replace />} />
+      ))}
 
       {/* Governance & Knowledge */}
       <Route path="/governance-log" element={<GovernanceLog />} />
