@@ -40,7 +40,28 @@
 | UX-06 | S4 | Responsive | WorkspaceDashboard used fixed `p-6` padding — less space-efficient on mobile vs other pages using `p-4 sm:p-6 lg:p-8` | Inconsistent responsive padding convention | Updated to `p-4 sm:p-6` to match the shared page pattern | `src/pages/workspace/WorkspaceDashboard.jsx` |
 | UX-07 | S4 | Design System | SalesPage "No tenant context" was an inline dashed-box message instead of using shared EmptyState | Minor duplicate empty-state implementation | Replaced inline div with `<EmptyState>` component | `src/pages/outlet/SalesPage.jsx` |
 
+## Validation passes (Build #19B-4 — Release Candidate Validation)
+
+| ID | Scope | Check | Result | Evidence |
+| :--- | :--- | :--- | :--- | :--- |
+| RC-01 | Navigation | Route registry parity — 65 app routes + 26 workspace sub-routes | ✅ PASS | Zero orphan routes; all 16 platform routes have nav entries; all 25 workspace page imports have routes |
+| RC-02 | Route guards | ProtectedRoute + RoleGateway + WorkspaceLayout auth enforcement | ✅ PASS | Unauthenticated → /login; workers → /worker; non-members → /join; platform admin bypass verified |
+| RC-03 | Authentication | AuthContext session validation + token refresh + error handling | ✅ PASS | user_not_registered + auth_required errors handled; checkUserAuth re-triggered on expired token |
+| RC-04 | RBAC | Access Engine + ModuleAccessPolicy + AccessButton enforcement | ✅ PASS | accessValidationHarness 16/16; ShieldGuard gates procurement spend; client-side RBAC guard on GoLiveReadinessCentre |
+| RC-05 | Multi-tenancy | RLS tenant isolation across 20 audited entities | ✅ PASS | All entities enforce tenant_id match; WorkspaceLayout rejects non-members; in-session switch invalidates only tenant-scoped cache |
+| RC-06 | PWA | Service worker + manifest + offline shell | ✅ PASS | SW registered in prod (purged in dev); manifest.json referenced; apple-mobile-web-app + theme-color meta present |
+| RC-07 | API consistency | Backend function inventory + entity SDK | ✅ PASS | 54 backend functions verified; all entity SDK calls use tenant-scoped filters; no duplicate connector functions |
+| RC-08 | Error boundaries | Auth error states + SystemGuard maintenance mode + entity load failures | ✅ PASS | UserNotRegisteredError renders for unregistered; MaintenanceView for maintenance; fail-closed catch blocks on all entity queries |
+| RC-09 | Empty/loading states | Standardized via Package 3 (LoadingState + EmptyState) | ✅ PASS | 4 inline loading patterns → LoadingState; EmptyState role="status" added; all 5 regression modules verified |
+| RC-10 | Accessibility | WCAG AA contrast + ARIA + keyboard nav | ✅ PASS | StatusBadge -700 tokens (4.5:1+); aria-label on icon buttons; aria-expanded on toggles; scope="col" on 11 table headers; StatCard focus-visible ring |
+| RC-11 | Performance | React Query staleTime + refetchInterval + memoised permissions | ✅ PASS | WorkspaceProvider memoises permissionSnapshot; memberships cache 60s staleTime; no unnecessary re-fetches on workspace switch |
+| RC-12 | Console warnings | Dev-mode SW cache purge prevents React version mismatch | ✅ PASS | PWAUpdateListener purges stale caches + unregisters SW in DEV mode |
+| RC-13 | Dead/duplicate code | Legacy redirects consolidated (P2); duplicate severity styles removed (P3) | ✅ PASS | 17 redirects → data-driven array; SEVERITY_STYLES → StatusBadge severity keys |
+
 ## Open defects
+| ID | Severity | Module | Status | Blocker |
+| :--- | :--- | :--- | :--- | :--- |
+| (none) | — | — | — | — |
 | ID | Severity | Module | Status | Blocker |
 | :--- | :--- | :--- | :--- | :--- |
 | (none) | — | — | — | — |
