@@ -59,6 +59,28 @@ export default function ResetPassword() {
     );
   }
 
+  if (success) {
+    return (
+      <AuthLayout
+        icon={CheckCircle2}
+        title="Password reset"
+        subtitle="Your password has been updated successfully"
+        footer={
+          <Link to="/login" className="text-blue-400 font-medium hover:underline">
+            Go to login
+          </Link>
+        }
+      >
+        <div className="flex flex-col items-center gap-3 text-center">
+          <CheckCircle2 className="w-12 h-12 text-orbitan-green" />
+          <p className="text-sm text-slate-200">
+            Your password was changed successfully. You will be redirected to the login page shortly.
+          </p>
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout
       icon={Lock}
