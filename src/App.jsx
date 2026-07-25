@@ -88,6 +88,8 @@ import SupportDiagnostics from '@/pages/platform/SupportDiagnostics';
 import PilotAdminPage from '@/pages/platform/PilotAdminPage';
 import OperationalHealthDashboard from '@/pages/platform/OperationalHealthDashboard';
 import ExceptionCentrePage from '@/pages/platform/ExceptionCentrePage';
+import PilotActivationPage from '@/pages/platform/PilotActivationPage';
+import DataMigrationPage from '@/pages/workspace/DataMigrationPage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -158,6 +160,7 @@ const AuthenticatedApp = () => {
         <Route path="production" element={<ProductionPage />} />
         <Route path="finance-integration" element={<FinanceIntegrationPage />} />
         <Route path="nexus-intelligence" element={<NexusIntelligencePage />} />
+        <Route path="data-migration" element={<DataMigrationPage />} />
       </Route>
 
       {/* Self-Serve Business Installation Wizard — Create Organisation */}
@@ -220,6 +223,7 @@ const AuthenticatedApp = () => {
       <Route path="/platform/pilot-admin" element={<PilotAdminPage />} />
       <Route path="/platform/operational-health" element={<OperationalHealthDashboard />} />
       <Route path="/platform/exception-centre" element={<ExceptionCentrePage />} />
+      <Route path="/platform/pilot-activation" element={<PilotActivationPage />} />
 
       {/* Dev — Automated Test Suites */}
       <Route path="/dev/task-tests" element={<TaskTestSuite />} />

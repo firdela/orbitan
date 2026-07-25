@@ -127,6 +127,13 @@ export const PLATFORM_NAVIGATION = {
           permission: "admin",
         },
         {
+          key: "pilot-activation",
+          label: "Pilot Activation",
+          route: "/platform/pilot-activation",
+          description: "Validate readiness and activate a pilot tenant for go-live",
+          permission: "admin",
+        },
+        {
           key: "operational-health",
           label: "Operational Health",
           route: "/platform/operational-health",

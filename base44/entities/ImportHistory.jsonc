@@ -1,0 +1,169 @@
+{
+  "name": "ImportHistory",
+  "type": "object",
+  "description": "Data Migration Engine \u2014 audit + rollback registry for bulk imports (Build Package #17). Each committed import stores the created record IDs so it can be rolled back. Powers Import History + rollback in the Data Migration page. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "entity_name": {
+      "type": "string",
+      "enum": [
+        "InventoryItem",
+        "Supplier",
+        "Recipe",
+        "Employee",
+        "CustomerProfile"
+      ],
+      "description": "Target entity imported into"
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "previewed",
+        "committed",
+        "rolled_back",
+        "failed"
+      ],
+      "default": "previewed"
+    },
+    "total_rows": {
+      "type": "number",
+      "default": 0
+    },
+    "valid_rows": {
+      "type": "number",
+      "default": 0
+    },
+    "invalid_rows": {
+      "type": "number",
+      "default": 0
+    },
+    "duplicate_rows": {
+      "type": "number",
+      "default": 0
+    },
+    "created_count": {
+      "type": "number",
+      "default": 0
+    },
+    "failed_count": {
+      "type": "number",
+      "default": 0
+    },
+    "created_record_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of records created by this import \u2014 used for rollback"
+    },
+    "field_mapping": {
+      "type": "object",
+      "description": "Column-to-field mapping used (if any)"
+    },
+    "error_summary": {
+      "type": "string"
+    },
+    "imported_by": {
+      "type": "string"
+    },
+    "imported_by_name": {
+      "type": "string"
+    },
+    "committed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rolled_back_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rollback_reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "entity_name"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

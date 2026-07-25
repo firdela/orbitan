@@ -137,6 +137,7 @@ const STANDARD_WORKSPACE_MODULES = [
   { section: 'Staffing', id: 'staff-directory', label: 'Staff Directory', icon: 'Contact', routeSuffix: '/staff-directory', moduleKey: 'staff_directory' },
   { section: 'Staffing', id: 'shift-trades', label: 'Shift Trades', icon: 'ArrowLeftRight', routeSuffix: '/shift-trades', moduleKey: 'shift_trades' },
   { section: 'Settings', id: 'facility-settings', label: 'Facility Settings', icon: 'Settings', routeSuffix: '/facility-settings', moduleKey: 'facility_settings' },
+  { section: 'Settings', id: 'data-migration', label: 'Data Migration', icon: 'Upload', routeSuffix: '/data-migration', moduleKey: 'data_migration' },
 ];
 
 function appendMissingStandardModules(result, tenantId, allowedModules, allUnlocked) {
