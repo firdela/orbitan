@@ -88,116 +88,152 @@
   ],
   "rls": {
     "create": {
-      "$and": [
+      "$or": [
         {
-          "data.tenant_id": "{{user.data.tenant_id}}"
+          "user_condition": {
+            "role": "admin"
+          }
         },
         {
-          "data.outlet_id": "{{user.data.outlet_id}}"
-        },
-        {
-          "$or": [
+          "$and": [
             {
-              "user_condition": {
-                "role": "admin"
-              }
+              "data.tenant_id": "{{user.data.tenant_id}}"
             },
             {
-              "user_condition": {
-                "role": "outlet_manager"
-              }
+              "data.outlet_id": "{{user.data.outlet_id}}"
             },
             {
-              "user_condition": {
-                "role": "supervisor"
-              }
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "supervisor"
+                  }
+                }
+              ]
             }
           ]
         }
       ]
     },
     "read": {
-      "$and": [
+      "$or": [
         {
-          "data.tenant_id": "{{user.data.tenant_id}}"
+          "user_condition": {
+            "role": "admin"
+          }
         },
         {
-          "data.outlet_id": "{{user.data.outlet_id}}"
-        },
-        {
-          "$or": [
+          "$and": [
             {
-              "user_condition": {
-                "role": "admin"
-              }
+              "data.tenant_id": "{{user.data.tenant_id}}"
             },
             {
-              "user_condition": {
-                "role": "outlet_manager"
-              }
+              "data.outlet_id": "{{user.data.outlet_id}}"
             },
             {
-              "user_condition": {
-                "role": "supervisor"
-              }
-            },
-            {
-              "user_condition": {
-                "role": "worker"
-              }
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "supervisor"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "worker"
+                  }
+                }
+              ]
             }
           ]
         }
       ]
     },
     "update": {
-      "$and": [
+      "$or": [
         {
-          "data.tenant_id": "{{user.data.tenant_id}}"
+          "user_condition": {
+            "role": "admin"
+          }
         },
         {
-          "data.outlet_id": "{{user.data.outlet_id}}"
-        },
-        {
-          "$or": [
+          "$and": [
             {
-              "user_condition": {
-                "role": "admin"
-              }
+              "data.tenant_id": "{{user.data.tenant_id}}"
             },
             {
-              "user_condition": {
-                "role": "outlet_manager"
-              }
+              "data.outlet_id": "{{user.data.outlet_id}}"
             },
             {
-              "user_condition": {
-                "role": "supervisor"
-              }
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "supervisor"
+                  }
+                }
+              ]
             }
           ]
         }
       ]
     },
     "delete": {
-      "$and": [
+      "$or": [
         {
-          "data.tenant_id": "{{user.data.tenant_id}}"
+          "user_condition": {
+            "role": "admin"
+          }
         },
         {
-          "data.outlet_id": "{{user.data.outlet_id}}"
-        },
-        {
-          "$or": [
+          "$and": [
             {
-              "user_condition": {
-                "role": "admin"
-              }
+              "data.tenant_id": "{{user.data.tenant_id}}"
             },
             {
-              "user_condition": {
-                "role": "outlet_manager"
-              }
+              "data.outlet_id": "{{user.data.outlet_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                }
+              ]
             }
           ]
         }
