@@ -54,6 +54,44 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #16, Part 1 (Pilot Operations Core)
+
+### Added — Pilot Administration (#1)
+- **`pilotAdmin` backend function** — platform-admin-only pilot tenant lifecycle:
+  `list`, `create`, `activate`, `suspend`, `extend`, `convert` (to paid subscription),
+  `archive`, `delete_sandbox` (hard-delete restricted to sandbox tenants only). Every
+  state change audited (`pilot_*` action types). Zero entity changes — reuses existing
+  Tenant fields (`status`, `is_pilot_tenant`, `trial_ends_date`, `subscription_plan`).
+- **`PilotAdminPage`** at `/platform/pilot-admin` — tenant list with full lifecycle
+  actions + create-pilot dialog (name, industry, plan, duration, sandbox flag, contact).
+
+### Added — Operational Health Dashboard (#5) + Exception Centre (#6)
+- **`pilotDiagnostics` backend function** — `diagnostics`: system_health, transaction_health,
+  inventory_health, finance_sync_status, audit_integrity, derived `exceptions`,
+  `retry_queue`. `retry`: resets a failed FinanceSyncQueue entry to `pending` + audits.
+  Admin = platform-wide; tenant_admin = scoped to own tenant. Bounded queries (≤500).
+- **`OperationalHealthDashboard`** at `/platform/operational-health` — 5 health sections.
+- **`ExceptionCentrePage`** at `/platform/exception-centre` — severity-filtered exception
+  feed (finance_sync_failed, negative_stock, production_cancelled, permission_denied,
+  orphaned_invoice) + retry queue with retry action. Derived live from entity state — no
+  new entity.
+
+### Verification
+- `pilotAdmin` list: 200, returns 4 real pilot tenants.
+- `pilotDiagnostics` diagnostics: 200, 5 tenants / 4 pilots / 29 audit entries / 0
+  exceptions (honest zero — real pilots not yet operationally loaded).
+- Both admin-gated; bounded queries; audit on every mutation.
+
+### Files
+- Created: `pilotAdmin`, `pilotDiagnostics` functions; `PilotAdminPage`,
+  `OperationalHealthDashboard`, `ExceptionCentrePage` pages; implementation-notes
+  `build-package-16-pilot-operations-core.md`.
+- Modified: `src/App.jsx` (3 routes), `src/lib/navigation-registry.js` (3 nav items).
+- No entity changes. Architecture LOCKED.
+
+### Deferred to #17 (Pilot Onboarding): #2 Onboarding Wizard, #3 Bulk Import Engine.
+### Deferred to #18 (Pilot Validation & Launch): #4 UAT, #7 System Diagnostics, #8 Production Readiness Checklist, #9 Customer Success, #10 Docs, #11 Final QA.
+
 ## [Unreleased] — Build Package #15 (Controlled Pilot Go-Live, Live Regression, Feedback Loop and Defect Resolution)
 
 ### Defect resolution — transactional engines (the core of #15)

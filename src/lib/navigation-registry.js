@@ -120,6 +120,27 @@ export const PLATFORM_NAVIGATION = {
           permission: "admin",
         },
         {
+          key: "pilot-admin",
+          label: "Pilot Administration",
+          route: "/platform/pilot-admin",
+          description: "Provision, manage, and retire pilot tenants",
+          permission: "admin",
+        },
+        {
+          key: "operational-health",
+          label: "Operational Health",
+          route: "/platform/operational-health",
+          description: "System, transaction, inventory, finance, and audit health",
+          permission: "admin",
+        },
+        {
+          key: "exception-centre",
+          label: "Exception Centre",
+          route: "/platform/exception-centre",
+          description: "Derived exceptions and finance sync retry queue",
+          permission: "admin",
+        },
+        {
           key: "support-diagnostics",
           label: "Support Diagnostics",
           route: "/platform/diagnostics",

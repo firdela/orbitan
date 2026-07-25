@@ -85,6 +85,9 @@ import FinanceIntegrationPage from '@/pages/workspace/FinanceIntegrationPage';
 import NexusIntelligencePage from '@/pages/workspace/NexusIntelligencePage';
 import PilotReadinessDashboard from '@/pages/platform/PilotReadinessDashboard';
 import SupportDiagnostics from '@/pages/platform/SupportDiagnostics';
+import PilotAdminPage from '@/pages/platform/PilotAdminPage';
+import OperationalHealthDashboard from '@/pages/platform/OperationalHealthDashboard';
+import ExceptionCentrePage from '@/pages/platform/ExceptionCentrePage';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -214,6 +217,9 @@ const AuthenticatedApp = () => {
       <Route path="/platform/capabilities" element={<CapabilityManager />} />
       <Route path="/platform/pilot-readiness" element={<PilotReadinessDashboard />} />
       <Route path="/platform/diagnostics" element={<SupportDiagnostics />} />
+      <Route path="/platform/pilot-admin" element={<PilotAdminPage />} />
+      <Route path="/platform/operational-health" element={<OperationalHealthDashboard />} />
+      <Route path="/platform/exception-centre" element={<ExceptionCentrePage />} />
 
       {/* Dev — Automated Test Suites */}
       <Route path="/dev/task-tests" element={<TaskTestSuite />} />
