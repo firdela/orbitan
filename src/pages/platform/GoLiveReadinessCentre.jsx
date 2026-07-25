@@ -4,6 +4,7 @@
 // PWA / accessibility / performance checks run in the browser.
 import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -22,6 +23,7 @@ const STATUS_ICON = {
 const STATUS_LABEL = { pass: 'Pass', warning: 'Warning', fail: 'Fail', pending_client: 'Client' };
 
 export default function GoLiveReadinessCentre() {
+  const { user, isLoadingAuth } = useAuth();
   const [server, setServer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [clientChecks, setClientChecks] = useState(null);
@@ -101,6 +103,22 @@ export default function GoLiveReadinessCentre() {
     runClientChecks();
   }, []);
 
+  // Client-side RBAC guard — mirrors backend goLiveReadiness admin-only check.
+  // Non-admins who reach this route see an access-denied state instead of a
+  // raw 403 error, and are never given the chance to trigger the backend call.
+  if (isLoadingAuth) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (!user || (user.role !== 'admin' && user.role !== 'platform_admin')) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto animate-fade-in">
+        <PageHeader title="Go-Live Readiness Centre" subtitle="Unified system readiness" />
+        <div className="border border-amber-200 bg-amber-50 rounded-xl p-6 text-center">
+          <ShieldAlert className="w-10 h-10 text-orbitan-amber mx-auto mb-3" />
+          <h3 className="text-lg font-heading font-bold text-foreground mb-1">Platform admin access required</h3>
+          <p className="text-sm text-muted-foreground">The Go-Live Readiness Centre is restricted to platform administrators. Your current role does not have permission to view system readiness data.</p>
+        </div>
+      </div>
+    );
+  }
   if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (server?.error) return <div className="p-8"><div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800">{server.error}</div></div>;
   if (!server) return null;

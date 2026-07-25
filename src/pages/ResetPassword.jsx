@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Loader2, AlertTriangle } from "lucide-react";
+import { Lock, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
 export default function ResetPassword() {
@@ -15,6 +15,7 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,7 +27,12 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       await base44.auth.resetPassword({ resetToken, newPassword });
-      window.location.href = "/login";
+      setSuccess(true);
+      // replace() removes the token-bearing URL from browser history so the
+      // reset link cannot be reused via the back button or history navigation.
+      // The platform auth backend invalidates the token server-side; this
+      // client-side measure prevents the token URL from lingering in history.
+      setTimeout(() => window.location.replace("/login"), 1500);
     } catch (err) {
       setError(err.message || "Failed to reset password");
     } finally {
