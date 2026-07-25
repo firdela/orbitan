@@ -123,7 +123,9 @@ Deno.serve(async (req) => {
       const grossProfit = +(subtotal - cogsTotal).toFixed(2);
       const grossMarginPct = subtotal > 0 ? +((grossProfit / subtotal) * 100).toFixed(1) : 0;
 
-      const invoiceNumber = `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+      const invNow = new Date();
+      const invRand = Math.random().toString(36).slice(2, 4).toUpperCase();
+      const invoiceNumber = `INV-${invNow.getFullYear()}-${invRand}${Date.now().toString().slice(-6)}`;
       const invoice = await base44.asServiceRole.entities.SalesInvoice.create({
         tenant_id: tenantId,
         outlet_id: outletId,
@@ -173,7 +175,7 @@ Deno.serve(async (req) => {
             Date: invoice.date,
             LineItems: lineItems.map(li => ({
               Description: li.description, Quantity: li.quantity, UnitAmount: li.unit_price,
-              DiscountRate: li.unit_price > 0 ? (1 - (li.total / (li.unit_price * li.quantity)) * 100) : 0,
+              DiscountRate: (li.unit_price > 0 && li.quantity > 0) ? +(((1 - (li.total / (li.unit_price * li.quantity))) * 100).toFixed(2)) : 0,
             })),
             Status: 'AUTHORISED',
           },
@@ -240,7 +242,8 @@ Deno.serve(async (req) => {
       const inv = await base44.asServiceRole.entities.SalesInvoice.get(payload.invoice_id);
       if (!inv || inv.tenant_id !== tenantId) return Response.json({ error: 'Invoice not found' }, { status: 404 });
       if (inv.payment_status === 'cancelled') return Response.json({ error: 'Invoice already cancelled — refund not applicable' }, { status: 400 });
-      const amount = Math.max(0, Number(payload.amount) || 0);
+      const amount = Math.min(inv.total || 0, Math.max(0, Number(payload.amount) || 0));
+      if (amount <= 0) return Response.json({ error: 'Refund amount must be greater than 0' }, { status: 400 });
       const restock = !!payload.restock_finished_goods;
       const fullRefund = amount >= (inv.total || 0);
 

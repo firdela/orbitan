@@ -183,11 +183,11 @@ Deno.serve(async (req) => {
         d.setDate(d.getDate() + shelfLifeDays);
         expiryDate = d.toISOString().split('T')[0];
       }
-      const existingBatches = await base44.asServiceRole.entities.ProductionBatch.filter({
-        tenant_id: tenantId, outlet_id: outletId
-      });
-      const batchSeq = String((existingBatches.length || 0) + 1).padStart(4, '0');
-      const batchNumber = `PB-${new Date().getFullYear()}-${batchSeq}`;
+      // Unique, collision-proof batch reference (no unbounded fetch; survives deletions).
+      const bNow = new Date();
+      const bpad = (n, l) => String(n).padStart(l, '0');
+      const bRand = Math.random().toString(36).slice(2, 4).toUpperCase();
+      const batchNumber = `PB-${bNow.getFullYear()}-${bpad(bNow.getMonth() + 1, 2)}${bpad(bNow.getDate(), 2)}-${bpad(bNow.getHours(), 2)}${bpad(bNow.getMinutes(), 2)}${bpad(bNow.getSeconds(), 2)}${bRand}`;
 
       const consumptionSnapshot = plan.map(p => ({
         inventory_item_id: p.inventory_item_id,

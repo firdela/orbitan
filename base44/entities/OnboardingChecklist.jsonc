@@ -1,14 +1,14 @@
 {
   "name": "OnboardingChecklist",
   "type": "object",
-  "description": "OrbitanOS Pilot Readiness \u2014 per-tenant onboarding checklist manual attestation (Build Package #14, Parts R/W). Auto-detected items (tenant/outlet/inventory/sales/etc.) are computed by the pilotReadiness function from real data; this entity stores only the manual-attestation flags (permissions reviewed, security review complete, pilot owner confirmed, support contact confirmed, Xero status reviewed) plus owner/contact details. Readiness % is deterministic and explainable. Exit-Ready: pure schema, portable to any stack.",
+  "description": "OrbitanOS Pilot Readiness \u2014 per-tenant onboarding checklist manual attestation (Build Package #14, Parts R/W; #15 adds tenant_admin_signoff launch sign-off). Auto-detected items are computed by the pilotReadiness function from real data; this entity stores manual-attestation flags (permissions reviewed, security review complete, pilot owner confirmed, support contact confirmed, Xero status reviewed, customer tenant admin sign-off) plus owner/contact details. Readiness % is deterministic and explainable. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
     },
     "manual_flags": {
       "type": "object",
-      "description": "Boolean attestation flags: permissions_reviewed, security_review_complete, pilot_owner_confirmed, support_contact_confirmed, xero_status_reviewed",
+      "description": "Boolean attestation flags: permissions_reviewed, security_review_complete, pilot_owner_confirmed, support_contact_confirmed, xero_status_reviewed, tenant_admin_signoff (Part W launch sign-off)",
       "properties": {
         "permissions_reviewed": {
           "type": "boolean",
@@ -27,6 +27,10 @@
           "default": false
         },
         "xero_status_reviewed": {
+          "type": "boolean",
+          "default": false
+        },
+        "tenant_admin_signoff": {
           "type": "boolean",
           "default": false
         }

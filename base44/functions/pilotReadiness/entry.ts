@@ -47,6 +47,7 @@ const ITEM_DEFS = [
   ['security_review_complete', 'Security review complete', 'Governance', 6, 'manual', false],
   ['pilot_owner_confirmed', 'Pilot owner confirmed', 'Pilot Controls', 4, 'manual', false],
   ['support_contact_confirmed', 'Support contact confirmed', 'Pilot Controls', 4, 'manual', false],
+  ['tenant_admin_signoff', 'Customer tenant admin sign-off', 'Pilot Controls', 3, 'manual', false],
 ];
 
 Deno.serve(async (req) => {
@@ -122,6 +123,7 @@ Deno.serve(async (req) => {
         security_review_complete: manual.security_review_complete === true,
         pilot_owner_confirmed: manual.pilot_owner_confirmed === true,
         support_contact_confirmed: manual.support_contact_confirmed === true,
+        tenant_admin_signoff: manual.tenant_admin_signoff === true,
       };
 
       const items = ITEM_DEFS.map(([key, label, category, weight, source, critical]) => {
@@ -138,7 +140,7 @@ Deno.serve(async (req) => {
       let recommendation;
       if (criticalBlockers.length > 0 || readinessPct < 60) {
         recommendation = 'Not Ready';
-      } else if (readinessPct < 90 || incomplete.some(i => ['pilot_owner_confirmed', 'support_contact_confirmed', 'security_review_complete'].includes(i.key) && !i.complete)) {
+      } else if (readinessPct < 90 || incomplete.some(i => ['pilot_owner_confirmed', 'support_contact_confirmed', 'security_review_complete', 'tenant_admin_signoff'].includes(i.key) && !i.complete)) {
         recommendation = 'Conditionally Ready';
       } else {
         recommendation = 'Ready for Controlled Pilot';

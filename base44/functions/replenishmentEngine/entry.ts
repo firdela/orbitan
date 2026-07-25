@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
       tenant_id: tenantId,
       outlet_id: outletId,
       status: 'active'
-    });
+    }, '-created_date', 500);
 
     // 2. Fetch last 7 days of sales invoices
     const sevenDaysAgo = new Date();
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     const salesInvoices = await base44.entities.SalesInvoice.filter({
       tenant_id: tenantId,
       outlet_id: outletId
-    });
+    }, '-created_date', 200);
 
     const recentSales = salesInvoices.filter(inv => {
       const invDate = new Date(inv.date);

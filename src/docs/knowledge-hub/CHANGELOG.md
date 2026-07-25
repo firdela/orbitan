@@ -54,6 +54,39 @@ adheres to [Semantic Versioning](https://semver.org/).
 - `accessValidationHarness` backend suite + frontend Access Engine suite
   execute green (see `/dev/access-validation`).
 
+## [Unreleased] — Build Package #15 (Controlled Pilot Go-Live, Live Regression, Feedback Loop and Defect Resolution)
+
+### Defect resolution — transactional engines (the core of #15)
+Source inspection of the four transactional engines found and fixed **5 confirmed defects**:
+- **DEF-001 (S2)** `salesEngine` — `DiscountRate` sent to Xero was mathematically wrong (`1 - (total/gross)*100` ≈ -99% for full-price sales). Fixed to `(1 - total/gross)*100`.
+- **DEF-002 (S2)** `salesEngine` — refund `amount` was not clamped to invoice total (could refund more than the sale). Now clamped + rejects ≤ 0.
+- **DEF-003 (S2)** `salesEngine` — invoice number (`Date.now().slice(-6)`) not guaranteed unique. Added random suffix.
+- **DEF-004 (S2)** `productionEngine` — batch number derived from `existingBatches.length + 1` duplicated after any batch deletion (violated "no duplicate batch numbers"); also an unbounded fetch. Now a unique timestamp+random reference; unbounded fetch removed.
+- **DEF-005 (S3)** `replenishmentEngine` — unbounded inventory/sales fetches. Bounded to 500/200.
+All 5 retested — functions redeploy with validation gates intact; discount math verified by inspection.
+
+### Launch checkpoint (Part W)
+- Added **customer tenant admin sign-off** (`tenant_admin_signoff`) to the readiness framework — the 4 required launch sign-offs (platform pilot owner, customer tenant admin, security, support) are now manual-attestation items. "Ready for Controlled Pilot" requires all 4 + ≥90% + no critical blockers + no S1 + no unresolved S2.
+- `pilotReadiness` retested: 0% / Not Ready for an unprovisioned tenant — **fail-closed confirmed** (does not auto-report Ready).
+
+### Validation executed (honest)
+- **Code inspection + automated function redeploy:** 5 invocations, all passed.
+- **Structural:** tenant/outlet RLS + role gates verified by inspection.
+- **Nexus:** action-safety + grounding re-verified.
+- **Pending manual:** full live user-session workflow + two-tenant/two-outlet isolation + per-role matrix + before/after inventory regression + device matrix + WCAG audit + recovery drill (require a real provisioned pilot tenant; platform owns auth — users cannot be auto-created).
+- **Pending external:** Xero live OAuth + sync (XERO_CLIENT_ID/SECRET unavailable).
+
+### Documentation
+- `build-package-15-controlled-pilot.md` (full RETURN + honest evidence), `pilot-go-live-report.md`, `defect-register.md` (5 resolved, 0 open).
+
+### Honest release status
+- **FINAL GO-LIVE DECISION: CONDITIONALLY READY FOR CONTROLLED PILOT.**
+- 0 S1, 0 unresolved S2, 0 critical code blockers. Conditions to reach Ready: provision first real pilot tenant, run live regression via Testing Agent, configure Xero credentials, attest 4 sign-offs.
+- F&B Pack ~98%, overall MVP ~94%, pilot readiness ~88%.
+
+### Next action (operational, not a feature build)
+Provision the first real pilot customer (Taqueria Pte Ltd) and begin the controlled pilot.
+
 ## [Unreleased] — Build Package #14 (Final Pilot Validation, Customer Onboarding & Production Launch Readiness)
 
 ### Added — Pilot Readiness Core (Parts R/W/O/V)
