@@ -2,13 +2,15 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronRight, ExternalLink } from 'lucide-react';
 import {
-  SEVERITY_CONFIG, MODULE_LABELS, formatAction, formatRelative, moduleEmoji,
+  SEVERITY_CONFIG, SHIELD_STYLES, MODULE_LABELS,
+  formatAction, formatRelative,
 } from '@/components/audit-centre/auditConfig';
 
 // Single row in the Activity Timeline. Keyboard-accessible, role=button.
 export default function TimelineItem({ log, isLast, onClick }) {
   const sev = SEVERITY_CONFIG[log.severity] || SEVERITY_CONFIG.info;
   const SevIcon = sev.icon;
+  const showShield = log.shield_outcome && log.shield_outcome !== 'not_evaluated';
 
   return (
     <div className="relative flex gap-3 sm:gap-4 group">
@@ -46,8 +48,8 @@ export default function TimelineItem({ log, isLast, onClick }) {
               <span className={cn('inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-medium', sev.badge)}>
                 {sev.label}
               </span>
-              {log.shield_outcome && log.shield_outcome !== 'not_evaluated' && (
-                <span className={cn('inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-medium', SHIELD_BADGE[log.shield_outcome])}>
+              {showShield && (
+                <span className={cn('inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-medium', SHIELD_STYLES[log.shield_outcome])}>
                   {log.shield_outcome.replace(/_/g, ' ')}
                 </span>
               )}
@@ -73,8 +75,3 @@ export default function TimelineItem({ log, isLast, onClick }) {
     </div>
   );
 }
-
-// Local shield badge map (avoids circular import of SHIELD_STYLES into the
-// component scope without an extra named import line — kept inline for clarity).
-import { SHIELD_STYLES } from '@/components/audit-centre/auditConfig';
-const SHIELD_BADGE = SHIELD_STYLES;

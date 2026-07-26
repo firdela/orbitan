@@ -64,7 +64,7 @@ import KnowledgeHub from '@/pages/KnowledgeHub';
 import ArtifactRegistry from '@/pages/workspace/ArtifactRegistry';
 
 // Enterprise — Compliance & Data
-import AuditTrail from '@/pages/AuditTrail';
+import AuditCentre from '@/pages/AuditCentre';
 import UserRoles from '@/pages/UserRoles';
 import DataImport from '@/pages/DataImport';
 import DataExplorer from '@/pages/DataExplorer';
@@ -74,7 +74,7 @@ import WalletPage from '@/pages/platform/WalletPage';
 import MarketplacePage from '@/pages/platform/MarketplacePage';
 import ShieldCommandCenter from '@/pages/platform/ShieldCommandCenter';
 import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
-import AuditLogPage from '@/pages/platform/AuditLogPage';
+
 import AccessControlPage from '@/pages/platform/AccessControlPage';
 import CapabilityManager from '@/pages/platform/CapabilityManager';
 import TaskTestSuite from '@/pages/dev/TaskTestSuite';
@@ -203,7 +203,8 @@ const AuthenticatedApp = () => {
       <Route path="/artifacts" element={<ArtifactRegistry />} />
 
       {/* Enterprise — Compliance & Data */}
-      <Route path="/audit-trail" element={<AuditTrail />} />
+      <Route path="/audit-centre" element={<AuditCentre />} />
+      <Route path="/audit-trail" element={<Navigate to="/audit-centre" replace />} />
       <Route path="/user-roles" element={<UserRoles />} />
       <Route path="/data-import" element={<DataImport />} />
       <Route path="/data-explorer" element={<DataExplorer />} />
@@ -213,7 +214,7 @@ const AuthenticatedApp = () => {
       <Route path="/platform/marketplace" element={<MarketplacePage />} />
       <Route path="/platform/shield" element={<ShieldCommandCenter />} />
       <Route path="/platform/integrations" element={<IntegrationHubPage />} />
-      <Route path="/platform/audit-logs" element={<AuditLogPage />} />
+      <Route path="/platform/audit-logs" element={<Navigate to="/audit-centre" replace />} />
       <Route path="/platform/access-control" element={<AccessControlPage />} />
       <Route path="/platform/capabilities" element={<CapabilityManager />} />
       <Route path="/platform/pilot-readiness" element={<PilotReadinessDashboard />} />
