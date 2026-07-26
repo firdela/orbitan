@@ -309,17 +309,51 @@ Deno.serve(async (req) => {
 
       const cred = existing[0];
       const isExpired = cred.token_expires_at && new Date(cred.token_expires_at) < new Date();
+      const status = isExpired && cred.status === 'connected' ? 'expired' : cred.status;
+      const connected = cred.status === 'connected' && !isExpired;
+
+      // ── Sync queue metrics (Build #26A) ── Derived from FinanceSyncQueue.
+      const pendingEntries = await base44.asServiceRole.entities.FinanceSyncQueue.filter({ tenant_id, status: 'pending' });
+      const failedEntries = await base44.asServiceRole.entities.FinanceSyncQueue.filter({ tenant_id, status: 'failed' });
+      const lastSynced = await base44.asServiceRole.entities.FinanceSyncQueue.filter({ tenant_id, status: 'synced' }, '-synced_at', 1);
+      const lastFailed = await base44.asServiceRole.entities.FinanceSyncQueue.filter({ tenant_id, status: 'failed' }, '-updated_date', 1);
+      const recent = await base44.asServiceRole.entities.FinanceSyncQueue.filter({ tenant_id }, '-updated_date', 10);
+      const recentTotal = recent.length;
+      const recentSynced = recent.filter((e) => e.status === 'synced').length;
+      const sync_success_rate = recentTotal > 0 ? Math.round((recentSynced / recentTotal) * 100) : (connected ? 100 : 0);
+
+      const pending_count = pendingEntries.length;
+      const failed_count = failedEntries.length;
+      const last_successful_sync = (lastSynced && lastSynced[0]?.synced_at) || null;
+      const last_failed_sync = (lastFailed && lastFailed[0]?.updated_date) || null;
+      const last_sync_error = (lastFailed && lastFailed[0]?.last_error) || '';
+
+      let sync_health = 'healthy';
+      if (!connected) {
+        sync_health = status === 'expired' ? 'warning' : 'critical';
+      } else if (failed_count >= 5) {
+        sync_health = 'critical';
+      } else if (failed_count > 0 || pending_count > 20) {
+        sync_health = 'warning';
+      }
 
       return Response.json({
-        connected: cred.status === 'connected' && !isExpired,
+        connected,
         configured: true,
-        status: isExpired && cred.status === 'connected' ? 'expired' : cred.status,
+        status,
         xero_tenant_name: cred.external_tenant_name,
         xero_tenant_id: cred.external_tenant_id,
         connected_date: cred.connected_date,
-        last_refreshed: cred.last_refreshed_date,
-        last_error: cred.last_error,
         token_expires_at: cred.token_expires_at,
+        last_refreshed: cred.last_refreshed_date,
+        last_successful_sync,
+        last_failed_sync,
+        last_sync_error,
+        pending_count,
+        failed_count,
+        sync_success_rate,
+        sync_health,
+        last_error: cred.last_error,
       });
     }
 
@@ -359,6 +393,174 @@ Deno.serve(async (req) => {
       return Response.json({
         success: true,
         message: 'Xero disconnected.',
+      });
+    }
+
+    // ── ACTION: test_connection ──
+    // Genuine health probe (Build #26A). Validates the stored access token
+    // (refreshing if expired), performs a lightweight authenticated Xero API
+    // request, confirms the connected organisation, detects revoked/expired
+    // access, updates status + last_error safely, writes an AuditLog event.
+    // Never exposes access tokens or refresh tokens in the response.
+    if (action === 'test_connection') {
+      if (!tenant_id) {
+        return Response.json({ error: 'tenant_id is required' }, { status: 400 });
+      }
+
+      const existing = await base44.asServiceRole.entities.IntegrationCredential.filter({
+        tenant_id,
+        service_type: 'xero',
+      });
+
+      if (!existing || existing.length === 0) {
+        return Response.json({
+          healthy: false,
+          reason: 'not_connected',
+          message: 'No Xero connection found for this tenant.',
+        });
+      }
+
+      let cred = existing[0];
+      if (cred.status === 'disconnected') {
+        return Response.json({
+          healthy: false,
+          reason: 'disconnected',
+          message: 'Xero connection is disconnected. Reconnect to continue.',
+        });
+      }
+
+      // Refresh token if expired or near expiry (reuses the refresh action)
+      const isExpired = cred.token_expires_at && new Date(cred.token_expires_at) < new Date(Date.now() + 60_000);
+      if (isExpired) {
+        const refreshRes = await base44.asServiceRole.functions.invoke('xeroOAuth', {
+          action: 'refresh_token',
+          tenant_id,
+        });
+        if (!refreshRes.data?.success) {
+          await base44.asServiceRole.entities.IntegrationCredential.update(cred.id, {
+            status: 'expired',
+            last_error: 'Token refresh failed during connection test.',
+          });
+          await base44.asServiceRole.entities.AuditLog.create({
+            tenant_id, actor_id: user.id, actor_name: user.full_name, actor_role: user.role,
+            action_type: 'XERO_TEST_CONNECTION_FAILED', module: 'finance',
+            target_entity: 'IntegrationCredential', target_record_id: cred.id,
+            details: 'Xero connection test failed: token refresh unsuccessful.',
+            shield_outcome: 'not_evaluated',
+          });
+          return Response.json({
+            healthy: false,
+            reason: 'token_refresh_failed',
+            message: 'Xero token expired and refresh failed. Reconnection required.',
+          });
+        }
+        const refreshed = await base44.asServiceRole.entities.IntegrationCredential.filter({ tenant_id, service_type: 'xero' });
+        cred = refreshed[0];
+      }
+
+      // Lightweight authenticated Xero API request — confirm organisation
+      const orgRes = await fetch('https://api.xero.com/api.xro/2.0/Organisation', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${cred.access_token}`,
+          'Xero-tenant-id': cred.external_tenant_id,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (orgRes.ok) {
+        const orgData = await orgRes.json();
+        const orgName = orgData.Organisations?.[0]?.Name || cred.external_tenant_name || 'Xero Organisation';
+        await base44.asServiceRole.entities.IntegrationCredential.update(cred.id, {
+          status: 'connected',
+          last_error: '',
+        });
+        await base44.asServiceRole.entities.AuditLog.create({
+          tenant_id, actor_id: user.id, actor_name: user.full_name, actor_role: user.role,
+          action_type: 'XERO_TEST_CONNECTION_OK', module: 'finance',
+          target_entity: 'IntegrationCredential', target_record_id: cred.id,
+          details: `Xero connection test successful. Organisation: ${orgName}.`,
+          shield_outcome: 'not_evaluated',
+        });
+        return Response.json({
+          healthy: true,
+          reason: 'connected',
+          organisation_name: orgName,
+          message: 'Xero connection is healthy.',
+        });
+      }
+
+      const errStatus = orgRes.status;
+      const errText = await orgRes.text().catch(() => '');
+      let reason = 'api_error';
+      let newStatus = 'error';
+      if (errStatus === 401) {
+        reason = 'revoked';
+        newStatus = 'expired';
+      }
+      await base44.asServiceRole.entities.IntegrationCredential.update(cred.id, {
+        status: newStatus,
+        last_error: `Connection test failed (${errStatus}): ${errText.substring(0, 200)}`,
+      });
+      await base44.asServiceRole.entities.AuditLog.create({
+        tenant_id, actor_id: user.id, actor_name: user.full_name, actor_role: user.role,
+        action_type: 'XERO_TEST_CONNECTION_FAILED', module: 'finance',
+        target_entity: 'IntegrationCredential', target_record_id: cred.id,
+        details: `Xero connection test failed. HTTP ${errStatus}.`,
+        shield_outcome: 'not_evaluated',
+      });
+      return Response.json({
+        healthy: false,
+        reason,
+        message: errStatus === 401
+          ? 'Xero access has been revoked or the token is invalid. Reconnect Xero.'
+          : `Xero API returned an error (HTTP ${errStatus}).`,
+      });
+    }
+
+    // ── ACTION: get_platform_config ──
+    // Admin-only configuration readiness (Build #26A). Returns only safe
+    // booleans and non-secret metadata. Never returns secret values, token
+    // fragments, or credentials. Drives the Platform Integration Settings view.
+    if (action === 'get_platform_config') {
+      if (user.role !== 'admin') {
+        return Response.json({ error: 'Forbidden: Platform configuration requires Platform Admin role' }, { status: 403 });
+      }
+      const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://app.orbitan.com';
+      const redirectUri = `${origin}/platform/integrations`;
+      const xeroClientId = !!Deno.env.get('XERO_CLIENT_ID');
+      const xeroClientSecret = !!Deno.env.get('XERO_CLIENT_SECRET');
+      const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
+      const environment = stripeKey.startsWith('sk_live') ? 'live' : stripeKey.startsWith('sk_test') ? 'test' : 'unconfigured';
+      return Response.json({
+        environment,
+        xero: {
+          client_id_configured: xeroClientId,
+          client_secret_configured: xeroClientSecret,
+          redirect_uri: redirectUri,
+          callback_url: redirectUri,
+          required_scopes: XERO_SCOPES.split(' '),
+          oauth_ready: xeroClientId && xeroClientSecret,
+          sync_ready: xeroClientId && xeroClientSecret,
+        },
+        stripe_platform_billing: {
+          secret_key_configured: !!Deno.env.get('STRIPE_SECRET_KEY'),
+          publishable_key_configured: !!Deno.env.get('STRIPE_PUBLISHABLE_KEY'),
+          webhook_secret_configured: !!Deno.env.get('STRIPE_WEBHOOK_SECRET'),
+          mode: 'live',
+          status: 'active',
+        },
+        stripe_connect: {
+          client_id_configured: !!Deno.env.get('STRIPE_CONNECT_CLIENT_ID'),
+          onboarding_model: 'standard_connected_accounts',
+          architecture_locked: true,
+          implementation_status: 'deferred_to_build_26b',
+          ready: false,
+        },
+        versions: {
+          xero_oauth: '1.1',
+          integration_sync: '1.0',
+        },
       });
     }
 
