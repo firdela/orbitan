@@ -8,7 +8,7 @@
 // ============================================================
 
 export const DEFAULT_PREFS = {
-  theme: 'system',          // 'system' | 'light' | 'dark'
+  theme: 'light',           // 'light' (default) | 'dark' | 'system'
   reduce_motion: false,
   large_text: false,
   high_contrast: false,
@@ -45,4 +45,12 @@ export function getStoredPrefs() {
   } catch (_) {
     return {};
   }
+}
+
+// Prevent flash of the wrong theme: apply persisted preferences the moment
+// this module is first imported (early in app boot via AuthContext). The
+// default is Light, so users with no saved preference stay on the canonical
+// light surface; a returning Dark/System user gets their choice immediately.
+if (typeof window !== 'undefined') {
+  applyPreferences(getStoredPrefs());
 }
