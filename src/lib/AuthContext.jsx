@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
+import { applyPreferences } from '@/lib/preferences';
 
 const AuthContext = createContext();
 
@@ -96,6 +97,7 @@ export const AuthProvider = ({ children }) => {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
       setIsAuthenticated(true);
+      applyPreferences(currentUser?.data?.preferences);
       setIsLoadingAuth(false);
       setAuthChecked(true);
     } catch (error) {

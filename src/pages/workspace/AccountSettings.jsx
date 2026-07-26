@@ -1,118 +1,63 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useToast } from '@/components/ui/use-toast';
-import {
-  ArrowLeft, Mail, Shield, Building2, Wallet, ScrollText,
-  Plug, Lock, Save, Loader2, Bell, UserCog, KeyRound, Monitor, Globe,
-} from 'lucide-react';
 import { LOGO_ASSETS } from '@/lib/orbitan-identity';
-import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
-import ProfilePhotoUploader from '@/components/profile/ProfilePhotoUploader';
-import OrgRoleCard from '@/components/profile/OrgRoleCard';
-import RecentActivityFeed from '@/components/profile/RecentActivityFeed';
-import PreferencesSection from '@/components/profile/PreferencesSection';
+import {
+  ArrowLeft, User, UserCog, Shield, Palette, Eye, Bell, Lock, Plug, Code,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const NOTIFICATION_DEFAULTS = {
-  notif_operational: true,
-  notif_ai_insights: true,
-  notif_audit: false,
-  notif_weekly_summary: true,
-};
+import ProfileSection from '@/components/account-settings/sections/ProfileSection';
+import AccountSection from '@/components/account-settings/sections/AccountSection';
+import SecuritySection from '@/components/account-settings/sections/SecuritySection';
+import PreferencesSection from '@/components/account-settings/sections/PreferencesSection';
+import AccessibilitySection from '@/components/account-settings/sections/AccessibilitySection';
+import PrivacySection from '@/components/account-settings/sections/PrivacySection';
+import NotificationsSection from '@/components/account-settings/sections/NotificationsSection';
+import ConnectedAccountsSection from '@/components/account-settings/sections/ConnectedAccountsSection';
+import DeveloperSection from '@/components/account-settings/sections/DeveloperSection';
+
+const SECTIONS = [
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'account', label: 'Account', icon: UserCog },
+  { id: 'security', label: 'Security', icon: Shield },
+  { id: 'preferences', label: 'Preferences', icon: Palette },
+  { id: 'accessibility', label: 'Accessibility', icon: Eye },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'privacy', label: 'Privacy', icon: Lock },
+  { id: 'connected', label: 'Connected Accounts', icon: Plug },
+  { id: 'developer', label: 'Developer', icon: Code, adminOnly: true },
+];
 
 export default function AccountSettings() {
-  const { user, checkUserAuth } = useAuth();
-  const { toast } = useToast();
+  const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const sections = SECTIONS.filter((s) => !s.adminOnly || isAdmin);
 
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [notifications, setNotifications] = useState(NOTIFICATION_DEFAULTS);
-  const [isDirty, setIsDirty] = useState(false);
+  const hashId = typeof window !== 'undefined' ? window.location.hash.replace('#', '') : '';
+  const initial = sections.find((s) => s.id === hashId) || sections[0];
+  const [active, setActive] = useState(initial?.id || 'profile');
 
   useEffect(() => {
-    setFullName(user?.full_name || '');
-    setPhone(user?.phone || user?.data?.phone || '');
-    setNotifications({
-      ...NOTIFICATION_DEFAULTS,
-      ...(user?.data?.notifications || {}),
-    });
-    setIsDirty(false);
-  }, [user]);
+    if (window.location.hash) {
+      const id = window.location.hash.replace('#', '');
+      if (sections.find((s) => s.id === id)) setActive(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleFieldChange = (setter) => (e) => {
-    setter(e.target.value);
-    setIsDirty(true);
+  const select = (id) => {
+    setActive(id);
+    window.history.replaceState(null, '', `/settings#${id}`);
   };
-
-  const handleNotifToggle = (key) => (checked) => {
-    setNotifications((prev) => ({ ...prev, [key]: checked }));
-    setIsDirty(true);
-  };
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const updates = {
-        full_name: fullName,
-        data: {
-          ...(user?.data || {}),
-          phone,
-          notifications,
-        },
-      };
-      await base44.auth.updateMe(updates);
-      await auditFrontend({
-        tenant_id: user?.tenant_id || user?.data?.tenant_id || 'platform',
-        actor_id: user?.id,
-        actor_name: user?.full_name,
-        actor_role: user?.role,
-        action_type: ACTION_TYPES.SETTINGS_UPDATED,
-        module: 'system',
-        target_entity: 'User',
-        target_record_id: user?.id,
-        details: `Updated profile: name="${fullName}", phone="${phone}", notifications=${JSON.stringify(notifications)}`,
-      });
-    },
-    onSuccess: () => {
-      checkUserAuth();
-      setIsDirty(false);
-      toast({
-        title: 'Profile saved',
-        description: 'Your changes have been applied.',
-      });
-    },
-    onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Save failed',
-        description: error.message || 'Could not update your profile.',
-      });
-    },
-  });
-
-  const displayName = fullName || user?.full_name || 'User';
-  const displayEmail = user?.email || '';
-  const initial = displayName[0]?.toUpperCase() || '?';
-
-  const platformLinks = [
-    { to: '/platform/wallet', icon: Wallet, label: 'Orbit Wallet', desc: 'Credits, billing, and transactions' },
-    { to: '/platform/audit-logs', icon: ScrollText, label: 'Audit Logs', desc: 'Your activity and system events' },
-    { to: '/platform/integrations', icon: Plug, label: 'Integrations', desc: 'Connected services and connectors' },
-    { to: '/platform/access-control', icon: Shield, label: 'Access Control', desc: 'Roles, permissions, and policies' },
-  ];
+  const activeSection = sections.find((s) => s.id === active) || sections[0];
+  const ActiveIcon = activeSection.icon;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-6 h-16 flex items-center gap-3">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
           <Link to="/workspace">
             <Button variant="ghost" size="icon" className="h-9 w-9">
               <ArrowLeft className="w-4 h-4" />
@@ -123,233 +68,53 @@ export default function AccountSettings() {
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-        {/* ── Profile Section ── */}
-        <section className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <UserCog className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Profile</h2>
-          </div>
-
-          {/* Avatar + Identity */}
-          <div className="flex items-center gap-4 mb-6">
-            <ProfilePhotoUploader size="md" />
-            <div className="flex-1 min-w-0">
-              <p className="text-lg font-display font-bold truncate">{displayName}</p>
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5 truncate">
-                <Mail className="w-3.5 h-3.5 flex-shrink-0" /> {displayEmail}
-              </p>
-              <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold capitalize">
-                <Shield className="w-3 h-3" /> {user?.role || 'user'}
-              </span>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        <div className="lg:grid lg:grid-cols-[200px_1fr] lg:gap-8">
+          {/* Section navigation */}
+          <nav className="mb-4 lg:mb-0" aria-label="Account settings sections">
+            <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 -mx-1 px-1">
+              {sections.map((s) => {
+                const Icon = s.icon;
+                const isActive = s.id === active;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => select(s.id)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring flex-shrink-0',
+                      isActive
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    )}
+                  >
+                    <Icon className="w-4 h-4" /> {s.label}
+                  </button>
+                );
+              })}
             </div>
-          </div>
+          </nav>
 
-          {/* Editable Fields */}
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="full-name" className="text-xs">Full Name</Label>
-              <Input
-                id="full-name"
-                value={fullName}
-                onChange={handleFieldChange(setFullName)}
-                className="h-10"
-                placeholder="Your full name"
-              />
+          {/* Active section */}
+          <main className="min-w-0">
+            <div className="bg-card rounded-xl border border-border p-5 sm:p-6 animate-fade-in">
+              <div className="flex items-center gap-2 mb-5">
+                <ActiveIcon className="w-4 h-4 text-muted-foreground" />
+                <h2 className="text-sm font-semibold text-foreground">{activeSection.label}</h2>
+              </div>
+              {active === 'profile' && <ProfileSection />}
+              {active === 'account' && <AccountSection />}
+              {active === 'security' && <SecuritySection />}
+              {active === 'preferences' && <PreferencesSection />}
+              {active === 'accessibility' && <AccessibilitySection />}
+              {active === 'notifications' && <NotificationsSection />}
+              {active === 'privacy' && <PrivacySection />}
+              {active === 'connected' && <ConnectedAccountsSection />}
+              {active === 'developer' && <DeveloperSection />}
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="phone" className="text-xs">Phone Number</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={handleFieldChange(setPhone)}
-                className="h-10"
-                placeholder="+65 9XXX XXXX"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs">Email Address</Label>
-              <Input
-                id="email"
-                value={displayEmail}
-                disabled
-                className="h-10 bg-muted/50 text-muted-foreground"
-              />
-              <p className="text-[11px] text-muted-foreground">Email cannot be changed. Contact your administrator if needed.</p>
-            </div>
-
-            <div className="flex justify-end pt-1">
-              <Button
-                onClick={() => saveMutation.mutate()}
-                disabled={!isDirty || saveMutation.isPending}
-                className="gap-1.5"
-              >
-                {saveMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Notifications Section ── */}
-        <section className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Bell className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notifications</h2>
-          </div>
-          <div className="space-y-1">
-            <NotificationToggle
-              label="Operational Alerts"
-              desc="Shift changes, task assignments, and urgent workflow events"
-              checked={notifications.notif_operational}
-              onCheckedChange={handleNotifToggle('notif_operational')}
-            />
-            <NotificationToggle
-              label="Orbit Nexus AI Insights"
-              desc="AI-generated recommendations, evolution proposals, and intelligence alerts"
-              checked={notifications.notif_ai_insights}
-              onCheckedChange={handleNotifToggle('notif_ai_insights')}
-            />
-            <NotificationToggle
-              label="Audit & Governance"
-              desc="Governance overrides, policy violations, and compliance reminders"
-              checked={notifications.notif_audit}
-              onCheckedChange={handleNotifToggle('notif_audit')}
-            />
-            <NotificationToggle
-              label="Weekly Summary"
-              desc="A digest of your platform activity every Monday"
-              checked={notifications.notif_weekly_summary}
-              onCheckedChange={handleNotifToggle('notif_weekly_summary')}
-            />
-          </div>
-          {isDirty && (
-            <p className="text-xs text-amber-600 mt-3">Unsaved changes — press "Save Changes" above to apply.</p>
-          )}
-        </section>
-
-        {/* ── Organization, Role & Wallet ── */}
-        <section className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Building2 className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Organization & Wallet</h2>
-          </div>
-          <OrgRoleCard />
-        </section>
-
-        {/* ── Recent Activity ── */}
-        <section className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <ScrollText className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Activity</h2>
-          </div>
-          <RecentActivityFeed limit={8} />
-        </section>
-
-        {/* ── Language & Accessibility ── */}
-        <section className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Globe className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Language & Accessibility</h2>
-          </div>
-          <PreferencesSection />
-        </section>
-
-        {/* ── Platform Console (admin only) ── */}
-        {isAdmin && (
-          <section className="bg-card rounded-xl border border-border p-6">
-            <div className="flex items-center gap-2 mb-5">
-              <Shield className="w-4 h-4 text-muted-foreground" />
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Platform Console</h2>
-            </div>
-            <div className="space-y-1">
-              {platformLinks.map((link) => (
-                <Link key={link.to} to={link.to} className="flex items-center gap-3 p-3 -mx-3 rounded-lg hover:bg-accent transition-colors">
-                  <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-                    <link.icon className="w-5 h-5 text-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{link.label}</p>
-                    <p className="text-xs text-muted-foreground">{link.desc}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Security Section ── */}
-        <section className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Lock className="w-4 h-4 text-muted-foreground" />
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Security</h2>
-          </div>
-          <div className="space-y-1">
-            <SecurityRow
-              icon={KeyRound}
-              title="Password & MFA"
-              desc="Coming soon — multi-factor authentication and password management"
-              badge="Coming Soon"
-            />
-            <SecurityRow
-              icon={Monitor}
-              title="Active Sessions"
-              desc="Coming soon — view and manage your logged-in devices"
-              badge="Coming Soon"
-            />
-          </div>
-        </section>
-
-        {/* ── Early Access Note ── */}
-        <section className="bg-primary/5 border border-primary/15 rounded-xl p-4">
-          <div className="flex items-start gap-3">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse mt-1.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-foreground">OrbitanOS Early Access</p>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                You're using an early version of OrbitanOS. New modules and capabilities are being deployed weekly as we validate with our pilot partners. Your feedback directly shapes the roadmap.
-              </p>
-            </div>
-          </div>
-        </section>
+          </main>
+        </div>
       </div>
-    </div>
-  );
-}
-
-// ── Sub-components ──────────────────────────────────────────
-
-function NotificationToggle({ label, desc, checked, onCheckedChange }) {
-  return (
-    <div className="flex items-center justify-between gap-4 p-3 -mx-3 rounded-lg hover:bg-accent/50 transition-colors">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-      </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} />
-    </div>
-  );
-}
-
-function SecurityRow({ icon: Icon, title, desc, badge }) {
-  return (
-    <div className="flex items-center gap-3 p-3 -mx-3 rounded-lg">
-      <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-        <Icon className="w-5 h-5 text-foreground" />
-      </div>
-      <div className="flex-1">
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-xs text-muted-foreground">{desc}</p>
-      </div>
-      {badge && (
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-          {badge}
-        </span>
-      )}
     </div>
   );
 }

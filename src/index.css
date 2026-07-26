@@ -231,6 +231,27 @@
     @apply border-t border-border/60 my-4;
   }
 
+  /* ── Accessibility preference classes (Build #26A.2) ── */
+  .reduce-motion *,
+  .reduce-motion *::before,
+  .reduce-motion *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .large-text {
+    font-size: 18px;
+  }
+  .high-contrast {
+    --muted-foreground: 220 20% 30%;
+    --border: 220 25% 70%;
+  }
+  .high-contrast.dark {
+    --muted-foreground: 220 15% 75%;
+    --border: 220 25% 35%;
+  }
+
   /* ── KPI Number ── */
   .kpi-value {
     @apply text-2xl font-display font-bold tracking-tight text-foreground;
