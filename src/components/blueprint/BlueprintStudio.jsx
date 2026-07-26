@@ -99,11 +99,13 @@ export default function BlueprintStudio() {
     setExported(true);
     // Capture the edit in the audit trail
     try {
+      let me = null;
+      try { me = await base44.auth.me(); } catch (_) { /* non-blocking */ }
       await base44.entities.AuditLog.create({
         tenant_id: 'orbitan_platform',
-        actor_id: 'platform_owner',
-        actor_name: 'Firdaus',
-        actor_role: 'admin',
+        actor_id: me?.id || 'unknown',
+        actor_name: me?.full_name || 'Platform Owner',
+        actor_role: me?.role || 'admin',
         action_type: 'blueprint_edited',
         module: 'system',
         target_entity: 'Blueprint',
