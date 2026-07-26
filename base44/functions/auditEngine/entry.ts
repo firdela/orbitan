@@ -299,6 +299,40 @@ const resolveModule = (entityName) => {
   return map[entityName] || 'system';
 };
 
+// ── Audit Centre enrichment (ADR-0054) ───────────────────────────
+// Additive metadata for the Global Activity Timeline & Audit Centre.
+// Same events, richer metadata — zero new event generation. Fully
+// backward-compatible: missing fields default on read.
+const SEVERITY_OVERRIDE = {
+  COMPLIANCE_OVERDUE: 'critical',
+  FOOD_SAFETY_FAIL: 'critical',
+  CLOCK_COMPLIANCE_GATE_TRIGGERED: 'critical',
+  INVOICE_REJECTED: 'warning',
+  COMPLIANCE_REJECTED: 'warning',
+  ARTIFACT_REJECTED: 'warning',
+  RECONCILIATION_FLAGGED: 'warning',
+  PO_CANCELLED: 'warning',
+  CLOCK_RECORD_AMENDED: 'warning',
+};
+const resolveSeverity = (actionType) => {
+  if (SEVERITY_OVERRIDE[actionType]) return SEVERITY_OVERRIDE[actionType];
+  if (actionType?.endsWith('_APPROVED') || actionType?.endsWith('_VERIFIED') ||
+      actionType?.endsWith('_COMPLETED') || actionType?.endsWith('_SYNCED')) return 'success';
+  return 'info';
+};
+const resolveCategory = (mod) =>
+  mod === 'compliance' ? 'governance' : mod === 'system' ? 'system' : 'operational';
+const LINK_ROUTES = {
+  SalesInvoice: 'sales', PurchaseOrder: 'procurement', GoodsReceipt: 'procurement',
+  InventoryItem: 'inventory', ClockRecord: 'workforce', FoodSafetyLog: 'compliance',
+  ComplianceRecord: 'compliance', MaterialCollection: 'sustainability',
+  ProductCatalog: 'sales', DailyReconciliation: 'reports', ArtifactRecord: 'artifacts',
+};
+const resolveLink = (entityName, tenantId) => {
+  const seg = LINK_ROUTES[entityName];
+  return seg && tenantId ? `/workspace/${tenantId}/${seg}` : null;
+};
+
 // ── Main Handler ─────────────────────────────────────────────────
 Deno.serve(async (req) => {
   try {
@@ -360,8 +394,12 @@ Deno.serve(async (req) => {
         actor_role: 'system_event',
         action_type,
         module,
+        category: resolveCategory(module),
+        severity: resolveSeverity(action_type),
+        event_source: 'auditEngine',
         target_entity: entityName,
         target_record_id: event.entity_id,
+        link: resolveLink(entityName, tenant_id),
         outlet_id: record?.outlet_id || null,
         previous_state: safeState(previousRecord),
         new_state: safeState(record),
