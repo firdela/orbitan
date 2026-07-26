@@ -154,7 +154,7 @@ export default function PilotDeploymentCentre() {
 }
 
 function StatusPill({ status }) {
-  const map = { active: 'bg-green-100 text-green-800', trial: 'bg-blue-100 text-blue-800', suspended: 'bg-amber-100 text-amber-800', onboarding: 'bg-purple-100 text-purple-800', cancelled: 'bg-muted text-muted-foreground' };
+  const map = { active: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400', trial: 'bg-primary/10 text-primary', suspended: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', onboarding: 'bg-purple-500/10 text-purple-700 dark:text-purple-400', cancelled: 'bg-muted text-muted-foreground' };
   return <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0', map[status] || 'bg-muted text-muted-foreground')}>{status}</span>;
 }
 

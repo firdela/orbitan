@@ -11,8 +11,8 @@
 // portable blueprint spec. Exit-Ready: pure UI over registry data.
 // ============================================================
 
-import React, { useState, useMemo } from 'react';
-import { getManifestList, getManifest } from '@/lib/tenant-registry';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   calculateBlueprintScore,
   getActiveAdvisoryRules,
@@ -34,13 +34,36 @@ import {
 } from 'lucide-react';
 
 export default function BlueprintStudio() {
-  const manifests = useMemo(() => getManifestList(), []);
-  const [selectedRef, setSelectedRef] = useState(manifests[0]?.tenant_ref || null);
+  const { data: tenantsData } = useQuery({
+    queryKey: ['studio-tenants'],
+    queryFn: async () => base44.entities.Tenant.list('-created_date', 100),
+  });
+  const manifests = useMemo(
+    () => (tenantsData || []).map((t) => ({
+      tenant_ref: t.id,
+      display_name: t.name || 'Unnamed tenant',
+      industry: t.industry || 'food_beverage',
+      plan: t.subscription_plan || t.plan || 'orbitan_starter',
+      enabled_modules: t.enabled_modules || [],
+      enabled_packs: t.enabled_packs || [],
+      is_virtual: t.is_virtual || false,
+    })),
+    [tenantsData]
+  );
+  const [selectedRef, setSelectedRef] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [exported, setExported] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const baseManifest = useMemo(() => getManifest(selectedRef), [selectedRef]);
+  const baseManifest = useMemo(
+    () => manifests.find((m) => m.tenant_ref === selectedRef) || null,
+    [manifests, selectedRef]
+  );
+
+  // Auto-select the first real tenant once loaded.
+  useEffect(() => {
+    if (!selectedRef && manifests.length > 0) setSelectedRef(manifests[0].tenant_ref);
+  }, [manifests, selectedRef]);
 
   // Working copy of the editable layout
   const [layoutModules, setLayoutModules] = useState(
@@ -231,7 +254,7 @@ export default function BlueprintStudio() {
       {governanceGates.length > 0 && (
         <div className="space-y-2">
           {governanceGates.map(rule => (
-            <div key={rule.id} className="flex items-start gap-2 bg-orbitan-red-light/60 border border-red-200 rounded-lg px-3 py-2.5">
+            <div key={rule.id} className="flex items-start gap-2 bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2.5">
               <Shield className="w-4 h-4 text-orbitan-red flex-shrink-0 mt-0.5" />
               <p className="text-xs text-foreground">{rule.message}</p>
             </div>

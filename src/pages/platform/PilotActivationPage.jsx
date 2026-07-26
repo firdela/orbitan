@@ -85,7 +85,7 @@ export default function PilotActivationPage() {
 
       {loading && <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}
 
-      {data?.error && <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800">{data.error}</div>}
+      {data?.error && <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-sm text-destructive">{data.error}</div>}
 
       {data && !data.error && (
         <>
@@ -109,18 +109,18 @@ export default function PilotActivationPage() {
             <h3 className="font-heading font-semibold text-sm mb-3 flex items-center gap-2"><Lightbulb className="w-4 h-4 text-orbitan-amber" /> Go-Live Assistant</h3>
             {critical.length > 0 && (
               <div className="mb-3">
-                <p className="text-xs font-semibold text-red-700 flex items-center gap-1 mb-1.5"><XCircle className="w-3.5 h-3.5" /> Critical blockers (must resolve before go-live)</p>
-                <ul className="text-xs text-red-700 ml-5 list-disc space-y-0.5">{critical.map(b => <li key={b.key}>{b.label} — {b.evidence}</li>)}</ul>
+                <p className="text-xs font-semibold text-destructive flex items-center gap-1 mb-1.5"><XCircle className="w-3.5 h-3.5" /> Critical blockers (must resolve before go-live)</p>
+                <ul className="text-xs text-destructive ml-5 list-disc space-y-0.5">{critical.map(b => <li key={b.key}>{b.label} — {b.evidence}</li>)}</ul>
               </div>
             )}
             {incomplete.length > 0 && (
               <div className="mb-3">
-                <p className="text-xs font-semibold text-amber-700 flex items-center gap-1 mb-1.5"><AlertTriangle className="w-3.5 h-3.5" /> Remaining setup tasks</p>
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1 mb-1.5"><AlertTriangle className="w-3.5 h-3.5" /> Remaining setup tasks</p>
                 <ul className="text-xs text-muted-foreground ml-5 list-disc space-y-0.5">{incomplete.slice(0, 12).map(b => <li key={b.key}>{b.label} — {b.evidence}</li>)}</ul>
               </div>
             )}
             {critical.length === 0 && incomplete.length === 0 && (
-              <p className="text-xs text-emerald-700 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> All readiness checks complete. Ready for controlled pilot.</p>
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> All readiness checks complete. Ready for controlled pilot.</p>
             )}
             <div className="mt-3 pt-3 border-t border-border">
               <p className="text-[11px] text-muted-foreground flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Estimated readiness: <strong className="text-foreground">{data.readiness_pct}%</strong> · {data.deterministic_note}</p>
@@ -133,7 +133,7 @@ export default function PilotActivationPage() {
             <div className="space-y-1">
               {items.map(it => (
                 <div key={it.key} className="flex items-center gap-2 py-1.5 border-b border-border/40 last:border-0">
-                  {it.complete ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <XCircle className={`w-4 h-4 shrink-0 ${it.critical ? 'text-red-600' : 'text-amber-500'}`} />}
+                  {it.complete ? <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" /> : <XCircle className={`w-4 h-4 shrink-0 ${it.critical ? 'text-destructive' : 'text-amber-500'}`} />}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium">{it.label}</p>
                     <p className="text-[10px] text-muted-foreground">{it.evidence} · {it.source} · weight {it.weight}{it.critical && ' · critical'}</p>
@@ -151,7 +151,7 @@ export default function PilotActivationPage() {
               {(data.external_dependencies || []).map(d => (
                 <div key={d.key} className="flex items-center justify-between text-xs">
                   <span>{d.label}</span>
-                  <span className={`font-medium ${d.status === 'connected' || d.status === 'available' ? 'text-emerald-600' : 'text-amber-600'}`}>{d.status}</span>
+                  <span className={`font-medium ${d.status === 'connected' || d.status === 'available' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>{d.status}</span>
                 </div>
               ))}
             </div>

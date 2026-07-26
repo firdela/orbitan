@@ -17,6 +17,7 @@ import PlatformFooter from '@/components/layout/PlatformFooter';
 import { useTenant } from '@/lib/use-tenant.jsx';
 import { MODULES } from '@/lib/orbitan-config';
 import { auditFrontend } from '@/lib/audit';
+import TeamRoster from '@/components/access/TeamRoster';
 
 const ROLES = [
   { key: 'tenant_admin', label: 'Tenant Admin' },
@@ -419,6 +420,8 @@ export default function AccessControlPage() {
             </div>
           </CardContent>
         </Card>
+
+        <TeamRoster tenantId={tenant?.id} />
       </main>
 
       <PlatformFooter />

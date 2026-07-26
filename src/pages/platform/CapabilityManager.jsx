@@ -9,61 +9,57 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
+import { auditFrontend } from '@/lib/audit';
 
 // ── Tier metadata ──────────────────────────────────────────
 const TIER_CONFIG = {
   1: {
     label: 'Tier 1 — Deterministic',
     icon: Cpu,
-    color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+    color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     dot: 'bg-emerald-500',
     description: 'Stateless function. Zero policy required.',
   },
   2: {
     label: 'Tier 2 — Assistant Synthesizer',
     icon: Zap,
-    color: 'text-blue-600 bg-blue-50 border-blue-200',
-    dot: 'bg-blue-500',
+    color: 'text-primary bg-primary/10 border-primary/20',
+    dot: 'bg-primary',
     description: 'LLM + tools. Shield governance-gated.',
   },
   3: {
     label: 'Tier 3 — Autonomous Delegate',
     icon: Brain,
-    color: 'text-purple-600 bg-purple-50 border-purple-200',
+    color: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20',
     dot: 'bg-purple-500',
     description: 'Agentic loop. Enterprise + high trust only.',
   },
 };
 
 const MODULE_COLORS = {
-  finance: 'bg-amber-100 text-amber-800',
-  inventory: 'bg-cyan-100 text-cyan-800',
-  procurement: 'bg-indigo-100 text-indigo-800',
-  workforce: 'bg-rose-100 text-rose-800',
-  compliance: 'bg-emerald-100 text-emerald-800',
-  sales: 'bg-orange-100 text-orange-800',
-  scheduling: 'bg-violet-100 text-violet-800',
-  retail: 'bg-lime-100 text-lime-800',
-  sustainability: 'bg-green-100 text-green-800',
-  system: 'bg-slate-100 text-slate-800',
+  finance: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  inventory: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400',
+  procurement: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400',
+  workforce: 'bg-rose-500/10 text-rose-700 dark:text-rose-400',
+  compliance: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  sales: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
+  scheduling: 'bg-violet-500/10 text-violet-700 dark:text-violet-400',
+  retail: 'bg-lime-500/10 text-lime-700 dark:text-lime-400',
+  sustainability: 'bg-green-500/10 text-green-700 dark:text-green-400',
+  system: 'bg-slate-500/10 text-slate-700 dark:text-slate-400',
 };
 
 const SANITIZATION_CONFIG = {
-  strict: { label: 'Strict', color: 'text-red-700 bg-red-50 border-red-200', icon: Lock },
-  permissive: { label: 'Permissive', color: 'text-amber-700 bg-amber-50 border-amber-200', icon: Eye },
-  disabled: { label: 'Disabled', color: 'text-slate-700 bg-slate-50 border-slate-200', icon: EyeOff },
+  strict: { label: 'Strict', color: 'text-destructive bg-destructive/10 border-destructive/20', icon: Lock },
+  permissive: { label: 'Permissive', color: 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/20', icon: Eye },
+  disabled: { label: 'Disabled', color: 'text-muted-foreground bg-muted/40 border-border', icon: EyeOff },
 };
 
-function CapabilityCard({ capability, onToggle, onEdit }) {
+function CapabilityCard({ capability, onToggle }) {
   const [expanded, setExpanded] = useState(false);
   const tierCfg = TIER_CONFIG[capability.tier] || TIER_CONFIG[1];
   const TierIcon = tierCfg.icon;
@@ -96,10 +92,10 @@ function CapabilityCard({ capability, onToggle, onEdit }) {
             variant="ghost"
             size="sm"
             onClick={() => onToggle(capability)}
-            className="shrink-0"
+            className="shrink-0" aria-label={capability.is_active ? 'Disable capability' : 'Enable capability'}
           >
             {capability.is_active ? (
-              <ToggleRight className="h-6 w-6 text-emerald-600" />
+              <ToggleRight className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             ) : (
               <ToggleLeft className="h-6 w-6 text-muted-foreground" />
             )}
@@ -117,7 +113,7 @@ function CapabilityCard({ capability, onToggle, onEdit }) {
             {capability.module}
           </Badge>
           {capability.governance?.domain_id && (
-            <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50">
+            <Badge variant="outline" className="text-primary border-primary/20 bg-primary/10">
               <ShieldCheck className="h-3 w-3 mr-1" />
               {capability.governance.domain_id}
             </Badge>
@@ -127,7 +123,7 @@ function CapabilityCard({ capability, onToggle, onEdit }) {
             {sanCfg.label}
           </Badge>
           {capability.tenant_id !== 'system' && (
-            <Badge variant="outline" className="text-violet-700 border-violet-200 bg-violet-50">
+            <Badge variant="outline" className="text-purple-600 dark:text-purple-400 border-purple-500/20 bg-purple-500/10">
               Tenant Override
             </Badge>
           )}
@@ -218,10 +214,6 @@ export default function CapabilityManager() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingCapability, setEditingCapability] = useState(null);
-  const [editForm, setEditForm] = useState({ display_name: '', description: '', notes: '' });
-
   // Fetch all capabilities (RLS: admin only)
   const { data: capabilities, isLoading, refetch } = useQuery({
     queryKey: ['nexusCapabilities'],
@@ -233,8 +225,21 @@ export default function CapabilityManager() {
 
   const toggleMutation = useMutation({
     mutationFn: async (capability) => {
-      await base44.entities.NexusCapabilityRegistry.update(capability.id, {
-        is_active: !capability.is_active,
+      const user = await base44.auth.me();
+      const newState = !capability.is_active;
+      await base44.entities.NexusCapabilityRegistry.update(capability.id, { is_active: newState });
+      await auditFrontend({
+        tenant_id: 'orbitan_platform',
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: user.role,
+        action_type: 'capability_toggled',
+        module: 'system',
+        target_entity: 'NexusCapabilityRegistry',
+        target_record_id: capability.id,
+        details: `Capability ${capability.display_name || capability.capability_key} ${newState ? 'enabled' : 'disabled'}`,
+        previous_state: { is_active: capability.is_active },
+        new_state: { is_active: newState },
       });
     },
     onSuccess: (_, capability) => {
@@ -246,24 +251,6 @@ export default function CapabilityManager() {
     },
     onError: (err) => {
       toast({ title: 'Failed to toggle', description: err.message, variant: 'destructive' });
-    },
-  });
-
-  const saveEditMutation = useMutation({
-    mutationFn: async () => {
-      await base44.entities.NexusCapabilityRegistry.update(editingCapability.id, {
-        display_name: editForm.display_name,
-        description: editForm.description,
-        notes: editForm.notes,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nexusCapabilities'] });
-      setEditDialogOpen(false);
-      toast({ title: 'Capability updated', description: 'Metadata changes saved to the registry.' });
-    },
-    onError: (err) => {
-      toast({ title: 'Update failed', description: err.message, variant: 'destructive' });
     },
   });
 
@@ -317,19 +304,19 @@ export default function CapabilityManager() {
           </Card>
           <Card>
             <CardContent className="pt-5">
-              <div className="text-2xl font-display font-bold text-emerald-600">{stats.active}</div>
+              <div className="text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400">{stats.active}</div>
               <p className="text-xs text-muted-foreground">Currently active</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-5">
-              <div className="text-2xl font-display font-bold text-purple-600">{stats.tier3}</div>
+              <div className="text-2xl font-display font-bold text-purple-600 dark:text-purple-400">{stats.tier3}</div>
               <p className="text-xs text-muted-foreground">Autonomous (Tier 3)</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-5">
-              <div className="text-2xl font-display font-bold text-blue-600">{stats.totalFires.toLocaleString()}</div>
+              <div className="text-2xl font-display font-bold text-primary">{stats.totalFires.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Lifetime invocations</p>
             </CardContent>
           </Card>
@@ -380,15 +367,6 @@ export default function CapabilityManager() {
                 key={cap.id}
                 capability={cap}
                 onToggle={(c) => toggleMutation.mutate(c)}
-                onEdit={(c) => {
-                  setEditingCapability(c);
-                  setEditForm({
-                    display_name: c.display_name || '',
-                    description: c.description || '',
-                    notes: c.notes || '',
-                  });
-                  setEditDialogOpen(true);
-                }}
               />
             ))}
           </div>

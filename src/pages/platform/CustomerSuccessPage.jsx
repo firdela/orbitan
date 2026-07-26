@@ -91,7 +91,7 @@ export default function CustomerSuccessPage() {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto animate-fade-in">
         <PageHeader title="Customer Success Workspace" subtitle="Cross-tenant customer success" />
-        <div className="border border-amber-200 bg-amber-50 rounded-xl p-6 text-center">
+        <div className="border border-amber-500/20 bg-amber-500/10 rounded-xl p-6 text-center">
           <ShieldAlert className="w-10 h-10 text-orbitan-amber mx-auto mb-3" />
           <h3 className="text-lg font-heading font-bold text-foreground mb-1">Platform admin access required</h3>
           <p className="text-sm text-muted-foreground">The Customer Success Workspace is restricted to platform administrators. Your current role does not have permission to view cross-tenant customer data.</p>
@@ -101,7 +101,7 @@ export default function CustomerSuccessPage() {
   }
 
   if (loading) return <div className="p-8"><LoadingState message="Loading customer success workspace…" size="lg" /></div>;
-  if (data?.error) return <div className="p-8"><div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800">{data.error}</div></div>;
+  if (data?.error) return <div className="p-8"><div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-sm text-destructive">{data.error}</div></div>;
   if (!data) return null;
 
   const customers = data.customers || [];

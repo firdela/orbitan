@@ -91,7 +91,7 @@ export default function NotificationsInbox({ tenantSlug = 't1', className }) {
           subtitle: `${a.current_stock} units left · ${a.days_until_stockout ?? '?'} days to stockout`,
           urgency: a.urgency,
           time: a.alert_date ? format(new Date(a.alert_date), 'd MMM') : 'Today',
-          link: `/${tenantSlug}/inventory`,
+          link: `/workspace/${tenantSlug}/inventory`,
         }));
       } catch (_) {}
 
@@ -104,7 +104,7 @@ export default function NotificationsInbox({ tenantSlug = 't1', className }) {
           subtitle: `${r.type} · Due ${r.due_date ? format(new Date(r.due_date), 'd MMM yyyy') : '—'}`,
           urgency: 'high',
           time: r.due_date ? format(new Date(r.due_date), 'd MMM') : '',
-          link: `/${tenantSlug}/compliance`,
+          link: `/workspace/${tenantSlug}/compliance`,
         }));
       } catch (_) {}
 
@@ -117,7 +117,7 @@ export default function NotificationsInbox({ tenantSlug = 't1', className }) {
           subtitle: `Priority: ${t.priority} · Due ${t.due_date ? format(new Date(t.due_date), 'd MMM') : '—'}`,
           urgency: t.priority === 'urgent' ? 'critical' : 'medium',
           time: t.due_date ? format(new Date(t.due_date), 'd MMM') : '',
-          link: `/${tenantSlug}/tasks`,
+          link: `/workspace/${tenantSlug}/tasks`,
         }));
       } catch (_) {}
 

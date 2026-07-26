@@ -44,10 +44,10 @@ function computeProductivityPct(tasks) {
 }
 
 const PRIORITY_CONFIG = {
-  low:    { color: 'bg-slate-100 text-slate-500',    dot: 'bg-slate-400',    label: 'Low',    ring: 'ring-slate-200' },
-  medium: { color: 'bg-blue-50 text-blue-600',       dot: 'bg-blue-500',     label: 'Medium', ring: 'ring-blue-200' },
-  high:   { color: 'bg-amber-50 text-amber-700',     dot: 'bg-amber-500',    label: 'High',   ring: 'ring-amber-200' },
-  urgent: { color: 'bg-red-50 text-red-600',         dot: 'bg-red-500',      label: 'Urgent', ring: 'ring-red-200' },
+  low:    { color: 'bg-slate-500/10 text-slate-600 dark:text-slate-400', dot: 'bg-slate-400',    label: 'Low',    ring: 'ring-slate-500/20' },
+  medium: { color: 'bg-primary/10 text-primary',                         dot: 'bg-primary',     label: 'Medium', ring: 'ring-primary/20' },
+  high:   { color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', dot: 'bg-amber-500',    label: 'High',   ring: 'ring-amber-500/20' },
+  urgent: { color: 'bg-destructive/10 text-destructive',                 dot: 'bg-destructive', label: 'Urgent', ring: 'ring-destructive/20' },
 };
 
 // ─── Sub-screens ─────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ function TasksScreen({ tasks, updateTask }) {
           return (
             <button key={task.id} onClick={() => setSelected(task)}
               className={`w-full bg-card border rounded-2xl p-4 text-left transition-all active:scale-[0.99] hover:shadow-sm ${
-                task.priority === 'urgent' && !done ? 'border-red-200 bg-red-50/50' :
+                task.priority === 'urgent' && !done ? 'border-destructive/20 bg-destructive/5' :
                 done ? 'border-border opacity-60' : 'border-border hover:border-primary/30'
               }`}>
               <div className="flex items-start gap-3">
@@ -257,22 +257,11 @@ function ShiftsScreen({ shifts, clockedIn, clockInTime, elapsed, onClockIn, onCl
         </div>
       </div>
 
-      {/* Quick link to full timesheets */}
-      <Link to="/t1/clockin" className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3.5 hover:border-primary/30 transition-all group">
-        <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-          <Clock className="w-4 h-4 text-blue-600" />
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-foreground">Timesheet & Records</p>
-          <p className="text-xs text-muted-foreground">Full clock history & verification</p>
-        </div>
-        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-      </Link>
     </div>
   );
 }
 
-function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onReportIssue, onSignOut }) {
+function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onReportIssue, onSignOut, onNavigate }) {
   return (
     <div className="space-y-4">
       {/* Profile card */}
@@ -350,17 +339,16 @@ function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onR
         </div>
         <div className="divide-y divide-border">
           {[
-            { to: '/t1/dashboard', icon: Utensils, label: 'F&B Dashboard', color: 'bg-orange-50 text-orange-600' },
-            { to: '/t1/compliance', icon: Shield, label: 'Compliance Centre', color: 'bg-purple-50 text-purple-600' },
-            { to: '/t1/ai-studio', icon: Zap, label: 'AI Studio & SOPs', color: 'bg-amber-50 text-amber-600' },
-          ].map(({ to, icon: Icon, label, color }) => (
-            <Link key={to} to={to} className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 transition-colors group">
+            { section: 'home', icon: Utensils, label: 'F&B Dashboard', color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400' },
+            { section: 'safety', icon: Shield, label: 'Compliance Centre', color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400' },
+          ].map(({ section, icon: Icon, label, color }) => (
+            <button key={section} onClick={() => onNavigate?.(section)} className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 transition-colors group text-left">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
                 <Icon className="w-4 h-4" />
               </div>
               <p className="text-sm font-medium text-foreground flex-1">{label}</p>
               <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-            </Link>
+            </button>
           ))}
         </div>
       </div>
@@ -637,12 +625,12 @@ export default function WorkerPortal() {
           <OrbitanLogo size="sm" />
           <div className="flex items-center gap-2">
             {urgentTasks > 0 && (
-              <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-full px-2.5 py-1">
-                <Flame className="w-3 h-3 text-red-500" />
-                <span className="text-[10px] font-bold text-red-600">{urgentTasks} urgent</span>
+              <div className="flex items-center gap-1 bg-destructive/10 border border-destructive/20 rounded-full px-2.5 py-1">
+                <Flame className="w-3 h-3 text-destructive" />
+                <span className="text-[10px] font-bold text-destructive">{urgentTasks} urgent</span>
               </div>
             )}
-            <NotificationsInbox tenantSlug="t1" />
+            <NotificationsInbox tenantSlug={tenantId} />
             <div className="w-9 h-9 rounded-full orbitan-gradient flex items-center justify-center text-white text-xs font-bold shadow-md">
               {workerInitials}
             </div>
@@ -668,13 +656,13 @@ export default function WorkerPortal() {
 
             {/* Compliance Gate Alert */}
             {pendingVerification.length > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 animate-fade-in">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                  <Shield className="w-4 h-4 text-amber-600" />
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3 animate-fade-in">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-amber-900">Attendance Verification Required</p>
-                  <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                  <p className="text-sm font-semibold text-foreground">Attendance Verification Required</p>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
                     {pendingVerification.length} clock record{pendingVerification.length > 1 ? 's are' : ' is'} pending
                     manager verification — likely due to a missing Food Safety Log. Please contact your supervisor.
                   </p>
@@ -759,7 +747,7 @@ export default function WorkerPortal() {
                   <div className="flex items-center gap-2">
                     <CheckSquare className="w-4 h-4 text-orbitan-blue" />
                     <span className="text-sm font-semibold">Pending Tasks</span>
-                    {urgentTasks > 0 && <span className="text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">{urgentTasks} urgent</span>}
+                    {urgentTasks > 0 && <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">{urgentTasks} urgent</span>}
                   </div>
                   <button onClick={() => setActiveSection('tasks')} className="text-xs text-primary font-medium">See all →</button>
                 </div>
@@ -861,6 +849,7 @@ export default function WorkerPortal() {
             onFeedback={openFeedback}
             onReportIssue={() => setReportIssueOpen(true)}
             onSignOut={() => base44.auth.logout()}
+            onNavigate={setActiveSection}
           />
         )}
 

@@ -51,10 +51,10 @@ export default function PilotReadinessDashboard() {
   };
 
   const recColor = { 'Not Ready': 'text-orbitan-red', 'Conditionally Ready': 'text-orbitan-amber', 'Ready for Controlled Pilot': 'text-orbitan-green' };
-  const recBg = { 'Not Ready': 'bg-red-50 border-red-200', 'Conditionally Ready': 'bg-amber-50 border-amber-200', 'Ready for Controlled Pilot': 'bg-green-50 border-green-200' };
+  const recBg = { 'Not Ready': 'bg-destructive/10 border-destructive/20', 'Conditionally Ready': 'bg-amber-500/10 border-amber-500/20', 'Ready for Controlled Pilot': 'bg-emerald-500/10 border-emerald-500/20' };
 
   if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-  if (data?.error) return <div className="p-8"><div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800">{data.error}</div></div>;
+  if (data?.error) return <div className="p-8"><div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-sm text-destructive">{data.error}</div></div>;
   if (!data) return null;
 
   const categories = {};
@@ -91,7 +91,7 @@ export default function PilotReadinessDashboard() {
             <p className="text-sm text-muted-foreground">{data.tenant_name || data.tenant_id} · {data.subscription_plan || 'no plan'} · {data.tenant_status}</p>
             {data.critical_blockers?.length > 0 ? (
               <div className="mt-2 text-xs text-red-700 flex items-start gap-1.5"><ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" /><span><span className="font-semibold">Critical blockers:</span> {data.critical_blockers.join(', ')}</span></div>
-            ) : <p className="mt-2 text-xs text-green-700">No critical blockers.</p>}
+            ) : <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">No critical blockers.</p>}
           </div>
         </div>
       </div>
@@ -139,6 +139,6 @@ export default function PilotReadinessDashboard() {
 }
 
 function StatusPill({ status }) {
-  const map = { connected: 'bg-green-100 text-green-800', pending: 'bg-amber-100 text-amber-800', 'platform-managed': 'bg-blue-100 text-blue-800', available: 'bg-green-100 text-green-800' };
+  const map = { connected: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400', pending: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', 'platform-managed': 'bg-primary/10 text-primary', available: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' };
   return <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${map[status] || 'bg-muted text-muted-foreground'}`}>{status}</span>;
 }

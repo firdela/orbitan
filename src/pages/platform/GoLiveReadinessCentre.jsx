@@ -111,7 +111,7 @@ export default function GoLiveReadinessCentre() {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto animate-fade-in">
         <PageHeader title="Go-Live Readiness Centre" subtitle="Unified system readiness" />
-        <div className="border border-amber-200 bg-amber-50 rounded-xl p-6 text-center">
+        <div className="border border-amber-500/20 bg-amber-500/10 rounded-xl p-6 text-center">
           <ShieldAlert className="w-10 h-10 text-orbitan-amber mx-auto mb-3" />
           <h3 className="text-lg font-heading font-bold text-foreground mb-1">Platform admin access required</h3>
           <p className="text-sm text-muted-foreground">The Go-Live Readiness Centre is restricted to platform administrators. Your current role does not have permission to view system readiness data.</p>
@@ -120,7 +120,7 @@ export default function GoLiveReadinessCentre() {
     );
   }
   if (loading) return <div className="p-8 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
-  if (server?.error) return <div className="p-8"><div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800">{server.error}</div></div>;
+  if (server?.error) return <div className="p-8"><div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-sm text-destructive">{server.error}</div></div>;
   if (!server) return null;
 
   // Merge client checks into the PWA & Client category
@@ -149,7 +149,7 @@ export default function GoLiveReadinessCentre() {
   const clientPending = allItems.filter(i => i.status === 'pending_client').length;
 
   const recColor = blockers.length > 0 ? 'text-orbitan-red' : warnings.length > 0 ? 'text-orbitan-amber' : 'text-orbitan-green';
-  const recBg = blockers.length > 0 ? 'bg-red-50 border-red-200' : warnings.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200';
+  const recBg = blockers.length > 0 ? 'bg-destructive/10 border-destructive/20' : warnings.length > 0 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-emerald-500/10 border-emerald-500/20';
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 animate-fade-in">
@@ -182,13 +182,13 @@ export default function GoLiveReadinessCentre() {
       {(blockers.length > 0 || warnings.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {blockers.length > 0 && (
-            <Card className="p-4 border-red-200 bg-red-50">
+            <Card className="p-4 border-destructive/20 bg-destructive/5">
               <div className="flex items-center gap-2 mb-2"><ShieldAlert className="w-4 h-4 text-orbitan-red" /><h3 className="text-xs font-semibold uppercase tracking-wider text-orbitan-red">Blockers</h3></div>
               <div className="space-y-1.5">{blockers.map((b, i) => <div key={i} className="text-xs"><span className="font-medium">{b.label}</span><p className="text-muted-foreground">{b.evidence}</p></div>)}</div>
             </Card>
           )}
           {warnings.length > 0 && (
-            <Card className="p-4 border-amber-200 bg-amber-50">
+            <Card className="p-4 border-amber-500/20 bg-amber-500/5">
               <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-4 h-4 text-orbitan-amber" /><h3 className="text-xs font-semibold uppercase tracking-wider text-orbitan-amber">Warnings</h3></div>
               <div className="space-y-1.5">{warnings.map((w, i) => <div key={i} className="text-xs"><span className="font-medium">{w.label}</span><p className="text-muted-foreground">{w.evidence}</p></div>)}</div>
             </Card>

@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import BlueprintScoreRing from '@/components/advisor/BlueprintScoreRing';
 import AdvisoryRuleCard from '@/components/advisor/AdvisoryRuleCard';
 import {
@@ -24,7 +26,7 @@ import {
 } from '@/lib/onboarding/blueprint-registry';
 import { useAdvisoryConfig } from '@/lib/hooks/useAdvisoryConfig';
 import { MODULES, INDUSTRY_LABELS } from '@/lib/orbitan-config';
-import { LAUNCH_MANIFESTS } from '@/lib/tenant-registry';
+
 import {
   X, Target, Shield, Info, AlertTriangle, Layers,
   ChevronDown, ChevronUp, Zap, Building2, Sparkles,
@@ -141,7 +143,22 @@ function TenantSelector({ selectedTenant, onSelect, manifests }) {
 
 // ── Main BlueprintAdvisor Component ───────────────────────────
 export default function BlueprintAdvisor({ open, onClose }) {
-  const manifests = useMemo(() => Object.values(LAUNCH_MANIFESTS), []);
+  const { data: tenantsData } = useQuery({
+    queryKey: ['advisor-tenants'],
+    queryFn: async () => base44.entities.Tenant.list('-created_date', 100),
+  });
+  const manifests = useMemo(
+    () => (tenantsData || []).map((t) => ({
+      tenant_ref: t.id,
+      display_name: t.name || 'Unnamed tenant',
+      industry: t.industry || 'food_beverage',
+      plan: t.subscription_plan || t.plan || 'orbitan_starter',
+      enabled_modules: t.enabled_modules || [],
+      enabled_packs: t.enabled_packs || [],
+      is_virtual: t.is_virtual || false,
+    })),
+    [tenantsData]
+  );
   const [selectedTenant, setSelectedTenant] = useState(null);
 
   const state = useMemo(() => {
@@ -262,8 +279,8 @@ export default function BlueprintAdvisor({ open, onClose }) {
                               className={cn(
                                 "text-[10px] px-2 py-1 rounded-full flex items-center gap-1 transition-colors",
                                 isActive
-                                  ? "bg-orbitan-green-light text-orbitan-green font-medium"
-                                  : "bg-muted text-muted-foreground"
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-medium"
+                                : "bg-muted text-muted-foreground"
                               )}
                             >
                               {isActive && <Zap className="w-2.5 h-2.5" />}
@@ -282,7 +299,7 @@ export default function BlueprintAdvisor({ open, onClose }) {
                     <div className="flex items-center gap-2 mb-3">
                       <Shield className="w-4 h-4 text-orbitan-red" />
                       <h3 className="text-sm font-semibold text-foreground">Governance Gates</h3>
-                      <Badge className="text-[10px] bg-orbitan-red-light text-orbitan-red border-0">
+                      <Badge className="text-[10px] bg-destructive/10 text-destructive border-0">
                         {governanceGates.length}
                       </Badge>
                     </div>
@@ -300,7 +317,7 @@ export default function BlueprintAdvisor({ open, onClose }) {
                     <div className="flex items-center gap-2 mb-3">
                       <Info className="w-4 h-4 text-orbitan-blue" />
                       <h3 className="text-sm font-semibold text-foreground">Recommendations</h3>
-                      <Badge className="text-[10px] bg-orbitan-blue-light text-orbitan-blue border-0">
+                      <Badge className="text-[10px] bg-primary/10 text-primary border-0">
                         {softGates.length}
                       </Badge>
                     </div>
@@ -318,13 +335,13 @@ export default function BlueprintAdvisor({ open, onClose }) {
                     <div className="flex items-center gap-2 mb-3">
                       <AlertTriangle className="w-4 h-4 text-orbitan-amber" />
                       <h3 className="text-sm font-semibold text-foreground">Dependency Violations</h3>
-                      <Badge className="text-[10px] bg-orbitan-amber-light text-orbitan-amber border-0">
+                      <Badge className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border-0">
                         {depViolations.length}
                       </Badge>
                     </div>
                     <div className="space-y-2">
                       {depViolations.map((v, i) => (
-                        <div key={i} className="bg-orbitan-amber-light border border-amber-200 rounded-lg px-3 py-2.5 text-xs">
+                        <div key={i} className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5 text-xs">
                           <p className="font-medium text-foreground mb-0.5">
                             {MODULES[v.module]?.name || v.module} is missing:
                           </p>
@@ -344,13 +361,13 @@ export default function BlueprintAdvisor({ open, onClose }) {
                     <div className="flex items-center gap-2 mb-3">
                       <ArrowUpRight className="w-4 h-4 text-orbitan-purple" />
                       <h3 className="text-sm font-semibold text-foreground">Plan Limitations</h3>
-                      <Badge className="text-[10px] bg-orbitan-purple-light text-orbitan-purple border-0">
+                      <Badge className="text-[10px] bg-purple-500/10 text-purple-700 dark:text-purple-400 border-0">
                         {planViolations.length}
                       </Badge>
                     </div>
                     <div className="space-y-2">
                       {planViolations.map((v, i) => (
-                        <div key={i} className="bg-orbitan-purple-light border border-purple-200 rounded-lg px-3 py-2.5 text-xs">
+                        <div key={i} className="bg-purple-500/10 border border-purple-500/20 rounded-lg px-3 py-2.5 text-xs">
                           <p className="text-foreground leading-relaxed">{v.message}</p>
                           {v.upgrade_plan && (
                             <p className="text-[10px] text-orbitan-purple mt-1 font-medium">
@@ -368,7 +385,7 @@ export default function BlueprintAdvisor({ open, onClose }) {
                 {governanceGates.length === 0 && softGates.length === 0 &&
                  depViolations.length === 0 && planViolations.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-orbitan-green-light flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
                       <Sparkles className="w-5 h-5 text-orbitan-green" />
                     </div>
                     <div>
