@@ -1,7 +1,7 @@
 {
   "name": "AuditLog",
   "type": "object",
-  "description": "Global, immutable audit trail registry for all high-value events across OrbitanOS. Now captures evidence artifacts and override references for audit-bundle generation. Exit-ready \u2014 portable to any stack.",
+  "description": "Global, immutable audit trail registry for all high-value events across OrbitanOS. Powers the Global Activity Timeline & Audit Centre (ADR-0054) and the Audit Bundle (SOC 2). ADR-0054 adds additive metadata (severity, category, event_source, link, related_user_id, related_workflow) for timeline classification and Orbit Nexus consumption \u2014 fully backward-compatible. Exit-ready \u2014 portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -37,12 +37,53 @@
       ],
       "description": "Which OrbitanOS module generated this event"
     },
+    "category": {
+      "type": "string",
+      "enum": [
+        "operational",
+        "lifecycle",
+        "access",
+        "governance",
+        "security",
+        "ai",
+        "system"
+      ],
+      "default": "operational",
+      "description": "ADR-0054 \u2014 Higher-level event classification for the Activity Timeline. 'operational' = business actions (auditEngine); 'lifecycle' = tenant/workspace/user creation; 'access' = login/role changes; 'governance' = overrides/policy; 'security' = shield blocks/threats; 'ai' = Nexus insights; 'system' = config/infrastructure."
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "success",
+        "warning",
+        "critical"
+      ],
+      "default": "info",
+      "description": "ADR-0054 \u2014 Deterministic severity for timeline prioritisation. Derived from action_type by the auditEngine. Independent of shield_outcome (which tracks policy evaluation)."
+    },
+    "event_source": {
+      "type": "string",
+      "description": "ADR-0054 \u2014 The engine/function that wrote this record e.g. 'auditEngine', 'shieldInterceptor', 'digitalSignature', 'notificationDispatcher', 'system'. Enables source filtering in the Audit Centre."
+    },
     "target_entity": {
       "type": "string",
       "description": "Entity type affected e.g. SalesInvoice, ComplianceRecord, ClockRecord"
     },
     "target_record_id": {
       "type": "string"
+    },
+    "link": {
+      "type": "string",
+      "description": "ADR-0054 \u2014 Best-effort deep link to the source record's page for one-click navigation from the timeline."
+    },
+    "related_user_id": {
+      "type": "string",
+      "description": "ADR-0054 \u2014 Another user referenced by this event (e.g. the user who was onboarded, invited, or whose role changed). actor_id is the performer; related_user_id is the subject. Null for most operational events."
+    },
+    "related_workflow": {
+      "type": "string",
+      "description": "ADR-0054 \u2014 Workflow name if this event is part of a multi-step workflow e.g. 'payroll_run', 'po_approval', 'compliance_review'. Null for standalone events."
     },
     "previous_state": {
       "type": "object",
@@ -155,6 +196,16 @@
                   }
                 }
               ]
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "data.actor_id": "{{user.id}}"
             }
           ]
         }
