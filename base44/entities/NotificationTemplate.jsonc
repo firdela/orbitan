@@ -1,7 +1,7 @@
 {
   "name": "NotificationTemplate",
   "type": "object",
-  "description": "OrbitanOS Unified Notification Pipeline (ADR-0031) \u2014 Registry of configurable notification templates consumed by the notificationDispatcher. Decouples notification *trigger* (the event) from *delivery* (the medium + copy). Tenant-overridable copy supports white-label/enterprise customisation. Exit-Ready: pure schema, portable to any stack.",
+  "description": "OrbitanOS Unified Notification Pipeline (ADR-0031, extended ADR-0053) \u2014 Registry of configurable notification templates consumed by the Orbit Notification Engine (notificationDispatcher). Decouples notification *trigger* (the event) from *delivery* (the medium + copy). Tenant-overridable copy supports white-label/enterprise customisation. ADR-0053 adds is_actionable, action_type, default_priority so the template becomes the authority on whether an event is actionable and its base priority \u2014 no business logic hardcoded in the engine. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string",
@@ -9,7 +9,7 @@
     },
     "template_key": {
       "type": "string",
-      "description": "Unique template identifier, namespaced by module e.g. 'shift_reminder', 'compliance_overdue', 'po_approval_request', 'replenishment_alert'. The dispatcher resolves by (tenant_id, template_key) with fallback to system default."
+      "description": "Unique template identifier, namespaced by module e.g. 'shift_reminder', 'compliance_overdue', 'po_approval_request', 'replenishment_alert'. The engine resolves by (tenant_id, template_key) with fallback to system default."
     },
     "module": {
       "type": "string",
@@ -27,17 +27,41 @@
       ],
       "description": "Owning module \u2014 used for grouping and admin filtering"
     },
+    "inbox_category": {
+      "type": "string",
+      "enum": [
+        "approval",
+        "assignment",
+        "reminder",
+        "mention",
+        "compliance",
+        "inventory",
+        "procurement",
+        "finance",
+        "sales",
+        "workforce",
+        "scheduling",
+        "onboarding",
+        "customer_success",
+        "audit",
+        "security",
+        "ai_insight",
+        "renewal",
+        "system"
+      ],
+      "description": "Orbit Inbox category this template maps to (ADR-0053)."
+    },
     "label": {
       "type": "string",
       "description": "Human-readable label shown in the admin template manager"
     },
     "subject_template": {
       "type": "string",
-      "description": "Subject line with {{mustache}} placeholders resolved from the dispatcher payload e.g. 'Shift Reminder \u2014 {{shift_date}} at {{start_time}}'"
+      "description": "Subject line with {{mustache}} placeholders resolved from the engine payload e.g. 'Shift Reminder \u2014 {{shift_date}} at {{start_time}}'"
     },
     "body_template": {
       "type": "string",
-      "description": "Email/body content with {{mustache}} placeholders. Supports plain text or HTML depending on delivery channel. Resolved against the dispatcher payload."
+      "description": "Email/body content with {{mustache}} placeholders. Supports plain text or HTML depending on delivery channel. Resolved against the engine payload."
     },
     "delivery_channels": {
       "type": "array",
@@ -52,7 +76,36 @@
       "default": [
         "email"
       ],
-      "description": "Channels the dispatcher will attempt for this template, in priority order."
+      "description": "Channels the engine will attempt for this template, in priority order."
+    },
+    "is_actionable": {
+      "type": "boolean",
+      "default": false,
+      "description": "ADR-0053 \u2014 True = generated inbox items appear in 'Needs My Action'. False = 'Activity'. The engine reads this from the template so actionability is configurable without code."
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "review",
+        "complete",
+        "acknowledge",
+        "follow_up",
+        "none"
+      ],
+      "default": "none",
+      "description": "ADR-0053 \u2014 The kind of action expected for actionable templates."
+    },
+    "default_priority": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "important",
+        "normal",
+        "informational"
+      ],
+      "default": "normal",
+      "description": "ADR-0053 \u2014 Base priority for generated inbox items. Orbit Nexus may override via ai_priority in future."
     },
     "from_name": {
       "type": "string",

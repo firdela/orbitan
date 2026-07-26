@@ -1,0 +1,207 @@
+{
+  "name": "OrbitInbox",
+  "type": "object",
+  "description": "OrbitanOS Orbit Inbox (ADR-0053) \u2014 the unified operational inbox for the entire Orbit ecosystem. One record per recipient per platform event. Separates actionable items (Needs My Action) from informational items (Activity), with archive + pin + read state. Created by the Orbit Notification Engine (extended notificationDispatcher) from platform events. Provenance is stored on the record (source_entity, source_id, event_type, event_metadata) \u2014 no source business data is duplicated. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "Outlet scope if applicable. Null = tenant/company-wide item."
+    },
+    "recipient_user_id": {
+      "type": "string",
+      "description": "User who should see this inbox item (one record per recipient)."
+    },
+    "recipient_name": {
+      "type": "string",
+      "description": "Display name of the recipient at creation time (for audit)."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "approval",
+        "assignment",
+        "reminder",
+        "mention",
+        "compliance",
+        "inventory",
+        "procurement",
+        "finance",
+        "sales",
+        "workforce",
+        "scheduling",
+        "onboarding",
+        "customer_success",
+        "audit",
+        "security",
+        "ai_insight",
+        "renewal",
+        "system"
+      ],
+      "description": "Inbox category \u2014 drives filters and preferences."
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Specific event identifier e.g. 'replenishment_alert', 'task_assigned', 'compliance_overdue'."
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string",
+      "description": "Resolved message body (mustache-substituted). No raw source data \u2014 only human-readable summary."
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "important",
+        "normal",
+        "informational"
+      ],
+      "default": "normal",
+      "description": "Deterministic priority set by the event adapter from the template default. Orbit Nexus may re-classify via ai_priority in future batch jobs."
+    },
+    "ai_priority": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "important",
+        "normal",
+        "informational",
+        "noise"
+      ],
+      "description": "Reserved for future Orbit Nexus batch re-prioritisation. Null until an AI job classifies it."
+    },
+    "is_actionable": {
+      "type": "boolean",
+      "default": false,
+      "description": "True = appears in 'Needs My Action'. False = appears in 'Activity'. Set from the template's is_actionable flag."
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "review",
+        "complete",
+        "acknowledge",
+        "follow_up",
+        "none"
+      ],
+      "default": "none",
+      "description": "The kind of action expected, if actionable."
+    },
+    "action_state": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "dismissed"
+      ],
+      "default": "pending",
+      "description": "Lifecycle of the action. pending \u2192 completed (done) or dismissed (snoozed/ignored). Completing or dismissing auto-archives."
+    },
+    "read_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Null = unread. Set when the recipient opens/views the item."
+    },
+    "pinned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Recipient-pinned item stays at the top of its section."
+    },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Null = active (in Needs My Action or Activity). Set when archived."
+    },
+    "source_entity": {
+      "type": "string",
+      "description": "Entity name that generated this event e.g. 'ReplenishmentAlert', 'Task', 'ComplianceRecord'."
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Record ID of the source record."
+    },
+    "link": {
+      "type": "string",
+      "description": "Deep link to the source record's page for navigation."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Event-specific context (counts, dates, names). No sensitive source data duplicated."
+    },
+    "channels_delivered": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Channels the engine delivered this item through e.g. ['in_app', 'email']."
+    },
+    "template_key": {
+      "type": "string",
+      "description": "NotificationTemplate key used to generate this item (for audit + re-render)."
+    }
+  },
+  "required": [
+    "tenant_id",
+    "recipient_user_id",
+    "category",
+    "event_type",
+    "title",
+    "priority"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "data.recipient_user_id": "{{user.id}}"
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "data.recipient_user_id": "{{user.id}}"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

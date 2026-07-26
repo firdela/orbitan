@@ -1,0 +1,133 @@
+{
+  "name": "NotificationPreference",
+  "type": "object",
+  "description": "OrbitanOS Orbit Inbox (ADR-0053) \u2014 per-user notification delivery preferences. One record per user per category. Drives the Orbit Notification Engine's channel selection and the inbox's noise filter (min_priority). Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User this preference applies to."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "approval",
+        "assignment",
+        "reminder",
+        "mention",
+        "compliance",
+        "inventory",
+        "procurement",
+        "finance",
+        "sales",
+        "workforce",
+        "scheduling",
+        "onboarding",
+        "customer_success",
+        "audit",
+        "security",
+        "ai_insight",
+        "renewal",
+        "system",
+        "all"
+      ],
+      "description": "Inbox category this preference governs. 'all' = user-wide default."
+    },
+    "email_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "push_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Future-ready \u2014 push channel not yet active but preference is stored."
+    },
+    "in_app_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "muted": {
+      "type": "boolean",
+      "default": false,
+      "description": "True = no in_app or push items created for this category (email still sent if enabled)."
+    },
+    "digest_mode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "daily",
+        "weekly"
+      ],
+      "default": "none",
+      "description": "Bundles email delivery into a digest. 'none' = send immediately. Future: digest scheduler automation."
+    },
+    "min_priority": {
+      "type": "string",
+      "enum": [
+        "informational",
+        "normal",
+        "important",
+        "critical"
+      ],
+      "default": "informational",
+      "description": "Items below this priority are hidden from the inbox (noise filter). informational = show everything; critical = only critical."
+    }
+  },
+  "required": [
+    "tenant_id",
+    "user_id",
+    "category"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.user_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}

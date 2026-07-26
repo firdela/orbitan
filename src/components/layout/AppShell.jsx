@@ -9,6 +9,7 @@ import GlobalSearchBar from './GlobalSearchBar';
 import OutletSwitcher from './OutletSwitcher';
 import { Menu, X } from 'lucide-react';
 import UserMenu from '@/components/shared/UserMenu';
+import OrbitInboxBadge from '@/components/orbit-inbox/OrbitInboxBadge';
 
 export default function AppShell({ navigation, manifestNav, children, headerRight, title, tenant }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -85,6 +86,11 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
           )}
         </div>
 
+        {/* Orbit Inbox — quick access link */}
+        <div className="px-3 py-2 border-t border-sidebar-border/40">
+          <OrbitInboxBadge variant="sidebar" />
+        </div>
+
         {/* Sidebar Footer — Enterprise Identity + Copyright */}
         <div className="px-4 py-4 border-t border-sidebar-border/40 space-y-3">
           {tenant && (
@@ -135,9 +141,10 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
             )}
           </div>
           <GlobalSearchBar tenant={tenant} />
-          {headerRight && (
-            <div className="flex items-center gap-2 flex-shrink-0 ml-auto">{headerRight}</div>
-          )}
+          <div className="flex items-center gap-1.5 flex-shrink-0 ml-auto">
+            <OrbitInboxBadge variant="topnav" />
+            {headerRight}
+          </div>
         </header>
 
         {/* Page content */}
