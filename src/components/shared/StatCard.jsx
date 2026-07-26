@@ -4,7 +4,7 @@ import { TrendingUp, TrendingDown, Minus, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ContextualHelp from '@/components/shared/ContextualHelp';
 
-export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue', trend, trendValue, className, help, to, onClick }) {
+export default function StatCard({ title, value, subtitle, icon: Icon, color = 'blue', trend, trendValue, className, help, to, onClick, compact }) {
   const navigate = useNavigate();
   const colors = {
     blue: { bg: 'bg-orbitan-blue-light', icon: 'text-orbitan-blue', border: 'border-blue-100' },
@@ -39,14 +39,15 @@ export default function StatCard({ title, value, subtitle, icon: Icon, color = '
       onKeyDown={handleKeyDown}
       aria-label={isInteractive ? `${title} — view details` : undefined}
       className={cn(
-        "group bg-card border border-border rounded-xl p-5 transition-shadow duration-200",
+        "group bg-card border border-border rounded-xl transition-shadow duration-200",
+        compact ? "p-3" : "p-5",
         isInteractive && "cursor-pointer hover:shadow-md hover:border-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         className
       )}
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", c.bg)}>
-          {Icon && <Icon className={cn("w-5 h-5", c.icon)} />}
+      <div className="flex items-start justify-between mb-3">
+        <div className={cn(compact ? "w-8 h-8" : "w-10 h-10", "rounded-lg flex items-center justify-center", c.bg)}>
+          {Icon && <Icon className={cn(compact ? "w-4 h-4" : "w-5 h-5", c.icon)} />}
         </div>
         {trendValue !== undefined && (
           <div className={cn("flex items-center gap-1 text-xs font-medium", trendColor)}>
@@ -56,7 +57,7 @@ export default function StatCard({ title, value, subtitle, icon: Icon, color = '
         )}
       </div>
       <div className="relative">
-        <p className="text-2xl font-heading font-bold text-foreground mb-0.5">{value ?? '—'}</p>
+        <p className={cn(compact ? "text-xl" : "text-2xl", "font-heading font-bold text-foreground mb-0.5")}>{value ?? '—'}</p>
         <div className="flex items-center gap-1">
           <p className="text-sm font-medium text-foreground/80">{title}</p>
           {help && <ContextualHelp {...(typeof help === 'string' ? { content: help } : help)} />}

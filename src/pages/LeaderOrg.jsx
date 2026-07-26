@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { PLATFORM_IDENTITY, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, OPERATING_CYCLE } from '@/lib/orbitan-config';
 import { DEMO_TENANTS } from '@/lib/use-tenant.jsx';
 import { LAUNCH_MANIFESTS, getManifestList } from '@/lib/tenant-registry';
 import { getActivePacks, getFuturePacks } from '@/lib/orbitan-engine';
-import { PLATFORM_NAVIGATION } from '@/lib/navigation-registry';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
 import StatCard from '@/components/shared/StatCard';
@@ -15,7 +14,10 @@ import { Button } from '@/components/ui/button';
 import TenantSwitcher from '@/components/shared/TenantSwitcher';
 import CurrencyDropdown from '@/components/shared/CurrencyDropdown';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import PlatformNavigation from '@/components/platform/PlatformNavigation';
+import UnifiedCommandNav from '@/components/leader/UnifiedCommandNav';
+import CompactLeaderHeader from '@/components/leader/CompactLeaderHeader';
+import NexusDailyBrief from '@/components/leader/NexusDailyBrief';
+import QuickLaunchRail from '@/components/leader/QuickLaunchRail';
 import TenantCommandCard from '@/components/leader/TenantCommandCard';
 import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionPlansAccordion';
 import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
@@ -29,9 +31,9 @@ import SubscriptionPolicyManager from '@/components/platform/SubscriptionPolicyM
 import ShieldCommandCenter from '@/pages/platform/ShieldCommandCenter';
 import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
 import {
-  Building2, Package, Shield, ChevronRight,
-  Cpu, Layers, Plus, CheckCircle2, RefreshCw,
-  Rocket, Activity, Zap, Wallet, ShoppingBag, Target, FileText, Lock } from 'lucide-react';
+  Building2, Package, Shield,
+  Layers, Plus, CheckCircle2, RefreshCw,
+  Rocket, Activity, Zap, Target } from 'lucide-react';
 import UserMenu from '@/components/shared/UserMenu';
 
 export default function LeaderOrg() {
@@ -44,13 +46,18 @@ export default function LeaderOrg() {
   // Live tenant data from DB — enables manifest-driven navigation + Shield status
   const [realTenants, setRealTenants] = useState({});
   const [policyCounts, setPolicyCounts] = useState({});
+  // Customer Success overview — single fetch reused for Nexus Brief + tenant enrichment
+  const [csData, setCsData] = useState(null);
+  const [csLoading, setCsLoading] = useState(true);
+  const [csError, setCsError] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [dbTenants, policies] = await Promise.all([
+        const [dbTenants, policies, csRes] = await Promise.all([
           base44.entities.Tenant.list('-created_date', 50),
-          base44.entities.GovernancePolicy.filter({ is_active: true })
+          base44.entities.GovernancePolicy.filter({ is_active: true }),
+          base44.functions.invoke('customerSuccess', { action: 'overview' }),
         ]);
         // Map tenant name → full record for workspace nav + governance domain
         const byName = {};
@@ -60,9 +67,14 @@ export default function LeaderOrg() {
         policies.forEach(p => { counts[p.tenant_id] = (counts[p.tenant_id] || 0) + 1; });
         setRealTenants(byName);
         setPolicyCounts(counts);
+        // Customer Success overview payload
+        setCsData(csRes.data || csRes || null);
       } catch (e) {
         // Fail gracefully — cards fall back to "Pages Coming Soon"
-        console.error('[LeaderOrg] Failed to load tenant/policy data:', e.message);
+        console.error('[LeaderOrg] Failed to load tenant/policy/CS data:', e.message);
+        setCsError(e.message);
+      } finally {
+        setCsLoading(false);
       }
     })();
   }, []);
@@ -94,6 +106,13 @@ export default function LeaderOrg() {
   // Map manifest array → lookup by tenant_ref
   const manifestByRef = {};
   manifests.forEach(m => { manifestByRef[m.tenant_ref] = m; });
+
+  // Map customerSuccess customer data by tenant name (single fetch, reused)
+  const csByName = useMemo(() => {
+    const map = {};
+    (csData?.customers || []).forEach(c => { map[c.name] = c; });
+    return map;
+  }, [csData]);
 
   const TENANT_MANIFEST_REF = {
     tenant_taqueria: 'taqueria_pte_ltd',
@@ -131,85 +150,33 @@ export default function LeaderOrg() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">
-        {/* Welcome */}
-        <div className="mb-8">
-          <div className="inline-flex items-center gap-2 bg-orbitan-blue-light text-orbitan-blue px-3 py-1.5 rounded-full text-xs font-semibold mb-3">
-            <Cpu className="w-3.5 h-3.5" />
-            OrbitanOS Console — v{PLATFORM_IDENTITY.version}
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-display font-bold text-foreground mb-2">
-            Welcome back, <span className="text-orbitan-blue">Firdaus</span>
-          </h1>
-          <p className="text-muted-foreground">
-            Platform Owner · {PLATFORM_IDENTITY.platform} &amp; {PLATFORM_IDENTITY.os} · {new Date().toLocaleDateString('en-SG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-5">
+        {/* Compact Leader Header */}
+        <CompactLeaderHeader
+          userName="Firdaus"
+          platform={PLATFORM_IDENTITY.platform}
+          os={PLATFORM_IDENTITY.os}
+          version={PLATFORM_IDENTITY.version}
+        />
+
+        {/* Operational KPIs — compact */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <StatCard compact title="Active Tenants" value={activeTenants} subtitle={`${totalTenants} total`} icon={Building2} color="blue" trend="up" trendValue="+3 this month" onClick={() => setActiveTab('tenants')} help={{ title: 'Active Tenants', content: 'Pilot organisations currently provisioned on OrbitanOS. Click to open the Tenant Command Center and manage capabilities, modules, and activation status.' }} />
+          <StatCard compact title="Module Activations" value={totalModuleUsage} subtitle="Across all tenants" icon={Layers} color="purple" onClick={() => setActiveTab('modules')} help={{ title: 'Module Activations', content: 'Total enabled modules across all pilot tenants. Click to view the full platform module registry and Industry Pack catalog.' }} />
+          <StatCard compact title="Industry Packs" value={Object.keys(INDUSTRY_PACKS).length} subtitle="Available packs" icon={Package} color="green" onClick={() => setActiveTab('modules')} help={{ title: 'Industry Packs', content: 'Self-aware capability blueprints available for activation — F&B, Retail, Recycling, and more. Click to browse active and future-proofed packs.' }} />
+          <StatCard compact title="Platform Health" value="100%" subtitle="All systems operational" icon={CheckCircle2} color="green" trend="up" onClick={() => setActiveTab('system-controls')} help={{ title: 'Platform Health', content: 'Real-time status of OrbitanOS backend engines, automations, and integrations. Click to open the System Health Scoreboard.' }} />
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard title="Active Tenants" value={activeTenants} subtitle={`${totalTenants} total`} icon={Building2} color="blue" trend="up" trendValue="+3 this month" onClick={() => setActiveTab('tenants')} help={{ title: 'Active Tenants', content: 'Pilot organisations currently provisioned on OrbitanOS. Click to open the Tenant Command Center and manage capabilities, modules, and activation status.' }} />
-          <StatCard title="Module Activations" value={totalModuleUsage} subtitle="Across all tenants" icon={Layers} color="purple" onClick={() => setActiveTab('modules')} help={{ title: 'Module Activations', content: 'Total enabled modules across all pilot tenants. Click to view the full platform module registry and Industry Pack catalog.' }} />
-          <StatCard title="Industry Packs" value={Object.keys(INDUSTRY_PACKS).length} subtitle="Available packs" icon={Package} color="green" onClick={() => setActiveTab('modules')} help={{ title: 'Industry Packs', content: 'Self-aware capability blueprints available for activation — F&B, Retail, Recycling, and more. Click to browse active and future-proofed packs.' }} />
-          <StatCard title="Platform Health" value="100%" subtitle="All systems operational" icon={CheckCircle2} color="green" trend="up" onClick={() => setActiveTab('system-controls')} help={{ title: 'Platform Health', content: 'Real-time status of OrbitanOS backend engines, automations, and integrations. Click to open the System Health Scoreboard.' }} />
+        {/* Orbit Nexus Daily Brief */}
+        <div className="mb-4">
+          <NexusDailyBrief data={csData} loading={csLoading} error={csError} />
         </div>
 
-        {/* Revenue Engine Quick Links */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <Link to="/platform/wallet" className="group bg-gradient-to-br from-[#1D4ED8] to-[#111827] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
-            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Wallet className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Orbit Wallet</p>
-              <p className="text-[11px] text-blue-300">Credits · Rewards · Cashback</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
-          </Link>
-          <Link to="/platform/marketplace" className="group bg-gradient-to-br from-[#6D28D9] to-[#111827] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
-            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <ShoppingBag className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Orbit Marketplace</p>
-              <p className="text-[11px] text-purple-300">Modules · Packs · Integrations</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
-          </Link>
-          <Link to="/platform/shield" className="group bg-gradient-to-br from-[#111827] to-[#1F2937] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow border border-[#D4AF37]/20">
-            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Shield className="w-5 h-5 text-[#D4AF37]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Orbit Shield™</p>
-              <p className="text-[11px] text-[#D4AF37]/70">Regulate · Govern · Protect</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
-          </Link>
-          <Link to="/platform/audit-logs" className="group bg-gradient-to-br from-[#0F766E] to-[#111827] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
-            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Audit Logs</p>
-              <p className="text-[11px] text-teal-300">Compliance · Traceability</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
-          </Link>
-          <Link to="/platform/access-control" className="group bg-gradient-to-br from-[#1E3A8A] to-[#111827] rounded-xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
-            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Lock className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white">Access Control</p>
-              <p className="text-[11px] text-blue-300">Module permissions by role</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
-          </Link>
-        </div>
+        {/* Quick Launch Rail — compact */}
+        <QuickLaunchRail />
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <PlatformNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+          <UnifiedCommandNav activeTab={activeTab} onTabChange={setActiveTab} />
 
           {/* Tenants Command Center Tab */}
           <TabsContent value="tenants">
@@ -252,6 +219,7 @@ export default function LeaderOrg() {
                 const realTenantId = realTenant?.id;
                 const shieldPolicyCount = realTenantId ? (policyCounts[realTenantId] || 0) : 0;
                 const governanceDomain = realTenant?.governance_domain;
+                const healthData = csByName[tenant.name] || null;
                 return (
                   <TenantCommandCard
                     key={tenant.id}
@@ -262,6 +230,7 @@ export default function LeaderOrg() {
                     report={reports[mRef]}
                     realTenantId={realTenantId}
                     shieldPolicyCount={shieldPolicyCount}
+                    healthData={healthData}
                   />
                 );
               })}

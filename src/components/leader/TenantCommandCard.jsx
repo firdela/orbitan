@@ -15,10 +15,11 @@ import ShieldStatusBadge from '@/components/leader/ShieldStatusBadge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
-  ChevronDown, ChevronUp, ChevronRight, CheckCircle2, Lock,
+  ChevronDown, ChevronUp, CheckCircle2, Lock,
   Rocket, Play, Loader2, Zap, Star, TrendingUp, Shield,
-  ClipboardList, Sparkles, AlertTriangle, ExternalLink
+  ClipboardList, Sparkles, AlertTriangle, ExternalLink, Layers, Clock
 } from 'lucide-react';
+import CSHealthBadge from '@/components/customer-success/CSHealthBadge';
 
 const PACK_META = {
   core:       { label: 'Core',       color: '#2563EB' },
@@ -58,7 +59,16 @@ const TENANT_MANIFEST_REF = {
   tenant_izaliqa:  'izaliqa_bakes',
 };
 
-export default function TenantCommandCard({ tenant, manifest, activating, onActivate, report, realTenantId, shieldPolicyCount = 0 }) {
+function formatLastActivity(days) {
+  if (days == null) return 'No activity';
+  if (days === 0) return 'Today';
+  if (days === 1) return '1d ago';
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+export default function TenantCommandCard({ tenant, manifest, activating, onActivate, report, realTenantId, shieldPolicyCount = 0, healthData }) {
   const [expanded, setExpanded] = useState(false);
 
   const activeModules = tenant.enabled_modules || [];
@@ -141,6 +151,31 @@ export default function TenantCommandCard({ tenant, manifest, activating, onActi
             {activeModules.length} modules active
           </span>
         </div>
+
+        {/* Operational Health Strip — glanceable indicators (Build #21) */}
+        {healthData && (
+          <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/50 flex-wrap">
+            <CSHealthBadge tier={healthData.health_tier} score={healthData.health} />
+            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Layers className="w-3 h-3" /> {healthData.adoption?.modules_used ?? 0}/8
+            </span>
+            {healthData.onboarding_pct != null && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                <CheckCircle2 className="w-3 h-3" /> {healthData.onboarding_pct}% onboarded
+              </span>
+            )}
+            {healthData.feedback?.open > 0 && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-orbitan-amber-700">
+                <AlertTriangle className="w-3 h-3" /> {healthData.feedback.open} open
+              </span>
+            )}
+            {healthData.last_activity && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground ml-auto">
+                <Clock className="w-3 h-3" /> {formatLastActivity(healthData.last_activity_days)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Expandable Detail ───────────────────────────── */}
