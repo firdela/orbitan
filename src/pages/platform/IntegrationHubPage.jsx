@@ -234,16 +234,38 @@ export default function IntegrationHubPage() {
                 )}
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {status === 'expired' ? (
                   <Button onClick={handleConnect} disabled={connecting}>
                     {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                     Reconnect Xero
                   </Button>
                 ) : (
-                  <Button variant="outline" onClick={handleDisconnect}>
-                    Disconnect
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const r = await base44.functions.invoke('xeroOAuth', { action: 'get_status', tenant_id: tenantId });
+                          const d = r.data;
+                          toast({
+                            title: d?.connected ? 'Connection Healthy' : 'Connection Issue',
+                            description: d?.connected
+                              ? `Connected to ${d.xero_tenant_name || 'Xero'}`
+                              : d?.last_error || 'Not connected',
+                            variant: d?.connected ? undefined : 'destructive',
+                          });
+                        } catch (e) {
+                          toast({ title: 'Test Failed', description: e?.message || 'Could not reach Xero.', variant: 'destructive' });
+                        }
+                      }}
+                    >
+                      <Zap className="w-4 h-4" /> Test Connection
+                    </Button>
+                    <Button variant="outline" onClick={handleDisconnect}>
+                      Disconnect
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -310,7 +332,7 @@ export default function IntegrationHubPage() {
         </CardContent>
       </Card>
 
-      {/* Stripe Integration Card (read-only status) */}
+      {/* ── Stripe — Platform Billing (managed by you as platform owner) ── */}
       <Card className="mt-6">
         <CardHeader>
           <div className="flex items-start justify-between">
@@ -319,9 +341,9 @@ export default function IntegrationHubPage() {
                 <span className="text-lg font-bold text-violet-600">S</span>
               </div>
               <div>
-                <CardTitle className="text-lg">Stripe Billing</CardTitle>
+                <CardTitle className="text-lg">Stripe — Platform Billing</CardTitle>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  Subscription billing for Orbitan plans. Platform-managed.
+                  Subscription billing for OrbitanOS plans. Managed by the platform owner — this is how tenants pay Orbitan.
                 </p>
               </div>
             </div>
@@ -332,9 +354,64 @@ export default function IntegrationHubPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Mode</p>
+              <p className="font-medium">Live</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Products</p>
+              <p className="font-medium">5 plans provisioned</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Webhook</p>
+              <p className="font-medium">Registered</p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            Platform billing is separate from tenant payment processing. It handles OrbitanOS subscriptions only.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* ── Stripe — Tenant Connect (coming soon) ── */}
+      <Card className="mt-6 border-dashed">
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-violet-50 flex items-center justify-center opacity-60">
+                <span className="text-lg font-bold text-violet-600">S</span>
+              </div>
+              <div>
+                <CardTitle className="text-lg">Stripe — Tenant Connect</CardTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Connect your own Stripe account to accept payments, payouts, and refunds directly into your bank.
+                </p>
+              </div>
+            </div>
+            <Badge className="bg-amber-50 text-amber-600 border border-amber-200">
+              <Clock className="w-3 h-3 mr-1" />
+              Coming Soon
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
           <p className="text-sm text-muted-foreground">
-            Stripe is connected at the platform level for subscription billing. Per-tenant Stripe
-            Connect for marketplace revenue splitting is a post-MVP feature.
+            Tenant Stripe Connect will let Tenant Owners and Finance Managers link their own Stripe
+            account, then sync payments, payouts, refunds, and customers — fully isolated per tenant.
+            This is separate from Platform Billing (which only handles OrbitanOS subscriptions).
+          </p>
+          <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3">
+            <p className="text-xs font-medium text-foreground mb-1.5">What you&rsquo;ll be able to do:</p>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              <li>• Connect, reconnect, or disconnect your Stripe account</li>
+              <li>• Sync payments, payouts, refunds, and customers</li>
+              <li>• View connection status and last sync time</li>
+              <li>• One Stripe account per tenant — tenant-isolated</li>
+            </ul>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            Available after the MVP pilot. Track this in the Knowledge Hub roadmap.
           </p>
         </CardContent>
       </Card>
