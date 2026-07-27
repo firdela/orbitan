@@ -192,7 +192,7 @@ export const PLATFORM_NAVIGATION = {
         {
           key: "audit-logs",
           label: "Audit Logs",
-          route: "/platform/audit-logs",
+          route: "/audit-centre",
           description: "Immutable platform-wide audit trail and forensic log viewer",
           permission: "admin",
         },
