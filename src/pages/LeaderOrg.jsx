@@ -50,14 +50,16 @@ export default function LeaderOrg() {
   const [csData, setCsData] = useState(null);
   const [csLoading, setCsLoading] = useState(true);
   const [csError, setCsError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [dbTenants, policies, csRes] = await Promise.all([
+        const [dbTenants, policies, csRes, me] = await Promise.all([
           base44.entities.Tenant.list('-created_date', 50),
           base44.entities.GovernancePolicy.filter({ is_active: true }),
           base44.functions.invoke('customerSuccess', { action: 'overview' }),
+          base44.auth.me().catch(() => null),
         ]);
         // Map tenant name → full record for workspace nav + governance domain
         const byName = {};
@@ -69,6 +71,7 @@ export default function LeaderOrg() {
         setPolicyCounts(counts);
         // Customer Success overview payload
         setCsData(csRes.data || csRes || null);
+        setCurrentUser(me);
       } catch (e) {
         // Fail gracefully — cards fall back to "Pages Coming Soon"
         console.error('[LeaderOrg] Failed to load tenant/policy/CS data:', e.message);
@@ -153,7 +156,7 @@ export default function LeaderOrg() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-5">
         {/* Compact Leader Header */}
         <CompactLeaderHeader
-          userName="Firdaus"
+          userName={currentUser?.full_name || 'Platform Owner'}
           platform={PLATFORM_IDENTITY.platform}
           os={PLATFORM_IDENTITY.os}
           version={PLATFORM_IDENTITY.version}
@@ -356,8 +359,8 @@ export default function LeaderOrg() {
               <div className="pt-6 border-t border-border">
                 <AnnouncementsManager
                   tenantId="taqueria_pte_ltd"
-                  publisherName="Firdaus"
-                  publisherRole="admin"
+                  publisherName={currentUser?.full_name || 'Platform Admin'}
+                  publisherRole={currentUser?.role || 'admin'}
                 />
               </div>
             </div>
