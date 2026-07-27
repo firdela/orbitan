@@ -1,5 +1,5 @@
 // OrbitanOS — Announcements Manager
-// Admin panel tab for managing broadcasts — used inside LeaderOrg / CompanyDashboard
+// Admin panel tab for managing broadcasts — used inside LeaderOrg
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

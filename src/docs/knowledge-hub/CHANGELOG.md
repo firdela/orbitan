@@ -7,6 +7,37 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build Package #27 (Platform Completion & Production Readiness)
+
+### Removed — Dead code (verified unreferenced before removal)
+- **`src/lib/orbitan-nav.js`** — `MODULE_REGISTRY`/`TENANT_NAV_MANIFESTS`/`NAV_SECTIONS` had zero importers after the engine stopped consuming `buildNav`; file deleted. Verified via project-wide reference scan (`/app` root).
+- **`OrbitanEngine.buildNav()`** + its `orbitan-nav` import — removed from `src/lib/orbitan-engine.js`. Produced legacy `/t1`/`/t2`/`/t3` routes absent from the router; live nav is `ManifestHydrator`-driven.
+- **`src/pages/ai/AIStudio.jsx`** + **`src/components/ai/AIDocumentCard.jsx`** + **`src/components/ai/GenerateModal.jsx`** — orphan cluster (AIStudio unrouted/unimported; the two components used only by it). Removed.
+- **`src/pages/Analytics.jsx`**, **`src/pages/CompanyDashboard.jsx`** — removed in Pass 1 (orphan routes with cross-tenant query / all-404 sidebar).
+
+### Fixed — Security / RLS
+- **`Employee.jsonc`** self-access branches — `{ "id": "{{user.id}}" }` (record id, dead no-op) → `{ "data.user_id": "{{user.id}}" }` (actual Orbit-Identity link). `accessValidationHarness` 16/16 before and after.
+
+### Consolidated — Routes & navigation
+- Duplicate `/artifacts` standalone route → `<Navigate to="/workspace">`; canonical entry is `/workspace/:tenantId/artifacts`.
+- `navigation-registry.js` `audit-logs` item: `/platform/audit-logs` (redirect) → `/audit-centre` (direct).
+- `PilotCommandCenter`: hardcoded 3-tenant array → live `Tenant.list()`.
+
+### Fixed — Accessibility (WCAG dark-mode contrast)
+- `LowStockCard`, `TenantPilotCard`: light-only `bg-amber-50`/`bg-green-50`/`text-green-600`/`text-red-500` → semantic `amber-500/10`, `emerald-*`, `destructive` with `dark:` variants.
+
+### Verified — Build integrity (static, project-wide)
+- 402 source files scanned; **0 broken local imports** (`@/shared/sanitizationGate` flagged hit was a JSDoc usage comment, not an import).
+- 75 routes, **0 duplicate routes**, all `<Navigate>` targets resolve.
+- 252 default exports, **0 duplicate export names**.
+- 64 page files, **0 orphan pages**.
+- `ManifestHydrator` `FALLBACK_NAV` + `STANDARD_WORKSPACE_MODULES` all map to existing `/workspace/:tenantId/*` routes.
+- `accessValidationHarness` **16/16** (RLS structure + identity linkage).
+
+### Docs
+- Stale `CompanyDashboard` reference in `AnnouncementsManager.jsx` comment removed.
+- Build #27 implementation notes + final readiness report added.
+
 ## [Unreleased] — Build Package #18 (Customer Success, Operational Readiness & Pilot Deployment)
 
 ### Added — Customer Success Workspace (Part 1)
