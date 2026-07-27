@@ -252,6 +252,19 @@
     --border: 220 25% 35%;
   }
 
+  /* ── OS-level reduced-motion preference (WCAG 2.3.3) ──
+     Automatically disables animations/transitions for users who
+     request reduced motion at the OS level. Complements the opt-in
+     .reduce-motion class used by the Accessibility settings panel. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   /* ── KPI Number ── */
   .kpi-value {
     @apply text-2xl font-display font-bold tracking-tight text-foreground;

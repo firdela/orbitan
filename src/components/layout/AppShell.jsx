@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import OrbitanLogo from './OrbitanLogo';
@@ -15,11 +15,26 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
+  // Close the mobile sidebar on Escape — keyboard accessibility (WCAG 2.1.1)
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') setSidebarOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [sidebarOpen]);
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow"
+      >
+        Skip to main content
+      </a>
 
       {/* ── Sidebar — Deep Titanium Rail ── */}
       <aside
+        aria-label="Primary navigation"
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex flex-col w-[220px] transition-transform duration-200 ease-out lg:relative lg:translate-x-0",
           "bg-sidebar",
@@ -31,6 +46,7 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
           <OrbitanLogo size="sm" variant="light" showOS />
           <button
             onClick={() => setSidebarOpen(false)}
+            aria-label="Close navigation"
             className="lg:hidden text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
           >
             <X className="w-4 h-4" />
@@ -117,6 +133,7 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
+          aria-hidden="true"
           className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -130,6 +147,7 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
           <div className="flex items-center gap-3 flex-shrink-0">
             <button
               onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation"
               className="lg:hidden text-muted-foreground hover:text-foreground transition-colors"
             >
               <Menu className="w-5 h-5" />
@@ -148,7 +166,7 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
           {children}
         </main>
 

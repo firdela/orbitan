@@ -7,6 +7,27 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build Package #27D (RC1 Runtime Hardening & Blocker Clearance)
+
+### Hardened — Accessibility (shared layer, WCAG)
+- **`AppShell.jsx`** — skip-to-content link (2.4.1), `aria-label` on primary `<aside>` (1.3.1), `aria-label` on both icon-only menu toggles (4.1.2), Escape-to-close + `aria-hidden` overlay (2.1.1), `id="main-content"` skip target. Benefits every workspace/leader/worker/customer-success/audit/inbox/integration/blueprint/admin/settings page.
+- **`src/index.css`** — global `@media (prefers-reduced-motion: reduce)` (2.3.3).
+- **`Landing.jsx`** — skip link, `aria-label="Main"` nav, hero `id="main-content"` target.
+
+### Reviewed — Performance (B-3)
+- **`useDashboardSnapshot`** (`useTenantQueries.js`) — 6 bounded (≤50) parallel, fail-closed, tenant-scoped, cached (30s), realtime-invalidated queries. No client-side cross-record aggregation. Adequate for pilot scale; **no refactor** (no competing data layer introduced, per directive).
+
+### Verified — Runtime (read-only backend functions)
+- `goLiveReadiness` — 200, all categories pass (auth, identity, RLS, access engine, core modules, finance, Xero, data migration, notifications, Nexus, security, system settings).
+- `accessValidationHarness` — 16/16 pass (100%).
+
+### Verified — Regression
+- 402-file import re-scan: 0 new broken imports. Landing footer anchors 7/7 resolve.
+
+### Outcome
+- Shared a11y foundation + security/RLS runtime evidence advanced. Full WCAG AA, responsive, e2e workflow, and performance **runtime** passes remain (require Testing Agent).
+- **Verdict: NOT READY FOR RC1** (B-1…B-4 runtime evidence pending).
+
 ## [Unreleased] — Build Package #27 (Platform Completion & Production Readiness)
 
 ### Removed — Dead code (verified unreferenced before removal)

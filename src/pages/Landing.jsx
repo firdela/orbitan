@@ -38,8 +38,15 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-marketing-bg text-white overflow-x-hidden">
+      {/* ── Skip link — keyboard accessibility (WCAG 2.4.1) ── */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-marketing-gold focus:text-marketing-bg focus:rounded-md focus:shadow"
+      >
+        Skip to main content
+      </a>
       {/* ── Navigation ── */}
-      <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 pt-[env(safe-area-inset-top)] ${scrolled ? 'bg-marketing-bg/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'}`}>
+      <nav aria-label="Main" className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 pt-[env(safe-area-inset-top)] ${scrolled ? 'bg-marketing-bg/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
             <OrbitanWordmark size="sm" variant="light" showOS={false} />
@@ -73,7 +80,7 @@ export default function Landing() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="relative pt-32 pb-16 md:pt-40 md:pb-20 px-6 overflow-hidden">
+      <section id="main-content" tabIndex={-1} className="relative pt-32 pb-16 md:pt-40 md:pb-20 px-6 overflow-hidden outline-none">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(59,130,246,0.08)_0%,transparent_70%)]" />
         <motion.div
           animate={{ x: [0, 40, 0], y: [0, -30, 0] }}
