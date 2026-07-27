@@ -18,6 +18,7 @@ import { useTenant } from '@/lib/use-tenant.jsx';
 import { MODULES } from '@/lib/orbitan-config';
 import { auditFrontend } from '@/lib/audit';
 import TeamRoster from '@/components/access/TeamRoster';
+import TenantSwitcher from '@/components/shared/TenantSwitcher';
 
 const ROLES = [
   { key: 'tenant_admin', label: 'Tenant Admin' },
@@ -171,8 +172,16 @@ export default function AccessControlPage() {
 
   if (!tenant) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading workspace...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6">
+        <OrbitanLogo size="sm" showOS />
+        <div className="text-center max-w-sm">
+          <h2 className="font-heading font-semibold text-lg mb-1">Select a tenant</h2>
+          <p className="text-sm text-muted-foreground">Access Control policies are scoped to a tenant. Choose a tenant to manage its role and module permissions.</p>
+        </div>
+        <TenantSwitcher />
+        <Button variant="outline" size="sm" asChild className="gap-1.5">
+          <Link to="/leader-org"><ArrowLeft className="w-4 h-4" /> Back to Console</Link>
+        </Button>
       </div>
     );
   }

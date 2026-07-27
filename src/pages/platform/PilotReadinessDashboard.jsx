@@ -15,7 +15,18 @@ export default function PilotReadinessDashboard() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('pilotReadiness', { action: 'readiness', tenant_id: tenantInput || undefined });
+      // Resolve tenant_id: explicit input → own tenant → first active pilot tenant
+      let tenantId = tenantInput;
+      if (!tenantId) {
+        const me = await base44.auth.me().catch(() => null);
+        tenantId = me?.data?.tenant_id;
+      }
+      if (!tenantId) {
+        const tenants = await base44.entities.Tenant.list('-created_date', 50);
+        const firstActive = tenants.find(t => t.status === 'active') || tenants[0];
+        tenantId = firstActive?.id;
+      }
+      const res = await base44.functions.invoke('pilotReadiness', { action: 'readiness', tenant_id: tenantId });
       const d = res.data || res;
       if (d.error) throw new Error(d.error);
       setData(d);
@@ -66,7 +77,7 @@ export default function PilotReadinessDashboard() {
         actions={<Button size="sm" variant="outline" onClick={load} disabled={loading} className="gap-1.5"><RefreshCw className="w-3.5 h-3.5" />Refresh</Button>} />
 
       <div className="flex flex-col sm:flex-row gap-3 items-start">
-        <input value={tenantInput} onChange={e => setTenantInput(e.target.value)} placeholder="Tenant ID (leave blank for your tenant)" className="w-full sm:w-72 h-9 rounded-md border border-input bg-transparent px-3 text-sm" />
+        <input value={tenantInput} onChange={e => setTenantInput(e.target.value)} placeholder="Tenant ID (blank = auto-select your tenant or first active pilot)" className="w-full sm:w-72 h-9 rounded-md border border-input bg-transparent px-3 text-sm" />
         <Button size="sm" onClick={load} disabled={loading}>Assess</Button>
       </div>
 
