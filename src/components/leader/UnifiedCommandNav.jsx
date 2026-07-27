@@ -45,8 +45,8 @@ const NAV_CATEGORIES = [
     id: 'customer-success',
     label: 'Customer Success',
     icon: HeartHandshake,
-    primary: { key: 'customer-success', type: 'route', label: 'CS Workspace' },
     items: [
+      { key: 'customer-success', type: 'route' },
       { key: 'feedback-intelligence', type: 'tab' },
       { key: 'operational-health', type: 'route' },
       { key: 'support-diagnostics', type: 'route' },
