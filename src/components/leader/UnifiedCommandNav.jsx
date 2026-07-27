@@ -36,11 +36,9 @@ const NAV_CATEGORIES = [
       { key: 'subscriptions', type: 'tab' },
       { key: 'modules', type: 'tab' },
       { key: 'pilot-control', type: 'tab' },
-      { key: 'pilot-readiness', type: 'route' },
       { key: 'pilot-admin', type: 'route' },
       { key: 'pilot-activation', type: 'route' },
       { key: 'pilot-deployment', type: 'route' },
-      { key: 'go-live-readiness', type: 'route' },
     ],
   },
   {
@@ -51,7 +49,6 @@ const NAV_CATEGORIES = [
     items: [
       { key: 'feedback-intelligence', type: 'tab' },
       { key: 'operational-health', type: 'route' },
-      { key: 'exception-centre', type: 'route' },
       { key: 'support-diagnostics', type: 'route' },
     ],
   },
@@ -60,7 +57,6 @@ const NAV_CATEGORIES = [
     label: 'Governance',
     icon: Shield,
     items: [
-      { key: 'access-control', type: 'route' },
       { key: 'shield-command', type: 'tab' },
       { key: 'audit-logs', type: 'route' },
     ],
@@ -88,8 +84,12 @@ const NAV_CATEGORIES = [
     items: [
       { key: 'platform-identity', type: 'tab' },
       { key: 'system-controls', type: 'tab' },
-      { key: 'capabilities', type: 'route' },
       { key: 'blueprint', type: 'tab' },
+      { key: 'capabilities', type: 'route' },
+      { key: 'access-control', type: 'route' },
+      { key: 'pilot-readiness', type: 'route' },
+      { key: 'go-live-readiness', type: 'route' },
+      { key: 'exception-centre', type: 'route' },
     ],
   },
 ];
