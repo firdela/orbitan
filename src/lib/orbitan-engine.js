@@ -18,11 +18,6 @@ import {
   planAllowsModule,
 } from './orbitan-config.js';
 
-import {
-  MODULE_REGISTRY,
-  TENANT_NAV_MANIFESTS,
-} from './orbitan-nav.js';
-
 /**
  * OrbitanEngine — The single service the UI calls to get
  * everything it needs to self-configure for a given tenant.
@@ -76,47 +71,10 @@ export class OrbitanEngine {
     return this._config?.primaryPackColor() ?? "#2563EB";
   }
 
-  // ── Navigation Builder ───────────────────────────────────
-  // Builds a fully-resolved nav array for AppShell.
-  // Consumes TENANT_NAV_MANIFESTS from orbitan-nav.js.
-  //
-  // tenantSlug: 't1' | 't2' | 't3' (or future tenants)
-  // iconMap: { iconKey: ReactComponent } — passed from the page
-  //          so the engine stays framework-agnostic.
-
-  buildNav(tenantSlug, iconMap = {}) {
-    const manifest = TENANT_NAV_MANIFESTS[tenantSlug];
-    if (!manifest) return [];
-
-    return manifest
-      .filter(item => {
-        // Always include section headers and raw links
-        if (item.type === 'section' || item.type === 'link') return true;
-        // Module items: filter by tenant access
-        return this.canAccess(item.module);
-      })
-      .map(item => {
-        // Section headers pass through unchanged
-        if (item.type === 'section') return item;
-
-        // Raw links (e.g. ← Platform Console)
-        if (item.type === 'link') {
-          return {
-            href: item.href,
-            label: item.label,
-            icon: iconMap[item.iconKey] || null,
-          };
-        }
-
-        // Module items — resolve label, icon, and prefixed href
-        const reg = MODULE_REGISTRY[item.module] || {};
-        return {
-          href: `/${tenantSlug}${item.path}`,
-          label: reg.label || item.module,
-          icon: iconMap[reg.iconKey] || null,
-        };
-      });
-  }
+  // ── Navigation (legacy) ─────────────────────────────────
+  // The live navigation is DB-driven via ManifestHydrator
+  // (PlatformManifest + SubscriptionPolicy). This legacy helper
+  // accepts an already-built nav config array for backwards compat.
 
   // Legacy: accepts an already-built nav config array (backwards compat)
   navigation(navConfig) {

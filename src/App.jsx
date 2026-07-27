@@ -200,7 +200,7 @@ const AuthenticatedApp = () => {
       <Route path="/governance-log" element={<GovernanceLog />} />
       <Route path="/suppliers" element={<Suppliers />} />
       <Route path="/knowledge-hub" element={<KnowledgeHub />} />
-      <Route path="/artifacts" element={<ArtifactRegistry />} />
+      <Route path="/artifacts" element={<Navigate to="/workspace" replace />} />
 
       {/* Enterprise — Compliance & Data */}
       <Route path="/audit-centre" element={<AuditCentre />} />
