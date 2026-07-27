@@ -28,7 +28,7 @@ import JoinGateway from '@/components/auth/JoinGateway';
 import RequestAccessPage from '@/pages/RequestAccess';
 import Onboarding from '@/pages/Onboarding';
 import LeaderOrg from '@/pages/LeaderOrg';
-import CompanyDashboard from '@/pages/CompanyDashboard';
+
 import OutletDashboard from '@/pages/OutletDashboard';
 import WorkerPortal from '@/pages/WorkerPortal';
 import AccountSettings from '@/pages/workspace/AccountSettings';
@@ -51,7 +51,7 @@ import FacilitySettings from '@/pages/outlet/FacilitySettings';
 import FeedbackCentre from '@/pages/FeedbackCentre';
 import AccessRequests from '@/pages/workspace/AccessRequests';
 import NotificationsPage from '@/pages/Notifications';
-import AnalyticsPage from '@/pages/Analytics';
+
 
 // Dynamic Workspace — scalable, tenant-agnostic routing
 import WorkspaceLayout from '@/components/workspace/WorkspaceLayout';
@@ -186,7 +186,7 @@ const AuthenticatedApp = () => {
       <Route path="/leader-org" element={<LeaderOrg />} />
 
       {/* Tenant / Company */}
-      <Route path="/company" element={<CompanyDashboard />} />
+      <Route path="/company" element={<Navigate to="/workspace" replace />} />
 
       {/* Outlet (legacy standalone dashboard — kept for direct access) */}
       <Route path="/outlet" element={<OutletDashboard />} />
@@ -236,7 +236,7 @@ const AuthenticatedApp = () => {
 
       {/* Notifications & Analytics — Cross-outlet intelligence */}
       <Route path="/notifications" element={<NotificationsPage />} />
-      <Route path="/analytics" element={<AnalyticsPage />} />
+      <Route path="/analytics" element={<Navigate to="/workspace" replace />} />
 
       {/* Account Settings */}
       <Route path="/settings" element={<AccountSettings />} />

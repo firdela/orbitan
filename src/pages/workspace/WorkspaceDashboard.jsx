@@ -145,10 +145,10 @@ function ModuleCard({ mod }) {
 function LowStockCard({ items, loading }) {
   const base = `/workspace`;
   return (
-    <div className="bg-amber-50 border border-amber-500/30 rounded-xl p-4 h-full flex flex-col">
+    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 h-full flex flex-col">
       <div className="flex items-center gap-2 mb-2">
-        <AlertTriangle className="w-4 h-4 text-amber-600" />
-        <h3 className="font-heading font-semibold text-sm text-amber-900">Low Stock</h3>
+        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+        <h3 className="font-heading font-semibold text-sm text-amber-700 dark:text-amber-300">Low Stock</h3>
       </div>
       {loading ? (
         <p className="text-xs text-muted-foreground">Loading…</p>
@@ -158,7 +158,7 @@ function LowStockCard({ items, loading }) {
         <ul className="space-y-1 text-xs flex-1 overflow-y-auto max-h-32">
           {items.slice(0, 5).map(item => (
             <li key={item.id}>
-              <Link to={`${base}/inventory`} className="flex justify-between text-amber-900/80 hover:text-amber-900 hover:bg-amber-100/60 rounded px-1.5 py-0.5 -mx-1.5 transition-colors gap-2">
+              <Link to={`${base}/inventory`} className="flex justify-between text-amber-800 dark:text-amber-200 hover:bg-amber-500/10 rounded px-1.5 py-0.5 -mx-1.5 transition-colors gap-2">
                 <span className="truncate">{item.name}</span>
                 <span className="tabular-nums flex-shrink-0">{item.current_stock}/{item.par_level} {item.unit}</span>
               </Link>
