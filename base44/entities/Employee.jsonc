@@ -214,7 +214,7 @@
           }
         },
         {
-          "id": "{{user.id}}"
+          "data.user_id": "{{user.id}}"
         },
         {
           "$and": [
@@ -281,7 +281,7 @@
           }
         },
         {
-          "id": "{{user.id}}"
+          "data.user_id": "{{user.id}}"
         },
         {
           "$and": [
