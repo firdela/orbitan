@@ -11,6 +11,7 @@ import { ALL_CATEGORIES, CATEGORY_CONFIG } from '@/components/orbit-inbox/inboxC
 import { useUnreadInbox } from '@/hooks/useUnreadInbox';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthContext';
+import BackBar from '@/components/shared/BackBar';
 import {
   Inbox, CheckCircle2, Activity, Archive, Search, Settings2,
   Bell, AlertTriangle, ListTodo,
@@ -103,6 +104,7 @@ export default function NotificationsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 animate-fade-in">
+      <BackBar to="/workspace" label="Back to Workspace" />
       <PageHeader
         title="Orbit Inbox"
         subtitle="Your unified operational inbox · Actionable items, activity & AI summaries"

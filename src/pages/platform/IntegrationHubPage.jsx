@@ -21,6 +21,7 @@ import {
 import IntegrationCatalog from '@/components/platform/IntegrationCatalog';
 import IntegrationHealthPanel from '@/components/platform/IntegrationHealthPanel';
 import { cn } from '@/lib/utils';
+import { classifyIntegrationError } from '@/lib/integration-errors';
 
 const STATUS_CONFIG = {
   connected: { icon: CheckCircle2, color: 'text-orbitan-green', bg: 'bg-orbitan-green-light', border: 'border-orbitan-green/30', label: 'Connected' },
@@ -143,7 +144,8 @@ export default function IntegrationHubPage() {
           }
         })
         .catch((err) => {
-          toast({ title: 'Connection Failed', description: err?.message || 'OAuth exchange failed.', variant: 'destructive' });
+          const e = classifyIntegrationError(err, { action: 'connect', service: 'xero' });
+          toast({ title: e.title, description: e.message, variant: e.variant === 'error' ? 'destructive' : 'default' });
         })
         .finally(() => {
           setConnecting(false);
@@ -153,17 +155,25 @@ export default function IntegrationHubPage() {
   }, [tenantId, toast, fetchXeroStatus]);
 
   const handleConnect = async () => {
+    if (!tenantId) {
+      toast({ title: 'No Workspace Selected', description: 'Please select a workspace before connecting Xero.', variant: 'destructive' });
+      return;
+    }
     setConnecting(true);
     try {
       const res = await base44.functions.invoke('xeroOAuth', { action: 'get_auth_url', tenant_id: tenantId });
       const data = res.data;
       if (!data.configured) {
-        toast({ title: 'Xero Not Configured', description: 'Platform admin must add XERO_CLIENT_ID and XERO_CLIENT_SECRET secrets first.', variant: 'destructive' });
+        toast({
+          title: 'Xero Not Yet Configured',
+          description: 'The platform administrator needs to add the OAuth credentials before you can connect. This is a one-time setup step.',
+        });
         return;
       }
       if (data.auth_url) window.location.href = data.auth_url;
     } catch (err) {
-      toast({ title: 'Failed', description: err?.message || 'Could not start Xero connection.', variant: 'destructive' });
+      const e = classifyIntegrationError(err, { action: 'connect', service: 'xero' });
+      toast({ title: e.title, description: e.message, variant: e.variant === 'error' ? 'destructive' : 'default' });
     } finally {
       setConnecting(false);
     }
@@ -183,9 +193,10 @@ export default function IntegrationHubPage() {
       });
       fetchXeroStatus();
     } catch (err) {
-      const result = { healthy: false, reason: 'error', message: err?.message || 'Could not run the connection test.' };
+      const e = classifyIntegrationError(err, { action: 'test', service: 'xero' });
+      const result = { healthy: false, reason: 'error', message: e.message };
       setTestResult(result);
-      toast({ title: 'Test Failed', description: result.message, variant: 'destructive' });
+      toast({ title: e.title, description: e.message, variant: e.variant === 'error' ? 'destructive' : 'default' });
     } finally {
       setTesting(false);
     }
@@ -197,7 +208,8 @@ export default function IntegrationHubPage() {
       toast({ title: 'Xero Disconnected', description: 'Your Xero connection has been removed.' });
       fetchXeroStatus();
     } catch (err) {
-      toast({ title: 'Failed', description: err?.message, variant: 'destructive' });
+      const e = classifyIntegrationError(err, { action: 'disconnect', service: 'xero' });
+      toast({ title: e.title, description: e.message, variant: e.variant === 'error' ? 'destructive' : 'default' });
     }
   };
 
@@ -210,7 +222,8 @@ export default function IntegrationHubPage() {
       fetchSyncQueue();
       fetchXeroStatus();
     } catch (err) {
-      toast({ title: 'Sync Failed', description: err?.response?.data?.error || err?.message, variant: 'destructive' });
+      const e = classifyIntegrationError(err, { action: 'sync', service: 'xero' });
+      toast({ title: e.title, description: e.message, variant: e.variant === 'error' ? 'destructive' : 'default' });
     } finally {
       setSyncing(false);
     }

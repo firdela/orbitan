@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/AuthContext';
 import AccountMappingManager from '@/components/finance/AccountMappingManager';
 import { Loader2, RefreshCw, Plug, PlugZap, ShieldCheck, AlertTriangle, RotateCw, ExternalLink } from 'lucide-react';
+import { classifyIntegrationError } from '@/lib/integration-errors';
 
 const STATUS_META = {
   not_connected: { label: 'Not Connected', color: 'text-muted-foreground' },
@@ -57,16 +58,29 @@ export default function FinanceIntegrationPage() {
   useEffect(() => { loadStatus(); loadQueue(); }, [loadStatus, loadQueue]);
 
   const handleConnect = async () => {
+    if (!tenantId) {
+      toast({ title: 'No Workspace Selected', description: 'Please select a workspace before connecting Xero.', variant: 'destructive' });
+      return;
+    }
     setConnecting(true);
     try {
       const res = await base44.functions.invoke('xeroOAuth', { action: 'get_auth_url', tenant_id: tenantId });
       const data = res.data || res;
       if (!data.configured) {
-        toast({ title: 'Xero not configured', description: data.message || 'Platform admin must add XERO_CLIENT_ID and XERO_CLIENT_SECRET.', variant: 'destructive' });
+        toast({
+          title: 'Xero Not Yet Configured',
+          description: 'The platform administrator needs to add the OAuth credentials before you can connect. This is a one-time setup step.',
+          variant: 'default',
+        });
         return;
       }
-      window.location.href = data.auth_url;
-    } catch (e) { toast({ title: 'Connection failed', description: e?.message, variant: 'destructive' }); } finally { setConnecting(false); }
+      if (data.auth_url) {
+        window.location.href = data.auth_url;
+      }
+    } catch (e) {
+      const err = classifyIntegrationError(e, { action: 'connect', service: 'xero' });
+      toast({ title: err.title, description: err.message, variant: err.variant === 'error' ? 'destructive' : 'default' });
+    } finally { setConnecting(false); }
   };
 
   const handleDisconnect = async () => {
@@ -85,7 +99,10 @@ export default function FinanceIntegrationPage() {
       const data = res.data || res;
       toast({ title: 'Sync processed', description: `${data.synced || 0} synced · ${data.skipped || 0} skipped · ${data.failed || 0} failed · ${data.routed_to_review || 0} review` });
       loadQueue();
-    } catch (e) { toast({ title: 'Sync failed', description: e?.response?.data?.error || e?.message, variant: 'destructive' }); } finally { setSyncing(false); }
+    } catch (e) {
+      const err = classifyIntegrationError(e, { action: 'sync', service: 'xero' });
+      toast({ title: err.title, description: err.message, variant: err.variant === 'error' ? 'destructive' : 'default' });
+    } finally { setSyncing(false); }
   };
 
   const handleRetry = async (entryId) => {
@@ -93,7 +110,10 @@ export default function FinanceIntegrationPage() {
       await base44.entities.FinanceSyncQueue.update(entryId, { status: 'pending', last_error: '' });
       toast({ title: 'Queued for retry' });
       loadQueue();
-    } catch (e) { toast({ title: 'Retry failed', description: e?.message, variant: 'destructive' }); }
+    } catch (e) {
+      const err = classifyIntegrationError(e, { action: 'sync', service: 'xero' });
+      toast({ title: err.title, description: err.message, variant: err.variant === 'error' ? 'destructive' : 'default' });
+    }
   };
 
   // OAuth callback handling: if URL has ?code, exchange it.
@@ -114,7 +134,10 @@ export default function FinanceIntegrationPage() {
           // clean URL
           window.history.replaceState({}, '', window.location.pathname);
           loadStatus();
-        } catch (e) { toast({ title: 'Connection failed', description: e?.message, variant: 'destructive' }); }
+        } catch (e) {
+          const err = classifyIntegrationError(e, { action: 'connect', service: 'xero' });
+          toast({ title: err.title, description: err.message, variant: err.variant === 'error' ? 'destructive' : 'default' });
+        }
       })();
     }
   }, [tenantId]);

@@ -6,7 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-  LogOut, User, Settings, Bell, Link2, Wallet, ScrollText,
+  LogOut, Settings, Bell, Wallet, ScrollText,
   ShieldCheck, LifeBuoy, MessageSquare, Building2, ChevronUp,
   Check, Plus, ArrowRight,
 } from 'lucide-react';
@@ -123,11 +123,8 @@ export default function UserMenu({ variant = 'sidebar', className }) {
         <div className="p-1.5 max-h-[70vh] overflow-y-auto">
           {/* ── Account ── */}
           <p className={labelClass} role="heading" aria-level={3}>Account</p>
-          <Link to="/settings#profile" className={itemClass} onClick={() => setOpen(false)}>
-            <User className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">My Profile</span>
-          </Link>
           <Link to="/settings" className={itemClass} onClick={() => setOpen(false)}>
-            <Settings className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Account Settings</span>
+            <Settings className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Settings</span>
           </Link>
           <Link to="/notifications" className={itemClass} onClick={() => setOpen(false)}>
             <Bell className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Notifications</span>
@@ -172,9 +169,6 @@ export default function UserMenu({ variant = 'sidebar', className }) {
               })}
             </div>
           )}
-          <Link to="/settings#connected" className={itemClass} onClick={() => setOpen(false)}>
-            <Link2 className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Connected Accounts</span>
-          </Link>
 
           {/* ── Platform (admin only) ── */}
           {isAdmin && (
