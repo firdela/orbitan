@@ -142,21 +142,53 @@ export default function AuditCentre() {
   const handleExportBundle = async () => {
     setBundling(true);
     try {
-      const res = await base44.functions.invoke('auditBundleGenerator', {
-        tenant_id: isAdmin ? (tenantFilter !== 'all' ? tenantFilter : undefined) : tenant?.id,
+      const payload = {
         module: moduleFilter !== 'all' ? moduleFilter : undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
-      });
+      };
+      // Platform admins with "All Tenants" use the cross-tenant scope.
+      if (isAdmin && tenantFilter === 'all') {
+        payload.scope = 'all_tenants';
+      } else if (isAdmin && tenantFilter !== 'all') {
+        payload.tenant_id = tenantFilter;
+      } else {
+        payload.tenant_id = tenant?.id;
+      }
+
+      // If no date range and no specific filters, require a date range.
+      if (!payload.tenant_id && !payload.scope && !payload.date_from && !payload.date_to) {
+        toast({
+          title: 'Date Range Required',
+          description: 'Select a date range or tenant scope before generating an audit bundle.',
+          variant: 'destructive',
+        });
+        setBundling(false);
+        return;
+      }
+
+      const res = await base44.functions.invoke('auditBundleGenerator', payload);
       const bundle = res.data || res;
       const m = bundle.manifest;
       if (!m) throw new Error('Bundle generator returned no manifest.');
+
+      // Handle empty result with actionable guidance.
+      if (m.event_count === 0) {
+        toast({
+          title: 'No Records Match',
+          description: 'No audit events found for the selected scope. Adjust your filters or date range and try again.',
+          variant: 'destructive',
+        });
+        setBundling(false);
+        return;
+      }
+
       const { jsPDF } = await import('jspdf');
       const doc = new jsPDF();
       doc.setFontSize(16); doc.text('OrbitanOS — Audit Bundle', 14, 20);
       doc.setFontSize(9);
       doc.text(`Bundle ID: ${m.bundle_id}`, 14, 28);
-      doc.text(`Tenant: ${m.tenant_id}`, 14, 33);
+      doc.text(`Scope: ${m.scope?.type === 'all_tenants' ? 'All Tenants' : (m.tenant_id || 'Single Record')}`, 14, 33);
       doc.text(`Generated: ${new Date(m.generated_at).toLocaleString('en-SG')}`, 14, 38);
       doc.text(`Integrity Hash: ${m.integrity_hash}`, 14, 43);
       doc.text(`Events: ${m.event_count}  |  Evidence: ${m.artifact_count}  |  ${m.standard}`, 14, 48);
@@ -171,7 +203,21 @@ export default function AuditCentre() {
       doc.save(`audit-bundle-${m.bundle_id}.pdf`);
       toast({ title: 'Audit Bundle Generated', description: `${m.event_count} events packaged.` });
     } catch (err) {
-      toast({ title: 'Bundle generation failed', description: err?.message || 'An error occurred.', variant: 'destructive' });
+      // Classify failure states into actionable user messages.
+      const status = err?.response?.status || err?.status;
+      let title = 'Bundle Generation Failed';
+      let description = 'An unexpected error occurred. Please try again or contact support.';
+      if (status === 400) {
+        title = 'Invalid Request';
+        description = 'The bundle request was missing required parameters. Select a date range or tenant scope and retry.';
+      } else if (status === 403) {
+        title = 'Permission Denied';
+        description = 'You do not have permission to generate audit bundles for this scope.';
+      } else if (status === 500) {
+        title = 'Bundle Service Unavailable';
+        description = 'The audit bundle service encountered an error. Please retry or contact support.';
+      }
+      toast({ title, description, variant: 'destructive' });
     } finally {
       setBundling(false);
     }

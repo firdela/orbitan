@@ -32,15 +32,23 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { tenant_id, target_record_id, module, date_from, date_to } = body || {};
+    const { tenant_id, target_record_id, module, date_from, date_to, scope } = body || {};
 
-    if (!tenant_id) return Response.json({ error: 'tenant_id is required' }, { status: 400 });
-    if (!target_record_id && !date_from && !date_to) {
-      return Response.json({ error: 'Provide target_record_id or a date range.' }, { status: 400 });
+    // ── Scope resolution ──
+    // Platform admins may request scope='all_tenants' to bundle across all tenants.
+    // Non-admins must always provide their own tenant_id.
+    const allTenantsScope = scope === 'all_tenants' && user.role === 'admin';
+
+    if (!tenant_id && !allTenantsScope) {
+      return Response.json({ error: 'tenant_id is required (or scope=all_tenants for platform admins)' }, { status: 400 });
+    }
+    if (!target_record_id && !date_from && !date_to && !allTenantsScope) {
+      return Response.json({ error: 'Provide target_record_id, a date range, or scope=all_tenants.' }, { status: 400 });
     }
 
     // ── Query AuditLog ──
-    const filter = { tenant_id };
+    const filter = {};
+    if (tenant_id) filter.tenant_id = tenant_id;
     if (target_record_id) filter.target_record_id = target_record_id;
     if (module) filter.module = module;
 
@@ -63,8 +71,8 @@ Deno.serve(async (req) => {
     let artifacts = [];
     if (evidenceUrls.size > 0 || linkedArtifactIds.size > 0) {
       try {
-        const urlArray = [...evidenceUrls];
-        const artifactFilter = { tenant_id };
+        const artifactFilter = {};
+        if (tenant_id) artifactFilter.tenant_id = tenant_id;
         // Fetch tenant artifacts and match by storage_url or linked_entity_id
         const candidate = await base44.asServiceRole.entities.ArtifactRecord.filter(
           artifactFilter, '-created_date', 200
@@ -99,10 +107,12 @@ Deno.serve(async (req) => {
     const bundle = {
       manifest: {
         bundle_id: `BUNDLE-${integrity_hash.slice(0, 16).toUpperCase()}`,
-        tenant_id,
-        scope: target_record_id
-          ? { target_record_id, module }
-          : { date_from, date_to, module },
+        tenant_id: tenant_id || null,
+        scope: allTenantsScope
+          ? { type: 'all_tenants', date_from, date_to, module }
+          : target_record_id
+            ? { target_record_id, module }
+            : { date_from, date_to, module },
         generated_at,
         generated_by: { id: user.id, name: user.full_name, role: user.role },
         integrity_hash,

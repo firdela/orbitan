@@ -20,6 +20,7 @@ const NAV_ITEMS = {
   tenants: { key: 'tenants', label: 'Tenant Command Center', route: '/leader-org?tab=tenants', description: 'View and manage all tenant organisations', permission: 'admin' },
   subscriptions: { key: 'subscriptions', label: 'Tenant Plans & Entitlements', route: '/leader-org?tab=subscriptions', description: 'Subscription plans, billing, modules, and entitlement policies', permission: 'admin' },
   'tenant-metrics': { key: 'tenant-metrics', label: 'Tenant Insights', route: '/platform/tenant-metrics', description: 'Tenant growth, usage, subscriptions, and revenue analytics', permission: 'admin' },
+  'tenant-insights': { key: 'tenant-insights', label: 'Tenant Insights', route: '/leader-org?section=tenant-insights', description: 'Tenant growth, usage, subscriptions, and revenue analytics', permission: 'admin' },
   'pilot-management': { key: 'pilot-management', label: 'Pilot Management', route: '/platform/pilot-admin', description: 'Provision, activate, monitor, and retire pilot tenants', permission: 'admin' },
 
   // Customer Success
@@ -60,6 +61,12 @@ const NAV_ITEMS = {
   // Quick Access utilities (compact, not primary nav)
   wallet: { key: 'wallet', label: 'Orbit Wallet', route: '/platform/wallet', description: 'Platform wallet ledger and transaction management', permission: 'admin' },
   marketplace: { key: 'marketplace', label: 'Marketplace', route: '/platform/marketplace', description: 'Module marketplace and add-on catalog', permission: 'admin' },
+
+  // Subscription & Billing — canonical tenant-facing billing
+  'subscription-billing': { key: 'subscription-billing', label: 'Subscription & Billing', route: '/leader-org?section=subscription-billing', description: 'Plan, billing, usage, invoices, and payment methods', permission: 'admin' },
+
+  // System Health — embedded console section
+  'system-health': { key: 'system-health', label: 'System Health', route: '/leader-org?section=system-health', description: 'Live operational health: web, API, auth, database, storage, jobs, integrations', permission: 'admin' },
 
   // ── Legacy keys (backward compatibility — not shown in primary nav) ──
   modules: { key: 'modules', label: 'Modules & Packs', route: '/leader-org?tab=modules', description: 'Platform modules and industry packs', permission: 'admin' },
@@ -173,6 +180,40 @@ export const QUICK_ACCESS = [
   NAV_ITEMS['access-control'],
 ];
 
+// ── Console Section Registry ─────────────────────────────
+// Maps section keys to their console domain. Used by LeaderOrg to validate
+// URL ?section= parameters and by UnifiedCommandNav to determine active state.
+export const CONSOLE_SECTIONS = {
+  overview:             { domain: 'overview',         label: 'Overview',              embedded: true },
+  tenants:               { domain: 'tenants',          label: 'Tenant Command Center', embedded: true },
+  subscriptions:        { domain: 'tenants',          label: 'Tenant Plans & Entitlements', embedded: true },
+  modules:              { domain: 'tenants',          label: 'Modules & Packs',      embedded: true },
+  'tenant-insights':    { domain: 'tenants',          label: 'Tenant Insights',      embedded: true },
+  'pilot-management':   { domain: 'tenants',          label: 'Pilot Management',      embedded: true },
+  'customer-success':   { domain: 'customer-success',  label: 'Customer Success',      embedded: true },
+  'feedback-intelligence': { domain: 'customer-success', label: 'Feedback Intelligence', embedded: true },
+  'shield-command':     { domain: 'governance',       label: 'Shield Command',        embedded: true },
+  'audit-centre':       { domain: 'governance',       label: 'Audit Centre',          embedded: false, route: '/audit-centre' },
+  'access-control':     { domain: 'governance',       label: 'Access Control',       embedded: false, route: '/platform/access-control' },
+  'security-centre':    { domain: 'governance',       label: 'Security Centre',       embedded: true },
+  'integration-hub':    { domain: 'integrations',     label: 'Integration Hub',       embedded: true },
+  'integration-health': { domain: 'integrations',     label: 'Integration Health',    embedded: true },
+  'integration-directory': { domain: 'integrations',  label: 'Integration Directory', embedded: true },
+  'platform-identity':  { domain: 'platform',         label: 'Platform Identity',     embedded: true },
+  'system-controls':    { domain: 'platform',         label: 'System Controls',      embedded: true },
+  blueprint:            { domain: 'platform',         label: 'Blueprint Studio',     embedded: true },
+  'system-health':      { domain: 'platform',         label: 'System Health',         embedded: true },
+  'operational-health': { domain: 'platform',         label: 'Operational Health',    embedded: true },
+  'incident-response':  { domain: 'platform',         label: 'Incident Response',     embedded: true },
+  'activity-logs':      { domain: 'platform',         label: 'Activity & Logs',       embedded: true },
+  'release-readiness':  { domain: 'platform',         label: 'Release Readiness',    embedded: true },
+  'deployment-pipeline': { domain: 'platform',        label: 'Deployment Pipeline',   embedded: true },
+  'change-log':         { domain: 'platform',         label: 'Change Log',            embedded: true },
+  roadmap:              { domain: 'platform',         label: 'Roadmap',               embedded: true },
+  'subscription-billing': { domain: 'platform',       label: 'Subscription & Billing', embedded: true },
+  'resource-usage':     { domain: 'platform',         label: 'Resource Usage',        embedded: true },
+};
+
 // ── Helpers ────────────────────────────────────────────────
 export function getNavItemByKey(key) {
   return NAV_ITEMS[key] || null;
@@ -181,4 +222,8 @@ export function getNavItemByKey(key) {
 export function canAccessNavItem(item, userRole) {
   if (!item?.permission) return true;
   return userRole === 'admin' || userRole === 'platform_admin';
+}
+
+export function getConsoleSection(key) {
+  return CONSOLE_SECTIONS[key] || null;
 }

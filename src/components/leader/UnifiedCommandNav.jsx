@@ -44,7 +44,7 @@ const NAV_CATEGORIES = [
     primary: { key: 'tenants', type: 'tab', label: 'Tenant Command Center' },
     items: [
       { key: 'subscriptions', type: 'tab' },
-      { key: 'tenant-metrics', type: 'route' },
+      { key: 'tenant-insights', type: 'tab' },
       { key: 'pilot-management', type: 'route' },
     ],
   },
@@ -74,7 +74,7 @@ const NAV_CATEGORIES = [
     icon: Plug,
     primary: { key: 'integration-hub', type: 'tab', label: 'Integration Hub' },
     items: [
-      { key: 'integration-health', type: 'route' },
+      { key: 'integration-health', type: 'tab' },
     ],
   },
   {
@@ -94,25 +94,26 @@ const NAV_CATEGORIES = [
         section: 'Capabilities & Access',
         items: [
           { key: 'capabilities', type: 'route' },
-          { key: 'security-centre', type: 'route' },
+          { key: 'security-centre', type: 'tab' },
         ],
       },
       {
         section: 'Reliability & Operations',
         items: [
-          { key: 'operational-health', type: 'route' },
-          { key: 'incident-response', type: 'route' },
-          { key: 'activity-logs', type: 'route' },
+          { key: 'system-health', type: 'tab' },
+          { key: 'operational-health', type: 'tab' },
+          { key: 'incident-response', type: 'tab' },
+          { key: 'activity-logs', type: 'tab' },
           { key: 'support-diagnostics', type: 'route' },
         ],
       },
       {
         section: 'Release & Evolution',
         items: [
-          { key: 'release-readiness', type: 'route' },
-          { key: 'deployment-pipeline', type: 'route' },
-          { key: 'change-log', type: 'route' },
-          { key: 'roadmap', type: 'route' },
+          { key: 'release-readiness', type: 'tab' },
+          { key: 'deployment-pipeline', type: 'tab' },
+          { key: 'change-log', type: 'tab' },
+          { key: 'roadmap', type: 'tab' },
         ],
       },
     ],

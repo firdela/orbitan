@@ -396,7 +396,7 @@ export default function IntegrationHubPage() {
           )}
 
           {/* Never connected state */}
-          {status === 'not_connected' && (
+          {status === 'not_connected' && configured !== false && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Connect your Xero account to automatically sync sales invoices, purchase order bills, and
@@ -409,6 +409,30 @@ export default function IntegrationHubPage() {
                 </Button>
               ) : (
                 <p className="text-xs text-muted-foreground">Ask your Tenant Admin to connect Xero.</p>
+              )}
+            </div>
+          )}
+
+          {/* Not configured state — Xero OAuth credentials missing */}
+          {status === 'not_connected' && configured === false && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Xero is not yet configured at the platform level. Once the Platform Owner adds the OAuth
+                credentials, finance teams can connect instantly.
+              </p>
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground mb-1.5">What the Platform Owner must configure:</p>
+                <ul className="space-y-1">
+                  <li>• Register a Xero OAuth 2.0 app at developer.xero.com</li>
+                  <li>• Set the redirect URI to <code className="bg-background px-1 rounded">{'{your app origin}'}/platform/integrations</code></li>
+                  <li>• Add <code className="bg-background px-1 rounded">XERO_CLIENT_ID</code> and <code className="bg-background px-1 rounded">XERO_CLIENT_SECRET</code> in Base44 Settings → Environment Variables</li>
+                </ul>
+              </div>
+              {canManage && (
+                <Button disabled title="Xero OAuth credentials have not been added by the Platform Owner">
+                  <Settings className="w-4 h-4" />
+                  Configuration Required
+                </Button>
               )}
             </div>
           )}

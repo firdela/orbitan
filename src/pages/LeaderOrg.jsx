@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { PLATFORM_IDENTITY, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, OPERATING_CYCLE } from '@/lib/orbitan-config';
 import { DEMO_TENANTS } from '@/lib/use-tenant.jsx';
@@ -30,14 +30,46 @@ import BlueprintStudio from '@/components/blueprint/BlueprintStudio';
 import SubscriptionPolicyManager from '@/components/platform/SubscriptionPolicyManager';
 import ShieldCommandCenter from '@/pages/platform/ShieldCommandCenter';
 import IntegrationHubPage from '@/pages/platform/IntegrationHubPage';
+import { CONSOLE_SECTIONS } from '@/lib/navigation-registry';
 import {
   Building2, Package, Shield,
   Layers, Plus, CheckCircle2, RefreshCw,
   Rocket, Activity, Zap, Target } from 'lucide-react';
 import UserMenu from '@/components/shared/UserMenu';
 
+// ── Lazy-loaded embedded console sections ──
+// These render inside LeaderOrg as console sections (no standalone page navigation).
+const TenantMetrics = lazy(() => import('@/pages/foundation/TenantMetrics'));
+const OperationalHealthDashboard = lazy(() => import('@/pages/platform/OperationalHealthDashboard'));
+const SecurityDashboard = lazy(() => import('@/pages/foundation/SecurityDashboard'));
+const ExceptionCentrePage = lazy(() => import('@/pages/platform/ExceptionCentrePage'));
+const SystemLogs = lazy(() => import('@/pages/foundation/SystemLogs'));
+const GoLiveReadinessCentre = lazy(() => import('@/pages/platform/GoLiveReadinessCentre'));
+const DeploymentPipeline = lazy(() => import('@/pages/foundation/DeploymentPipeline'));
+const ChangeLog = lazy(() => import('@/pages/foundation/ChangeLog'));
+const RoadmapPage = lazy(() => import('@/pages/foundation/RoadmapPage'));
+const SubscriptionPage = lazy(() => import('@/pages/workspace/SubscriptionPage'));
+
+function EmbeddedSection({ children }) {
+  return (
+    <div className="animate-fade-in">
+      <Suspense fallback={<div className="py-12 text-center text-sm text-muted-foreground">Loading section…</div>}>
+        {children}
+      </Suspense>
+    </div>
+  );
+}
+
 export default function LeaderOrg() {
-  const [activeTab, setActiveTab] = useState('overview');
+  // ── URL-synchronised section model ──
+  // The active console section is stored in the URL (?section=<key>) so that
+  // refresh preserves state, deep links work, and browser Back/Forward navigates
+  // between console sections without leaving LeaderOrg.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('section') || 'overview';
+  const setActiveTab = (key) => {
+    setSearchParams(key === 'overview' ? {} : { section: key }, { replace: true });
+  };
   // Manifests loaded directly from tenant-registry.js (no function call)
   const [manifests] = useState(() => getManifestList());
   const [activating, setActivating] = useState(null);
@@ -392,6 +424,58 @@ export default function LeaderOrg() {
           {/* Integration Hub — Xero, Stripe, and external service connections */}
           <TabsContent value="integration-hub">
             <IntegrationHubPage />
+          </TabsContent>
+
+          {/* ── Embedded Console Sections ── */}
+          {/* These render existing canonical pages inside the Platform Console,
+              avoiding standalone page navigation for dashboard/monitoring views. */}
+
+          <TabsContent value="tenant-insights">
+            <EmbeddedSection><TenantMetrics /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="integration-health">
+            <EmbeddedSection><IntegrationHubPage /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="system-health">
+            <EmbeddedSection><OperationalHealthDashboard /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="operational-health">
+            <EmbeddedSection><OperationalHealthDashboard /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="security-centre">
+            <EmbeddedSection><SecurityDashboard /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="incident-response">
+            <EmbeddedSection><ExceptionCentrePage /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="activity-logs">
+            <EmbeddedSection><SystemLogs /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="release-readiness">
+            <EmbeddedSection><GoLiveReadinessCentre /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="deployment-pipeline">
+            <EmbeddedSection><DeploymentPipeline /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="change-log">
+            <EmbeddedSection><ChangeLog /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="roadmap">
+            <EmbeddedSection><RoadmapPage /></EmbeddedSection>
+          </TabsContent>
+
+          <TabsContent value="subscription-billing">
+            <EmbeddedSection><SubscriptionPage /></EmbeddedSection>
           </TabsContent>
 
           {/* Platform Identity (About) - Merged with Operating Cycle */}
