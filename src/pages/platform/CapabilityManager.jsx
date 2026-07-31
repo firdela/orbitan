@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
+import BackBar from '@/components/shared/BackBar';
 import { auditFrontend } from '@/lib/audit';
 
 // ── Tier metadata ──────────────────────────────────────────
@@ -294,6 +295,7 @@ export default function CapabilityManager() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <BackBar to="/leader-org" label="Back to Platform Console" />
         {/* Stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>

@@ -17,7 +17,7 @@ import { Tabs, TabsContent } from '@/components/ui/tabs';
 import UnifiedCommandNav from '@/components/leader/UnifiedCommandNav';
 import CompactLeaderHeader from '@/components/leader/CompactLeaderHeader';
 import NexusDailyBrief from '@/components/leader/NexusDailyBrief';
-import QuickLaunchRail from '@/components/leader/QuickLaunchRail';
+import QuickAccess from '@/components/leader/QuickLaunchRail';
 import TenantCommandCard from '@/components/leader/TenantCommandCard';
 import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionPlansAccordion';
 import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
@@ -37,7 +37,7 @@ import {
 import UserMenu from '@/components/shared/UserMenu';
 
 export default function LeaderOrg() {
-  const [activeTab, setActiveTab] = useState('tenants');
+  const [activeTab, setActiveTab] = useState('overview');
   // Manifests loaded directly from tenant-registry.js (no function call)
   const [manifests] = useState(() => getManifestList());
   const [activating, setActivating] = useState(null);
@@ -175,11 +175,13 @@ export default function LeaderOrg() {
           <NexusDailyBrief data={csData} loading={csLoading} error={csError} />
         </div>
 
-        {/* Quick Launch Rail — compact */}
-        <QuickLaunchRail />
-
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <UnifiedCommandNav activeTab={activeTab} onTabChange={setActiveTab} />
+
+          {/* Overview Tab — Quick Access + Summary */}
+          <TabsContent value="overview">
+            <QuickAccess />
+          </TabsContent>
 
           {/* Tenants Command Center Tab */}
           <TabsContent value="tenants">
@@ -317,6 +319,15 @@ export default function LeaderOrg() {
                 <h3 className="font-heading font-semibold text-base mb-1">Subscription Policies</h3>
                 <p className="text-xs text-muted-foreground mb-4">Define commercial entitlements and resource limits per plan tier.</p>
                 <SubscriptionPolicyManager />
+              </div>
+              <div className="pt-6 border-t border-border">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-heading font-semibold text-base">Modules &amp; Packs</h3>
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setActiveTab('modules')}>
+                    View Modules &amp; Packs
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Platform modules and industry packs available for tenant activation.</p>
               </div>
             </div>
           </TabsContent>

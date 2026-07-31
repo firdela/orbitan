@@ -1,32 +1,42 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Accordion, AccordionItem, AccordionTrigger, AccordionContent,
+} from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { getNavItemByKey } from '@/lib/navigation-registry';
 import {
-  Building2, HeartHandshake, Shield, Plug, ShoppingBag, Settings,
-  ChevronDown, ChevronRight,
+  Building2, HeartHandshake, Shield, Plug, Settings,
+  LayoutDashboard, ChevronDown, ChevronRight, Menu,
 } from 'lucide-react';
 
 /**
- * UnifiedCommandNav — consolidates ~20 flat nav items into 6 high-level categories.
+ * UnifiedCommandNav — six primary domains with no TAB/PAGE badges.
  *
- * Preserves every existing route (24 items) and navigation-registry authority:
- * item metadata (label, route, description) is fetched from the registry via
- * getNavItemByKey(). Only the grouping is defined here (presentation concern).
+ * Domains: Overview · Tenants · Customer Success · Governance ·
+ * Integrations · Platform
  *
- * Interaction:
- *   - 'tab' items call onTabChange(key) → stays in LeaderOrg Tabs
- *   - 'route' items navigate via react-router Link/navigate
+ * Platform uses a grouped mega-menu (2-column grid with section headings).
+ * Mobile uses a Sheet with accordion sections — same information architecture.
  *
- * Accessibility:
- *   - Radix DropdownMenu provides aria-expanded, aria-controls, keyboard nav
- *   - Active category highlighted when it contains the current tab
+ * Internal `type` metadata (tab/route) is engineering-only and never displayed.
+ * - 'tab' items call onTabChange(key) → stays in LeaderOrg Tabs
+ * - 'route' items navigate via react-router
  */
 const NAV_CATEGORIES = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    icon: LayoutDashboard,
+    primary: { key: 'overview', type: 'tab', label: 'Overview' },
+    items: [],
+  },
   {
     id: 'tenants',
     label: 'Tenants',
@@ -34,11 +44,8 @@ const NAV_CATEGORIES = [
     primary: { key: 'tenants', type: 'tab', label: 'Tenant Command Center' },
     items: [
       { key: 'subscriptions', type: 'tab' },
-      { key: 'modules', type: 'tab' },
-      { key: 'pilot-control', type: 'tab' },
-      { key: 'pilot-admin', type: 'route' },
-      { key: 'pilot-activation', type: 'route' },
-      { key: 'pilot-deployment', type: 'route' },
+      { key: 'tenant-metrics', type: 'route' },
+      { key: 'pilot-management', type: 'route' },
     ],
   },
   {
@@ -48,8 +55,6 @@ const NAV_CATEGORIES = [
     items: [
       { key: 'customer-success', type: 'route' },
       { key: 'feedback-intelligence', type: 'tab' },
-      { key: 'operational-health', type: 'route' },
-      { key: 'support-diagnostics', type: 'route' },
     ],
   },
   {
@@ -59,53 +64,68 @@ const NAV_CATEGORIES = [
     items: [
       { key: 'shield-command', type: 'tab' },
       { key: 'audit-logs', type: 'route' },
+      { key: 'compliance', type: 'route' },
+      { key: 'access-control', type: 'route' },
     ],
   },
   {
     id: 'integrations',
     label: 'Integrations',
     icon: Plug,
+    primary: { key: 'integration-hub', type: 'tab', label: 'Integration Hub' },
     items: [
-      { key: 'integration-hub', type: 'tab' },
-      { key: 'wallet', type: 'route' },
+      { key: 'integration-health', type: 'route' },
     ],
-  },
-  {
-    id: 'marketplace',
-    label: 'Marketplace',
-    icon: ShoppingBag,
-    primary: { key: 'marketplace', type: 'route' },
-    items: [],
   },
   {
     id: 'platform',
     label: 'Platform',
     icon: Settings,
-    items: [
-      { key: 'platform-identity', type: 'tab' },
-      { key: 'system-controls', type: 'tab' },
-      { key: 'blueprint', type: 'tab' },
-      { key: 'capabilities', type: 'route' },
-      { key: 'access-control', type: 'route' },
-      { key: 'pilot-readiness', type: 'route' },
-      { key: 'go-live-readiness', type: 'route' },
-      { key: 'exception-centre', type: 'route' },
-      { key: 'system-logs', type: 'route' },
-      { key: 'deployment-pipeline', type: 'route' },
-      { key: 'tenant-metrics', type: 'route' },
-      { key: 'security-dashboard', type: 'route' },
-      { key: 'feature-flags', type: 'route' },
-      { key: 'change-log', type: 'route' },
+    megaGroups: [
+      {
+        section: 'Foundation',
+        items: [
+          { key: 'platform-identity', type: 'tab' },
+          { key: 'system-controls', type: 'tab' },
+          { key: 'blueprint', type: 'tab' },
+        ],
+      },
+      {
+        section: 'Capabilities & Access',
+        items: [
+          { key: 'capabilities', type: 'route' },
+          { key: 'security-centre', type: 'route' },
+        ],
+      },
+      {
+        section: 'Reliability & Operations',
+        items: [
+          { key: 'operational-health', type: 'route' },
+          { key: 'incident-response', type: 'route' },
+          { key: 'activity-logs', type: 'route' },
+          { key: 'support-diagnostics', type: 'route' },
+        ],
+      },
+      {
+        section: 'Release & Evolution',
+        items: [
+          { key: 'release-readiness', type: 'route' },
+          { key: 'deployment-pipeline', type: 'route' },
+          { key: 'change-log', type: 'route' },
+          { key: 'roadmap', type: 'route' },
+        ],
+      },
     ],
   },
 ];
 
-const TRIGGER_BASE = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring';
+const TRIGGER_BASE = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1';
 const TRIGGER_ACTIVE = 'bg-primary text-primary-foreground';
 const TRIGGER_IDLE = 'bg-card border border-border text-foreground hover:bg-muted';
 
 export default function UnifiedCommandNav({ activeTab, onTabChange }) {
   const navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleItem = (entry) => {
     const item = getNavItemByKey(entry.key);
@@ -119,76 +139,222 @@ export default function UnifiedCommandNav({ activeTab, onTabChange }) {
 
   const isActiveCategory = (cat) => {
     if (cat.primary?.type === 'tab' && activeTab === cat.primary.key) return true;
-    return cat.items.some((i) => i.type === 'tab' && i.key === activeTab);
+    if (cat.items?.some((i) => i.type === 'tab' && i.key === activeTab)) return true;
+    if (cat.megaGroups?.some((g) => g.items.some((i) => i.type === 'tab' && i.key === activeTab))) return true;
+    return false;
   };
 
-  return (
-    <nav className="flex items-center gap-1.5 flex-wrap mb-5" aria-label="Platform command navigation">
-      {NAV_CATEGORIES.map((cat) => {
-        const Icon = cat.icon;
-        const active = isActiveCategory(cat);
+  // ── Render a single category trigger (shared by desktop + mobile label) ──
+  const renderDesktopCategory = (cat) => {
+    const Icon = cat.icon;
+    const active = isActiveCategory(cat);
 
-        // Categories with no dropdown items → direct link
-        if (cat.items.length === 0 && cat.primary) {
-          const item = getNavItemByKey(cat.primary.key);
-          if (!item) return null;
-          return (
-            <Link
-              key={cat.id}
-              to={item.route}
-              aria-label={cat.label}
-              className={cn(TRIGGER_BASE, active ? TRIGGER_ACTIVE : TRIGGER_IDLE)}
-            >
-              <Icon className="w-4 h-4" /> {cat.label}
-            </Link>
-          );
-        }
+    // Direct link — no dropdown items and no megaGroups
+    if ((!cat.items || cat.items.length === 0) && !cat.megaGroups && cat.primary) {
+      const item = getNavItemByKey(cat.primary.key);
+      if (!item) return null;
+      return (
+        <Link
+          key={cat.id}
+          to={item.route}
+          aria-label={cat.label}
+          className={cn(TRIGGER_BASE, active ? TRIGGER_ACTIVE : TRIGGER_IDLE)}
+        >
+          <Icon className="w-4 h-4" /> {cat.label}
+        </Link>
+      );
+    }
 
-        // Categories with dropdown items
-        return (
-          <DropdownMenu key={cat.id}>
-            <DropdownMenuTrigger
-              className={cn(TRIGGER_BASE, active ? TRIGGER_ACTIVE : TRIGGER_IDLE)}
-              aria-label={`${cat.label} menu`}
-            >
+    // Mega-menu — Platform category with grouped sections
+    if (cat.megaGroups) {
+      return (
+        <DropdownMenu key={cat.id}>
+          <DropdownMenuTrigger
+            className={cn(TRIGGER_BASE, active ? TRIGGER_ACTIVE : TRIGGER_IDLE)}
+            aria-label={`${cat.label} menu`}
+          >
+            <Icon className="w-4 h-4" /> {cat.label}
+            <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-[480px] p-3 max-h-[80vh] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+              {cat.megaGroups.map((group) => (
+                <div key={group.section} className="space-y-0.5">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
+                    {group.section}
+                  </p>
+                  {group.items.map((entry) => {
+                    const item = getNavItemByKey(entry.key);
+                    if (!item) return null;
+                    return (
+                      <DropdownMenuItem
+                        key={entry.key}
+                        onClick={() => handleItem(entry)}
+                        className="gap-2 cursor-pointer rounded-md px-2 py-1.5 text-sm"
+                      >
+                        {item.label}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
+    // Regular dropdown
+    return (
+      <DropdownMenu key={cat.id}>
+        <DropdownMenuTrigger
+          className={cn(TRIGGER_BASE, active ? TRIGGER_ACTIVE : TRIGGER_IDLE)}
+          aria-label={`${cat.label} menu`}
+        >
+          <Icon className="w-4 h-4" /> {cat.label}
+          <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56 max-h-[80vh] overflow-y-auto">
+          {cat.primary && (
+            <>
+              <DropdownMenuItem
+                onClick={() => handleItem(cat.primary)}
+                className="gap-2 font-medium text-primary focus:text-primary"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+                {cat.primary.label || getNavItemByKey(cat.primary.key)?.label}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          {cat.items
+            .filter((i) => !cat.primary || i.key !== cat.primary.key)
+            .map((entry) => {
+              const item = getNavItemByKey(entry.key);
+              if (!item) return null;
+              return (
+                <DropdownMenuItem
+                  key={entry.key}
+                  onClick={() => handleItem(entry)}
+                  className="gap-2 cursor-pointer"
+                >
+                  {entry.label || item.label}
+                </DropdownMenuItem>
+              );
+            })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  // ── Mobile: Sheet with accordion sections ──
+  const renderMobileCategory = (cat) => {
+    const Icon = cat.icon;
+
+    // Direct link
+    if ((!cat.items || cat.items.length === 0) && !cat.megaGroups && cat.primary) {
+      const item = getNavItemByKey(cat.primary.key);
+      if (!item) return null;
+      return (
+        <Button
+          key={cat.id}
+          variant="ghost"
+          className="w-full justify-start gap-2 font-medium"
+          onClick={() => { handleItem(cat.primary); setMobileOpen(false); }}
+        >
+          <Icon className="w-4 h-4" /> {cat.label}
+        </Button>
+      );
+    }
+
+    return (
+      <Accordion key={cat.id} type="single" collapsible>
+        <AccordionItem value={cat.id} className="border-b-0">
+          <AccordionTrigger className="px-3 py-2 hover:no-underline">
+            <span className="flex items-center gap-2 text-sm font-medium">
               <Icon className="w-4 h-4" /> {cat.label}
-              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              {cat.primary && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => handleItem(cat.primary)}
-                    className="gap-2 font-medium text-primary focus:text-primary"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
-                    {cat.primary.label || getNavItemByKey(cat.primary.key)?.label}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              {cat.items
-                .filter((i) => !cat.primary || i.key !== cat.primary.key)
-                .map((entry) => {
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="pb-2 pl-4 space-y-0.5">
+            {cat.primary && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 font-medium text-primary"
+                onClick={() => { handleItem(cat.primary); setMobileOpen(false); }}
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+                {cat.primary.label || getNavItemByKey(cat.primary.key)?.label}
+              </Button>
+            )}
+            {cat.items?.map((entry) => {
+              const item = getNavItemByKey(entry.key);
+              if (!item) return null;
+              return (
+                <Button
+                  key={entry.key}
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => { handleItem(entry); setMobileOpen(false); }}
+                >
+                  {entry.label || item.label}
+                </Button>
+              );
+            })}
+            {cat.megaGroups?.map((group) => (
+              <div key={group.section} className="pt-2">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">
+                  {group.section}
+                </p>
+                {group.items.map((entry) => {
                   const item = getNavItemByKey(entry.key);
                   if (!item) return null;
                   return (
-                    <DropdownMenuItem
+                    <Button
                       key={entry.key}
-                      onClick={() => handleItem(entry)}
-                      className="gap-2 justify-between"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => { handleItem(entry); setMobileOpen(false); }}
                     >
-                      <span>{entry.label || item.label}</span>
-                      <span className="text-[9px] text-muted-foreground uppercase tracking-wider">
-                        {entry.type === 'tab' ? 'Tab' : 'Page'}
-                      </span>
-                    </DropdownMenuItem>
+                      {item.label}
+                    </Button>
                   );
                 })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      })}
-    </nav>
+              </div>
+            ))}
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    );
+  };
+
+  return (
+    <>
+      {/* Desktop Navigation */}
+      <nav className="hidden md:flex items-center gap-1.5 flex-wrap mb-5" aria-label="Platform command navigation">
+        {NAV_CATEGORIES.map(renderDesktopCategory)}
+      </nav>
+
+      {/* Mobile Navigation */}
+      <div className="md:hidden mb-5">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" className="w-full gap-2">
+              <Menu className="w-4 h-4" /> Navigation
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[300px] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Platform Navigation</SheetTitle>
+            </SheetHeader>
+            <div className="py-2 space-y-1">
+              {NAV_CATEGORIES.map(renderMobileCategory)}
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    </>
   );
 }

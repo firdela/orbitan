@@ -159,6 +159,12 @@ const AuthenticatedApp = () => {
       <Route path="/incident-response" element={<Navigate to="/platform/exception-centre" replace />} />
       <Route path="/security-settings" element={<Navigate to="/settings#security" replace />} />
       <Route path="/compliance-dashboard" element={<Navigate to="/workspace" replace />} />
+      {/* Consolidated canonical route aliases — Build #27E */}
+      <Route path="/platform/release-readiness" element={<Navigate to="/platform/go-live-readiness" replace />} />
+      <Route path="/platform/security-centre" element={<Navigate to="/platform/security-dashboard" replace />} />
+      <Route path="/platform/activity-logs" element={<Navigate to="/platform/system-logs" replace />} />
+      <Route path="/platform/pilot-management" element={<Navigate to="/platform/pilot-admin" replace />} />
+      <Route path="/platform/tenant-insights" element={<Navigate to="/platform/tenant-metrics" replace />} />
       <Route path="/data-export" element={<DataExportPage />} />
       <Route path="/system-activity" element={<SystemActivityPage />} />
       <Route path="/subscription" element={<SubscriptionPage />} />
