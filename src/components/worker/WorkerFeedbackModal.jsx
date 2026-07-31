@@ -8,14 +8,14 @@ const FEEDBACK_TYPES = [
   { value: 'issue', label: 'Report Issue', description: 'Something is broken or wrong', emoji: '⚠️', color: 'bg-amber-50 border-amber-200 text-amber-700' },
   { value: 'praise', label: 'Give Praise', description: 'Recognise someone', emoji: '🌟', color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
   { value: 'urgent_escalation', label: 'Urgent Escalation', description: 'Needs immediate attention', emoji: '🚨', color: 'bg-red-50 border-red-200 text-red-700' },
-  { value: 'orbitan_product_feedback', label: 'Improve Orbitan', description: 'Tell Firdaus & the team', emoji: '🚀', color: 'bg-purple-50 border-purple-200 text-purple-700' },
+  { value: 'orbitan_product_feedback', label: 'Improve Orbitan', description: 'Tell the product team', emoji: '🚀', color: 'bg-purple-50 border-purple-200 text-purple-700' },
 ];
 
 const RECIPIENTS = [
   { value: 'my_manager', label: 'My Manager', icon: Users, desc: 'Outlet manager / supervisor' },
   { value: 'business_leader', label: 'Business Leader', icon: Building2, desc: 'Company / tenant leadership' },
   { value: 'all_leaders', label: 'All Leaders', icon: ChevronRight, desc: 'Manager + business leader' },
-  { value: 'orbitan_platform', label: 'Orbitan Team', icon: Cpu, desc: 'Firdaus & product team' },
+  { value: 'orbitan_platform', label: 'Orbitan Team', icon: Cpu, desc: 'Orbitan product team' },
 ];
 
 export default function WorkerFeedbackModal({ open, onClose, worker }) {
@@ -205,7 +205,7 @@ export default function WorkerFeedbackModal({ open, onClose, worker }) {
               <p className="font-heading font-bold text-lg text-foreground">Feedback Sent!</p>
               <p className="text-sm text-muted-foreground mt-1">
                 {type === 'orbitan_product_feedback'
-                  ? 'Your input goes directly to Firdaus and the Orbitan product team. Thank you for helping us improve.'
+                  ? 'Your input goes directly to the Orbitan product team. Thank you for helping us improve.'
                   : 'Your feedback has been delivered. Your leaders will see this.'}
               </p>
             </div>

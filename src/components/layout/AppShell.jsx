@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { PLATFORM_IDENTITY } from '@/lib/orbitan-config';
 import OrbitanLogo from './OrbitanLogo';
 import PlatformFooter from './PlatformFooter';
 import EnterpriseIdentityBar from '@/components/shared/EnterpriseIdentityBar';
@@ -121,8 +122,8 @@ export default function AppShell({ navigation, manifestNav, children, headerRigh
             </div>
           )}
           <p className="text-[9px] text-sidebar-foreground/25 leading-relaxed tracking-wide uppercase">
-            Orbitan & OrbitanOS<br />
-            © 2026 Muhammad Firdaus Bin Ismail
+            {PLATFORM_IDENTITY.os}<br />
+            {PLATFORM_IDENTITY.copyright}
           </p>
 
           {/* User profile + sign out */}

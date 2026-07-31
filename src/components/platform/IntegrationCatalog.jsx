@@ -14,6 +14,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useWorkspace } from '@/lib/workspace';
 import { ArrowUpRight, Sparkles, MessageSquare } from 'lucide-react';
 
 // Truthful statuses — validated against actual backend implementation.
@@ -65,6 +66,8 @@ const CATALOG = [
 ];
 
 export default function IntegrationCatalog() {
+  const { tenant } = useWorkspace();
+  const feedbackPath = tenant?.id ? `/workspace/${tenant.id}/feedback` : '/workspace';
   const categories = [...new Set(CATALOG.map((s) => s.category))];
 
   return (
@@ -119,7 +122,7 @@ export default function IntegrationCatalog() {
                     </span>
                   </div>
                   <Link
-                    to="/feedback"
+                    to={feedbackPath}
                     className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 flex-shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded px-1 py-0.5"
                     aria-label={`Request ${service.name} integration`}
                   >
@@ -137,7 +140,7 @@ export default function IntegrationCatalog() {
         <ArrowUpRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
         <p className="text-xs text-muted-foreground leading-relaxed">
           Don&rsquo;t see your tool? Every connector here is on the OrbitanOS roadmap. Use
-          <Link to="/feedback" className="text-foreground underline-offset-2 hover:underline mx-1">Send Feedback</Link>
+          <Link to={feedbackPath} className="text-foreground underline-offset-2 hover:underline mx-1">Send Feedback</Link>
           to request an integration — we prioritise connectors our pilot tenants actually need.
         </p>
       </div>

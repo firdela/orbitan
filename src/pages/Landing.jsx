@@ -184,16 +184,16 @@ export default function Landing() {
       </section>
 
       {/* ── 1. Two Products ── */}
-      <DualProductSection />
+      <div id="products"><DualProductSection /></div>
 
       {/* ── 2. Ecosystem Engines ── */}
-      <OrbitEcosystemSection />
+      <div id="ecosystem"><OrbitEcosystemSection /></div>
 
       {/* ── 3. Orbit Nexus (Intelligence) ── */}
-      <NexusSection />
+      <div id="nexus"><NexusSection /></div>
 
       {/* ── 4. Integration Hub ── */}
-      <IntegrationHubSection />
+      <div id="connect"><IntegrationHubSection /></div>
 
       {/* ── 5. Industry Packs ── */}
       <section id="packs" className="py-20 md:py-28 px-6">
@@ -370,7 +370,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-5 h-5 opacity-50" />
-            <span className="text-xs text-slate-300">OrbitanOS by Orbitan © {new Date().getFullYear()} Muhammad Firdaus Bin Ismail</span>
+            <span className="text-xs text-slate-300">© {new Date().getFullYear()} Orbitan. All rights reserved.</span>
           </div>
           <div className="flex items-center gap-6 flex-wrap justify-center">
             <a href="#products" className="text-xs text-slate-300 hover:text-white transition-colors">Products</a>

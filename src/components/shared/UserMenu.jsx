@@ -10,8 +10,9 @@ import {
   ShieldCheck, LifeBuoy, MessageSquare, Building2, ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PLATFORM_IDENTITY } from '@/lib/orbitan-config';
 
-const APP_VERSION = 'OrbitanOS v1.0 RC';
+const APP_VERSION = `${PLATFORM_IDENTITY.os} v${PLATFORM_IDENTITY.version}`;
 // Honest runtime environment: published builds run in production mode;
 // the Base44 editor preview is the only non-production runtime.
 const ENV_LABEL = import.meta.env.MODE === 'production' ? 'Production' : 'Preview';
@@ -143,7 +144,7 @@ export default function UserMenu({ variant = 'sidebar', className }) {
           <Link to="/knowledge-hub" className={itemClass}>
             <LifeBuoy className="w-4 h-4" /> Help Centre
           </Link>
-          <Link to="/feedback" className={itemClass}>
+          <Link to={tenant?.id ? `/workspace/${tenant.id}/feedback` : '/workspace'} className={itemClass}>
             <MessageSquare className="w-4 h-4" /> Send Feedback
           </Link>
         </div>
