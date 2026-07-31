@@ -188,8 +188,11 @@ export default function UserMenu({ variant = 'sidebar', className }) {
 
           {/* ── Support ── */}
           <p className={labelClass} role="heading" aria-level={3}>Support</p>
+          <Link to="/support" className={itemClass} onClick={() => setOpen(false)}>
+            <LifeBuoy className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Support Portal</span>
+          </Link>
           <Link to="/knowledge-hub" className={itemClass} onClick={() => setOpen(false)}>
-            <LifeBuoy className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Help Centre</span>
+            <MessageSquare className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Help Centre</span>
           </Link>
           <Link to={tenant?.id ? `/workspace/${tenant.id}/feedback` : '/workspace'} className={itemClass} onClick={() => setOpen(false)}>
             <MessageSquare className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Send Feedback</span>

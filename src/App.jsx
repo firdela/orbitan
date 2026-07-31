@@ -94,6 +94,19 @@ import CustomerSuccessPage from '@/pages/platform/CustomerSuccessPage';
 import GoLiveReadinessCentre from '@/pages/platform/GoLiveReadinessCentre';
 import PilotDeploymentCentre from '@/pages/platform/PilotDeploymentCentre';
 
+// Foundation — Public & Admin Pages
+import AboutOrbitan from '@/pages/foundation/AboutOrbitan';
+import LegalCentre from '@/pages/foundation/LegalCentre';
+import SupportPortal from '@/pages/foundation/SupportPortal';
+import PlatformStatus from '@/pages/foundation/PlatformStatus';
+import GovernanceOverview from '@/pages/foundation/GovernanceOverview';
+import SystemLogs from '@/pages/foundation/SystemLogs';
+import DeploymentPipeline from '@/pages/foundation/DeploymentPipeline';
+import TenantMetrics from '@/pages/foundation/TenantMetrics';
+import SecurityDashboard from '@/pages/foundation/SecurityDashboard';
+import FeatureFlagManager from '@/pages/foundation/FeatureFlagManager';
+import ChangeLog from '@/pages/foundation/ChangeLog';
+
 // Legacy route redirects — all consolidated module routes redirect to the
 // dynamic workspace resolver. Data-driven to keep App.jsx maintainable.
 const LEGACY_REDIRECTS = [
@@ -124,6 +137,13 @@ const AuthenticatedApp = () => {
     <Routes>
       {/* Orbitan Public Landing — Brand & Marketing Hub */}
       <Route path="/" element={<Landing />} />
+
+      {/* Foundation — Public Pages */}
+      <Route path="/about-orbitan" element={<AboutOrbitan />} />
+      <Route path="/legal" element={<LegalCentre />} />
+      <Route path="/support" element={<SupportPortal />} />
+      <Route path="/status" element={<PlatformStatus />} />
+      <Route path="/governance" element={<GovernanceOverview />} />
 
       {/* Stripe Checkout — Subscription Billing */}
       <Route path="/checkout" element={<Checkout />} />
@@ -226,6 +246,14 @@ const AuthenticatedApp = () => {
       <Route path="/platform/customer-success" element={<CustomerSuccessPage />} />
       <Route path="/platform/go-live-readiness" element={<GoLiveReadinessCentre />} />
       <Route path="/platform/pilot-deployment" element={<PilotDeploymentCentre />} />
+
+      {/* Foundation — Platform Admin Pages */}
+      <Route path="/platform/system-logs" element={<SystemLogs />} />
+      <Route path="/platform/deployment-pipeline" element={<DeploymentPipeline />} />
+      <Route path="/platform/tenant-metrics" element={<TenantMetrics />} />
+      <Route path="/platform/security-dashboard" element={<SecurityDashboard />} />
+      <Route path="/platform/feature-flags" element={<FeatureFlagManager />} />
+      <Route path="/platform/change-log" element={<ChangeLog />} />
 
       {/* Dev — Automated Test Suites */}
       <Route path="/dev/task-tests" element={<TaskTestSuite />} />

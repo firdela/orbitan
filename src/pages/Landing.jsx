@@ -372,16 +372,17 @@ export default function Landing() {
             <img src={LOGO_ASSETS.mark3D} alt="Orbitan" className="w-5 h-5 opacity-50" />
             <span className="text-xs text-slate-300">© {new Date().getFullYear()} Orbitan. All rights reserved.</span>
           </div>
-          <div className="flex items-center gap-6 flex-wrap justify-center">
+          <div className="flex items-center gap-5 flex-wrap justify-center">
+            <Link to="/about-orbitan" className="text-xs text-slate-300 hover:text-white transition-colors">About</Link>
             <a href="#products" className="text-xs text-slate-300 hover:text-white transition-colors">Products</a>
             <a href="#ecosystem" className="text-xs text-slate-300 hover:text-white transition-colors">Ecosystem</a>
             <a href="#nexus" className="text-xs text-slate-300 hover:text-white transition-colors">Nexus</a>
-            <a href="#connect" className="text-xs text-slate-300 hover:text-white transition-colors">Connect</a>
             <a href="#packs" className="text-xs text-slate-300 hover:text-white transition-colors">Industries</a>
             <a href="#plans" className="text-xs text-slate-300 hover:text-white transition-colors">Pricing</a>
-            <a href="#shield" className="text-xs text-slate-300 hover:text-white transition-colors">Security</a>
-            <Link to="/governance-log" className="text-xs text-slate-300 hover:text-white transition-colors">Governance</Link>
-            <Link to="/request-access" className="text-xs text-slate-300 hover:text-white transition-colors">Customer Support</Link>
+            <Link to="/support" className="text-xs text-slate-300 hover:text-white transition-colors">Support</Link>
+            <Link to="/status" className="text-xs text-slate-300 hover:text-white transition-colors">Status</Link>
+            <Link to="/legal" className="text-xs text-slate-300 hover:text-white transition-colors">Legal</Link>
+            <Link to="/governance" className="text-xs text-slate-300 hover:text-white transition-colors">Governance</Link>
           </div>
         </div>
       </footer>

@@ -3,9 +3,13 @@ import { Link } from 'react-router-dom';
 import { PLATFORM_IDENTITY } from '@/lib/orbitan-config';
 
 const FOOTER_LINKS = [
+  { label: 'About', to: '/about-orbitan' },
+  { label: 'Support', to: '/support' },
+  { label: 'Status', to: '/status' },
+  { label: 'Legal', to: '/legal' },
+  { label: 'Governance', to: '/governance' },
   { label: 'Knowledge Hub', to: '/knowledge-hub' },
   { label: 'Audit Centre', to: '/audit-centre' },
-  { label: 'Governance', to: '/governance-log' },
   { label: 'Pricing', to: '/checkout' },
 ];
 

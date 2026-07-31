@@ -90,6 +90,12 @@ const NAV_CATEGORIES = [
       { key: 'pilot-readiness', type: 'route' },
       { key: 'go-live-readiness', type: 'route' },
       { key: 'exception-centre', type: 'route' },
+      { key: 'system-logs', type: 'route' },
+      { key: 'deployment-pipeline', type: 'route' },
+      { key: 'tenant-metrics', type: 'route' },
+      { key: 'security-dashboard', type: 'route' },
+      { key: 'feature-flags', type: 'route' },
+      { key: 'change-log', type: 'route' },
     ],
   },
 ];
