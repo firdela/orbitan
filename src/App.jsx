@@ -112,6 +112,9 @@ import RoadmapPage from '@/pages/foundation/RoadmapPage';
 import DataExportPage from '@/pages/workspace/DataExportPage';
 import SystemActivityPage from '@/pages/workspace/SystemActivityPage';
 import SubscriptionPage from '@/pages/workspace/SubscriptionPage';
+import TaskAnalyticsPage from '@/pages/workspace/TaskAnalyticsPage';
+import InventoryTransfersPage from '@/pages/workspace/InventoryTransfersPage';
+import WorkflowTemplatesPage from '@/pages/workspace/WorkflowTemplatesPage';
 
 // Legacy route redirects — all consolidated module routes redirect to the
 // dynamic workspace resolver. Data-driven to keep App.jsx maintainable.
@@ -178,6 +181,9 @@ const AuthenticatedApp = () => {
       <Route path="/data-export" element={<DataExportPage />} />
       <Route path="/system-activity" element={<SystemActivityPage />} />
       <Route path="/subscription" element={<SubscriptionPage />} />
+      <Route path="/task-analytics" element={<TaskAnalyticsPage />} />
+      <Route path="/inventory-transfers" element={<InventoryTransfersPage />} />
+      <Route path="/workflow-templates" element={<WorkflowTemplatesPage />} />
 
       {/* Stripe Checkout — Subscription Billing */}
       <Route path="/checkout" element={<Checkout />} />

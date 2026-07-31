@@ -62,6 +62,11 @@ const NAV_ITEMS = {
   wallet: { key: 'wallet', label: 'Orbit Wallet', route: '/platform/wallet', description: 'Platform wallet ledger and transaction management', permission: 'admin' },
   marketplace: { key: 'marketplace', label: 'Marketplace', route: '/platform/marketplace', description: 'Module marketplace and add-on catalog', permission: 'admin' },
 
+  // Workspace — Operational Analytics & Workflows
+  'task-analytics': { key: 'task-analytics', label: 'Task Analytics', route: '/task-analytics', description: 'Task performance, workload, and completion trends', permission: 'admin' },
+  'inventory-transfers': { key: 'inventory-transfers', label: 'Inventory Transfers', route: '/inventory-transfers', description: 'Inter-outlet stock transfer ledger and lifecycle', permission: 'admin' },
+  'workflow-templates': { key: 'workflow-templates', label: 'Workflow Templates', route: '/workflow-templates', description: 'Reusable, versioned operational workflow definitions', permission: 'admin' },
+
   // Subscription & Billing — canonical tenant-facing billing
   'subscription-billing': { key: 'subscription-billing', label: 'Subscription & Billing', route: '/leader-org?section=subscription-billing', description: 'Plan, billing, usage, invoices, and payment methods', permission: 'admin' },
 

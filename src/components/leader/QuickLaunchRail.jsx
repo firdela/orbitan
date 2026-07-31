@@ -22,6 +22,7 @@ const ALL_DESTINATIONS = [
   'activity-logs', 'security-centre', 'release-readiness', 'deployment-pipeline',
   'change-log', 'roadmap', 'system-health', 'subscription-billing',
   'pilot-management', 'feedback-intelligence',
+  'task-analytics', 'inventory-transfers', 'workflow-templates',
 ];
 
 // Icon resolver — maps destination keys to lucide icons.
@@ -29,7 +30,7 @@ import {
   Wallet, ShoppingBag, Shield, ScrollText, Lock, Building2, BarChart3,
   HeartHandshake, Plug, Activity, AlertTriangle, ListTree, Lock as LockIcon,
   CheckCircle2, GitBranch, FileText, Map, Server, CreditCard, Rocket,
-  MessageSquare,
+  MessageSquare, ListChecks, Package, Workflow,
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -43,6 +44,8 @@ const ICON_MAP = {
   'change-log': FileText, 'roadmap': Map, 'system-health': Server,
   'subscription-billing': CreditCard, 'pilot-management': Rocket,
   'feedback-intelligence': MessageSquare,
+  'task-analytics': ListChecks, 'inventory-transfers': Package,
+  'workflow-templates': Workflow,
 };
 
 function getIcon(key) {

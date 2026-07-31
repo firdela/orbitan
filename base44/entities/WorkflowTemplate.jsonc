@@ -1,0 +1,259 @@
+{
+  "name": "WorkflowTemplate",
+  "type": "object",
+  "description": "OrbitanOS Workflow Templates \u2014 reusable, versioned operational workflow definitions. Templates for opening, closing, onboarding, inventory counts, procurement, compliance inspections, incident response, food safety, cleaning, maintenance, audit preparation, and custom workflows. Published versions are immutable; generating operational tasks from a template snapshots the version. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "opening",
+        "closing",
+        "onboarding",
+        "inventory_count",
+        "procurement",
+        "compliance_inspection",
+        "incident_response",
+        "food_safety",
+        "cleaning",
+        "maintenance",
+        "audit_preparation",
+        "custom"
+      ],
+      "default": "custom"
+    },
+    "version": {
+      "type": "number",
+      "default": 1
+    },
+    "steps": {
+      "type": "array",
+      "description": "Ordered workflow steps",
+      "items": {
+        "type": "object",
+        "properties": {
+          "order": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "assignee_role": {
+            "type": "string",
+            "description": "Role expected to complete this step"
+          },
+          "expected_duration_mins": {
+            "type": "number"
+          },
+          "required_evidence": {
+            "type": "boolean",
+            "default": false
+          },
+          "approval_required": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      }
+    },
+    "assignee_role": {
+      "type": "string",
+      "description": "Default role assigned to generated tasks"
+    },
+    "expected_duration_mins": {
+      "type": "number",
+      "description": "Total expected workflow duration"
+    },
+    "required_evidence": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether evidence uploads are required"
+    },
+    "approval_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "recurrence": {
+      "type": "string",
+      "enum": [
+        "none",
+        "daily",
+        "weekly",
+        "monthly",
+        "quarterly",
+        "custom"
+      ],
+      "default": "none"
+    },
+    "applicable_industry": {
+      "type": "string",
+      "description": "Industry pack key this template is designed for (null = all)"
+    },
+    "applicable_outlet_id": {
+      "type": "string",
+      "description": "Specific outlet (null = all outlets in tenant)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "published",
+        "archived"
+      ],
+      "default": "draft"
+    },
+    "published_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_by": {
+      "type": "string"
+    },
+    "published_by_name": {
+      "type": "string"
+    },
+    "parent_template_id": {
+      "type": "string",
+      "description": "If this is a new version, links to the previous version"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "name",
+    "category",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "supervisor"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "worker"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

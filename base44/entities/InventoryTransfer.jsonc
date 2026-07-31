@@ -1,0 +1,268 @@
+{
+  "name": "InventoryTransfer",
+  "type": "object",
+  "description": "OrbitanOS Inventory \u2014 Inter-outlet stock transfer ledger. Records the full lifecycle of stock movements between outlets: Draft \u2192 Requested \u2192 Approved \u2192 Preparing \u2192 Dispatched \u2192 Partially Received \u2192 Received \u2192 Reconciled \u2192 Cancelled. Immutable movement history for audit and inventory ledger integrity. Transactional stock reservations and deductions handled by the inventory engine. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "source_outlet_id": {
+      "type": "string",
+      "description": "Outlet transferring stock FROM"
+    },
+    "source_outlet_name": {
+      "type": "string"
+    },
+    "destination_outlet_id": {
+      "type": "string",
+      "description": "Outlet receiving stock TO. Must differ from source."
+    },
+    "destination_outlet_name": {
+      "type": "string"
+    },
+    "transfer_number": {
+      "type": "string",
+      "description": "Human-readable reference e.g. IT-2026-0001"
+    },
+    "items": {
+      "type": "array",
+      "description": "Line items requested for transfer",
+      "items": {
+        "type": "object",
+        "properties": {
+          "inventory_item_id": {
+            "type": "string"
+          },
+          "inventory_item_name": {
+            "type": "string"
+          },
+          "requested_qty": {
+            "type": "number"
+          },
+          "approved_qty": {
+            "type": "number"
+          },
+          "dispatched_qty": {
+            "type": "number"
+          },
+          "received_qty": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "discrepancy_qty": {
+            "type": "number",
+            "description": "Difference between dispatched and received"
+          },
+          "discrepancy_reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "requested",
+        "approved",
+        "preparing",
+        "dispatched",
+        "partially_received",
+        "received",
+        "reconciled",
+        "cancelled"
+      ],
+      "default": "draft"
+    },
+    "requester_id": {
+      "type": "string"
+    },
+    "requester_name": {
+      "type": "string"
+    },
+    "approver_id": {
+      "type": "string",
+      "description": "User who approved the transfer"
+    },
+    "approver_name": {
+      "type": "string"
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "dispatcher_id": {
+      "type": "string"
+    },
+    "dispatcher_name": {
+      "type": "string"
+    },
+    "dispatched_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "receiver_id": {
+      "type": "string"
+    },
+    "receiver_name": {
+      "type": "string"
+    },
+    "received_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "request_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "required_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date stock is needed at destination"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "cancel_reason": {
+      "type": "string"
+    },
+    "reconciled_date": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "source_outlet_id",
+    "destination_outlet_id",
+    "transfer_number",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "supervisor"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "worker"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
