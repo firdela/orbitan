@@ -1,37 +1,47 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { useWorkspace } from '@/lib/workspace';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-  LogOut, User, Settings, Bell, Link2, LayoutGrid, Wallet, ScrollText,
+  LogOut, User, Settings, Bell, Link2, Wallet, ScrollText,
   ShieldCheck, LifeBuoy, MessageSquare, Building2, ChevronUp,
+  Check, Plus, ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PLATFORM_IDENTITY } from '@/lib/orbitan-config';
 
 const APP_VERSION = `${PLATFORM_IDENTITY.os} v${PLATFORM_IDENTITY.version}`;
-// Honest runtime environment: published builds run in production mode;
-// the Base44 editor preview is the only non-production runtime.
 const ENV_LABEL = import.meta.env.MODE === 'production' ? 'Production' : 'Preview';
 const ENV_BADGE =
   ENV_LABEL === 'Production'
     ? 'bg-orbitan-green-light text-orbitan-green-700'
     : 'bg-orbitan-amber-light text-orbitan-amber-700';
 
+const ROLE_LABELS = {
+  tenant_admin: 'Tenant Admin',
+  outlet_manager: 'Outlet Manager',
+  supervisor: 'Supervisor',
+  worker: 'Worker',
+  client_manager: 'Client Manager',
+  admin: 'Platform Admin',
+};
+
 /**
- * UserMenu — concise account-navigation menu (Build #26A.1).
+ * UserMenu — concise account-navigation menu (Build #27).
  * variant: "sidebar" (dark rail) | "light" (light bg) | "dark" (marketing dark bg)
  *
- * Only primary destinations live here; Security, Sessions, Theme, Language,
- * Accessibility, MFA, Privacy, etc. are reached via Account Settings — not
- * duplicated in this dropdown. Fits the viewport with no internal scrollbar.
+ * Every menu item is click-validated and routes to a canonical destination.
+ * Switch Workspace uses the canonical switchWorkspace() from useWorkspace().
  */
 export default function UserMenu({ variant = 'sidebar', className }) {
   const { user } = useAuth();
-  const { tenant, activeRole } = useWorkspace();
+  const { tenant, activeRole, memberships, activeMembership, switchWorkspace } = useWorkspace();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+
   const isAdmin = user?.role === 'admin';
   const displayName = user?.full_name || 'User';
   const displayEmail = user?.email || '';
@@ -56,18 +66,28 @@ export default function UserMenu({ variant = 'sidebar', className }) {
     base44.auth.logout('/');
   };
 
+  const handleSwitchWorkspace = (membership) => {
+    const ok = switchWorkspace(membership.organisation_id);
+    setOpen(false);
+    if (ok) {
+      navigate(`/workspace/${membership.organisation_id}/dashboard`, { replace: true });
+    }
+  };
+
   const itemClass =
-    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring';
+    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring w-full';
   const labelClass = 'px-3 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70 font-semibold';
 
   const roleLabel = activeRole || user?.role || '—';
+  const roleDisplay = ROLE_LABELS[roleLabel] || String(roleLabel).replace(/_/g, ' ');
   const tenantLabel = tenant?.name || 'No workspace';
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
+          aria-label={`Account menu for ${displayName}`}
           className={cn(
             'w-full flex items-center gap-2 pt-2 border-t transition-colors',
             isSidebar ? 'border-sidebar-border/40 px-0' : 'border-border/60 px-2 py-2 rounded-lg',
@@ -87,7 +107,7 @@ export default function UserMenu({ variant = 'sidebar', className }) {
         align="end"
         side="top"
         sideOffset={8}
-        className={cn('w-64 p-0', isSidebar && 'mb-2')}
+        className={cn('w-72 p-0', isSidebar && 'mb-2')}
       >
         {/* Profile Header */}
         <div className="flex items-center gap-3 p-4 border-b border-border">
@@ -100,52 +120,85 @@ export default function UserMenu({ variant = 'sidebar', className }) {
           </div>
         </div>
 
-        {/* Concise menu — fits viewport, no internal scroll */}
-        <div className="p-1.5">
+        <div className="p-1.5 max-h-[70vh] overflow-y-auto">
           {/* ── Account ── */}
-          <p className={labelClass}>Account</p>
-          <Link to="/settings" className={itemClass}>
-            <User className="w-4 h-4" /> My Profile
+          <p className={labelClass} role="heading" aria-level={3}>Account</p>
+          <Link to="/settings#profile" className={itemClass} onClick={() => setOpen(false)}>
+            <User className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">My Profile</span>
           </Link>
-          <Link to="/settings" className={itemClass}>
-            <Settings className="w-4 h-4" /> Account Settings
+          <Link to="/settings" className={itemClass} onClick={() => setOpen(false)}>
+            <Settings className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Account Settings</span>
           </Link>
-          <Link to="/notifications" className={itemClass}>
-            <Bell className="w-4 h-4" /> Notifications
+          <Link to="/notifications" className={itemClass} onClick={() => setOpen(false)}>
+            <Bell className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Notifications</span>
           </Link>
 
           {/* ── Workspace ── */}
-          <p className={labelClass}>Workspace</p>
-          <Link to="/workspace" className={itemClass}>
-            <LayoutGrid className="w-4 h-4" /> Switch Workspace
-          </Link>
-          <Link to="/platform/integrations" className={itemClass}>
-            <Link2 className="w-4 h-4" /> Connected Accounts
+          <p className={labelClass} role="heading" aria-level={3}>Workspace</p>
+          {memberships.length === 0 ? (
+            <div className="px-3 py-2 space-y-1.5">
+              <p className="text-xs text-muted-foreground">No workspaces joined.</p>
+              <Link to="/request-access" className={itemClass} onClick={() => setOpen(false)}>
+                <Plus className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Request Access</span>
+              </Link>
+            </div>
+          ) : memberships.length === 1 ? (
+            <div className="px-3 py-2 flex items-center gap-2.5 rounded-lg bg-accent/50">
+              <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <span className="flex-1 text-sm text-foreground truncate">
+                {memberships[0].display_name || 'Single workspace'}
+              </span>
+              <Check className="w-3.5 h-3.5 flex-shrink-0 text-orbitan-blue" />
+            </div>
+          ) : (
+            <div className="space-y-0.5" role="group" aria-label="Switch workspace">
+              {memberships.slice(0, 5).map((m) => {
+                const isActive = activeMembership?.organisation_id === m.organisation_id;
+                return (
+                  <button
+                    key={m.organisation_id}
+                    type="button"
+                    onClick={() => handleSwitchWorkspace(m)}
+                    aria-current={isActive ? 'true' : undefined}
+                    className={cn(itemClass, isActive && 'bg-accent text-foreground')}
+                  >
+                    <Building2 className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left truncate">{m.display_name || 'Unnamed Workspace'}</span>
+                    {isActive
+                      ? <Check className="w-3.5 h-3.5 flex-shrink-0 text-orbitan-blue" />
+                      : <ArrowRight className="w-3 h-3 flex-shrink-0 text-muted-foreground/40" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <Link to="/settings#connected" className={itemClass} onClick={() => setOpen(false)}>
+            <Link2 className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Connected Accounts</span>
           </Link>
 
           {/* ── Platform (admin only) ── */}
           {isAdmin && (
             <>
-              <p className={labelClass}>Platform</p>
-              <Link to="/platform/wallet" className={itemClass}>
-                <Wallet className="w-4 h-4" /> Orbit Wallet
+              <p className={labelClass} role="heading" aria-level={3}>Platform</p>
+              <Link to="/platform/wallet" className={itemClass} onClick={() => setOpen(false)}>
+                <Wallet className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Orbit Wallet</span>
               </Link>
-              <Link to="/audit-centre" className={itemClass}>
-                <ScrollText className="w-4 h-4" /> Audit Logs
+              <Link to="/audit-centre" className={itemClass} onClick={() => setOpen(false)}>
+                <ScrollText className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Audit Logs</span>
               </Link>
-              <Link to="/platform/integrations" className={itemClass}>
-                <ShieldCheck className="w-4 h-4" /> Platform Settings
+              <Link to="/leader-org" className={itemClass} onClick={() => setOpen(false)}>
+                <ShieldCheck className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Platform Console</span>
               </Link>
             </>
           )}
 
           {/* ── Support ── */}
-          <p className={labelClass}>Support</p>
-          <Link to="/knowledge-hub" className={itemClass}>
-            <LifeBuoy className="w-4 h-4" /> Help Centre
+          <p className={labelClass} role="heading" aria-level={3}>Support</p>
+          <Link to="/knowledge-hub" className={itemClass} onClick={() => setOpen(false)}>
+            <LifeBuoy className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Help Centre</span>
           </Link>
-          <Link to={tenant?.id ? `/workspace/${tenant.id}/feedback` : '/workspace'} className={itemClass}>
-            <MessageSquare className="w-4 h-4" /> Send Feedback
+          <Link to={tenant?.id ? `/workspace/${tenant.id}/feedback` : '/workspace'} className={itemClass} onClick={() => setOpen(false)}>
+            <MessageSquare className="w-4 h-4 flex-shrink-0" /> <span className="flex-1">Send Feedback</span>
           </Link>
         </div>
 
@@ -175,7 +228,7 @@ export default function UserMenu({ variant = 'sidebar', className }) {
             </span>
             <span className="flex items-center gap-1 flex-shrink-0">
               <ShieldCheck className="w-2.5 h-2.5" />
-              <span className="capitalize">{String(roleLabel).replace(/_/g, ' ')}</span>
+              <span>{roleDisplay}</span>
             </span>
           </div>
         </div>

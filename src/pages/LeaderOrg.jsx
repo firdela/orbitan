@@ -342,13 +342,6 @@ export default function LeaderOrg() {
                 </div>
               )}
             </div>
-            <div className="bg-muted rounded-xl p-5">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-foreground">Exit-Ready Architecture Note:</span>{' '}
-                The Operating Cycle is embedded as metadata in <code className="bg-card px-1.5 py-0.5 rounded font-mono">lib/orbitan-config.js</code> via the <code className="bg-card px-1.5 py-0.5 rounded font-mono">OPERATING_CYCLE</code> object.
-                Every module is tagged with its principle key (<code className="bg-card px-1.5 py-0.5 rounded font-mono">principle: "regulate"</code>, etc.), ensuring that when you migrate stacks, the OrbitanOS DNA — including its brand philosophy — travels with the codebase.
-              </p>
-            </div>
           </TabsContent>
 
           {/* System Controls Tab — Orchestrator & Broadcast combined */}
