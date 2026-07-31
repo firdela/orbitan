@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, CheckCircle2, Circle, ShieldAlert, Rocket } from 'lucide-react';
+import BackBar from '@/components/shared/BackBar';
 
 export default function PilotReadinessDashboard() {
   const [data, setData] = useState(null);
@@ -73,6 +74,7 @@ export default function PilotReadinessDashboard() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 animate-fade-in">
+      <BackBar to="/leader-org" label="Back to Platform Console" />
       <PageHeader title="Pilot Readiness Dashboard" subtitle="Deterministic readiness · explainable · no fabricated percentages"
         actions={<Button size="sm" variant="outline" onClick={load} disabled={loading} className="gap-1.5"><RefreshCw className="w-3.5 h-3.5" />Refresh</Button>} />
 

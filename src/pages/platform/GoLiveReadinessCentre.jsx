@@ -13,6 +13,7 @@ import {
   Rocket, Smartphone, Accessibility, Gauge, WifiOff, Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import BackBar from '@/components/shared/BackBar';
 
 const STATUS_ICON = {
   pass: <CheckCircle2 className="w-4 h-4 text-orbitan-green flex-shrink-0" />,
@@ -110,6 +111,7 @@ export default function GoLiveReadinessCentre() {
   if (!user || (user.role !== 'admin' && user.role !== 'platform_admin')) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto animate-fade-in">
+        <BackBar to="/leader-org" label="Back to Platform Console" />
         <PageHeader title="Go-Live Readiness Centre" subtitle="Unified system readiness" />
         <div className="border border-amber-500/20 bg-amber-500/10 rounded-xl p-6 text-center">
           <ShieldAlert className="w-10 h-10 text-orbitan-amber mx-auto mb-3" />
@@ -153,6 +155,7 @@ export default function GoLiveReadinessCentre() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 animate-fade-in">
+      <BackBar to="/leader-org" label="Back to Platform Console" />
       <PageHeader title="Go-Live Readiness Centre" subtitle="Unified system readiness — server-verified + client-side PWA, accessibility & performance"
         actions={<Button size="sm" variant="outline" onClick={load} disabled={loading} className="gap-1.5"><RefreshCw className="w-3.5 h-3.5" />Refresh</Button>} />
 

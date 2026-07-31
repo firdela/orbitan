@@ -5,6 +5,7 @@ import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, RefreshCw, AlertOctagon, RotateCw, Filter, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import BackBar from '@/components/shared/BackBar';
 
 const SEV_COLOR = {
   critical: 'bg-red-100 text-red-700 border-red-200',
@@ -58,6 +59,7 @@ export default function ExceptionCentrePage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 animate-fade-in">
+      <BackBar to="/leader-org" label="Back to Platform Console" />
       <PageHeader
         title="Exception Centre"
         subtitle={`${data.exception_count} exception(s) · ${retryQueue.length} awaiting retry · derived from live data`}

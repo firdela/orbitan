@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
+import BackBar from '@/components/shared/BackBar';
 
 const ACTION_META = {
   pilot_tenant_created: { label: 'Created', icon: Plus, color: 'text-orbitan-blue' },
@@ -71,6 +72,7 @@ export default function PilotDeploymentCentre() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
+      <BackBar to="/leader-org" label="Back to Platform Console" />
       <PageHeader title="Pilot Deployment Centre" subtitle="Activate, pause, resume, close pilots · deployment timeline · full audit trail"
         actions={<div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={load} disabled={loading} className="gap-1.5"><RefreshCw className="w-3.5 h-3.5" />Refresh</Button>

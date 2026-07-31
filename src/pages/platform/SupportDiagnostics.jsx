@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Activity, AlertOctagon, Database, Zap, Link2 } from 'lucide-react';
+import BackBar from '@/components/shared/BackBar';
 
 export default function SupportDiagnostics() {
   const [data, setData] = useState(null);
@@ -31,6 +32,7 @@ export default function SupportDiagnostics() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 animate-fade-in">
+      <BackBar to="/leader-org" label="Back to Platform Console" />
       <PageHeader title="Support Diagnostics" subtitle="Authorised admin view · correlation IDs for triage · no secrets exposed"
         actions={<Button size="sm" variant="outline" onClick={load} disabled={loading} className="gap-1.5"><RefreshCw className="w-3.5 h-3.5" />Refresh</Button>} />
 

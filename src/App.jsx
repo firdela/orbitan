@@ -106,6 +106,12 @@ import TenantMetrics from '@/pages/foundation/TenantMetrics';
 import SecurityDashboard from '@/pages/foundation/SecurityDashboard';
 import FeatureFlagManager from '@/pages/foundation/FeatureFlagManager';
 import ChangeLog from '@/pages/foundation/ChangeLog';
+import RoadmapPage from '@/pages/foundation/RoadmapPage';
+
+// Workspace — Canonical Route Pages (Build #27D)
+import DataExportPage from '@/pages/workspace/DataExportPage';
+import SystemActivityPage from '@/pages/workspace/SystemActivityPage';
+import SubscriptionPage from '@/pages/workspace/SubscriptionPage';
 
 // Legacy route redirects — all consolidated module routes redirect to the
 // dynamic workspace resolver. Data-driven to keep App.jsx maintainable.
@@ -144,6 +150,18 @@ const AuthenticatedApp = () => {
       <Route path="/support" element={<SupportPortal />} />
       <Route path="/status" element={<PlatformStatus />} />
       <Route path="/governance" element={<GovernanceOverview />} />
+      <Route path="/roadmap" element={<RoadmapPage />} />
+
+      {/* Canonical Route Aliases — Build #27D (safe redirects to canonical implementations) */}
+      <Route path="/help-center" element={<Navigate to="/knowledge-hub" replace />} />
+      <Route path="/module-config" element={<Navigate to="/platform/feature-flags" replace />} />
+      <Route path="/integration-health" element={<Navigate to="/platform/integrations" replace />} />
+      <Route path="/incident-response" element={<Navigate to="/platform/exception-centre" replace />} />
+      <Route path="/security-settings" element={<Navigate to="/settings#security" replace />} />
+      <Route path="/compliance-dashboard" element={<Navigate to="/workspace" replace />} />
+      <Route path="/data-export" element={<DataExportPage />} />
+      <Route path="/system-activity" element={<SystemActivityPage />} />
+      <Route path="/subscription" element={<SubscriptionPage />} />
 
       {/* Stripe Checkout — Subscription Billing */}
       <Route path="/checkout" element={<Checkout />} />

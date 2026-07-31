@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/shared/PageHeader';
+import BackBar from '@/components/shared/BackBar';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Activity, TrendingUp, Package, Database, ShieldCheck, AlertOctagon, Server } from 'lucide-react';
 
@@ -46,6 +47,7 @@ export default function OperationalHealthDashboard() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 animate-fade-in">
+      <BackBar to="/leader-org" label="Back to Platform Console" />
       <PageHeader
         title="Operational Health"
         subtitle={sh.scoped ? `Tenant: ${sh.tenant_name || '—'}` : 'Platform-wide operational health · live from real data'}

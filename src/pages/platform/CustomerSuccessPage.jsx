@@ -21,6 +21,7 @@ import CSRecommendations from '@/components/customer-success/CSRecommendations';
 import CSMilestones from '@/components/customer-success/CSMilestones';
 import CSFeedback from '@/components/customer-success/CSFeedback';
 import CSDetailDrawer from '@/components/customer-success/CSDetailDrawer';
+import BackBar from '@/components/shared/BackBar';
 
 const TABS = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -90,6 +91,7 @@ export default function CustomerSuccessPage() {
   if (!user || user.role !== 'admin') {
     return (
       <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto animate-fade-in">
+        <BackBar to="/leader-org" label="Back to Platform Console" />
         <PageHeader title="Customer Success Workspace" subtitle="Cross-tenant customer success" />
         <div className="border border-amber-500/20 bg-amber-500/10 rounded-xl p-6 text-center">
           <ShieldAlert className="w-10 h-10 text-orbitan-amber mx-auto mb-3" />
@@ -110,6 +112,7 @@ export default function CustomerSuccessPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
+      <BackBar to="/leader-org" label="Back to Platform Console" />
       <PageHeader title="Customer Success Workspace" subtitle="Cross-tenant health, adoption, onboarding, health scores, timeline, notes, support, AI recommendations, milestones & feedback — deterministic & evidence-based"
         help="Health is a weighted composite of adoption, activity, support, compliance, workforce, inventory, and AI usage. Recommendations are deterministic rules — no LLM automation."
         actions={<Button size="sm" variant="outline" onClick={load} disabled={loading} className="gap-1.5"><RefreshCw className="w-3.5 h-3.5" />Refresh</Button>} />

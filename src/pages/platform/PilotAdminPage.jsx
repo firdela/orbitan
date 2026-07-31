@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/shared/PageHeader';
+import BackBar from '@/components/shared/BackBar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,6 +65,7 @@ export default function PilotAdminPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6 animate-fade-in">
+      <BackBar to="/leader-org" label="Back to Platform Console" />
       <PageHeader
         title="Pilot Administration"
         subtitle="Provision, manage, and retire pilot tenants · platform admin only"
