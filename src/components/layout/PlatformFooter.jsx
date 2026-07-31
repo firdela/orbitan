@@ -1,5 +1,13 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { PLATFORM_IDENTITY } from '@/lib/orbitan-config';
+
+const FOOTER_LINKS = [
+  { label: 'Knowledge Hub', to: '/knowledge-hub' },
+  { label: 'Audit Centre', to: '/audit-centre' },
+  { label: 'Governance', to: '/governance-log' },
+  { label: 'Pricing', to: '/checkout' },
+];
 
 export default function PlatformFooter({ variant = 'default' }) {
   if (variant === 'minimal') {
@@ -15,19 +23,27 @@ export default function PlatformFooter({ variant = 'default' }) {
 
   return (
     <footer className="border-t border-border/60 bg-background px-6 py-4">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full orbitan-gradient" />
           <span className="text-[11px] font-semibold text-foreground tracking-tight">
-            {PLATFORM_IDENTITY.platform} &amp; {PLATFORM_IDENTITY.os}
+            {PLATFORM_IDENTITY.os}
           </span>
           <span className="text-[10px] text-muted-foreground/60">v{PLATFORM_IDENTITY.version}</span>
         </div>
-        <p className="text-[10px] text-muted-foreground/60 text-center">
-          {PLATFORM_IDENTITY.copyright}
-        </p>
+        <nav className="flex items-center gap-4 flex-wrap justify-center">
+          {FOOTER_LINKS.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className="text-[10px] text-muted-foreground/60 hover:text-foreground transition-colors"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
         <p className="text-[10px] text-muted-foreground/60">
-          Strategic Partner: {PLATFORM_IDENTITY.strategic_partner}
+          {PLATFORM_IDENTITY.copyright}
         </p>
       </div>
     </footer>

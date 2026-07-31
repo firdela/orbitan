@@ -23,7 +23,7 @@ const TEMPLATE_MAPPINGS = [
   { category_name: 'Inventory Adjustment', category_type: 'expense', xero_account_type: 'EXPENSE' },
   { category_name: 'Waste / Write-Off', category_type: 'expense', xero_account_type: 'EXPENSE' },
   { category_name: 'Purchases', category_type: 'expense', xero_account_type: 'EXPENSE' },
-  { category_name: 'Accounts Payable', category_type: 'liability', xero_account_type: 'CURRENT' },
+  { category_name: 'Accounts Payable', category_type: 'asset', xero_account_type: 'CURRENT' },
   { category_name: 'Operating Expenses', category_type: 'expense', xero_account_type: 'OVERHEADS' },
   { category_name: 'Payroll Expense', category_type: 'labour', xero_account_type: 'EXPENSE' },
   { category_name: 'Tax / GST', category_type: 'expense', xero_account_type: 'CURRENT' },

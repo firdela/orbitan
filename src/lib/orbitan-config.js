@@ -11,13 +11,11 @@
 // ============================================================
 
 export const PLATFORM_IDENTITY = {
-  creator: "Muhammad Firdaus Bin Ismail",
   platform: "Orbitan",
   os: "OrbitanOS",
   version: "1.1.0",
   tagline: "One Operating System for Workforce, Inventory, Operations, Finance, Sustainability, and Growth.",
-  copyright: `© ${new Date().getFullYear()} Orbitan & OrbitanOS. Created by Muhammad Firdaus Bin Ismail. All Rights Reserved.`,
-  strategic_partner: "Hamka — Renewed Resources Pte Ltd",
+  copyright: `© ${new Date().getFullYear()} Orbitan. All rights reserved.`,
   operating_cycle: ["Renew", "Relate", "Respond", "Refine", "Regulate", "Reach"],
 };
 

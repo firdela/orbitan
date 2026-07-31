@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useWorkspace } from '@/lib/workspace';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
 import EmptyState from '@/components/shared/EmptyState';
@@ -33,6 +34,7 @@ const STATUS_ICONS = {
 export default function CompliancePage() {
   const queryClient = useQueryClient();
   const { tenantId } = useOutletContext() || {};
+  const { activeMembership, activeOutlet } = useWorkspace();
   const [showAdd, setShowAdd] = useState(false);
   const [signRecord, setSignRecord] = useState(null);
   const [newRec, setNewRec] = useState({ title: '', type: '', category: 'food_safety', due_date: '', status: 'pending' });
@@ -208,7 +210,11 @@ export default function CompliancePage() {
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
             <Button
-              onClick={() => createMutation.mutate(newRec)}
+              onClick={() => {
+                const membershipOutletId = activeMembership?.role_assignments?.[0]?.scope?.outlet_id || null;
+                const resolvedOutletId = activeOutlet?.id || membershipOutletId || null;
+                createMutation.mutate({ ...newRec, tenant_id: tenantId, outlet_id: resolvedOutletId });
+              }}
               disabled={!newRec.title || createMutation.isPending}
             >
               {createMutation.isPending ? 'Adding...' : 'Add Record'}

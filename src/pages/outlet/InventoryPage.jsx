@@ -30,7 +30,7 @@ import { TrendingUp, ClipboardCheck } from 'lucide-react';
 
 
 export default function InventoryPage() {
-  const { identity, activeTenantId: tenantId, activeRole } = useWorkspace();
+  const { identity, activeTenantId: tenantId, activeRole, activeMembership, activeOutlet } = useWorkspace();
   const { formatAmount, currencyConfig } = useCurrency();
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
@@ -63,8 +63,13 @@ export default function InventoryPage() {
     return matchSearch && matchLow;
   });
 
+  const membershipOutletId = activeMembership?.role_assignments?.[0]?.scope?.outlet_id || null;
+  const resolvedOutletId = activeOutlet?.id || membershipOutletId || null;
+
   const handleSaveItem = async () => {
     const itemData = {
+      tenant_id: tenantId,
+      outlet_id: resolvedOutletId,
       name: newItem.name,
       category: newItem.category,
       unit: newItem.unit,
