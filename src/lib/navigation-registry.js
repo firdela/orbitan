@@ -63,9 +63,9 @@ const NAV_ITEMS = {
   marketplace: { key: 'marketplace', label: 'Marketplace', route: '/platform/marketplace', description: 'Module marketplace and add-on catalog', permission: 'admin' },
 
   // Workspace — Operational Analytics & Workflows
-  'task-analytics': { key: 'task-analytics', label: 'Task Analytics', route: '/task-analytics', description: 'Task performance, workload, and completion trends', permission: 'admin' },
-  'inventory-transfers': { key: 'inventory-transfers', label: 'Inventory Transfers', route: '/inventory-transfers', description: 'Inter-outlet stock transfer ledger and lifecycle', permission: 'admin' },
-  'workflow-templates': { key: 'workflow-templates', label: 'Workflow Templates', route: '/workflow-templates', description: 'Reusable, versioned operational workflow definitions', permission: 'admin' },
+  'task-analytics': { key: 'task-analytics', label: 'Task Analytics', route: '/task-analytics', description: 'Task performance, workload, and completion trends', permission: ['admin', 'tenant_admin', 'outlet_manager', 'supervisor'] },
+  'inventory-transfers': { key: 'inventory-transfers', label: 'Inventory Transfers', route: '/inventory-transfers', description: 'Inter-outlet stock transfer ledger and lifecycle', permission: ['admin', 'tenant_admin', 'outlet_manager', 'supervisor'] },
+  'workflow-templates': { key: 'workflow-templates', label: 'Workflow Templates', route: '/workflow-templates', description: 'Reusable, versioned operational workflow definitions', permission: ['admin', 'tenant_admin', 'outlet_manager'] },
 
   // Subscription & Billing — canonical tenant-facing billing
   'subscription-billing': { key: 'subscription-billing', label: 'Subscription & Billing', route: '/leader-org?section=subscription-billing', description: 'Plan, billing, usage, invoices, and payment methods', permission: 'admin' },
@@ -226,7 +226,10 @@ export function getNavItemByKey(key) {
 
 export function canAccessNavItem(item, userRole) {
   if (!item?.permission) return true;
-  return userRole === 'admin' || userRole === 'platform_admin';
+  const allowed = Array.isArray(item.permission) ? item.permission : [item.permission];
+  // Platform admins can always access any destination
+  if (userRole === 'admin' || userRole === 'platform_admin') return true;
+  return allowed.includes(userRole);
 }
 
 export function getConsoleSection(key) {
