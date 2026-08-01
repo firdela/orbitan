@@ -7,6 +7,35 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #27H.1 (Workflow Template Service & Error Contract)
+
+### Added — Workflow Template Server-Side Service
+- **New backend function:** `workflowTemplateService` — server-authoritative lifecycle for workflow templates (create, update, publish, archive, restore, duplicate, newVersion, assign, generateWork).
+- **Lifecycle:** Draft → Published → Archived. Published templates are immutable. Restore returns to draft.
+- **Versioning:** `newVersion` preserves `parent_template_id` lineage. `duplicate` creates independent copy.
+- **Task generation:** Generates Task records from published templates with template ID + version traceability. Duplicate generation prevented.
+- **Audit:** All governance actions write fail-closed AuditLog via `writeAuditCritical`. No fire-and-forget audit.
+
+### Added — Inventory Transfer Structured Error Contract
+- All error responses now return `{ error: { code, message, retryable } }`.
+- Error codes: TENANT_CONTEXT_REQUIRED, PERMISSION_DENIED, CROSS_TENANT_DENIED, INVALID_TRANSITION, STALE_TRANSFER_STATE, SAME_OUTLET, INVALID_QUANTITY, INSUFFICIENT_STOCK, STOCK_CHANGED, DISCREPANCY_REQUIRED, CANCELLATION_NOT_ALLOWED, ALREADY_PROCESSED, AUDIT_FAILURE, SERVICE_UNAVAILABLE, UNKNOWN_ERROR.
+- No stack traces, internal paths, or secrets exposed.
+
+### Migrated — Frontend
+- `WorkflowTemplatesPage.jsx` — all lifecycle actions now call `workflowTemplateService`. `auditFrontend` removed.
+- `TemplateFormDialog.jsx` — create/update now call `workflowTemplateService` instead of direct SDK calls.
+- `TransferDetailSheet.jsx` — structured error code parsing, inline error summary with focus management and aria-live, form values preserved on failure, sheet stays open after error.
+- Consolidated duplicate "New Template" actions: page header button hidden when empty state is shown.
+
+### Added — Shared Backend Utilities
+- `base44/shared/serviceUtils.ts` — `serviceError`, `stripSecrets`, `createAuditWriter` factory. Eliminates duplicated audit/error logic across backend services.
+
+### Documentation
+- ADR-0057 created: `src/docs/knowledge-hub/decision-records/0057-build-27h1-workflow-service-and-error-contract.md`
+
+### Deferred
+- Navigation alias memoisation (D-03): P3, no measured performance trace. Documented as technical debt only.
+
 ## [Unreleased] — Build #27H (Surgical Operational Hardening)
 
 ### Hardened — Audit Event Standardisation (Package 1)

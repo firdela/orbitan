@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   CheckCircle2, XCircle, Truck, PackageCheck, AlertTriangle,
-  ClipboardCheck, Loader2, ArrowRight, History,
+  ClipboardCheck, Loader2, ArrowRight, AlertCircle, RefreshCw,
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -30,6 +30,84 @@ const STATUS_CONFIG = {
 
 const LIFECYCLE_FLOW = ['draft', 'requested', 'approved', 'preparing', 'dispatched', 'received', 'reconciled'];
 
+// ── Structured error code → user-facing message + action ──────────
+const ERROR_MAP = {
+  TENANT_CONTEXT_REQUIRED: {
+    message: 'Select a tenant before managing this transfer.',
+    action: 'Select Tenant',
+  },
+  PERMISSION_DENIED: {
+    message: 'You do not have permission to perform this action.',
+    action: 'Return to Transfers',
+  },
+  CROSS_TENANT_DENIED: {
+    message: 'You do not have permission to perform this action.',
+    action: 'Return to Transfers',
+  },
+  INVALID_TRANSITION: {
+    message: 'This transfer has changed and this action is no longer available.',
+    action: 'Refresh Transfer',
+  },
+  STALE_TRANSFER_STATE: {
+    message: 'This transfer was updated by another user.',
+    action: 'Reload',
+  },
+  SAME_OUTLET: {
+    message: 'Source and destination outlets must differ.',
+    action: 'Review Outlets',
+  },
+  INVALID_QUANTITY: {
+    message: 'The quantities provided are invalid. Please review and try again.',
+    action: 'Review Quantities',
+  },
+  INSUFFICIENT_STOCK: {
+    message: 'There is not enough available stock to dispatch the requested quantity.',
+    action: 'Review Quantities',
+  },
+  STOCK_CHANGED: {
+    message: 'The inventory has changed since this transfer was last loaded.',
+    action: 'Reload',
+  },
+  DISCREPANCY_REQUIRED: {
+    message: 'Receipt quantities are required to confirm receipt.',
+    action: 'Enter Quantities',
+  },
+  CANCELLATION_NOT_ALLOWED: {
+    message: 'This transfer cannot be cancelled in its current state.',
+    action: 'Close',
+  },
+  ALREADY_PROCESSED: {
+    message: 'This transfer has already been processed.',
+    action: 'Refresh Transfer',
+  },
+  AUDIT_FAILURE: {
+    message: 'The system could not record this action for audit purposes. The action was rolled back.',
+    action: 'Retry',
+  },
+  SERVICE_UNAVAILABLE: {
+    message: 'Inventory Transfer service is temporarily unavailable.',
+    action: 'Retry',
+  },
+  UNKNOWN_ERROR: {
+    message: 'We could not complete this transfer action.',
+    action: 'Retry',
+  },
+};
+
+function parseServiceError(err) {
+  const raw = err?.message || err?.response?.data?.error || err;
+  if (raw && typeof raw === 'object' && raw.code) {
+    return ERROR_MAP[raw.code] || ERROR_MAP.UNKNOWN_ERROR;
+  }
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.code) return ERROR_MAP[parsed.code] || ERROR_MAP.UNKNOWN_ERROR;
+    } catch (e) {}
+  }
+  return ERROR_MAP.UNKNOWN_ERROR;
+}
+
 export default function TransferDetailSheet({ transfer, open, onOpenChange, onEdit }) {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -38,7 +116,15 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [discrepancies, setDiscrepancies] = useState({});
-  const [error, setError] = useState('');
+  const [errorInfo, setErrorInfo] = useState(null);
+  const errorRef = useRef(null);
+
+  // Move focus to error summary when an error occurs
+  useEffect(() => {
+    if (errorInfo && errorRef.current) {
+      errorRef.current.focus();
+    }
+  }, [errorInfo]);
 
   if (!transfer) return null;
 
@@ -48,10 +134,9 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['inventory-transfers'] });
 
-  // ── Server-side transition via inventoryTransferService (Build #27H)
-  // The browser does NOT authorise transitions or mutate stock directly.
   const transition = async (newStatus, opts = {}) => {
-    setActionLoading(true); setError('');
+    setActionLoading(true);
+    setErrorInfo(null);
     try {
       const payload = {
         action: 'transition',
@@ -60,7 +145,6 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
         tenant_id: user?.data?.tenant_id,
       };
 
-      // Build receipt items if receiving
       if (discrepancyOpen && (newStatus === 'received' || newStatus === 'partially_received')) {
         payload.receipt_items = (transfer.items || []).map((it, idx) => {
           const disc = discrepancies[idx];
@@ -81,16 +165,23 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
 
       const res = await base44.functions.invoke('inventoryTransferService', payload);
       const result = res?.data || res;
-      if (result?.error) throw new Error(result.error);
+      if (result?.error) {
+        const errMap = parseServiceError(result.error);
+        setErrorInfo(errMap);
+        return;
+      }
 
       refresh();
       setDiscrepancyOpen(false);
       setCancelOpen(false);
       setCancelReason('');
       setDiscrepancies({});
+      setErrorInfo(null);
       onOpenChange(false);
     } catch (e) {
-      setError(e.message || e?.response?.data?.error || 'Action failed.');
+      const errMap = parseServiceError(e);
+      setErrorInfo(errMap);
+      // Keep sheet open, preserve all form values
     } finally {
       setActionLoading(false);
     }
@@ -103,6 +194,26 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
       const dispatched = it.dispatched_qty || it.approved_qty || it.requested_qty;
       return disc?.received_qty !== undefined && Number(disc.received_qty) >= Number(dispatched);
     });
+  };
+
+  const handleErrorAction = () => {
+    if (!errorInfo) return;
+    if (errorInfo.action === 'Return to Transfers') {
+      onOpenChange(false);
+      return;
+    }
+    if (errorInfo.action === 'Reload' || errorInfo.action === 'Refresh Transfer') {
+      refresh();
+      setErrorInfo(null);
+      onOpenChange(false);
+      return;
+    }
+    if (errorInfo.action === 'Retry') {
+      setErrorInfo(null);
+      return;
+    }
+    // For other actions, just clear the error
+    setErrorInfo(null);
   };
 
   return (
@@ -136,6 +247,33 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
           })}
         </div>
 
+        {/* ── Inline Error Summary ───────────────────────────────── */}
+        {errorInfo && (
+          <div
+            ref={errorRef}
+            role="alert"
+            aria-live="assertive"
+            tabIndex={-1}
+            className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 p-3 flex items-start gap-2"
+          >
+            <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-destructive">{errorInfo.message}</p>
+              {errorInfo.action && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 h-7 text-xs"
+                  onClick={handleErrorAction}
+                >
+                  {errorInfo.action === 'Retry' && <RefreshCw className="w-3 h-3 mr-1" />}
+                  {errorInfo.action}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Items */}
         <div className="space-y-2 mb-4">
           <Label className="text-xs font-medium">Transfer Items</Label>
@@ -154,7 +292,7 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
                   <div className="col-span-3 text-destructive"><AlertTriangle className="w-3 h-3 inline mr-1" />Discrepancy: {it.discrepancy_qty} — {it.discrepancy_reason || 'No reason given'}</div>
                 )}
               </div>
-              {/* Discrepancy inputs */}
+              {/* Discrepancy inputs — values preserved on error */}
               {discrepancyOpen && (transfer.status === 'dispatched' || transfer.status === 'partially_received') && (
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
                   <div>
@@ -181,8 +319,6 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
           {transfer.receiver_name && <div>Received by: {transfer.receiver_name}</div>}
           {transfer.notes && <div className="pt-1">Notes: {transfer.notes}</div>}
         </div>
-
-        {error && <p className="text-sm text-destructive mt-2">{error}</p>}
 
         {/* Lifecycle Actions */}
         {canManage && transfer.status !== 'cancelled' && transfer.status !== 'reconciled' && (

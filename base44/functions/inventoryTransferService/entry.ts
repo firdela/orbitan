@@ -1,11 +1,11 @@
 /**
- * OrbitanOS — Inventory Transfer Service (Build #27H)
+ * OrbitanOS — Inventory Transfer Service (Build #27H + #27H.1)
  * ──────────────────────────────────────────────────
  * Server-side authoritative lifecycle for inter-outlet stock transfers.
  *
- * Principle: The browser must NOT authorise lifecycle transitions or
- * perform multi-record stock mutations. All state transitions, stock
- * deductions, and stock additions are validated and executed here.
+ * Build #27H.1: Structured error contract — all error responses now
+ * return { error: { code, message, retryable } } instead of plain
+ * strings. No stack traces, internal paths, or secrets exposed.
  *
  * Canonical Lifecycle:
  *   Draft → Requested → Approved → Preparing → Dispatched
@@ -19,17 +19,18 @@
  *   • Reconciliation → closes outstanding discrepancies (no stock change)
  *   • Cancellation after dispatch → reverses source deduction (if not yet received)
  *
- * Audit: Every sensitive transition writes a canonical AuditLog via logAuditCritical
- *   (fail-closed). If the audit write fails, the mutation is rolled back.
+ * Audit: Every sensitive transition writes a canonical AuditLog via
+ *   writeAuditCritical (fail-closed). If the audit write fails, the
+ *   mutation is rolled back.
  *
- * Idempotency: Status is re-validated before every transition. A repeat request
- *   for the same target status is rejected as a no-op (not an error) when the
- *   transfer is already in that state.
+ * Idempotency: Status is re-validated before every transition. A repeat
+ *   request for the same target status is rejected as a no-op.
  *
- * Exit-Ready: pure business logic over Base44 entities; portable to any stack.
+ * Exit-Ready: pure business logic over Base44 entities; portable.
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { serviceError, createAuditWriter } from '../../shared/serviceUtils.ts';
 
 // ── Role matrix ──────────────────────────────────────────────────
 const MANAGE_ROLES = ['admin', 'tenant_admin', 'outlet_manager', 'supervisor'];
@@ -37,7 +38,6 @@ const APPROVE_ROLES = ['admin', 'tenant_admin', 'outlet_manager'];
 const RECONCILE_ROLES = ['admin', 'tenant_admin', 'outlet_manager'];
 
 // ── Canonical transition map ──────────────────────────────────────
-// Keys = current status. Values = { target: { roles: [], action } }
 const TRANSITIONS = {
   draft: {
     requested: { roles: MANAGE_ROLES },
@@ -58,7 +58,7 @@ const TRANSITIONS = {
   dispatched: {
     partially_received: { roles: MANAGE_ROLES },
     received: { roles: MANAGE_ROLES },
-    cancelled: { roles: APPROVE_ROLES }, // reverse source deduction
+    cancelled: { roles: APPROVE_ROLES },
   },
   partially_received: {
     received: { roles: MANAGE_ROLES },
@@ -74,52 +74,14 @@ const VALID_STATUSES = new Set([
   'partially_received', 'received', 'reconciled', 'cancelled',
 ]);
 
-// ── Secret stripping for audit state snapshots ───────────────────
-const FORBIDDEN_KEYS = new Set([
-  'password', 'token', 'secret', 'api_key', 'apikey', 'authorization',
-  'access_token', 'refresh_token', 'private_key', 'client_secret',
-]);
-function stripSecrets(obj) {
-  if (!obj || typeof obj !== 'object') return obj;
-  if (Array.isArray(obj)) return obj.map(stripSecrets);
-  const cleaned = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (FORBIDDEN_KEYS.has(key.toLowerCase())) continue;
-    cleaned[key] = typeof value === 'object' ? stripSecrets(value) : value;
-  }
-  return cleaned;
-}
+const writeAuditCritical = createAuditWriter({
+  module: 'inventory',
+  category: 'operational',
+  event_source: 'inventoryTransferService',
+  target_entity: 'InventoryTransfer',
+  related_workflow: 'inventory_transfer',
+});
 
-// ── Fail-closed audit writer ─────────────────────────────────────
-async function writeAuditCritical(base44, payload) {
-  const p = {
-    tenant_id: payload.tenant_id,
-    outlet_id: payload.outlet_id || null,
-    actor_id: payload.actor_id,
-    actor_name: payload.actor_name || 'system',
-    actor_role: payload.actor_role || 'system_event',
-    action_type: payload.action_type,
-    module: payload.module || 'inventory',
-    category: payload.category || 'operational',
-    severity: payload.severity || 'info',
-    event_source: payload.event_source || 'inventoryTransferService',
-    target_entity: payload.target_entity || 'InventoryTransfer',
-    target_record_id: payload.target_record_id,
-    related_workflow: payload.related_workflow || 'inventory_transfer',
-    link: payload.link || null,
-    details: payload.details || '',
-    previous_state: stripSecrets(payload.previous_state) || null,
-    new_state: stripSecrets(payload.new_state) || null,
-    ip_address: 'server_context',
-  };
-  // Validate required identifiers — never fabricate
-  if (!p.tenant_id || !p.actor_id || !p.action_type || !p.target_record_id) {
-    throw new Error('Critical audit event missing required identifiers — aborting transition');
-  }
-  return await base44.asServiceRole.entities.AuditLog.create(p);
-}
-
-// ── Generate human-readable transfer number ──────────────────────
 function generateTransferNumber() {
   const now = new Date();
   const pad = (n, l) => String(n).padStart(l, '0');
@@ -127,25 +89,22 @@ function generateTransferNumber() {
   return `IT-${now.getFullYear()}-${pad(now.getMonth() + 1, 2)}${pad(now.getDate(), 2)}-${pad(now.getHours(), 2)}${pad(now.getMinutes(), 2)}${pad(now.getSeconds(), 2)}${rand}`;
 }
 
-// ── Validate outlet pair belongs to tenant ────────────────────────
 async function validateOutlets(base44, tenantId, sourceOutletId, destOutletId) {
   if (sourceOutletId === destOutletId) {
-    return { valid: false, error: 'Source and destination outlets must differ' };
+    return { valid: false, code: 'SAME_OUTLET', message: 'Source and destination outlets must differ' };
   }
   const outlets = await base44.asServiceRole.entities.Outlet.filter({ tenant_id: tenantId });
   const outletIds = new Set(outlets.map((o) => o.id));
   if (!outletIds.has(sourceOutletId)) {
-    return { valid: false, error: 'Source outlet does not belong to this tenant' };
+    return { valid: false, code: 'SAME_OUTLET', message: 'Source outlet does not belong to this tenant' };
   }
   if (!outletIds.has(destOutletId)) {
-    return { valid: false, error: 'Destination outlet does not belong to this tenant' };
+    return { valid: false, code: 'SAME_OUTLET', message: 'Destination outlet does not belong to this tenant' };
   }
   return { valid: true };
 }
 
-// ── Resolve or create destination inventory item ─────────────────
 async function resolveDestinationItem(base44, tenantId, destOutletId, sourceItem) {
-  // Find existing item in destination outlet with same name and unit
   const candidates = await base44.asServiceRole.entities.InventoryItem.filter({
     tenant_id: tenantId,
     outlet_id: destOutletId,
@@ -155,7 +114,6 @@ async function resolveDestinationItem(base44, tenantId, destOutletId, sourceItem
   if (candidates && candidates.length > 0) {
     return candidates[0];
   }
-  // Create a new destination inventory item mirroring the source
   const created = await base44.asServiceRole.entities.InventoryItem.create({
     tenant_id: tenantId,
     outlet_id: destOutletId,
@@ -173,7 +131,7 @@ export default async function(req) {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user) return serviceError('PERMISSION_DENIED', 'You do not have permission to perform this action.', 401);
 
     let payload = {};
     try { payload = await req.json(); } catch (e) {}
@@ -185,39 +143,36 @@ export default async function(req) {
     // ══════════════════════════════════════════════════════════════
     if (action === 'create') {
       if (!MANAGE_ROLES.includes(user.role)) {
-        return Response.json({ error: 'Forbidden — insufficient role to create transfer' }, { status: 403 });
+        return serviceError('PERMISSION_DENIED', 'You do not have permission to create transfers.', 403);
       }
 
       const tenantId = payload.tenant_id || userTenantId;
       if (!tenantId) {
-        return Response.json({ error: 'tenant_id required — no explicit tenant context' }, { status: 400 });
+        return serviceError('TENANT_CONTEXT_REQUIRED', 'Select a tenant before managing this transfer.', 400);
       }
 
       const sourceOutletId = payload.source_outlet_id;
       const destOutletId = payload.destination_outlet_id;
       const items = payload.items || [];
 
-      // Validate outlets
       const outletCheck = await validateOutlets(base44, tenantId, sourceOutletId, destOutletId);
       if (!outletCheck.valid) {
-        return Response.json({ error: outletCheck.error }, { status: 400 });
+        return serviceError(outletCheck.code, outletCheck.message, 400);
       }
 
-      // Validate items
       if (items.length === 0) {
-        return Response.json({ error: 'At least one transfer item is required' }, { status: 400 });
+        return serviceError('INVALID_QUANTITY', 'At least one transfer item is required.', 400);
       }
       for (const it of items) {
         if (!it.inventory_item_id || !it.inventory_item_name) {
-          return Response.json({ error: 'Each item must have an inventory_item_id and inventory_item_name' }, { status: 400 });
+          return serviceError('INVALID_QUANTITY', 'Each item must have an inventory_item_id and inventory_item_name.', 400);
         }
         const qty = Number(it.requested_qty);
         if (isNaN(qty) || qty <= 0) {
-          return Response.json({ error: `Requested quantity must be positive for ${it.inventory_item_name}` }, { status: 400 });
+          return serviceError('INVALID_QUANTITY', `Requested quantity must be positive for ${it.inventory_item_name}.`, 400);
         }
       }
 
-      // Resolve outlet names
       const outlets = await base44.asServiceRole.entities.Outlet.filter({ tenant_id: tenantId });
       const sourceName = outlets.find((o) => o.id === sourceOutletId)?.name || '';
       const destName = outlets.find((o) => o.id === destOutletId)?.name || '';
@@ -246,63 +201,64 @@ export default async function(req) {
         notes: payload.notes || undefined,
       });
 
-      // Audit (fail-closed for lifecycle events)
-      await writeAuditCritical(base44, {
-        tenant_id: tenantId,
-        outlet_id: sourceOutletId,
-        actor_id: user.id,
-        actor_name: user.full_name || user.email,
-        actor_role: user.role,
-        action_type: status === 'requested' ? 'transfer_requested' : 'transfer_created',
-        severity: 'info',
-        target_record_id: transfer.id,
-        previous_state: null,
-        new_state: { transfer_number: transferNumber, status, source: sourceName, destination: destName, item_count: items.length },
-        details: `Transfer ${transferNumber} ${status === 'requested' ? 'created and submitted' : 'created as draft'}: ${sourceName} → ${destName} (${items.length} items).`,
-      });
+      try {
+        await writeAuditCritical(base44, {
+          tenant_id: tenantId,
+          outlet_id: sourceOutletId,
+          actor_id: user.id,
+          actor_name: user.full_name || user.email,
+          actor_role: user.role,
+          action_type: status === 'requested' ? 'transfer_requested' : 'transfer_created',
+          severity: 'info',
+          target_record_id: transfer.id,
+          previous_state: null,
+          new_state: { transfer_number: transferNumber, status, source: sourceName, destination: destName, item_count: items.length },
+          details: `Transfer ${transferNumber} ${status === 'requested' ? 'created and submitted' : 'created as draft'}: ${sourceName} → ${destName} (${items.length} items).`,
+        });
+      } catch (auditErr) {
+        try { await base44.asServiceRole.entities.InventoryTransfer.delete(transfer.id); } catch (e) {}
+        return serviceError('AUDIT_FAILURE', 'Critical audit write failed — transfer creation rolled back.', 500);
+      }
 
       return Response.json({ success: true, transfer });
     }
 
     // ══════════════════════════════════════════════════════════════
-    // ACTION: transition (submit, approve, prepare, dispatch, receive, reconcile, cancel)
+    // ACTION: transition
     // ══════════════════════════════════════════════════════════════
     if (action === 'transition') {
       if (!MANAGE_ROLES.includes(user.role)) {
-        return Response.json({ error: 'Forbidden — insufficient role to transition transfer' }, { status: 403 });
+        return serviceError('PERMISSION_DENIED', 'You do not have permission to transition transfers.', 403);
       }
 
       const transferId = payload.transfer_id;
       const targetStatus = payload.target_status;
-      const receiptData = payload.receipt_items || null; // [{ inventory_item_id, received_qty, discrepancy_reason }]
+      const receiptData = payload.receipt_items || null;
       const cancelReason = payload.cancel_reason || '';
 
       if (!transferId || !targetStatus) {
-        return Response.json({ error: 'transfer_id and target_status required' }, { status: 400 });
+        return serviceError('INVALID_REQUEST', 'transfer_id and target_status are required.', 400);
       }
       if (!VALID_STATUSES.has(targetStatus)) {
-        return Response.json({ error: `Invalid target status: ${targetStatus}` }, { status: 400 });
+        return serviceError('INVALID_TRANSITION', `Invalid target status: ${targetStatus}.`, 400);
       }
 
-      // Fetch transfer (service role — authoritative read)
       const transfer = await base44.asServiceRole.entities.InventoryTransfer.get(transferId);
       if (!transfer) {
-        return Response.json({ error: 'Transfer not found' }, { status: 404 });
+        return serviceError('NOT_FOUND', 'Transfer not found.', 404);
       }
 
-      // Cross-tenant guard: client-supplied tenant_id is NOT trusted.
-      // Platform admins must have explicit tenant_id in payload matching the transfer.
       const tenantId = payload.tenant_id || userTenantId;
       if (user.role === 'admin') {
         if (!payload.tenant_id) {
-          return Response.json({ error: 'Platform admin must specify explicit tenant_id for transfer operations' }, { status: 400 });
+          return serviceError('TENANT_CONTEXT_REQUIRED', 'Platform admin must specify explicit tenant_id for transfer operations.', 400);
         }
         if (payload.tenant_id !== transfer.tenant_id) {
-          return Response.json({ error: 'Tenant mismatch — transfer does not belong to specified tenant' }, { status: 403 });
+          return serviceError('CROSS_TENANT_DENIED', 'Transfer does not belong to specified tenant.', 403);
         }
       } else {
         if (transfer.tenant_id !== userTenantId) {
-          return Response.json({ error: 'Forbidden — transfer belongs to a different tenant' }, { status: 403 });
+          return serviceError('CROSS_TENANT_DENIED', 'Transfer belongs to a different tenant.', 403);
         }
       }
 
@@ -311,25 +267,24 @@ export default async function(req) {
         return Response.json({ success: true, message: 'Transfer already in target status', transfer, idempotent: true });
       }
 
-      // Validate transition is allowed
-      const allowed = TRANSITIONS[transfer.status]?.[targetStatus];
-      if (!allowed) {
-        return Response.json({
-          error: `Invalid transition: ${transfer.status} → ${targetStatus}`,
-          current_status: transfer.status,
-        }, { status: 400 });
+      // Validate cancellation is allowed from current state
+      if (targetStatus === 'cancelled' && (transfer.status === 'reconciled' || transfer.status === 'received')) {
+        return serviceError('CANCELLATION_NOT_ALLOWED', `Cannot cancel a transfer in '${transfer.status}' status.`, 400);
       }
 
-      // Validate role authority for this transition
+      const allowed = TRANSITIONS[transfer.status]?.[targetStatus];
+      if (!allowed) {
+        return serviceError('INVALID_TRANSITION', `This transfer has changed and this action is no longer available. Current status: ${transfer.status}.`, 400);
+      }
+
       if (!allowed.roles.includes(user.role)) {
-        return Response.json({ error: `Forbidden — role '${user.role}' cannot ${transfer.status}→${targetStatus}` }, { status: 403 });
+        return serviceError('PERMISSION_DENIED', 'You do not have permission to perform this action.', 403);
       }
 
       const previousStatus = transfer.status;
       const updates = { status: targetStatus };
       const now = new Date().toISOString();
 
-      // ── Build update fields per transition ──────────────────────
       if (targetStatus === 'approved') {
         updates.approver_id = user.id;
         updates.approver_name = user.full_name || user.email;
@@ -351,7 +306,7 @@ export default async function(req) {
       // ── Process receipt quantities ──────────────────────────────
       if (targetStatus === 'received' || targetStatus === 'partially_received') {
         if (!receiptData || receiptData.length === 0) {
-          return Response.json({ error: 'receipt_items required for receiving' }, { status: 400 });
+          return serviceError('DISCREPANCY_REQUIRED', 'Receipt quantities are required to confirm receipt.', 400);
         }
         const updatedItems = (transfer.items || []).map((it) => {
           const rcpt = receiptData.find((r) => r.inventory_item_id === it.inventory_item_id);
@@ -369,8 +324,9 @@ export default async function(req) {
       }
 
       // ── Stock ledger mutations ──────────────────────────────────
-      // DISPATCH: deduct dispatched_qty from SOURCE outlet items
       let stockMutations = [];
+
+      // DISPATCH: deduct from SOURCE
       if (targetStatus === 'dispatched') {
         const sourceItems = await base44.asServiceRole.entities.InventoryItem.filter({
           tenant_id: tenantId,
@@ -382,12 +338,12 @@ export default async function(req) {
         const updatedTransferItems = (transfer.items || []).map((it) => {
           const inv = sourceMap.get(it.inventory_item_id);
           if (!inv) {
-            throw new Error(`Source inventory item not found: ${it.inventory_item_name}`);
+            throw { code: 'STOCK_CHANGED', message: `Source inventory item not found: ${it.inventory_item_name}. The inventory may have changed.`, status: 409 };
           }
           const dispatchedQty = Number(it.approved_qty) || Number(it.requested_qty) || 0;
           const available = Number(inv.current_stock) || 0;
           if (available < dispatchedQty) {
-            throw new Error(`Insufficient stock for ${inv.name}: required ${dispatchedQty}, available ${available}`);
+            throw { code: 'INSUFFICIENT_STOCK', message: `There is not enough available stock to dispatch the requested quantity. ${inv.name}: required ${dispatchedQty}, available ${available}.`, status: 400 };
           }
           stockMutations.push({
             item_id: inv.id,
@@ -403,9 +359,8 @@ export default async function(req) {
         updates.items = updatedTransferItems;
       }
 
-      // RECEIVE: add received_qty to DESTINATION outlet items
+      // RECEIVE: add to DESTINATION
       if (targetStatus === 'received' || targetStatus === 'partially_received') {
-        // Fetch source items to get unit/sku info for destination matching
         const sourceItems = await base44.asServiceRole.entities.InventoryItem.filter({
           tenant_id: tenantId,
           outlet_id: transfer.source_outlet_id,
@@ -470,18 +425,14 @@ export default async function(req) {
           completedMutations.push(m);
         }
       } catch (mutErr) {
-        // Rollback already-applied mutations
         for (const m of completedMutations) {
           try {
             await base44.asServiceRole.entities.InventoryItem.update(m.item_id, {
               current_stock: m.before,
             });
-          } catch (rbErr) { /* best-effort; audit will flag */ }
+          } catch (rbErr) { /* best-effort */ }
         }
-        return Response.json({
-          error: 'Stock mutation failed — rolled back',
-          detail: mutErr.message,
-        }, { status: 500 });
+        return serviceError('STOCK_CHANGED', 'Inventory stock could not be updated. The transfer has been rolled back.', 409, true);
       }
 
       // ── Update the transfer record ─────────────────────────────
@@ -514,7 +465,6 @@ export default async function(req) {
             (completedMutations.length > 0 ? ` ${completedMutations.length} stock mutation(s) applied.` : ''),
         });
 
-        // Audit each individual stock mutation
         for (const m of completedMutations) {
           await writeAuditCritical(base44, {
             tenant_id: tenantId,
@@ -537,11 +487,8 @@ export default async function(req) {
           for (const m of completedMutations) {
             await base44.asServiceRole.entities.InventoryItem.update(m.item_id, { current_stock: m.before });
           }
-        } catch (rbErr) { /* best-effort rollback */ }
-        return Response.json({
-          error: 'Critical audit write failed — transition rolled back',
-          detail: auditErr.message,
-        }, { status: 500 });
+        } catch (rbErr) { /* best-effort */ }
+        return serviceError('AUDIT_FAILURE', 'Critical audit write failed — transition rolled back.', 500);
       }
 
       return Response.json({
@@ -554,26 +501,29 @@ export default async function(req) {
     }
 
     // ══════════════════════════════════════════════════════════════
-    // ACTION: get (fetch single transfer with server-side validation)
+    // ACTION: get
     // ══════════════════════════════════════════════════════════════
     if (action === 'get') {
       const transferId = payload.transfer_id;
-      if (!transferId) return Response.json({ error: 'transfer_id required' }, { status: 400 });
+      if (!transferId) return serviceError('INVALID_REQUEST', 'transfer_id is required.', 400);
       const transfer = await base44.asServiceRole.entities.InventoryTransfer.get(transferId);
-      if (!transfer) return Response.json({ error: 'Transfer not found' }, { status: 404 });
-      // Cross-tenant guard
+      if (!transfer) return serviceError('NOT_FOUND', 'Transfer not found.', 404);
       if (user.role !== 'admin' && transfer.tenant_id !== userTenantId) {
-        return Response.json({ error: 'Forbidden — transfer belongs to a different tenant' }, { status: 403 });
+        return serviceError('CROSS_TENANT_DENIED', 'Transfer belongs to a different tenant.', 403);
       }
       if (user.role === 'admin' && payload.tenant_id && payload.tenant_id !== transfer.tenant_id) {
-        return Response.json({ error: 'Tenant mismatch' }, { status: 403 });
+        return serviceError('CROSS_TENANT_DENIED', 'Tenant mismatch.', 403);
       }
       return Response.json({ transfer });
     }
 
-    return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
+    return serviceError('UNKNOWN_ACTION', `Unknown action: ${action}`, 400);
   } catch (error) {
+    // Handle structured errors thrown from within (e.g., INSUFFICIENT_STOCK)
+    if (error && error.code) {
+      return serviceError(error.code, error.message || 'An error occurred.', error.status || 400, error.retryable || false);
+    }
     console.error('[inventoryTransferService] Error:', error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    return serviceError('SERVICE_UNAVAILABLE', 'Inventory Transfer service is temporarily unavailable.', 500, true);
   }
 }

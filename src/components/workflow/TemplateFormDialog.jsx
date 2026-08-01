@@ -107,7 +107,9 @@ export default function TemplateFormDialog({ open, onOpenChange, editTemplate })
     setSaving(true); setError('');
     try {
       const payload = {
+        action: isEdit ? 'update' : 'create',
         tenant_id: tenantId,
+        template_id: isEdit ? editTemplate.id : undefined,
         name: name.trim(),
         description: description.trim() || undefined,
         category,
@@ -122,25 +124,15 @@ export default function TemplateFormDialog({ open, onOpenChange, editTemplate })
           required_evidence: !!s.required_evidence,
           approval_required: !!s.approval_required,
         })),
-        expected_duration_mins: steps.reduce((sum, s) => sum + (Number(s.expected_duration_mins) || 0), 0),
-        required_evidence: steps.some((s) => s.required_evidence),
-        approval_required: steps.some((s) => s.approval_required),
-        status: publish ? 'published' : 'draft',
+        publish,
         notes: notes.trim() || undefined,
-        is_active: true,
-        version: editTemplate?.version || 1,
       };
 
-      if (publish) {
-        payload.published_date = new Date().toISOString();
-        payload.published_by = user?.id;
-        payload.published_by_name = user?.full_name || user?.email;
-      }
-
-      if (isEdit) {
-        await base44.entities.WorkflowTemplate.update(editTemplate.id, payload);
-      } else {
-        await base44.entities.WorkflowTemplate.create(payload);
+      const res = await base44.functions.invoke('workflowTemplateService', payload);
+      const result = res?.data || res;
+      if (result?.error) {
+        const errMsg = typeof result.error === 'object' ? result.error.message : result.error;
+        throw new Error(errMsg || 'Failed to save template.');
       }
       qc.invalidateQueries({ queryKey: ['workflow-templates'] });
       onOpenChange(false);

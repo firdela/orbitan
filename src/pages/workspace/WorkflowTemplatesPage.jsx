@@ -20,11 +20,11 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import {
+  AlertCircle, RefreshCw,
   Workflow, CheckCircle2, FileText, Archive, Plus, Clock, ListChecks,
   Copy, Eye, Loader2, Filter, X, RotateCcw, Pencil,
 } from 'lucide-react';
 import TemplateFormDialog from '@/components/workflow/TemplateFormDialog';
-import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
 
 const CATEGORY_LABELS = {
   opening: 'Opening', closing: 'Closing', onboarding: 'Onboarding',
@@ -33,6 +33,14 @@ const CATEGORY_LABELS = {
   food_safety: 'Food Safety', cleaning: 'Cleaning', maintenance: 'Maintenance',
   audit_preparation: 'Audit Preparation', custom: 'Custom',
 };
+
+// ── Service error parser ──────────────────────────────────────────
+function parseServiceError(err) {
+  const raw = err?.message || err?.response?.data?.error || err;
+  if (raw && typeof raw === 'object' && raw.message) return raw.message;
+  if (typeof raw === 'string') return raw;
+  return 'An unexpected error occurred.';
+}
 
 export default function WorkflowTemplatesPage() {
   const { user } = useAuth();
@@ -47,7 +55,7 @@ export default function WorkflowTemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [errorInfo, setErrorInfo] = useState(null);
 
   const filter = useMemo(() => {
     const f = {};
@@ -72,92 +80,37 @@ export default function WorkflowTemplatesPage() {
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['workflow-templates'] });
 
-  // ── Audit helper for workflow lifecycle events (Build #27H) ──
-  const auditWorkflowEvent = (actionType, template, extra = {}) => {
-    return auditFrontend({
-      tenant_id: template.tenant_id || user?.data?.tenant_id,
-      actor_id: user?.id,
-      actor_name: user?.full_name || user?.email,
-      actor_role: user?.role,
-      action_type: actionType,
-      module: 'system',
-      category: 'governance',
-      severity: actionType === ACTION_TYPES.WORKFLOW_ARCHIVED ? 'warning' : 'success',
-      event_source: 'workflowTemplatesPage',
-      target_entity: 'WorkflowTemplate',
-      target_record_id: template.id,
-      related_workflow: 'workflow_template_lifecycle',
-      details: `Workflow template "${template.name}" (v${template.version || 1}) ${actionType.replace('workflow_', '')} by ${user?.full_name || user?.email}.`,
-      new_state: { status: extra.status || template.status, version: template.version || 1, ...extra },
-    });
-  };
-
+  // ── Lifecycle action handler — delegates to workflowTemplateService ──
   const handleAction = async () => {
     if (!confirmAction) return;
     const { type, template } = confirmAction;
-    setActionLoading(true); setError('');
+    setActionLoading(true);
+    setErrorInfo(null);
     try {
-      let auditType = null;
-      let auditExtra = {};
+      const payload = {
+        tenant_id: user?.data?.tenant_id,
+        template_id: template.id,
+      };
 
-      if (type === 'publish') {
-        await base44.entities.WorkflowTemplate.update(template.id, {
-          status: 'published',
-          published_date: new Date().toISOString(),
-          published_by: user?.id,
-          published_by_name: user?.full_name || user?.email,
-        });
-        auditType = ACTION_TYPES.WORKFLOW_PUBLISHED;
-        auditExtra = { published_by: user?.full_name || user?.email };
-      } else if (type === 'archive') {
-        await base44.entities.WorkflowTemplate.update(template.id, { status: 'archived', is_active: false });
-        auditType = ACTION_TYPES.WORKFLOW_ARCHIVED;
-        auditExtra = { status: 'archived' };
-      } else if (type === 'restore') {
-        await base44.entities.WorkflowTemplate.update(template.id, { status: 'draft', is_active: true });
-        auditType = ACTION_TYPES.WORKFLOW_RESTORED;
-        auditExtra = { status: 'draft' };
-      } else if (type === 'duplicate') {
-        const { id, created_date, updated_date, created_by_id, ...rest } = template;
-        const dup = await base44.entities.WorkflowTemplate.create({
-          ...rest,
-          name: `${template.name} (Copy)`,
-          status: 'draft',
-          version: 1,
-          is_active: true,
-          published_date: undefined,
-          published_by: undefined,
-          published_by_name: undefined,
-          parent_template_id: template.id,
-        });
-        auditType = ACTION_TYPES.WORKFLOW_DUPLICATED;
-        auditExtra = { duplicated_to: dup?.id, status: 'draft' };
-      } else if (type === 'newVersion') {
-        const { id, created_date, updated_date, created_by_id, ...rest } = template;
-        const newVer = await base44.entities.WorkflowTemplate.create({
-          ...rest,
-          name: `${template.name} (v${(template.version || 1) + 1})`,
-          status: 'draft',
-          version: (template.version || 1) + 1,
-          parent_template_id: template.id,
-          published_date: undefined,
-          published_by: undefined,
-          published_by_name: undefined,
-        });
-        auditType = ACTION_TYPES.WORKFLOW_NEW_VERSION;
-        auditExtra = { new_version_id: newVer?.id, version: (template.version || 1) + 1 };
-      }
+      if (type === 'publish') payload.action = 'publish';
+      else if (type === 'archive') payload.action = 'archive';
+      else if (type === 'restore') payload.action = 'restore';
+      else if (type === 'duplicate') payload.action = 'duplicate';
+      else if (type === 'newVersion') payload.action = 'newVersion';
 
-      // Write audit event (fire-and-forget for governance events)
-      if (auditType) {
-        auditWorkflowEvent(auditType, template, auditExtra);
+      const res = await base44.functions.invoke('workflowTemplateService', payload);
+      const result = res?.data || res;
+      if (result?.error) {
+        const errMsg = typeof result.error === 'object' ? result.error.message : result.error;
+        setErrorInfo(errMsg || 'Action failed.');
+        return;
       }
 
       refresh();
       setConfirmAction(null);
       setSelectedTemplate(null);
     } catch (e) {
-      setError(e.message || 'Action failed.');
+      setErrorInfo(parseServiceError(e));
     } finally {
       setActionLoading(false);
     }
@@ -171,6 +124,9 @@ export default function WorkflowTemplatesPage() {
     newVersion: { title: 'Create New Version', desc: 'Creates a new draft version linked to this template.', label: 'Create Version' },
   };
 
+  // Hide page header "New Template" when showing empty state (consolidation)
+  const showEmptyState = !isLoading && stats.total === 0 && categoryFilter === 'all';
+
   return (
     <div className="min-h-screen bg-background">
       <BackBar to={backTo} label={isAdmin ? 'Platform Console' : 'Workspace'} title="Workflow Templates" />
@@ -178,7 +134,7 @@ export default function WorkflowTemplatesPage() {
         <PageHeader
           title="Workflow Templates"
           subtitle="Reusable, versioned operational workflow definitions. Published templates are immutable and traceable."
-          actions={canManage && (
+          actions={canManage && !showEmptyState && (
             <Button size="sm" onClick={() => { setEditTemplate(null); setFormOpen(true); }}>
               <Plus className="w-4 h-4 mr-1.5" /> New Template
             </Button>
@@ -187,7 +143,7 @@ export default function WorkflowTemplatesPage() {
 
         {isLoading ? (
           <LoadingState message="Loading templates…" />
-        ) : stats.total === 0 && categoryFilter === 'all' ? (
+        ) : showEmptyState ? (
           <EmptyState icon={Workflow} title="No workflow templates yet" color="purple"
             description="Create reusable templates for opening, closing, onboarding, compliance inspections, and more."
             actionLabel={canManage ? 'Create Template' : undefined}
@@ -307,7 +263,13 @@ export default function WorkflowTemplatesPage() {
                 {selectedTemplate.parent_template_id && <div>Previous version linked</div>}
               </div>
 
-              {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+              {/* Inline error display */}
+              {errorInfo && (
+                <div role="alert" aria-live="assertive" className="mt-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3 flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-destructive">{errorInfo}</p>
+                </div>
+              )}
 
               {/* Actions */}
               {canManage && (
@@ -319,28 +281,28 @@ export default function WorkflowTemplatesPage() {
                         <Button size="sm" variant="outline" onClick={() => { setEditTemplate(selectedTemplate); setSelectedTemplate(null); setFormOpen(true); }}>
                           <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
                         </Button>
-                        <Button size="sm" onClick={() => setConfirmAction({ type: 'publish', template: selectedTemplate })}>
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Publish
+                        <Button size="sm" onClick={() => setConfirmAction({ type: 'publish', template: selectedTemplate })} disabled={actionLoading}>
+                          {actionLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5 mr-1" />} Publish
                         </Button>
                       </>
                     )}
                     {selectedTemplate.status === 'published' && (
-                      <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: 'newVersion', template: selectedTemplate })}>
-                        <Copy className="w-3.5 h-3.5 mr-1" /> New Version
+                      <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: 'newVersion', template: selectedTemplate })} disabled={actionLoading}>
+                        {actionLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Copy className="w-3.5 h-3.5 mr-1" />} New Version
                       </Button>
                     )}
                     {selectedTemplate.status !== 'archived' && (
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setConfirmAction({ type: 'archive', template: selectedTemplate })}>
-                        <Archive className="w-3.5 h-3.5 mr-1" /> Archive
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setConfirmAction({ type: 'archive', template: selectedTemplate })} disabled={actionLoading}>
+                        {actionLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Archive className="w-3.5 h-3.5 mr-1" />} Archive
                       </Button>
                     )}
                     {selectedTemplate.status === 'archived' && (
-                      <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: 'restore', template: selectedTemplate })}>
-                        <RotateCcw className="w-3.5 h-3.5 mr-1" /> Restore
+                      <Button size="sm" variant="outline" onClick={() => setConfirmAction({ type: 'restore', template: selectedTemplate })} disabled={actionLoading}>
+                        {actionLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5 mr-1" />} Restore
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => setConfirmAction({ type: 'duplicate', template: selectedTemplate })}>
-                      <Copy className="w-3.5 h-3.5 mr-1" /> Duplicate
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmAction({ type: 'duplicate', template: selectedTemplate })} disabled={actionLoading}>
+                      {actionLoading ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Copy className="w-3.5 h-3.5 mr-1" />} Duplicate
                     </Button>
                   </div>
                 </>
