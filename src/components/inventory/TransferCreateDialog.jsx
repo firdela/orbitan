@@ -82,43 +82,55 @@ export default function TransferCreateDialog({ open, onOpenChange, editTransfer 
     return true;
   };
 
+  // ── Server-side create via inventoryTransferService (Build #27H)
+  // The browser sends item data; the service validates outlets, tenant, and writes audit.
   const handleSave = async (submitAfter = false) => {
     if (!validate()) return;
     setSaving(true); setError('');
     try {
-      const sourceName = (outlets || []).find((o) => o.id === sourceOutlet)?.name || '';
-      const destName = (outlets || []).find((o) => o.id === destOutlet)?.name || '';
-      const transferNumber = editTransfer?.transfer_number || `IT-${Date.now().toString().slice(-8)}`;
       const payload = {
+        action: 'create',
         tenant_id: tenantId,
         source_outlet_id: sourceOutlet,
-        source_outlet_name: sourceName,
         destination_outlet_id: destOutlet,
-        destination_outlet_name: destName,
-        transfer_number: transferNumber,
         items: items.map((it) => ({
           inventory_item_id: it.inventory_item_id,
           inventory_item_name: it.inventory_item_name,
           requested_qty: Number(it.requested_qty),
           unit: it.unit,
         })),
-        status: submitAfter ? 'requested' : 'draft',
-        requester_id: user?.id,
-        requester_name: user?.full_name || user?.email,
-        request_date: new Date().toISOString().split('T')[0],
+        submit: submitAfter,
         required_date: requiredDate || undefined,
         notes: notes || undefined,
       };
 
-      if (isEdit) {
-        await base44.entities.InventoryTransfer.update(editTransfer.id, payload);
+      // Edit of an existing draft still uses direct SDK update (draft only, no lifecycle)
+      if (isEdit && editTransfer?.status === 'draft') {
+        const sourceName = (outlets || []).find((o) => o.id === sourceOutlet)?.name || '';
+        const destName = (outlets || []).find((o) => o.id === destOutlet)?.name || '';
+        await base44.entities.InventoryTransfer.update(editTransfer.id, {
+          source_outlet_id: sourceOutlet,
+          source_outlet_name: sourceName,
+          destination_outlet_id: destOutlet,
+          destination_outlet_name: destName,
+          items: items.map((it) => ({
+            inventory_item_id: it.inventory_item_id,
+            inventory_item_name: it.inventory_item_name,
+            requested_qty: Number(it.requested_qty),
+            unit: it.unit,
+          })),
+          required_date: requiredDate || undefined,
+          notes: notes || undefined,
+        });
       } else {
-        await base44.entities.InventoryTransfer.create(payload);
+        const res = await base44.functions.invoke('inventoryTransferService', payload);
+        const result = res?.data || res;
+        if (result?.error) throw new Error(result.error);
       }
       qc.invalidateQueries({ queryKey: ['inventory-transfers'] });
       onOpenChange(false);
     } catch (e) {
-      setError(e.message || 'Failed to save transfer.');
+      setError(e.message || e?.response?.data?.error || 'Failed to save transfer.');
     } finally {
       setSaving(false);
     }

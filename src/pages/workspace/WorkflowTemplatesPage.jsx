@@ -24,6 +24,7 @@ import {
   Copy, Eye, Loader2, Filter, X, RotateCcw, Pencil,
 } from 'lucide-react';
 import TemplateFormDialog from '@/components/workflow/TemplateFormDialog';
+import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
 
 const CATEGORY_LABELS = {
   opening: 'Opening', closing: 'Closing', onboarding: 'Onboarding',
@@ -71,11 +72,34 @@ export default function WorkflowTemplatesPage() {
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['workflow-templates'] });
 
+  // ── Audit helper for workflow lifecycle events (Build #27H) ──
+  const auditWorkflowEvent = (actionType, template, extra = {}) => {
+    return auditFrontend({
+      tenant_id: template.tenant_id || user?.data?.tenant_id,
+      actor_id: user?.id,
+      actor_name: user?.full_name || user?.email,
+      actor_role: user?.role,
+      action_type: actionType,
+      module: 'system',
+      category: 'governance',
+      severity: actionType === ACTION_TYPES.WORKFLOW_ARCHIVED ? 'warning' : 'success',
+      event_source: 'workflowTemplatesPage',
+      target_entity: 'WorkflowTemplate',
+      target_record_id: template.id,
+      related_workflow: 'workflow_template_lifecycle',
+      details: `Workflow template "${template.name}" (v${template.version || 1}) ${actionType.replace('workflow_', '')} by ${user?.full_name || user?.email}.`,
+      new_state: { status: extra.status || template.status, version: template.version || 1, ...extra },
+    });
+  };
+
   const handleAction = async () => {
     if (!confirmAction) return;
     const { type, template } = confirmAction;
     setActionLoading(true); setError('');
     try {
+      let auditType = null;
+      let auditExtra = {};
+
       if (type === 'publish') {
         await base44.entities.WorkflowTemplate.update(template.id, {
           status: 'published',
@@ -83,13 +107,19 @@ export default function WorkflowTemplatesPage() {
           published_by: user?.id,
           published_by_name: user?.full_name || user?.email,
         });
+        auditType = ACTION_TYPES.WORKFLOW_PUBLISHED;
+        auditExtra = { published_by: user?.full_name || user?.email };
       } else if (type === 'archive') {
         await base44.entities.WorkflowTemplate.update(template.id, { status: 'archived', is_active: false });
+        auditType = ACTION_TYPES.WORKFLOW_ARCHIVED;
+        auditExtra = { status: 'archived' };
       } else if (type === 'restore') {
         await base44.entities.WorkflowTemplate.update(template.id, { status: 'draft', is_active: true });
+        auditType = ACTION_TYPES.WORKFLOW_RESTORED;
+        auditExtra = { status: 'draft' };
       } else if (type === 'duplicate') {
         const { id, created_date, updated_date, created_by_id, ...rest } = template;
-        await base44.entities.WorkflowTemplate.create({
+        const dup = await base44.entities.WorkflowTemplate.create({
           ...rest,
           name: `${template.name} (Copy)`,
           status: 'draft',
@@ -100,9 +130,11 @@ export default function WorkflowTemplatesPage() {
           published_by_name: undefined,
           parent_template_id: template.id,
         });
+        auditType = ACTION_TYPES.WORKFLOW_DUPLICATED;
+        auditExtra = { duplicated_to: dup?.id, status: 'draft' };
       } else if (type === 'newVersion') {
         const { id, created_date, updated_date, created_by_id, ...rest } = template;
-        await base44.entities.WorkflowTemplate.create({
+        const newVer = await base44.entities.WorkflowTemplate.create({
           ...rest,
           name: `${template.name} (v${(template.version || 1) + 1})`,
           status: 'draft',
@@ -112,7 +144,15 @@ export default function WorkflowTemplatesPage() {
           published_by: undefined,
           published_by_name: undefined,
         });
+        auditType = ACTION_TYPES.WORKFLOW_NEW_VERSION;
+        auditExtra = { new_version_id: newVer?.id, version: (template.version || 1) + 1 };
       }
+
+      // Write audit event (fire-and-forget for governance events)
+      if (auditType) {
+        auditWorkflowEvent(auditType, template, auditExtra);
+      }
+
       refresh();
       setConfirmAction(null);
       setSelectedTemplate(null);

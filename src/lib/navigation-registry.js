@@ -219,17 +219,113 @@ export const CONSOLE_SECTIONS = {
   'resource-usage':     { domain: 'platform',         label: 'Resource Usage',        embedded: true },
 };
 
+// ── Canonical alias map (old route → canonical destination) ────
+// Preserved for backward compatibility. Deep links and bookmarks
+// using old routes are safely redirected to their canonical home.
+// App.jsx owns the actual <Navigate> declarations; this registry
+// informs consistency checks and alias resolution.
+export const ROUTE_ALIASES = {
+  '/help-center':              { canonical: '/knowledge-hub',              deprecated: false },
+  '/module-config':           { canonical: '/platform/feature-flags',     deprecated: false },
+  '/integration-health':      { canonical: '/platform/integrations',       deprecated: false },
+  '/incident-response':      { canonical: '/platform/exception-centre',   deprecated: false },
+  '/security-settings':      { canonical: '/settings#security',            deprecated: false },
+  '/compliance-dashboard':   { canonical: '/workspace',                   deprecated: false },
+  '/subscription-billing':   { canonical: '/leader-org?section=subscription-billing', deprecated: false },
+  '/integration-directory':  { canonical: '/leader-org?section=integration-hub',      deprecated: false },
+  '/activity-log':           { canonical: '/audit-centre',                 deprecated: false },
+  '/system-health':          { canonical: '/leader-org?section=system-health',        deprecated: false },
+  '/resource-usage':         { canonical: '/leader-org?section=subscription-billing', deprecated: false },
+  '/employee-directory':     { canonical: '/workspace',                   deprecated: false },
+  '/supplier-portal':        { canonical: '/suppliers',                   deprecated: false },
+  '/document-repository':    { canonical: '/workspace',                   deprecated: false },
+  '/audit-trail':            { canonical: '/audit-centre',                 deprecated: false },
+  '/platform/release-readiness':     { canonical: '/platform/go-live-readiness',    deprecated: false },
+  '/platform/security-centre':       { canonical: '/platform/security-dashboard',  deprecated: false },
+  '/platform/activity-logs':         { canonical: '/platform/system-logs',          deprecated: false },
+  '/platform/pilot-management':      { canonical: '/platform/pilot-admin',          deprecated: false },
+  '/platform/tenant-insights':       { canonical: '/platform/tenant-metrics',       deprecated: false },
+};
+
 // ── Helpers ────────────────────────────────────────────────
+
+/**
+ * getNavItemByKey — O(1) lookup of a navigation item by its stable key.
+ */
 export function getNavItemByKey(key) {
   return NAV_ITEMS[key] || null;
+}
+
+/**
+ * resolveAlias — resolves an old route to its canonical destination.
+ * Returns { canonical, deprecated } or null if the route is not an alias.
+ * Preserves query parameters from the original route.
+ */
+export function resolveAlias(oldRoute) {
+  if (!oldRoute) return null;
+  const [path, queryString] = oldRoute.split('?');
+  const alias = ROUTE_ALIASES[path];
+  if (!alias) return null;
+  const [canonicalPath, canonicalQuery] = alias.canonical.split('?');
+  const params = new URLSearchParams(queryString || '');
+  const canonicalParams = new URLSearchParams(canonicalQuery || '');
+  for (const [key, value] of canonicalParams) {
+    params.set(key, value);
+  }
+  const finalQuery = params.toString();
+  return {
+    canonical: finalQuery ? `${canonicalPath}?${finalQuery}` : canonicalPath,
+    deprecated: alias.deprecated,
+  };
+}
+
+/**
+ * getNavByRoute — retrieves the navigation item matching a given route path.
+ */
+export function getNavByRoute(routePath) {
+  if (!routePath) return null;
+  const [path] = routePath.split('?');
+  for (const item of Object.values(NAV_ITEMS)) {
+    const [itemPath] = (item.route || '').split('?');
+    if (itemPath === path) return item;
+  }
+  return null;
+}
+
+/**
+ * isDeprecatedAlias — checks whether an old route is marked as deprecated.
+ */
+export function isDeprecatedAlias(oldRoute) {
+  if (!oldRoute) return false;
+  const [path] = oldRoute.split('?');
+  return ROUTE_ALIASES[path]?.deprecated === true;
 }
 
 export function canAccessNavItem(item, userRole) {
   if (!item?.permission) return true;
   const allowed = Array.isArray(item.permission) ? item.permission : [item.permission];
-  // Platform admins can always access any destination
   if (userRole === 'admin' || userRole === 'platform_admin') return true;
   return allowed.includes(userRole);
+}
+
+/**
+ * canAccessRoute — convenience: check role access by route path.
+ */
+export function canAccessRoute(routePath, userRole) {
+  const item = getNavByRoute(routePath);
+  if (!item) return true;
+  return canAccessNavItem(item, userRole);
+}
+
+/**
+ * safeNavDestination — returns a navigation destination safe for the given role.
+ * Returns null if access is denied.
+ */
+export function safeNavDestination(key, userRole) {
+  const item = getNavItemByKey(key);
+  if (!item) return null;
+  if (!canAccessNavItem(item, userRole)) return null;
+  return { key: item.key, label: item.label, route: item.route };
 }
 
 export function getConsoleSection(key) {

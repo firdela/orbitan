@@ -7,6 +7,45 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #27H (Surgical Operational Hardening)
+
+### Hardened — Audit Event Standardisation (Package 1)
+- **`src/lib/audit.js`** — extended with `normalizeAuditPayload()` compatibility-safe normalisation layer: maps legacy field names to canonical AuditLog fields, strips secret/token values from state snapshots, validates required identifiers (`tenant_id`, `actor_id`, `action_type`, `target_entity`, `target_record_id`). Never fabricates tenant, actor, or target identifiers.
+- **`logAuditCritical()`** — fail-closed audit writer for security/compliance-critical mutations. Throws on write failure so calling mutations can roll back. Existing `logAudit()` remains fire-and-forget for operational events.
+- **`auditFrontend()`** — now normalises before writing; rejects malformed events with actionable console errors.
+- **New `ACTION_TYPES`:** `TRANSFER_CREATED`, `TRANSFER_SUBMITTED`, `TRANSFER_APPROVED`, `TRANSFER_PREPARING`, `TRANSFER_DISPATCHED`, `TRANSFER_PARTIALLY_RECEIVED`, `TRANSFER_RECEIVED`, `TRANSFER_RECONCILED`, `TRANSFER_CANCELLED`, `WORKFLOW_PUBLISHED`, `WORKFLOW_ARCHIVED`, `WORKFLOW_RESTORED`, `WORKFLOW_DUPLICATED`, `WORKFLOW_NEW_VERSION`.
+- **Audit failure policy:** Security-critical mutations fail closed (throw → rollback). Lower-risk operational events follow existing approved failure policy (log + continue). No fire-and-forget pathway for critical evidence.
+
+### Hardened — Inventory Transfer Server-Side Lifecycle (Package 2)
+- **New backend function:** `base44/functions/inventoryTransferService/entry.ts` — authoritative server-side lifecycle for inter-outlet stock transfers.
+- **Canonical transition map:** Draft → Requested → Approved → Preparing → Dispatched → Partially Received → Received → Reconciled. Cancelled valid from pre-reconciliation states. Rejects invalid order, stale-state, repeated, unauthorised, and cross-tenant transitions.
+- **Server-side validation:** Authenticated actor, role matrix, tenant scope, outlet pair (both belong to tenant, source ≠ destination), required line items, positive quantities, stock availability at dispatch.
+- **Ledger integrity:** Reuses canonical `InventoryItem` entity. Dispatch deducts from source; receive adds to destination (resolves or creates matching item by name+unit). Cancellation after dispatch reverses source deduction. No second ledger created.
+- **Transactional safeguards:** Pre-validates all stock before any write; rollback on failure (compensating mutations).
+- **Idempotency:** Repeat transition to current status returns success no-op (`idempotent: true`).
+- **Audit:** Every transition writes canonical `AuditLog` via fail-closed writer. Each stock mutation writes individual `AuditLog`. Audit failure rolls back the entire transition.
+- **Platform admin:** Must specify explicit `tenant_id`; unscoped mutations rejected with 400.
+- **Frontend refactor:** `TransferDetailSheet.jsx` and `TransferCreateDialog.jsx` now call the server-side service. Browser no longer authors transitions or performs stock mutations directly.
+
+### Hardened — Workflow Template Audit (Package 1)
+- **`WorkflowTemplatesPage.jsx`** — publish, archive, restore, duplicate, and new-version actions now write canonical `AuditLog` events via `auditFrontend`.
+
+### Hardened — Navigation Registry (Package 3)
+- **`src/lib/navigation-registry.js`** — extended with `ROUTE_ALIASES` map documenting every old route → canonical destination pair. `App.jsx` remains authoritative React Router config.
+- **New helpers:** `resolveAlias()`, `getNavByRoute()`, `isDeprecatedAlias()`, `canAccessRoute()`, `safeNavDestination()`. All existing redirects preserved. No alias removed.
+
+### Documentation
+- **ADR-0056** created: `src/docs/knowledge-hub/decision-records/0056-build-27h-operational-hardening.md`
+
+### Rejected Proposals (per ADR-0056)
+- `auditDispatcher` (new) → extended existing `audit.js`
+- `useOrbitQuery` → duplicates `useTenantScopedQuery`
+- `ManifestResolver` → extended `navigation-registry.js`
+- `OrbitanStateProvider` → breaks tenant/outlet scope separation
+- `CrudManager`, `OperationsOrchestrator`, `OrbitModal` → unnecessary abstraction
+- RLS sandbox/pilot bypass → violates security architecture
+- Removing legacy redirects → compatibility risk
+
 ## [Unreleased] — Build Package #27D (RC1 Runtime Hardening & Blocker Clearance)
 
 ### Hardened — Accessibility (shared layer, WCAG)

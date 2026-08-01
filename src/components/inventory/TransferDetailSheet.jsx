@@ -48,45 +48,41 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['inventory-transfers'] });
 
-  const transition = async (newStatus, extra = {}) => {
+  // ── Server-side transition via inventoryTransferService (Build #27H)
+  // The browser does NOT authorise transitions or mutate stock directly.
+  const transition = async (newStatus, opts = {}) => {
     setActionLoading(true); setError('');
     try {
-      const updates = { status: newStatus, ...extra };
-      if (newStatus === 'approved') {
-        updates.approver_id = user?.id;
-        updates.approver_name = user?.full_name || user?.email;
-        updates.approved_date = new Date().toISOString();
-      } else if (newStatus === 'dispatched') {
-        updates.dispatcher_id = user?.id;
-        updates.dispatcher_name = user?.full_name || user?.email;
-        updates.dispatched_date = new Date().toISOString();
-      } else if (newStatus === 'received' || newStatus === 'partially_received') {
-        updates.receiver_id = user?.id;
-        updates.receiver_name = user?.full_name || user?.email;
-        updates.received_date = new Date().toISOString();
-      } else if (newStatus === 'reconciled') {
-        updates.reconciled_date = new Date().toISOString();
-      } else if (newStatus === 'cancelled') {
-        updates.cancel_reason = cancelReason || 'Cancelled by user';
-      }
+      const payload = {
+        action: 'transition',
+        transfer_id: transfer.id,
+        target_status: newStatus,
+        tenant_id: user?.data?.tenant_id,
+      };
 
+      // Build receipt items if receiving
       if (discrepancyOpen && (newStatus === 'received' || newStatus === 'partially_received')) {
-        const itemsWithDiscrepancies = (transfer.items || []).map((it, idx) => {
+        payload.receipt_items = (transfer.items || []).map((it, idx) => {
           const disc = discrepancies[idx];
-          if (disc && disc.received_qty !== undefined) {
-            return {
-              ...it,
-              received_qty: Number(disc.received_qty),
-              discrepancy_qty: Number(it.dispatched_qty || it.approved_qty || it.requested_qty) - Number(disc.received_qty),
-              discrepancy_reason: disc.reason || '',
-            };
-          }
-          return { ...it, received_qty: it.dispatched_qty || it.approved_qty || it.requested_qty };
+          const receivedQty = disc?.received_qty !== undefined
+            ? Number(disc.received_qty)
+            : Number(it.dispatched_qty || it.approved_qty || it.requested_qty);
+          return {
+            inventory_item_id: it.inventory_item_id,
+            received_qty: receivedQty,
+            discrepancy_reason: disc?.reason || '',
+          };
         });
-        updates.items = itemsWithDiscrepancies;
       }
 
-      await base44.entities.InventoryTransfer.update(transfer.id, updates);
+      if (newStatus === 'cancelled') {
+        payload.cancel_reason = opts.cancelReason || cancelReason || 'Cancelled by user';
+      }
+
+      const res = await base44.functions.invoke('inventoryTransferService', payload);
+      const result = res?.data || res;
+      if (result?.error) throw new Error(result.error);
+
       refresh();
       setDiscrepancyOpen(false);
       setCancelOpen(false);
@@ -94,7 +90,7 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
       setDiscrepancies({});
       onOpenChange(false);
     } catch (e) {
-      setError(e.message || 'Action failed.');
+      setError(e.message || e?.response?.data?.error || 'Action failed.');
     } finally {
       setActionLoading(false);
     }
@@ -206,7 +202,7 @@ export default function TransferDetailSheet({ transfer, open, onOpenChange, onEd
                   <Button size="sm" onClick={() => transition('approved')} disabled={actionLoading}>
                     {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle2 className="w-4 h-4 mr-1" /> Approve</>}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => transition('cancelled', { cancel_reason: 'Request rejected' })} disabled={actionLoading}>
+                  <Button size="sm" variant="outline" onClick={() => transition('cancelled', { cancelReason: 'Request rejected' })} disabled={actionLoading}>
                     <XCircle className="w-4 h-4 mr-1" /> Reject
                   </Button>
                 </>
