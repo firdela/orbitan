@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const { action, tenant_id, code, state, xero_tenant_id } = body;
+    const { action, tenant_id, code, state, xero_tenant_id, force_confirm } = body;
 
     if (!action) {
       return Response.json({ error: 'action is required', error_code: 'CALLBACK_FAILED' }, { status: 400 });
@@ -190,6 +190,22 @@ Deno.serve(async (req) => {
         status: 'pending',
         environment: getSecret('STRIPE_SECRET_KEY')?.startsWith('sk_live') ? 'live' : 'preview',
         expires_at: expiresAt,
+      });
+
+      // Audit — connection initiated (Build #28.2F)
+      await base44.asServiceRole.entities.AuditLog.create({
+        tenant_id,
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: user.role,
+        action_type: 'XERO_CONNECTION_INITIATED',
+        module: 'finance',
+        target_entity: 'Tenant',
+        target_record_id: tenant_id,
+        details: `Xero connection initiated by ${user.full_name}.`,
+        shield_outcome: 'not_evaluated',
+        category: 'lifecycle',
+        event_source: 'xeroOAuth',
       });
 
       const params = new URLSearchParams({
@@ -387,52 +403,20 @@ Deno.serve(async (req) => {
         console.warn('[xeroOAuth] INTEGRATION_ENCRYPTION_KEY not configured — storing tokens as plaintext (security gap)');
       }
 
-      // ── Multi-organisation selection ──
-      if (xeroConnections.length > 1) {
-        const existing = await base44.asServiceRole.entities.IntegrationCredential.filter({
-          tenant_id: resolvedTenantId,
-          service_type: 'xero',
-        });
-
-        const credentialData: any = {
-          tenant_id: resolvedTenantId,
-          service_type: 'xero',
-          status: 'connected',
-          access_token: encAccessToken,
-          refresh_token: encRefreshToken,
-          token_encryption_version: tokenEncryptionVersion,
-          token_expires_at: new Date(Date.now() + (tokens.expires_in * 1000)).toISOString(),
-          scopes: XERO_SCOPES.split(' '),
-          connected_by_id: user.id,
-          connected_by_name: user.full_name,
-          connected_date: new Date().toISOString(),
-          last_refreshed_date: new Date().toISOString(),
-          last_error: '',
-        };
-
-        if (existing && existing.length > 0) {
-          await base44.asServiceRole.entities.IntegrationCredential.update(existing[0].id, credentialData);
-        } else {
-          await base44.asServiceRole.entities.IntegrationCredential.create(credentialData);
-        }
-
-        // Keep transaction in "processing" for select_organisation to complete
+      // ── Build org list for confirmation (Build #28.2F) ──
+      // Unified flow: always return the org list for customer confirmation.
+      // Single-org and multi-org both go through select_organisation after
+      // the customer confirms the organisation binding in the UI.
+      if (xeroConnections.length === 0) {
+        await base44.asServiceRole.entities.OAuthTransaction.update(txn.id, { status: 'failed' });
         return Response.json({
           success: false,
-          requires_org_selection: true,
-          state, // Pass through for the select_organisation action
-          connections: xeroConnections.map((c) => ({
-            tenantId: c.tenantId,
-            tenantName: c.tenantName,
-            tenantType: c.tenantType,
-          })),
+          error: 'No Xero organisations were found for your account. Please ensure your Xero account has at least one organisation.',
+          error_code: 'NO_ORGANISATIONS',
         });
       }
 
-      const primaryConnection = xeroConnections[0] || {};
-
-      // Persist the connection
-      const existing = await base44.asServiceRole.entities.IntegrationCredential.filter({
+      const existingCred = await base44.asServiceRole.entities.IntegrationCredential.filter({
         tenant_id: resolvedTenantId,
         service_type: 'xero',
       });
@@ -445,8 +429,6 @@ Deno.serve(async (req) => {
         refresh_token: encRefreshToken,
         token_encryption_version: tokenEncryptionVersion,
         token_expires_at: new Date(Date.now() + (tokens.expires_in * 1000)).toISOString(),
-        external_tenant_id: primaryConnection.tenantId || '',
-        external_tenant_name: primaryConnection.tenantName || '',
         scopes: XERO_SCOPES.split(' '),
         connected_by_id: user.id,
         connected_by_name: user.full_name,
@@ -455,41 +437,38 @@ Deno.serve(async (req) => {
         last_error: '',
       };
 
-      let credential;
-      if (existing && existing.length > 0) {
-        credential = await base44.asServiceRole.entities.IntegrationCredential.update(existing[0].id, credentialData);
+      if (existingCred && existingCred.length > 0) {
+        await base44.asServiceRole.entities.IntegrationCredential.update(existingCred[0].id, credentialData);
       } else {
-        credential = await base44.asServiceRole.entities.IntegrationCredential.create(credentialData);
+        await base44.asServiceRole.entities.IntegrationCredential.create(credentialData);
       }
 
-      // Mark transaction as consumed
-      await base44.asServiceRole.entities.OAuthTransaction.update(txn.id, {
-        status: 'consumed',
-        consumed_at: new Date().toISOString(),
-      });
-
-      // Audit log — no token values in the audit record
+      // Audit — organisations returned for selection
       await base44.asServiceRole.entities.AuditLog.create({
         tenant_id: resolvedTenantId,
         actor_id: user.id,
         actor_name: user.full_name,
         actor_role: user.role,
-        action_type: 'XERO_CONNECTED',
+        action_type: 'XERO_ORGS_RETURNED',
         module: 'finance',
         target_entity: 'IntegrationCredential',
-        target_record_id: credential.id,
-        details: `Xero connected by ${user.full_name}. Organisation: ${primaryConnection.tenantName || 'Unknown'}.`,
+        target_record_id: existingCred?.[0]?.id || '',
+        details: `Xero returned ${xeroConnections.length} organisation(s) for confirmation.`,
         shield_outcome: 'not_evaluated',
         category: 'lifecycle',
         event_source: 'xeroOAuth',
       });
 
+      // Keep transaction in "processing" for select_organisation to complete
       return Response.json({
-        success: true,
-        message: 'Xero connected successfully.',
-        credential_id: credential.id,
-        xero_tenant_name: primaryConnection.tenantName || 'Unknown',
-        xero_tenant_id: primaryConnection.tenantId || '',
+        success: false,
+        requires_org_selection: true,
+        state, // Pass through for the select_organisation action
+        connections: xeroConnections.map((c) => ({
+          tenantId: c.tenantId,
+          tenantName: c.tenantName,
+          tenantType: c.tenantType,
+        })),
       });
     }
 
@@ -526,6 +505,26 @@ Deno.serve(async (req) => {
 
       const resolvedTenantId = txn.tenant_id;
 
+      // ── Cross-tenant conflict check (Build #28.2F) ──
+      // Verify the selected Xero organisation isn't already bound to another
+      // Orbitan tenant. If it is, warn the customer and require explicit
+      // confirmation (force_confirm: true) before binding.
+      if (!force_confirm) {
+        const conflictCheck = await base44.asServiceRole.entities.IntegrationCredential.filter({
+          service_type: 'xero',
+          external_tenant_id: xero_tenant_id,
+          status: 'connected',
+        });
+        const conflict = conflictCheck?.find(c => c.tenant_id !== resolvedTenantId);
+        if (conflict) {
+          return Response.json({
+            success: false,
+            has_conflict: true,
+            conflict_message: 'This Xero organisation is already connected to another Orbitan workspace. Connecting it here will not affect the other workspace, but please confirm this is intentional.',
+          });
+        }
+      }
+
       const existing = await base44.asServiceRole.entities.IntegrationCredential.filter({
         tenant_id: resolvedTenantId,
         service_type: 'xero',
@@ -536,6 +535,9 @@ Deno.serve(async (req) => {
       }
 
       const cred = existing[0];
+      const previousOrgId = cred.external_tenant_id || '';
+      const previousOrgName = cred.external_tenant_name || '';
+      const isOrgChanged = !!(previousOrgId && previousOrgId !== xero_tenant_id);
 
       // Decrypt access token to fetch org name from Xero connections endpoint
       let accessToken = cred.access_token;
@@ -557,9 +559,11 @@ Deno.serve(async (req) => {
         // Fallback: use the ID as name
       }
 
+      const finalOrgName = orgName || xero_tenant_id;
+
       await base44.asServiceRole.entities.IntegrationCredential.update(cred.id, {
         external_tenant_id: xero_tenant_id,
-        external_tenant_name: orgName || xero_tenant_id,
+        external_tenant_name: finalOrgName,
         status: 'connected',
         last_error: '',
       });
@@ -575,11 +579,13 @@ Deno.serve(async (req) => {
         actor_id: user.id,
         actor_name: user.full_name,
         actor_role: user.role,
-        action_type: 'XERO_ORG_SELECTED',
+        action_type: isOrgChanged ? 'XERO_ORG_CHANGED' : 'XERO_ORG_CONFIRMED',
         module: 'finance',
         target_entity: 'IntegrationCredential',
         target_record_id: cred.id,
-        details: `Xero organisation selected: ${orgName || xero_tenant_id}.`,
+        details: isOrgChanged
+          ? `Xero organisation changed from "${previousOrgName}" to "${finalOrgName}".`
+          : `Xero organisation confirmed: ${finalOrgName}.`,
         shield_outcome: 'not_evaluated',
         category: 'lifecycle',
         event_source: 'xeroOAuth',
@@ -588,8 +594,65 @@ Deno.serve(async (req) => {
       return Response.json({
         success: true,
         message: 'Xero organisation connected.',
-        xero_tenant_name: orgName || xero_tenant_id,
+        xero_tenant_name: finalOrgName,
       });
+    }
+
+    // ── ACTION: cancel_connection (Build #28.2F) ──
+    // Called when the customer cancels during organisation confirmation.
+    // Marks the OAuth transaction as consumed (prevents replay) and cleans
+    // up any orphaned credential that was never bound to an organisation.
+    if (action === 'cancel_connection') {
+      if (!state) {
+        return Response.json({ error: 'state is required', error_code: 'CALLBACK_FAILED' }, { status: 400 });
+      }
+
+      const cancelHash = await sha256Hash(state);
+      const cancelTxns = await base44.asServiceRole.entities.OAuthTransaction.filter({
+        nonce_hash: cancelHash,
+        provider: 'xero',
+      });
+
+      if (cancelTxns && cancelTxns.length > 0) {
+        const txn = cancelTxns[0];
+
+        if (txn.user_id !== user.id) {
+          return Response.json({ error: 'Authorisation state does not belong to this user.', error_code: 'INVALID_STATE' }, { status: 403 });
+        }
+
+        if (txn.status === 'processing' || txn.status === 'pending') {
+          await base44.asServiceRole.entities.OAuthTransaction.update(txn.id, {
+            status: 'consumed',
+            consumed_at: new Date().toISOString(),
+          });
+
+          // Clean up orphaned credential (never bound to an org)
+          const orphanCreds = await base44.asServiceRole.entities.IntegrationCredential.filter({
+            tenant_id: txn.tenant_id,
+            service_type: 'xero',
+          });
+          if (orphanCreds && orphanCreds.length > 0 && !orphanCreds[0].external_tenant_id) {
+            await base44.asServiceRole.entities.IntegrationCredential.delete(orphanCreds[0].id);
+          }
+
+          await base44.asServiceRole.entities.AuditLog.create({
+            tenant_id: txn.tenant_id,
+            actor_id: user.id,
+            actor_name: user.full_name,
+            actor_role: user.role,
+            action_type: 'XERO_CONNECTION_CANCELLED',
+            module: 'finance',
+            target_entity: 'IntegrationCredential',
+            target_record_id: orphanCreds?.[0]?.id || '',
+            details: 'Xero connection cancelled by user during organisation confirmation.',
+            shield_outcome: 'not_evaluated',
+            category: 'lifecycle',
+            event_source: 'xeroOAuth',
+          });
+        }
+      }
+
+      return Response.json({ success: true, message: 'Connection cancelled.' });
     }
 
     // ── ACTION: refresh_token ──

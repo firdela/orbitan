@@ -28,6 +28,7 @@ import {
   Building2, AlertTriangle,
 } from 'lucide-react';
 import IntegrationCatalog from '@/components/platform/IntegrationCatalog';
+import XeroConfirmDialog from '@/components/platform/XeroConfirmDialog';
 import { cn } from '@/lib/utils';
 import { classifyIntegrationError } from '@/lib/integration-errors';
 
@@ -125,6 +126,9 @@ export default function IntegrationHubPage() {
   const [testResult, setTestResult] = useState(null);
   const [syncQueue, setSyncQueue] = useState([]);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [confirmOrg, setConfirmOrg] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [conflictInfo, setConflictInfo] = useState(null);
 
   const fetchXeroStatus = useCallback(async () => {
     if (!tenantId) return;
@@ -204,9 +208,15 @@ export default function IntegrationHubPage() {
             toast({ title: 'Xero Connected', description: res.data.message });
             fetchXeroStatus();
           } else if (res.data?.requires_org_selection) {
-            // Multiple Xero organisations — user must select one
+            // Build #28.2F — always show confirmation for org selection
             setXeroStatus((prev) => ({ ...prev, pending_org_selection: res.data.connections, pending_state: res.data.state }));
-            toast({ title: 'Select Organisation', description: 'Choose which Xero organisation to connect.' });
+            if (res.data.connections.length === 1) {
+              // Single org — skip selector, go straight to confirmation dialog
+              setConfirmOrg(res.data.connections[0]);
+              setConflictInfo(null);
+            } else {
+              toast({ title: 'Select Organisation', description: 'Choose which Xero organisation to connect.' });
+            }
           } else {
             toast({ title: 'Connection Failed', description: res.data?.error || 'Could not connect to Xero.', variant: 'destructive' });
           }
@@ -276,39 +286,70 @@ export default function IntegrationHubPage() {
     }
   };
 
-  const handleSelectOrg = async (xeroTenantId, xeroTenantName) => {
+  // ── Build #28.2F — Organisation confirmation flow ──
+  // User clicks an org in the selector → open confirmation dialog
+  const handleSelectOrg = (org) => {
+    setConfirmOrg(org);
+    setConflictInfo(null);
+  };
+
+  // User confirms in the dialog → call select_organisation (with force_confirm if conflict acknowledged)
+  const handleConfirmOrg = async () => {
+    if (!confirmOrg) return;
     const state = xeroStatus?.pending_state;
     if (!state) {
       toast({ title: 'Session Expired', description: 'Please reconnect Xero to continue.', variant: 'destructive' });
       return;
     }
-    setConnecting(true);
+    setConfirmLoading(true);
     try {
       const res = await base44.functions.invoke('xeroOAuth', {
         action: 'select_organisation',
         state,
-        xero_tenant_id: xeroTenantId,
+        xero_tenant_id: confirmOrg.tenantId,
+        force_confirm: !!conflictInfo,
       });
       if (res.data?.success) {
-        toast({ title: 'Xero Connected', description: `Connected to ${xeroTenantName || 'your Xero organisation'}.` });
-        setXeroStatus((prev) => ({ ...prev, pending_org_selection: null }));
+        toast({ title: 'Xero Connected', description: `Connected to ${confirmOrg.tenantName || 'your Xero organisation'}.` });
+        setConfirmOrg(null);
+        setConflictInfo(null);
+        setXeroStatus((prev) => ({ ...prev, pending_org_selection: null, pending_state: null }));
         fetchXeroStatus();
+      } else if (res.data?.has_conflict) {
+        setConflictInfo({ has_conflict: true, conflict_message: res.data.conflict_message });
+      } else {
+        toast({ title: 'Connection Failed', description: res.data?.error || 'Could not connect to Xero.', variant: 'destructive' });
       }
     } catch (err) {
       const e = classifyIntegrationError(err, { action: 'connect', service: 'xero' });
       toast({ title: e.title, description: e.message, variant: e.variant === 'error' ? 'destructive' : 'default' });
     } finally {
-      setConnecting(false);
-      const cbParams = new URLSearchParams(window.location.search);
-      cbParams.delete('code');
-      cbParams.delete('state');
-      cbParams.delete('error');
-      cbParams.delete('error_description');
-      const cleanUrl = cbParams.toString()
-        ? `${window.location.pathname}?${cbParams.toString()}`
-        : window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
+      setConfirmLoading(false);
     }
+  };
+
+  // User cancels — clean up the pending OAuth transaction
+  const handleCancelConnection = async () => {
+    const state = xeroStatus?.pending_state;
+    setConfirmOrg(null);
+    setConflictInfo(null);
+    if (state) {
+      try {
+        await base44.functions.invoke('xeroOAuth', { action: 'cancel_connection', state });
+      } catch {
+        // best-effort cleanup
+      }
+    }
+    setXeroStatus((prev) => ({ ...prev, pending_org_selection: null, pending_state: null }));
+    const cbParams = new URLSearchParams(window.location.search);
+    cbParams.delete('code');
+    cbParams.delete('state');
+    cbParams.delete('error');
+    cbParams.delete('error_description');
+    const cleanUrl = cbParams.toString()
+      ? `${window.location.pathname}?${cbParams.toString()}`
+      : window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
   };
 
   const handleTestConnection = async () => {
@@ -506,7 +547,7 @@ export default function IntegrationHubPage() {
                     <button
                       key={org.tenantId}
                       type="button"
-                      onClick={() => handleSelectOrg(org.tenantId, org.tenantName)}
+                      onClick={() => handleSelectOrg(org)}
                       disabled={connecting}
                       className="w-full flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:bg-accent transition-colors text-left"
                     >
@@ -825,6 +866,20 @@ export default function IntegrationHubPage() {
 
       {/* ── Full Integration Catalog ── */}
       <IntegrationCatalog />
+
+      {/* ── Build #28.2F — Organisation Confirmation Dialog ── */}
+      <XeroConfirmDialog
+        open={!!confirmOrg}
+        xeroOrg={confirmOrg}
+        workspaceName={activeTenant?.name}
+        workspaceId={tenantId}
+        hasConflict={!!conflictInfo}
+        conflictMessage={conflictInfo?.conflict_message}
+        loading={confirmLoading}
+        onConfirm={handleConfirmOrg}
+        onChooseAnother={xeroStatus?.pending_org_selection?.length > 1 ? () => { setConfirmOrg(null); setConflictInfo(null); } : undefined}
+        onCancel={handleCancelConnection}
+      />
     </div>
   );
 }
