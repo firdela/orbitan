@@ -124,7 +124,7 @@ export default function FinanceIntegrationPage() {
     if (code && stateTenant && stateTenant === tenantId) {
       (async () => {
         try {
-          const res = await base44.functions.invoke('xeroOAuth', { action: 'exchange_code', tenant_id: stateTenant, code, redirect_uri: window.location.origin + window.location.pathname });
+          const res = await base44.functions.invoke('xeroOAuth', { action: 'exchange_code', tenant_id: stateTenant, code });
           const data = res.data || res;
           if (data.success) {
             toast({ title: 'Xero connected', description: `Connected to ${data.xero_tenant_name || 'Xero'}` });

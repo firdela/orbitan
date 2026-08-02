@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { useWorkspace } from '@/lib/workspace';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,7 +80,10 @@ function ReadyDot({ ok, label }) {
 export default function IntegrationHubPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const tenantId = user?.data?.tenant_id || user?.tenant_id;
+  const { activeTenantId } = useWorkspace();
+  // Resolve tenantId from: outlet context (workspace route) → workspace provider → user profile.
+  // Platform admins viewing from LeaderOrg need the workspace switcher's active tenant.
+  const tenantId = activeTenantId || user?.data?.tenant_id || user?.tenant_id;
   const isAdmin = user?.role === 'admin';
   const canManage = ['admin', 'tenant_admin'].includes(user?.role);
 

@@ -115,12 +115,11 @@ export const PLATFORM_NAVIGATION = {
     {
       id: 'governance',
       title: 'Governance',
-      description: 'Shield governance, audit, compliance, and access control',
+      description: 'Shield governance, audit, and access control',
       icon: 'Shield',
       items: [
         NAV_ITEMS['shield-command'],
         NAV_ITEMS['audit-logs'],
-        NAV_ITEMS.compliance,
         NAV_ITEMS['access-control'],
       ],
     },

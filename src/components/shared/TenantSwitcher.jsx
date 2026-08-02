@@ -9,9 +9,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 import { useWorkspace } from '@/lib/workspace';
 import { INDUSTRY_LABELS } from '@/lib/orbitan-config';
+import { DEMO_TENANTS } from '@/lib/use-tenant';
 import { Building2, ChevronRight, Check, Shield, Search, Plus, ArrowRight, Layers } from 'lucide-react';
 import {
   DropdownMenu,
@@ -53,6 +56,36 @@ export default function TenantSwitcher({ className }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
 
+  // ── Hydrate Tenant records for ALL memberships ──
+  // The membership objects carry organisation_id but use the Employee's
+  // full_name as display_name. We fetch the actual Tenant records so the
+  // switcher shows the business/workspace name, not the user's personal name.
+  const membershipIds = useMemo(
+    () => memberships.map((m) => m.organisation_id).filter(Boolean),
+    [memberships]
+  );
+
+  const { data: tenantRecords = [] } = useQuery({
+    queryKey: ['switcher-tenants', membershipIds.join(',')],
+    queryFn: async () => {
+      if (!membershipIds.length) return [];
+      const results = await Promise.all(
+        membershipIds.map((id) => base44.entities.Tenant.get(id).catch(() => null))
+      );
+      return results.filter(Boolean);
+    },
+    enabled: membershipIds.length > 0,
+    staleTime: 60 * 1000,
+  });
+
+  // Lookup map: tenant_id → Tenant record (DB first, DEMO_TENANTS fallback)
+  const tenantMap = useMemo(() => {
+    const map = {};
+    tenantRecords.forEach((t) => { map[t.id] = t; });
+    DEMO_TENANTS.forEach((t) => { if (!map[t.id]) map[t.id] = t; });
+    return map;
+  }, [tenantRecords]);
+
   const handleSwitch = (membership) => {
     const ok = switchWorkspace(membership.organisation_id);
     if (ok) {
@@ -63,13 +96,17 @@ export default function TenantSwitcher({ className }) {
   const filtered = useMemo(() => {
     if (!query.trim()) return memberships;
     const q = query.toLowerCase();
-    return memberships.filter(
-      (m) =>
-        (m.display_name || '').toLowerCase().includes(q) ||
-        (m.industry || '').toLowerCase().includes(q) ||
-        (INDUSTRY_LABELS[m.industry] || '').toLowerCase().includes(q)
-    );
-  }, [memberships, query]);
+    return memberships.filter((m) => {
+      const tenant = tenantMap[m.organisation_id];
+      const name = tenant?.name || m.display_name || '';
+      const industry = tenant?.industry || m.industry || '';
+      return (
+        name.toLowerCase().includes(q) ||
+        industry.toLowerCase().includes(q) ||
+        (INDUSTRY_LABELS[industry] || '').toLowerCase().includes(q)
+      );
+    });
+  }, [memberships, query, tenantMap]);
 
   return (
     <DropdownMenu>
@@ -143,7 +180,10 @@ export default function TenantSwitcher({ className }) {
           filtered.map((membership) => {
             const isActive = activeMembership?.organisation_id === membership.organisation_id;
             const role = membership.role_assignments?.[0]?.role || membership.role;
-            const industry = membership.industry || (isActive ? activeTenant?.industry : null);
+            const tenant = tenantMap[membership.organisation_id];
+            const workspaceName = tenant?.name || 'Unnamed Workspace';
+            const industry = tenant?.industry || membership.industry || (isActive ? activeTenant?.industry : null);
+            const tenantStatus = tenant?.status || null;
             return (
               <DropdownMenuItem
                 key={membership.organisation_id}
@@ -154,9 +194,14 @@ export default function TenantSwitcher({ className }) {
                 )}
               >
                 <div className="flex items-center justify-between w-full gap-2">
-                  <span className="font-medium text-sm truncate">
-                    {membership.display_name || 'Unnamed Workspace'}
-                  </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-md bg-orbitan-blue-light flex items-center justify-center flex-shrink-0">
+                      <Building2 className="w-3.5 h-3.5 text-orbitan-blue" />
+                    </div>
+                    <span className="font-medium text-sm truncate">
+                      {workspaceName}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     {isActive ? (
                       <Check className="w-3.5 h-3.5 text-orbitan-blue" />
@@ -165,12 +210,15 @@ export default function TenantSwitcher({ className }) {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap pl-9">
                   <RoleBadge role={role} />
                   {industry && (
                     <span className="text-[10px] text-muted-foreground">
                       {INDUSTRY_LABELS[industry] || industry}
                     </span>
+                  )}
+                  {tenantStatus && !isActive && (
+                    <span className="text-[10px] text-muted-foreground/70 capitalize">{tenantStatus}</span>
                   )}
                   {isActive && (
                     <span className="text-[10px] text-orbitan-green-700 font-medium">Active</span>

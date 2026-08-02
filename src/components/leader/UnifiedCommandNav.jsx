@@ -64,7 +64,6 @@ const NAV_CATEGORIES = [
     items: [
       { key: 'shield-command', type: 'tab' },
       { key: 'audit-logs', type: 'route' },
-      { key: 'compliance', type: 'route' },
       { key: 'access-control', type: 'route' },
     ],
   },
@@ -342,7 +341,7 @@ export default function UnifiedCommandNav({ activeTab, onTabChange }) {
       <div className="md:hidden mb-5">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="w-full gap-2">
+            <Button variant="outline" className="w-full gap-2" aria-label="Open platform navigation menu">
               <Menu className="w-4 h-4" /> Navigation
             </Button>
           </SheetTrigger>

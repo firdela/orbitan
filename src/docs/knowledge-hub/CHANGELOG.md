@@ -7,6 +7,46 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2 (Workspace Identity, Xero Recovery, Leader Console IA & Dashboard Refinement)
+
+### Fixed — Workspace Switcher Identity
+- **Root cause:** `TenantSwitcher` used `membership.display_name` (Employee `full_name`) as the primary label, causing all four workspaces to display "Firdaus (Founder)" instead of the actual tenant/business name.
+- **Fix:** Added a presentation-layer query to hydrate Tenant records for all memberships. Each workspace entry now displays the tenant name (e.g., "Izaliqa Bakes", "Taqueria Pte Ltd") with a building icon, role badge, industry, and status. Deduplicated by canonical tenant ID. The `MembershipResolver.translateEmployee` function is unchanged — this is a display-only correction.
+
+### Fixed — Xero OAuth "No Workspace Selected"
+- **Root cause:** `IntegrationHubPage` resolved `tenantId` only from `user.data.tenant_id || user.tenant_id`. Platform admins viewing from the Leader Console have no `tenant_id` on their User record, so the workspace context was always null — triggering the "No Workspace Selected" error even when a workspace was visibly selected.
+- **Fix:** Added `useWorkspace().activeTenantId` as the primary fallback for tenant resolution. The Integration Hub now correctly inherits the active workspace from the `WorkspaceProvider` context. No new providers, no `?tenant=id` URL parameters, no megaprovider.
+
+### Fixed — Toast Notification Dismiss & Auto-Dismiss
+- **Root cause:** `ToastClose` button had `opacity-0` (invisible unless hovering), and toasts had no auto-dismiss timer (`TOAST_REMOVE_DELAY = 1000000`). Toasts persisted indefinitely and could not be dismissed by touch or keyboard.
+- **Fix:** Made `ToastClose` always visible (`opacity-100`). Added auto-dismiss: default toasts dismiss after 6 seconds; destructive toasts persist until manually dismissed. Reduced `TOAST_LIMIT` from 20 to 5 to prevent stacking. No migration to another toast library — the existing `useToast` abstraction was corrected.
+
+### Fixed — Governance/Compliance Information Architecture
+- **Root cause:** Tenant operational Compliance was incorrectly placed under the platform Governance dropdown in `UnifiedCommandNav`. The `compliance` nav item pointed to `/governance` (public governance overview), which is a public trust/legal page, not a platform governance tool.
+- **Fix:** Removed `compliance` from the Governance dropdown in both `UnifiedCommandNav` and the navigation registry's `PLATFORM_NAVIGATION` governance group. Shield Command, Audit Centre, and Access Control remain. Tenant operational compliance belongs in the tenant workspace navigation, not the platform Governance dropdown.
+
+### Improved — Leader Console Dashboard Hierarchy
+- **Before:** KPI StatCards → Nexus Daily Brief → Tabs (Overview → QuickAccess)
+- **After:** Nexus Daily Brief → Quick Access (always visible) → Tabs (Overview → Configurable KPI Widgets)
+- Nexus Daily Brief is now the highest-priority content beneath the page header.
+- Quick Access is always visible immediately below the Daily Brief, not hidden inside the Overview tab.
+- KPI widgets (Active Tenants, Module Activations, Industry Packs, Platform Health) are now in the Overview tab and are configurable per user.
+
+### Added — Configurable Leader Overview Widgets
+- New component: `LeaderOverviewWidgets` — configurable KPI widget grid for the Leader Console Overview.
+- Reuses the same user-preference mechanism as Quick Access (`base44.auth.updateMe`). No new `DashboardEngine`, no `WidgetManifest`, no new entity.
+- Users can: add widgets, remove widgets, reorder (move up/down), restore defaults, and save their layout.
+- Layout persists across sessions and devices via the user profile.
+
+### Removed — Personal Founder Attribution
+- Removed personal founder and partner names from the Leader Console "About" tab. Replaced with platform branding only.
+- Footer already uses `© 2026 Orbitan. All rights reserved.` — no personal names in the global footer.
+
+### Accessibility
+- Added `aria-label="Open platform navigation menu"` to the mobile navigation trigger.
+- Toast close button is now always visible (WCAG 2.2 AA — visible focus and operable controls).
+- Toast auto-dismiss ensures notifications do not block workspace interaction.
+
 ## [Unreleased] — Build #27H.1 (Workflow Template Service & Error Contract)
 
 ### Added — Workflow Template Server-Side Service

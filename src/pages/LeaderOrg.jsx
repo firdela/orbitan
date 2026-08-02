@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { PLATFORM_IDENTITY, MODULES, INDUSTRY_PACKS, INDUSTRY_LABELS, OPERATING_CYCLE } from '@/lib/orbitan-config';
+import { PLATFORM_IDENTITY, MODULES, OPERATING_CYCLE } from '@/lib/orbitan-config';
 import { DEMO_TENANTS } from '@/lib/use-tenant.jsx';
 import { LAUNCH_MANIFESTS, getManifestList } from '@/lib/tenant-registry';
 import { getActivePacks, getFuturePacks } from '@/lib/orbitan-engine';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
 import PlatformFooter from '@/components/layout/PlatformFooter';
-import StatCard from '@/components/shared/StatCard';
 import { PlanBadge } from '@/components/shared/PackBadge';
 import { CapabilityBadge, CapabilityStack } from '@/components/shared/CapabilityBadge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +17,7 @@ import UnifiedCommandNav from '@/components/leader/UnifiedCommandNav';
 import CompactLeaderHeader from '@/components/leader/CompactLeaderHeader';
 import NexusDailyBrief from '@/components/leader/NexusDailyBrief';
 import QuickAccess from '@/components/leader/QuickLaunchRail';
+import LeaderOverviewWidgets from '@/components/leader/LeaderOverviewWidgets';
 import TenantCommandCard from '@/components/leader/TenantCommandCard';
 import SubscriptionPlansAccordion from '@/components/subscriptions/SubscriptionPlansAccordion';
 import OrchestratorTab from '@/components/orchestrator/OrchestratorTab';
@@ -194,25 +194,22 @@ export default function LeaderOrg() {
           version={PLATFORM_IDENTITY.version}
         />
 
-        {/* Operational KPIs — compact */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <StatCard compact title="Active Tenants" value={activeTenants} subtitle={`${totalTenants} total`} icon={Building2} color="blue" trend="up" trendValue="+3 this month" onClick={() => setActiveTab('tenants')} help={{ title: 'Active Tenants', content: 'Pilot organisations currently provisioned on OrbitanOS. Click to open the Tenant Command Center and manage capabilities, modules, and activation status.' }} />
-          <StatCard compact title="Module Activations" value={totalModuleUsage} subtitle="Across all tenants" icon={Layers} color="purple" onClick={() => setActiveTab('modules')} help={{ title: 'Module Activations', content: 'Total enabled modules across all pilot tenants. Click to view the full platform module registry and Industry Pack catalog.' }} />
-          <StatCard compact title="Industry Packs" value={Object.keys(INDUSTRY_PACKS).length} subtitle="Available packs" icon={Package} color="green" onClick={() => setActiveTab('modules')} help={{ title: 'Industry Packs', content: 'Self-aware capability blueprints available for activation — F&B, Retail, Recycling, and more. Click to browse active and future-proofed packs.' }} />
-          <StatCard compact title="Platform Health" value="100%" subtitle="All systems operational" icon={CheckCircle2} color="green" trend="up" onClick={() => setActiveTab('system-controls')} help={{ title: 'Platform Health', content: 'Real-time status of OrbitanOS backend engines, automations, and integrations. Click to open the System Health Scoreboard.' }} />
-        </div>
-
-        {/* Orbit Nexus Daily Brief */}
+        {/* 1. Orbit Nexus Daily Brief — highest priority content */}
         <div className="mb-4">
           <NexusDailyBrief data={csData} loading={csLoading} error={csError} />
+        </div>
+
+        {/* 2. Quick Access — immediately below the Daily Brief (always visible) */}
+        <div className="mb-5">
+          <QuickAccess />
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <UnifiedCommandNav activeTab={activeTab} onTabChange={setActiveTab} />
 
-          {/* Overview Tab — Quick Access + Summary */}
+          {/* Overview Tab — Configurable KPI Widgets */}
           <TabsContent value="overview">
-            <QuickAccess />
+            <LeaderOverviewWidgets tenants={tenants} onNavigate={setActiveTab} />
           </TabsContent>
 
           {/* Tenants Command Center Tab */}
@@ -486,18 +483,6 @@ export default function LeaderOrg() {
                   <OrbitanLogo size="lg" showOS />
                 </div>
                 <div className="space-y-4 text-sm">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-orbitan-blue-light rounded-xl p-4">
-                      <p className="text-xs text-muted-foreground mb-1">Created &amp; Owned By</p>
-                      <p className="font-heading font-bold text-foreground">Muhammad Firdaus<br />Bin Ismail</p>
-                      <p className="text-xs text-muted-foreground mt-1">Founder &amp; Product Owner</p>
-                    </div>
-                    <div className="bg-orbitan-green-light rounded-xl p-4">
-                      <p className="text-xs text-muted-foreground mb-1">Strategic Partner</p>
-                      <p className="font-heading font-bold text-foreground">Hamka Ariffin</p>
-                      <p className="text-xs text-muted-foreground mt-1">Renewed Resources Pte Ltd<br />Business Dev &amp; Franchise Lead</p>
-                    </div>
-                  </div>
                   <div className="border border-border rounded-xl p-4 space-y-2">
                     <div className="flex justify-between"><span className="text-muted-foreground">Platform</span><span className="font-medium">Orbitan &amp; OrbitanOS</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Version</span><span className="font-medium">v{PLATFORM_IDENTITY.version}</span></div>
