@@ -163,7 +163,15 @@ export default function IntegrationHubPage() {
         })
         .finally(() => {
           setConnecting(false);
-          window.history.replaceState({}, document.title, '/platform/integrations');
+          // Clean OAuth callback params from URL — preserve current path + other query params
+          // (e.g. ?section=integration-hub when embedded in LeaderOrg)
+          const cbParams = new URLSearchParams(window.location.search);
+          cbParams.delete('code');
+          cbParams.delete('state');
+          const cleanUrl = cbParams.toString()
+            ? `${window.location.pathname}?${cbParams.toString()}`
+            : window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
         });
     }
   }, [toast, fetchXeroStatus]);
@@ -216,7 +224,13 @@ export default function IntegrationHubPage() {
       toast({ title: e.title, description: e.message, variant: e.variant === 'error' ? 'destructive' : 'default' });
     } finally {
       setConnecting(false);
-      window.history.replaceState({}, document.title, '/platform/integrations');
+      const cbParams = new URLSearchParams(window.location.search);
+      cbParams.delete('code');
+      cbParams.delete('state');
+      const cleanUrl = cbParams.toString()
+        ? `${window.location.pathname}?${cbParams.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
     }
   };
 

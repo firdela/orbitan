@@ -431,10 +431,7 @@ export default function LeaderOrg() {
             <EmbeddedSection><TenantMetrics /></EmbeddedSection>
           </TabsContent>
 
-          <TabsContent value="integration-health">
-            <EmbeddedSection><IntegrationHubPage /></EmbeddedSection>
-          </TabsContent>
-
+          {/* integration-health consolidated into integration-hub (same page, same route) */}
           <TabsContent value="system-health">
             <EmbeddedSection><OperationalHealthDashboard /></EmbeddedSection>
           </TabsContent>

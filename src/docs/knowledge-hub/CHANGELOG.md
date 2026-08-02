@@ -7,6 +7,28 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2C (Xero INVALID_SCOPE Fix & Integration Hub Stabilisation)
+
+### Fixed — Xero INVALID_SCOPE Error
+- **Root cause:** Xero's OAuth 2.0 (built on IdentityServer) requires the `openid` scope to be present whenever `offline_access` is requested. Without `openid`, Xero rejects the authorization request with `invalid_scope`, preventing the OAuth flow from starting. The Build #28.2B scopes were `offline_access accounting.transactions accounting.settings.read accounting.contacts` — missing `openid`.
+- **Fix:** Added `openid` as the first scope in `XERO_SCOPES`. Full scope string is now `openid offline_access accounting.transactions accounting.settings.read accounting.contacts`. Verified via runtime test: `required_scopes` now includes `openid`.
+- **Evidence:** Xero Developer documentation and StackOverflow confirm `openid` is required alongside `offline_access`.
+
+### Fixed — Integration Hub URL Rewrite Bug
+- **Root cause:** The IntegrationHubPage OAuth callback handler and org-selection handler hardcoded `window.history.replaceState({}, document.title, '/platform/integrations')`. When the page was embedded as a tab inside LeaderOrg (`/leader-org?section=integration-hub`), this rewrote the URL to `/platform/integrations` — a different route. A browser refresh after the callback landed the user on the standalone page, not LeaderOrg.
+- **Fix:** Changed URL cleanup to remove only `code` and `state` query parameters, preserving the current pathname and other query params (e.g., `section=integration-hub`). Applied to both the OAuth callback handler and the `handleSelectOrg` function.
+
+### Fixed — Duplicate Integration Hub Rendering
+- **Root cause:** LeaderOrg rendered `<IntegrationHubPage />` under two separate tab keys (`integration-hub` and `integration-health`), both showing the same content. The `integration-health` tab was redundant.
+- **Fix:** Removed the `integration-health` TabsContent from LeaderOrg. Changed the `integration-health` nav item in UnifiedCommandNav from `type: 'tab'` to `type: 'route'`, so it navigates to the standalone `/platform/integrations` page. The `integration-hub` nav item remains `type: 'tab'`.
+
+### Verified — Route Integrity
+- `/platform/integrations` — standalone page ✅
+- `/leader-org?section=integration-hub` — embedded tab in LeaderOrg ✅
+- `/integration-health` → redirects to `/platform/integrations` ✅
+- `/integration-directory` → redirects to `/leader-org?section=integration-hub` ✅
+- No dead navigation links found in navigation registry, UnifiedCommandNav, GlobalSearchBar, or route aliases.
+
 ## [Unreleased] — Build #28.2B (Xero OAuth Domain, Callback & Security Hardening)
 
 ### Fixed — Xero Configuration & Domain Alignment

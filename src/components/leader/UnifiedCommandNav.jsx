@@ -73,7 +73,7 @@ const NAV_CATEGORIES = [
     icon: Plug,
     primary: { key: 'integration-hub', type: 'tab', label: 'Integration Hub' },
     items: [
-      { key: 'integration-health', type: 'tab' },
+      { key: 'integration-health', type: 'route' },
     ],
   },
   {

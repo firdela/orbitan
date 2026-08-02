@@ -37,7 +37,12 @@ const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
 const XERO_REVOCATION_URL = 'https://identity.xero.com/connect/revocation';
 
 // ── Least-privilege scopes ──
+// NOTE: Xero's OAuth 2.0 (built on IdentityServer) requires `openid` to be
+// present whenever `offline_access` is requested. Without `openid`, Xero
+// rejects the authorization request with `invalid_scope`. This was the root
+// cause of the INVALID_SCOPE error in Build #28.2C.
 const XERO_SCOPES = [
+  'openid',
   'offline_access',
   'accounting.transactions',
   'accounting.settings.read',
