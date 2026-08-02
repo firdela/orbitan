@@ -7,6 +7,34 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2B (Xero OAuth Domain, Callback & Security Hardening)
+
+### Fixed — Xero Configuration & Domain Alignment
+- **Root cause:** Secret keys were misnamed (`XERO_Orbitan_ClientID` vs `XERO_CLIENT_ID`), causing `configured: false` and locking the Connect Xero button. Additionally, the redirect URI was derived from HTTP headers with a hardcoded `app.orbitan.com` fallback, conflicting with the canonical domain `https://orbitan.io`.
+- **Fix:** Backend now reads exactly `XERO_CLIENT_ID`, `XERO_CLIENT_SECRET`, and `XERO_REDIRECT_URI` from the environment. The redirect URI is backend-only, validated against an allowlist of approved Orbitan origins (`https://orbitan.io`, `https://www.orbitan.io`). No more origin/referer derivation. No more `app.orbitan.com` fallback.
+- **Canonical callback URI:** `https://orbitan.io/platform/integrations` — must be registered in the Xero Developer Portal.
+
+### Added — OAuth Transaction (Single-Use State)
+- **Before:** OAuth state was an HMAC-signed token — stateless, consumed state could be replayed.
+- **After:** New `OAuthTransaction` entity persists single-use, server-side state. State is a random 32-byte nonce; only its SHA-256 hash is stored. Lifecycle: `pending → processing → consumed`. Supports expiry (10-min TTL), user binding, tenant binding, and duplicate-click prevention. Already-consumed state is rejected.
+
+### Added — Token Encryption at Rest (AES-GCM)
+- **Before:** Access and refresh tokens stored as plaintext in `IntegrationCredential`, protected only by RLS.
+- **After:** Tokens are AES-GCM encrypted via `base44/shared/cryptoUtils.ts` using `INTEGRATION_ENCRYPTION_KEY`. Unique IV per value, authenticated additional data (provider+tenant context), versioned ciphertext format. Backward-compatible with legacy plaintext during decryption. RLS is not described as encryption — it provides isolation, not confidentiality at rest.
+
+### Added — Invoice Idempotency
+- **Before:** Duplicate prevention relied solely on disabled frontend buttons.
+- **After:** `FinanceSyncQueue` now has an `idempotency_key` field (deterministic: `tenant_id:source_entity:source_record_id:queue_type:erp_target`). The `financeSyncProcessor` checks for existing synced entries with the same key before making Xero API calls. Handles: double-clicks, page refreshes, retries, job replays, and the edge case where Xero succeeded but Orbitan timed out.
+
+### Added — Structured Error Codes
+- All `xeroOAuth` error responses now include an `error_code` field (`CONFIGURATION_UNAVAILABLE`, `INVALID_STATE`, `STATE_EXPIRED`, `STATE_ALREADY_USED`, `RECONNECT_REQUIRED`, etc.). The `classifyIntegrationError` utility maps these to customer-safe messages with inline recovery actions.
+
+### Added — Platform Diagnostics Enhancement
+- Platform admin diagnostics panel now shows: Client ID configured, Client Secret configured, Redirect URI configured, Token encryption enabled — all as boolean indicators, no secret values.
+
+### Changed — xeroOAuth Version
+- Bumped from v2.0 to v3.0. No breaking changes to the frontend API contract (same actions, same response shapes with additive `error_code` field).
+
 ## [Unreleased] — Build #28.2A (User Profile Workspace Identity & Privacy-First Xero Integration)
 
 ### Fixed — User Profile Dropdown Workspace Names

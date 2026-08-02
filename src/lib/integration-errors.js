@@ -39,7 +39,66 @@ export function classifyIntegrationError(err, opts = {}) {
   const status = err?.status || err?.response?.status || err?.statusCode;
   const rawMessage = err?.message || '';
   const bodyError = body?.error || body?.message || '';
+  const errorCode = body?.error_code || '';
   const combinedMsg = `${rawMessage} ${bodyError}`.toLowerCase();
+
+  // ── Structured error codes from backend (Build #28.2B) ──
+  const ERROR_CODE_MAP = {
+    CONFIGURATION_UNAVAILABLE: {
+      title: `${service === 'xero' ? 'Xero' : 'Integration'} Temporarily Unavailable`,
+      message: `${service === 'xero' ? 'Xero' : 'This integration'} is temporarily unavailable. Please try again later or contact Orbitan Support.`,
+      variant: 'info', action: { label: null, to: null, dismiss: true },
+    },
+    WORKSPACE_REQUIRED: {
+      title: 'No Workspace Selected',
+      message: 'Please select a workspace before connecting your Xero organisation. Use the workspace switcher in the header.',
+      variant: 'warning', action: { label: null, to: null, dismiss: true },
+    },
+    PERMISSION_DENIED: {
+      title: 'Permission Required',
+      message: 'Only workspace administrators can manage Xero connections. Ask your admin to connect Xero for your organisation.',
+      variant: 'warning', action: { label: null, to: null, dismiss: true },
+    },
+    INVALID_STATE: {
+      title: 'Connection Error',
+      message: 'The authorisation state was invalid. Please try connecting again.',
+      variant: 'error', action: { label: 'Retry', to: null, dismiss: true },
+    },
+    STATE_EXPIRED: {
+      title: 'Authorisation Expired',
+      message: 'Your Xero authorisation has expired. Please try connecting again.',
+      variant: 'warning', action: { label: 'Retry', to: null, dismiss: true },
+    },
+    STATE_ALREADY_USED: {
+      title: 'Authorisation Already Used',
+      message: 'This authorisation has already been processed. Please start a new connection if needed.',
+      variant: 'warning', action: { label: null, to: null, dismiss: true },
+    },
+    CALLBACK_FAILED: {
+      title: `${action === 'connect' ? 'Connection' : 'Action'} Failed`,
+      message: bodyError || 'The request was invalid. Please try again.',
+      variant: 'error', action: { label: 'Retry', to: null, dismiss: true },
+    },
+    TOKEN_EXCHANGE_FAILED: {
+      title: 'Connection Failed',
+      message: 'Failed to complete Xero authorisation. Please try again.',
+      variant: 'error', action: { label: 'Retry', to: null, dismiss: true },
+    },
+    RECONNECT_REQUIRED: {
+      title: 'Reconnection Required',
+      message: 'Your Xero connection has expired or been revoked. Please reconnect to continue.',
+      variant: 'warning', action: { label: 'Reconnect', to: null, dismiss: true },
+    },
+    UNKNOWN_ERROR: {
+      title: 'Unexpected Error',
+      message: 'An unexpected error occurred. Please try again, and if the problem persists, contact support.',
+      variant: 'error', action: { label: 'Retry', to: null, dismiss: true },
+    },
+  };
+
+  if (errorCode && ERROR_CODE_MAP[errorCode]) {
+    return ERROR_CODE_MAP[errorCode];
+  }
 
   // ── Network failure / timeout ──
   if (

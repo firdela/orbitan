@@ -151,7 +151,7 @@ export default function IntegrationHubPage() {
             fetchXeroStatus();
           } else if (res.data?.requires_org_selection) {
             // Multiple Xero organisations — user must select one
-            setXeroStatus((prev) => ({ ...prev, pending_org_selection: res.data.connections }));
+            setXeroStatus((prev) => ({ ...prev, pending_org_selection: res.data.connections, pending_state: res.data.state }));
             toast({ title: 'Select Organisation', description: 'Choose which Xero organisation to connect.' });
           } else {
             toast({ title: 'Connection Failed', description: res.data?.error || 'Could not connect to Xero.', variant: 'destructive' });
@@ -194,8 +194,7 @@ export default function IntegrationHubPage() {
   };
 
   const handleSelectOrg = async (xeroTenantId, xeroTenantName) => {
-    const params = new URLSearchParams(window.location.search);
-    const state = params.get('state') || xeroStatus?.pending_state;
+    const state = xeroStatus?.pending_state;
     if (!state) {
       toast({ title: 'Session Expired', description: 'Please reconnect Xero to continue.', variant: 'destructive' });
       return;
@@ -633,6 +632,8 @@ export default function IntegrationHubPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <ReadyDot ok={platformConfig.xero.client_id_configured} label="Client ID configured" />
                       <ReadyDot ok={platformConfig.xero.client_secret_configured} label="Client Secret configured" />
+                      <ReadyDot ok={platformConfig.xero.redirect_uri_configured} label="Redirect URI configured" />
+                      <ReadyDot ok={platformConfig.xero.token_encryption_enabled} label="Token encryption enabled" />
                     </div>
                     <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
                       <p>Redirect URI: <code className="bg-background px-1 rounded">{platformConfig.xero.redirect_uri}</code></p>

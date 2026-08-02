@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { decryptToken } from '../../shared/cryptoUtils.ts';
 
 /**
  * Integration Hub Sync Processor — OrbitanOS
@@ -84,7 +85,11 @@ Deno.serve(async (req) => {
       credential = refreshedCreds[0];
     }
 
-    const accessToken = credential.access_token;
+    // Decrypt access token for API use (Build #28.2B)
+    let accessToken = credential.access_token;
+    if (credential.token_encryption_version >= 1) {
+      accessToken = await decryptToken(credential.access_token, `xero:${tenant_id}`);
+    }
     const xeroTenantId = credential.external_tenant_id;
 
     // ── Fetch pending FinanceSyncQueue entries ──
@@ -138,6 +143,42 @@ Deno.serve(async (req) => {
             skip_reason: `Unsupported queue_type: ${entry.queue_type}`,
           });
           continue;
+        }
+
+        // ── Idempotency check (Build #28.2B) ──
+        const idempotencyKey = entry.idempotency_key ||
+          `${entry.tenant_id}:${entry.source_entity}:${entry.source_record_id}:${entry.queue_type}:xero`;
+
+        if (entry.erp_reference_id) {
+          await base44.asServiceRole.entities.FinanceSyncQueue.update(entry.id, {
+            status: 'synced',
+            skip_reason: 'already_has_erp_reference',
+            synced_at: new Date().toISOString(),
+            idempotency_key: idempotencyKey,
+          });
+          synced++;
+          results.push({ entry_id: entry.id, status: 'synced', reason: 'already_has_erp_reference' });
+          continue;
+        }
+
+        const alreadySynced = await base44.asServiceRole.entities.FinanceSyncQueue.filter({
+          idempotency_key: idempotencyKey,
+          status: 'synced',
+        });
+        if (alreadySynced && alreadySynced.length > 0) {
+          await base44.asServiceRole.entities.FinanceSyncQueue.update(entry.id, {
+            status: 'skipped',
+            skip_reason: 'duplicate_idempotency_key',
+            erp_reference_id: alreadySynced[0].erp_reference_id,
+            idempotency_key: idempotencyKey,
+          });
+          failed++;
+          results.push({ entry_id: entry.id, status: 'skipped', reason: 'duplicate_idempotency_key' });
+          continue;
+        }
+
+        if (!entry.idempotency_key) {
+          await base44.asServiceRole.entities.FinanceSyncQueue.update(entry.id, { idempotency_key: idempotencyKey });
         }
 
         // ── Live Xero API call ──

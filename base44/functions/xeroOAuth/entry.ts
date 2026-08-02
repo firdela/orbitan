@@ -1,50 +1,42 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { encryptToken, decryptToken, isEncryptionAvailable, sha256Hash, generateNonce } from '../../shared/cryptoUtils.ts';
 
 /**
- * Xero OAuth Bridge — OrbitanOS Privacy-First Integration (Build #28.2A)
+ * Xero OAuth Bridge — OrbitanOS Privacy-First Integration (Build #28.2B)
  *
- * Handles the full Xero OAuth 2.0 authorization code flow:
- *   1. get_auth_url         — Returns the Xero consent URL with a secure
- *                             HMAC-signed state token (not raw tenant_id)
- *   2. exchange_code        — Validates the state token, exchanges the OAuth
- *                             callback code for access+refresh tokens, stores
- *                             them in IntegrationCredential. If multiple Xero
- *                             organisations are available, returns them for
- *                             user selection instead of auto-selecting the first.
- *   3. select_organisation  — Persists the user's chosen Xero organisation
- *   4. refresh_token        — Refreshes an expired access token
- *   5. get_status           — Returns the current connection status for a tenant
- *   6. disconnect           — Revokes tokens and marks credential as disconnected
- *   7. test_connection      — Health probe with automatic token refresh
- *   8. get_platform_config  — Admin-only configuration readiness (no secrets)
+ * Handles the full Xero OAuth 2.0 authorization code flow with:
+ *   - Canonical redirect URI from XERO_REDIRECT_URI env (not derived from origin/referer)
+ *   - Single-use OAuth state via OAuthTransaction entity (prevents replay)
+ *   - AES-GCM token encryption at rest (via INTEGRATION_ENCRYPTION_KEY)
+ *   - Structured error codes for customer-safe UX
+ *
+ * Actions:
+ *   1. get_platform_config  — Admin-only configuration readiness (no secrets)
+ *   2. get_auth_url         — Creates OAuthTransaction, returns Xero consent URL
+ *   3. get_status           — Returns connection status for a tenant
+ *   4. exchange_code        — Validates state, exchanges code, encrypts+stores tokens
+ *   5. select_organisation  — Persists user's chosen Xero organisation (multi-org)
+ *   6. refresh_token        — Refreshes expired access token (decrypt→refresh→encrypt)
+ *   7. disconnect           — Revokes tokens, clears credential
+ *   8. test_connection      — Health probe with automatic token refresh
  *
  * SECURITY:
- *   - OAuth state is an opaque HMAC-signed token containing nonce, tenant_id,
- *     user_id, and expiry — never raw tenant_id
- *   - Tokens are stored ONLY in IntegrationCredential (admin-only writes via service role)
- *   - User must be authenticated and be admin or tenant_admin for sensitive actions
- *   - XERO_CLIENT_ID / XERO_CLIENT_SECRET are read from env — never sent to browser
- *   - No token values, secrets, or stack traces are returned in responses
+ *   - OAuth state is a random nonce; only its SHA-256 hash is persisted (OAuthTransaction)
+ *   - State is single-use: pending → processing → consumed (cannot be replayed)
+ *   - State has a 10-minute expiry
+ *   - Tokens are AES-GCM encrypted before storage (INTEGRATION_ENCRYPTION_KEY)
+ *   - No token values, secrets, or stack traces in responses or audit logs
+ *   - Redirect URI is backend-only (XERO_REDIRECT_URI), validated against allowlist
  *
- * PORTABILITY:
- *   - Secret retrieval is isolated behind a getSecret() adapter so the app
- *     can migrate from Base44 env vars to AWS Secrets Manager / Vault / etc.
- *   - OAuth state uses Web Crypto API (HMAC-SHA256) — portable to any runtime
- *   - Entity schema is pure JSON — portable to any database
- *
- * FUTURE CUSTOMERS: Fully multi-tenant. Each tenant connects their own
- * Xero org. The redirect URI uses the app's deployed origin so it works
- * for any customer domain automatically.
+ * CANONICAL DOMAIN: https://orbitan.io (supersedes app.orbitan.com)
  */
 
 const XERO_AUTH_URL = 'https://login.xero.com/identity/connect/authorize';
 const XERO_TOKEN_URL = 'https://identity.xero.com/connect/token';
 const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
+const XERO_REVOCATION_URL = 'https://identity.xero.com/connect/revocation';
 
-// ── Least-privilege scopes (Build #28.2A) ──
-// Only request scopes needed for enabled Orbitan functions.
-// Do NOT request payroll, bank transactions, or journals unless a
-// corresponding feature is explicitly enabled.
+// ── Least-privilege scopes ──
 const XERO_SCOPES = [
   'offline_access',
   'accounting.transactions',
@@ -52,200 +44,66 @@ const XERO_SCOPES = [
   'accounting.contacts',
 ].join(' ');
 
+// ── Approved Orbitan origins allowlist ──
+// The redirect URI must start with one of these.
+const ALLOWED_ORIGINS = [
+  'https://orbitan.io',
+  'https://www.orbitan.io',
+];
+
 // ── Portable secrets adapter ──
-// Isolates secret retrieval so Orbitan can later migrate from
-// Base44 environment variables to AWS Secrets Manager / Google Secret
-// Manager / Azure Key Vault / HashiCorp Vault without rewriting
-// application logic. Only this function needs to change.
 function getSecret(name: string): string | undefined {
-  // Current adapter: Base44/Deno env vars
   return Deno.env.get(name);
 }
 
-// ── HMAC-SHA256 signing for OAuth state tokens ──
-// The signing key is derived from XERO_CLIENT_SECRET (already a server-side
-// secret). This means state tokens cannot be forged without the secret.
-const encoder = new TextEncoder();
-
-async function getSigningKey(): Promise<CryptoKey> {
-  const secret = getSecret('XERO_CLIENT_SECRET') || getSecret('STRIPE_SECRET_KEY') || 'orbitan-fallback-dev-key';
-  return crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign', 'verify']
-  );
-}
-
-function base64UrlEncode(data: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(data)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
-function base64UrlDecode(str: string): Uint8Array {
-  const padded = str.replace(/-/g, '+').replace(/_/g, '/');
-  const binary = atob(padded);
-  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
-}
-
-function randomNonce(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return base64UrlEncode(bytes.buffer);
-}
-
-/**
- * Creates a signed OAuth state token.
- * Format: base64url(payload).base64url(hmac)
- *
- * Payload contains: nonce, tenant_id, user_id, return_route, created_at, expires_at
- * The state is opaque to Xero and the browser — only the backend can decode/verify.
- */
-async function createStateToken(tenantId: string, userId: string, returnRoute: string): Promise<string> {
-  const now = Date.now();
-  const payload = {
-    n: randomNonce(),
-    t: tenantId,
-    u: userId,
-    r: returnRoute,
-    c: now,
-    e: now + 10 * 60 * 1000, // 10-minute expiry
-  };
-  const payloadStr = JSON.stringify(payload);
-  const payloadB64 = btoa(payloadStr)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-
-  const key = await getSigningKey();
-  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(payloadB64));
-  const sigB64 = base64UrlEncode(sig);
-
-  return `${payloadB64}.${sigB64}`;
-}
-
-/**
- * Validates a signed OAuth state token.
- * Verifies HMAC signature, checks expiry, and returns the decoded payload.
- * Returns null if invalid, expired, or tampered.
- */
-async function validateStateToken(state: string): Promise<{ t: string; u: string; r: string; n: string } | null> {
-  if (!state || !state.includes('.')) return null;
-  const [payloadB64, sigB64] = state.split('.');
-  if (!payloadB64 || !sigB64) return null;
-
-  const key = await getSigningKey();
-  const sigBytes = base64UrlDecode(sigB64);
-
-  const valid = await crypto.subtle.verify(
-    'HMAC',
-    key,
-    sigBytes,
-    encoder.encode(payloadB64)
-  );
-  if (!valid) return null;
-
-  let payload;
-  try {
-    const padded = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
-    payload = JSON.parse(atob(padded));
-  } catch {
-    return null;
-  }
-
-  if (!payload.e || Date.now() > payload.e) return null;
-
-  return { t: payload.t, u: payload.u, r: payload.r, n: payload.n };
+// ── Canonical redirect URI (backend-only, from env) ──
+function getRedirectUri(): string {
+  const uri = getSecret('XERO_REDIRECT_URI');
+  if (!uri) return '';
+  // Validate: must be HTTPS, must be in allowlist
+  if (!uri.startsWith('https://')) return '';
+  if (!ALLOWED_ORIGINS.some(origin => uri.startsWith(origin))) return '';
+  return uri;
 }
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const { action, tenant_id, code, state, redirect_uri, xero_tenant_id } = body;
+    const { action, tenant_id, code, state, xero_tenant_id } = body;
 
     if (!action) {
-      return Response.json({ error: 'action is required' }, { status: 400 });
+      return Response.json({ error: 'action is required', error_code: 'CALLBACK_FAILED' }, { status: 400 });
     }
 
     const clientId = getSecret('XERO_CLIENT_ID');
     const clientSecret = getSecret('XERO_CLIENT_SECRET');
-
-    // ── ACTION: get_auth_url ──
-    // Returns the Xero consent screen URL with a secure HMAC-signed state.
-    if (action === 'get_auth_url') {
-      if (!tenant_id) {
-        return Response.json({ error: 'tenant_id is required' }, { status: 400 });
-      }
-
-      const user = await base44.auth.me();
-      if (!user) {
-        return Response.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-
-      if (!clientId) {
-        // Neutral message — no internal configuration details exposed
-        return Response.json({
-          configured: false,
-          auth_url: null,
-          message: 'Xero integration is temporarily unavailable.',
-        });
-      }
-
-      const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://app.orbitan.com';
-      const finalRedirect = redirect_uri || `${origin}/platform/integrations`;
-      const returnRoute = '/platform/integrations';
-
-      // Create secure state token
-      const stateToken = await createStateToken(tenant_id, user.id, returnRoute);
-
-      const params = new URLSearchParams({
-        response_type: 'code',
-        client_id: clientId,
-        redirect_uri: finalRedirect,
-        scope: XERO_SCOPES,
-        state: stateToken,
-      });
-
-      const authUrl = `${XERO_AUTH_URL}?${params.toString()}`;
-
-      return Response.json({
-        configured: true,
-        auth_url: authUrl,
-        redirect_uri: finalRedirect,
-      });
-    }
+    const redirectUri = getRedirectUri();
+    const configured = !!(clientId && clientSecret && redirectUri);
 
     // ── ACTION: get_platform_config ──
-    // Admin-only configuration readiness. Must work even when Xero
-    // credentials are not configured (it reports whether they ARE).
     if (action === 'get_platform_config') {
       const user = await base44.auth.me();
-      if (!user) {
-        return Response.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      if (!user) return Response.json({ error: 'Unauthorized', error_code: 'PERMISSION_DENIED' }, { status: 401 });
       if (user.role !== 'admin') {
-        return Response.json({ error: 'Forbidden: Platform configuration requires Platform Admin role' }, { status: 403 });
+        return Response.json({ error: 'Forbidden', error_code: 'PERMISSION_DENIED' }, { status: 403 });
       }
-      const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://app.orbitan.com';
-      const redirectUri = `${origin}/platform/integrations`;
-      const xeroClientId = !!getSecret('XERO_CLIENT_ID');
-      const xeroClientSecret = !!getSecret('XERO_CLIENT_SECRET');
+
       const stripeKey = getSecret('STRIPE_SECRET_KEY') || '';
       const environment = stripeKey.startsWith('sk_live') ? 'live' : stripeKey.startsWith('sk_test') ? 'test' : 'unconfigured';
+
       return Response.json({
         environment,
         xero: {
-          client_id_configured: xeroClientId,
-          client_secret_configured: xeroClientSecret,
-          redirect_uri: redirectUri,
-          callback_url: redirectUri,
+          client_id_configured: !!clientId,
+          client_secret_configured: !!clientSecret,
+          redirect_uri_configured: !!redirectUri,
+          redirect_uri: redirectUri || '(not configured)',
+          callback_health: redirectUri ? 'ok' : 'missing_redirect_uri',
           required_scopes: XERO_SCOPES.split(' '),
-          oauth_ready: xeroClientId && xeroClientSecret,
-          sync_ready: xeroClientId && xeroClientSecret,
+          oauth_ready: configured,
+          sync_ready: configured,
+          token_encryption_enabled: isEncryptionAvailable(),
         },
         stripe_platform_billing: {
           secret_key_configured: !!getSecret('STRIPE_SECRET_KEY'),
@@ -262,24 +120,85 @@ Deno.serve(async (req) => {
           ready: false,
         },
         versions: {
-          xero_oauth: '2.0',
+          xero_oauth: '3.0',
           integration_sync: '1.0',
         },
       });
     }
 
+    // ── ACTION: get_auth_url ──
+    if (action === 'get_auth_url') {
+      if (!tenant_id) {
+        return Response.json({ error: 'tenant_id is required', error_code: 'WORKSPACE_REQUIRED' }, { status: 400 });
+      }
+
+      const user = await base44.auth.me();
+      if (!user) return Response.json({ error: 'Unauthorized', error_code: 'PERMISSION_DENIED' }, { status: 401 });
+
+      const allowedRoles = ['admin', 'tenant_admin'];
+      if (!allowedRoles.includes(user.role)) {
+        return Response.json({ error: 'Forbidden', error_code: 'PERMISSION_DENIED' }, { status: 403 });
+      }
+
+      if (!configured) {
+        return Response.json({
+          configured: false,
+          auth_url: null,
+          error_code: 'CONFIGURATION_UNAVAILABLE',
+          message: 'Xero integration is temporarily unavailable.',
+        });
+      }
+
+      // Invalidate any existing pending transactions for this tenant+user (prevents duplicate clicks)
+      const existingTxns = await base44.asServiceRole.entities.OAuthTransaction.filter({
+        tenant_id,
+        user_id: user.id,
+        provider: 'xero',
+        status: 'pending',
+      });
+      for (const txn of existingTxns) {
+        await base44.asServiceRole.entities.OAuthTransaction.update(txn.id, { status: 'expired' });
+      }
+
+      // Create single-use OAuth transaction
+      const nonce = generateNonce();
+      const nonceHash = await sha256Hash(nonce);
+      const now = Date.now();
+      const expiresAt = new Date(now + 10 * 60 * 1000).toISOString();
+
+      await base44.asServiceRole.entities.OAuthTransaction.create({
+        tenant_id,
+        provider: 'xero',
+        nonce_hash: nonceHash,
+        user_id: user.id,
+        return_route: '/platform/integrations',
+        status: 'pending',
+        environment: getSecret('STRIPE_SECRET_KEY')?.startsWith('sk_live') ? 'live' : 'preview',
+        expires_at: expiresAt,
+      });
+
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId!,
+        redirect_uri: redirectUri,
+        scope: XERO_SCOPES,
+        state: nonce,
+      });
+
+      return Response.json({
+        configured: true,
+        auth_url: `${XERO_AUTH_URL}?${params.toString()}`,
+      });
+    }
+
     // ── ACTION: get_status ──
-    // Works without secrets — it reports whether the platform is configured
-    // and whether a credential exists. Only makes DB reads, no Xero API calls.
     if (action === 'get_status') {
       if (!tenant_id) {
-        return Response.json({ error: 'tenant_id is required' }, { status: 400 });
+        return Response.json({ error: 'tenant_id is required', error_code: 'WORKSPACE_REQUIRED' }, { status: 400 });
       }
 
       const statusUser = await base44.auth.me();
-      if (!statusUser) {
-        return Response.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+      if (!statusUser) return Response.json({ error: 'Unauthorized', error_code: 'PERMISSION_DENIED' }, { status: 401 });
 
       const existing = await base44.asServiceRole.entities.IntegrationCredential.filter({
         tenant_id,
@@ -289,9 +208,9 @@ Deno.serve(async (req) => {
       if (!existing || existing.length === 0) {
         return Response.json({
           connected: false,
-          configured: !!clientId,
-          status: clientId ? 'not_connected' : 'not_configured',
-          message: clientId
+          configured,
+          status: configured ? 'not_connected' : 'not_configured',
+          message: configured
             ? 'Xero is ready to connect.'
             : 'Xero integration is temporarily unavailable.',
         });
@@ -328,7 +247,7 @@ Deno.serve(async (req) => {
 
       return Response.json({
         connected,
-        configured: !!clientId,
+        configured,
         status,
         xero_tenant_name: cred.external_tenant_name,
         xero_tenant_id: cred.external_tenant_id,
@@ -346,44 +265,63 @@ Deno.serve(async (req) => {
     }
 
     // ── All remaining actions require secrets ──
-    if (!clientId || !clientSecret) {
+    if (!configured) {
       return Response.json({
         configured: false,
         error: 'Xero integration is temporarily unavailable.',
+        error_code: 'CONFIGURATION_UNAVAILABLE',
       }, { status: 503 });
     }
 
     const user = await base44.auth.me();
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!user) return Response.json({ error: 'Unauthorized', error_code: 'PERMISSION_DENIED' }, { status: 401 });
 
     const allowedRoles = ['admin', 'tenant_admin'];
     if (!allowedRoles.includes(user.role)) {
-      return Response.json({ error: 'Forbidden: Only authorised administrators can manage Xero connections' }, { status: 403 });
+      return Response.json({ error: 'Forbidden: Only authorised administrators can manage Xero connections', error_code: 'PERMISSION_DENIED' }, { status: 403 });
     }
 
     // ── ACTION: exchange_code ──
-    // Validates the secure state token, exchanges the OAuth code for tokens,
-    // and fetches available Xero organisations.
     if (action === 'exchange_code') {
       if (!code || !state) {
-        return Response.json({ error: 'code and state are required' }, { status: 400 });
+        return Response.json({ error: 'code and state are required', error_code: 'CALLBACK_FAILED' }, { status: 400 });
       }
 
-      // Validate the signed state token
-      const statePayload = await validateStateToken(state);
-      if (!statePayload) {
-        return Response.json({
-          error: 'Invalid or expired authorisation state. Please try connecting again.',
-        }, { status: 400 });
+      // Hash the nonce and look up the OAuth transaction
+      const nonceHash = await sha256Hash(state);
+      const transactions = await base44.asServiceRole.entities.OAuthTransaction.filter({
+        nonce_hash: nonceHash,
+        provider: 'xero',
+      });
+
+      if (!transactions || transactions.length === 0) {
+        return Response.json({ error: 'Invalid or expired authorisation state. Please try connecting again.', error_code: 'INVALID_STATE' }, { status: 400 });
       }
 
-      const resolvedTenantId = statePayload.t;
-      const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://app.orbitan.com';
-      const finalRedirect = redirect_uri || `${origin}/platform/integrations`;
+      const txn = transactions[0];
 
-      // Exchange auth code for tokens
+      // Verify expiry
+      if (txn.expires_at && new Date(txn.expires_at) < new Date()) {
+        await base44.asServiceRole.entities.OAuthTransaction.update(txn.id, { status: 'expired' });
+        return Response.json({ error: 'Authorisation state has expired. Please try connecting again.', error_code: 'STATE_EXPIRED' }, { status: 400 });
+      }
+
+      // Verify not already consumed
+      if (txn.status !== 'pending') {
+        return Response.json({ error: 'This authorisation state has already been used. Please try connecting again.', error_code: 'STATE_ALREADY_USED' }, { status: 400 });
+      }
+
+      // Verify user ownership
+      if (txn.user_id !== user.id) {
+        return Response.json({ error: 'Authorisation state does not belong to this user.', error_code: 'INVALID_STATE' }, { status: 403 });
+      }
+
+      // Atomically mark as processing
+      await base44.asServiceRole.entities.OAuthTransaction.update(txn.id, { status: 'processing' });
+
+      const resolvedTenantId = txn.tenant_id;
+
+      // Exchange auth code for tokens (using the same canonical redirect URI)
       const tokenRes = await fetch(XERO_TOKEN_URL, {
         method: 'POST',
         headers: {
@@ -393,39 +331,77 @@ Deno.serve(async (req) => {
         body: new URLSearchParams({
           grant_type: 'authorization_code',
           code,
-          redirect_uri: finalRedirect,
+          redirect_uri: redirectUri,
         }),
       });
 
       if (!tokenRes.ok) {
-        const errText = await tokenRes.text();
         console.error('[xeroOAuth] Token exchange failed:', tokenRes.status);
-        // Never expose raw error details to the customer
+        await base44.asServiceRole.entities.OAuthTransaction.update(txn.id, { status: 'failed' });
         return Response.json({
           error: 'Failed to complete Xero authorisation. Please try again.',
+          error_code: 'TOKEN_EXCHANGE_FAILED',
         }, { status: 400 });
       }
 
       const tokens = await tokenRes.json();
 
-      // Fetch the Xero tenant connections (orgs the user authorized)
+      // Fetch Xero tenant connections (organisations the user authorised)
       const connectionsRes = await fetch(XERO_CONNECTIONS_URL, {
-        headers: {
-          'Authorization': `Bearer ${tokens.access_token}`,
-        },
+        headers: { 'Authorization': `Bearer ${tokens.access_token}` },
       });
 
-      let xeroConnections = [];
+      let xeroConnections: any[] = [];
       if (connectionsRes.ok) {
         xeroConnections = await connectionsRes.json();
       } else {
         console.warn('[xeroOAuth] Could not fetch Xero connections:', connectionsRes.status);
       }
 
+      // Encrypt tokens before storage
+      const encryptionCtx = `xero:${resolvedTenantId}`;
+      let encAccessToken = tokens.access_token;
+      let encRefreshToken = tokens.refresh_token;
+      let tokenEncryptionVersion = 0;
+
+      if (isEncryptionAvailable()) {
+        encAccessToken = await encryptToken(tokens.access_token, encryptionCtx);
+        encRefreshToken = await encryptToken(tokens.refresh_token, encryptionCtx);
+        tokenEncryptionVersion = 1;
+      } else {
+        console.warn('[xeroOAuth] INTEGRATION_ENCRYPTION_KEY not configured — storing tokens as plaintext (security gap)');
+      }
+
       // ── Multi-organisation selection ──
-      // If the user has multiple Xero orgs, return them for selection
-      // instead of auto-selecting the first.
       if (xeroConnections.length > 1) {
+        const existing = await base44.asServiceRole.entities.IntegrationCredential.filter({
+          tenant_id: resolvedTenantId,
+          service_type: 'xero',
+        });
+
+        const credentialData: any = {
+          tenant_id: resolvedTenantId,
+          service_type: 'xero',
+          status: 'connected',
+          access_token: encAccessToken,
+          refresh_token: encRefreshToken,
+          token_encryption_version: tokenEncryptionVersion,
+          token_expires_at: new Date(Date.now() + (tokens.expires_in * 1000)).toISOString(),
+          scopes: XERO_SCOPES.split(' '),
+          connected_by_id: user.id,
+          connected_by_name: user.full_name,
+          connected_date: new Date().toISOString(),
+          last_refreshed_date: new Date().toISOString(),
+          last_error: '',
+        };
+
+        if (existing && existing.length > 0) {
+          await base44.asServiceRole.entities.IntegrationCredential.update(existing[0].id, credentialData);
+        } else {
+          await base44.asServiceRole.entities.IntegrationCredential.create(credentialData);
+        }
+
+        // Keep transaction in "processing" for select_organisation to complete
         return Response.json({
           success: false,
           requires_org_selection: true,
@@ -446,12 +422,13 @@ Deno.serve(async (req) => {
         service_type: 'xero',
       });
 
-      const credentialData = {
+      const credentialData: any = {
         tenant_id: resolvedTenantId,
         service_type: 'xero',
         status: 'connected',
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        access_token: encAccessToken,
+        refresh_token: encRefreshToken,
+        token_encryption_version: tokenEncryptionVersion,
         token_expires_at: new Date(Date.now() + (tokens.expires_in * 1000)).toISOString(),
         external_tenant_id: primaryConnection.tenantId || '',
         external_tenant_name: primaryConnection.tenantName || '',
@@ -469,6 +446,12 @@ Deno.serve(async (req) => {
       } else {
         credential = await base44.asServiceRole.entities.IntegrationCredential.create(credentialData);
       }
+
+      // Mark transaction as consumed
+      await base44.asServiceRole.entities.OAuthTransaction.update(txn.id, {
+        status: 'consumed',
+        consumed_at: new Date().toISOString(),
+      });
 
       // Audit log — no token values in the audit record
       await base44.asServiceRole.entities.AuditLog.create({
@@ -496,43 +479,63 @@ Deno.serve(async (req) => {
     }
 
     // ── ACTION: select_organisation ──
-    // Called when the user has multiple Xero organisations and selects one.
     if (action === 'select_organisation') {
       if (!state || !xero_tenant_id) {
-        return Response.json({ error: 'state and xero_tenant_id are required' }, { status: 400 });
+        return Response.json({ error: 'state and xero_tenant_id are required', error_code: 'CALLBACK_FAILED' }, { status: 400 });
       }
 
-      // Validate the state token
-      const statePayload = await validateStateToken(state);
-      if (!statePayload) {
-        return Response.json({
-          error: 'Invalid or expired authorisation state. Please try connecting again.',
-        }, { status: 400 });
+      // Validate the state against OAuthTransaction
+      const nonceHash = await sha256Hash(state);
+      const transactions = await base44.asServiceRole.entities.OAuthTransaction.filter({
+        nonce_hash: nonceHash,
+        provider: 'xero',
+      });
+
+      if (!transactions || transactions.length === 0) {
+        return Response.json({ error: 'Invalid authorisation state.', error_code: 'INVALID_STATE' }, { status: 400 });
       }
 
-      const resolvedTenantId = statePayload.t;
+      const txn = transactions[0];
 
-      // Fetch the existing credential (created during exchange_code, or update existing)
+      if (txn.expires_at && new Date(txn.expires_at) < new Date()) {
+        return Response.json({ error: 'Authorisation state has expired.', error_code: 'STATE_EXPIRED' }, { status: 400 });
+      }
+
+      if (txn.status !== 'processing') {
+        return Response.json({ error: 'Authorisation state has already been used.', error_code: 'STATE_ALREADY_USED' }, { status: 400 });
+      }
+
+      if (txn.user_id !== user.id) {
+        return Response.json({ error: 'Authorisation state does not belong to this user.', error_code: 'INVALID_STATE' }, { status: 403 });
+      }
+
+      const resolvedTenantId = txn.tenant_id;
+
       const existing = await base44.asServiceRole.entities.IntegrationCredential.filter({
         tenant_id: resolvedTenantId,
         service_type: 'xero',
       });
 
       if (!existing || existing.length === 0) {
-        return Response.json({ error: 'No pending Xero connection found. Please reconnect.' }, { status: 404 });
+        return Response.json({ error: 'No pending Xero connection found. Please reconnect.', error_code: 'RECONNECT_REQUIRED' }, { status: 404 });
       }
 
       const cred = existing[0];
 
-      // Fetch the Xero org name from the connections endpoint using the stored token
+      // Decrypt access token to fetch org name from Xero connections endpoint
+      let accessToken = cred.access_token;
+      if (cred.token_encryption_version >= 1) {
+        accessToken = await decryptToken(cred.access_token, `xero:${resolvedTenantId}`);
+      }
+
       let orgName = '';
       try {
         const connectionsRes = await fetch(XERO_CONNECTIONS_URL, {
-          headers: { 'Authorization': `Bearer ${cred.access_token}` },
+          headers: { 'Authorization': `Bearer ${accessToken}` },
         });
         if (connectionsRes.ok) {
           const conns = await connectionsRes.json();
-          const selected = conns.find((c) => c.tenantId === xero_tenant_id);
+          const selected = conns.find((c: any) => c.tenantId === xero_tenant_id);
           orgName = selected?.tenantName || '';
         }
       } catch {
@@ -544,6 +547,12 @@ Deno.serve(async (req) => {
         external_tenant_name: orgName || xero_tenant_id,
         status: 'connected',
         last_error: '',
+      });
+
+      // Mark transaction as consumed
+      await base44.asServiceRole.entities.OAuthTransaction.update(txn.id, {
+        status: 'consumed',
+        consumed_at: new Date().toISOString(),
       });
 
       await base44.asServiceRole.entities.AuditLog.create({
@@ -571,7 +580,7 @@ Deno.serve(async (req) => {
     // ── ACTION: refresh_token ──
     if (action === 'refresh_token') {
       if (!tenant_id) {
-        return Response.json({ error: 'tenant_id is required' }, { status: 400 });
+        return Response.json({ error: 'tenant_id is required', error_code: 'WORKSPACE_REQUIRED' }, { status: 400 });
       }
 
       const existing = await base44.asServiceRole.entities.IntegrationCredential.filter({
@@ -580,12 +589,18 @@ Deno.serve(async (req) => {
       });
 
       if (!existing || existing.length === 0) {
-        return Response.json({ error: 'No Xero credential found for this tenant' }, { status: 404 });
+        return Response.json({ error: 'No Xero credential found for this tenant', error_code: 'RECONNECT_REQUIRED' }, { status: 404 });
       }
 
       const cred = existing[0];
       if (cred.status === 'disconnected') {
-        return Response.json({ error: 'Xero connection is disconnected. Please reconnect.' }, { status: 403 });
+        return Response.json({ error: 'Xero connection is disconnected. Please reconnect.', error_code: 'RECONNECT_REQUIRED' }, { status: 403 });
+      }
+
+      // Decrypt refresh token
+      let refreshToken = cred.refresh_token;
+      if (cred.token_encryption_version >= 1) {
+        refreshToken = await decryptToken(cred.refresh_token, `xero:${tenant_id}`);
       }
 
       const tokenRes = await fetch(XERO_TOKEN_URL, {
@@ -596,44 +611,45 @@ Deno.serve(async (req) => {
         },
         body: new URLSearchParams({
           grant_type: 'refresh_token',
-          refresh_token: cred.refresh_token,
+          refresh_token: refreshToken,
         }),
       });
 
       if (!tokenRes.ok) {
         console.error('[xeroOAuth] Token refresh failed:', tokenRes.status);
-
         await base44.asServiceRole.entities.IntegrationCredential.update(cred.id, {
           status: 'expired',
           last_error: 'Token refresh failed — reconnection required.',
         });
-
-        return Response.json({
-          error: 'Xero token refresh failed. Reconnection required.',
-        }, { status: 401 });
+        return Response.json({ error: 'Xero token refresh failed. Reconnection required.', error_code: 'RECONNECT_REQUIRED' }, { status: 401 });
       }
 
       const tokens = await tokenRes.json();
+      const encryptionCtx = `xero:${tenant_id}`;
+
+      let encAccessToken = tokens.access_token;
+      let encRefreshToken = tokens.refresh_token;
+      if (isEncryptionAvailable()) {
+        encAccessToken = await encryptToken(tokens.access_token, encryptionCtx);
+        encRefreshToken = await encryptToken(tokens.refresh_token, encryptionCtx);
+      }
 
       await base44.asServiceRole.entities.IntegrationCredential.update(cred.id, {
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        access_token: encAccessToken,
+        refresh_token: encRefreshToken,
         token_expires_at: new Date(Date.now() + (tokens.expires_in * 1000)).toISOString(),
         last_refreshed_date: new Date().toISOString(),
         status: 'connected',
         last_error: '',
       });
 
-      return Response.json({
-        success: true,
-        message: 'Xero token refreshed.',
-      });
+      return Response.json({ success: true, message: 'Xero token refreshed.' });
     }
 
     // ── ACTION: disconnect ──
     if (action === 'disconnect') {
       if (!tenant_id) {
-        return Response.json({ error: 'tenant_id is required' }, { status: 400 });
+        return Response.json({ error: 'tenant_id is required', error_code: 'WORKSPACE_REQUIRED' }, { status: 400 });
       }
 
       const existing = await base44.asServiceRole.entities.IntegrationCredential.filter({
@@ -642,28 +658,39 @@ Deno.serve(async (req) => {
       });
 
       if (!existing || existing.length === 0) {
-        return Response.json({ error: 'No Xero connection found' }, { status: 404 });
+        return Response.json({ error: 'No Xero connection found', error_code: 'CALLBACK_FAILED' }, { status: 404 });
       }
 
       const cred = existing[0];
 
-      // Attempt to revoke the token at Xero (best-effort)
-      try {
-        await fetch(`${XERO_CONNECTIONS_URL}/${cred.external_tenant_id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${cred.access_token}`,
-          },
-        });
-      } catch {
-        // Best-effort revocation — proceed with local disconnect regardless
+      // Decrypt access token for revocation
+      let accessToken = cred.access_token;
+      if (cred.token_encryption_version >= 1) {
+        accessToken = await decryptToken(cred.access_token, `xero:${tenant_id}`);
       }
 
-      // Mark as disconnected and clear token material
+      // Attempt to revoke the token at Xero (best-effort)
+      try {
+        await fetch(XERO_REVOCATION_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`),
+          },
+          body: new URLSearchParams({
+            token: accessToken,
+            token_type_hint: 'access_token',
+          }),
+        });
+      } catch {
+        // Best-effort revocation
+      }
+
       await base44.asServiceRole.entities.IntegrationCredential.update(cred.id, {
         status: 'disconnected',
         access_token: '',
         refresh_token: '',
+        token_encryption_version: 0,
         token_expires_at: '',
         last_error: 'Disconnected by user',
       });
@@ -683,16 +710,13 @@ Deno.serve(async (req) => {
         event_source: 'xeroOAuth',
       });
 
-      return Response.json({
-        success: true,
-        message: 'Xero disconnected. Future syncs are paused.',
-      });
+      return Response.json({ success: true, message: 'Xero disconnected. Future syncs are paused.' });
     }
 
     // ── ACTION: test_connection ──
     if (action === 'test_connection') {
       if (!tenant_id) {
-        return Response.json({ error: 'tenant_id is required' }, { status: 400 });
+        return Response.json({ error: 'tenant_id is required', error_code: 'WORKSPACE_REQUIRED' }, { status: 400 });
       }
 
       const existing = await base44.asServiceRole.entities.IntegrationCredential.filter({
@@ -701,20 +725,12 @@ Deno.serve(async (req) => {
       });
 
       if (!existing || existing.length === 0) {
-        return Response.json({
-          healthy: false,
-          reason: 'not_connected',
-          message: 'No Xero connection found for this tenant.',
-        });
+        return Response.json({ healthy: false, reason: 'not_connected', message: 'No Xero connection found for this tenant.' });
       }
 
       let cred = existing[0];
       if (cred.status === 'disconnected') {
-        return Response.json({
-          healthy: false,
-          reason: 'disconnected',
-          message: 'Xero connection is disconnected. Reconnect to continue.',
-        });
+        return Response.json({ healthy: false, reason: 'disconnected', message: 'Xero connection is disconnected. Reconnect to continue.' });
       }
 
       // Refresh token if expired
@@ -729,30 +745,22 @@ Deno.serve(async (req) => {
             status: 'expired',
             last_error: 'Token refresh failed during connection test.',
           });
-          await base44.asServiceRole.entities.AuditLog.create({
-            tenant_id, actor_id: user.id, actor_name: user.full_name, actor_role: user.role,
-            action_type: 'XERO_TEST_CONNECTION_FAILED', module: 'finance',
-            target_entity: 'IntegrationCredential', target_record_id: cred.id,
-            details: 'Xero connection test failed: token refresh unsuccessful.',
-            shield_outcome: 'not_evaluated',
-            category: 'operational',
-            event_source: 'xeroOAuth',
-          });
-          return Response.json({
-            healthy: false,
-            reason: 'token_refresh_failed',
-            message: 'Xero token expired and refresh failed. Reconnection required.',
-          });
+          return Response.json({ healthy: false, reason: 'token_refresh_failed', message: 'Xero token expired and refresh failed. Reconnection required.' });
         }
         const refreshed = await base44.asServiceRole.entities.IntegrationCredential.filter({ tenant_id, service_type: 'xero' });
         cred = refreshed[0];
       }
 
-      // Lightweight authenticated Xero API request
+      // Decrypt access token for API call
+      let accessToken = cred.access_token;
+      if (cred.token_encryption_version >= 1) {
+        accessToken = await decryptToken(cred.access_token, `xero:${tenant_id}`);
+      }
+
       const orgRes = await fetch('https://api.xero.com/api.xro/2.0/Organisation', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${cred.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Xero-tenant-id': cred.external_tenant_id,
           'Accept': 'application/json',
         },
@@ -761,46 +769,24 @@ Deno.serve(async (req) => {
       if (orgRes.ok) {
         const orgData = await orgRes.json();
         const orgName = orgData.Organisations?.[0]?.Name || cred.external_tenant_name || 'Xero Organisation';
-        await base44.asServiceRole.entities.IntegrationCredential.update(cred.id, {
-          status: 'connected',
-          last_error: '',
-        });
+        await base44.asServiceRole.entities.IntegrationCredential.update(cred.id, { status: 'connected', last_error: '' });
         await base44.asServiceRole.entities.AuditLog.create({
           tenant_id, actor_id: user.id, actor_name: user.full_name, actor_role: user.role,
           action_type: 'XERO_TEST_CONNECTION_OK', module: 'finance',
           target_entity: 'IntegrationCredential', target_record_id: cred.id,
           details: `Xero connection test successful. Organisation: ${orgName}.`,
-          shield_outcome: 'not_evaluated',
-          category: 'operational',
-          event_source: 'xeroOAuth',
+          shield_outcome: 'not_evaluated', category: 'operational', event_source: 'xeroOAuth',
         });
-        return Response.json({
-          healthy: true,
-          reason: 'connected',
-          organisation_name: orgName,
-          message: 'Xero connection is healthy.',
-        });
+        return Response.json({ healthy: true, reason: 'connected', organisation_name: orgName, message: 'Xero connection is healthy.' });
       }
 
       const errStatus = orgRes.status;
       let reason = 'api_error';
       let newStatus = 'error';
-      if (errStatus === 401) {
-        reason = 'revoked';
-        newStatus = 'expired';
-      }
+      if (errStatus === 401) { reason = 'revoked'; newStatus = 'expired'; }
       await base44.asServiceRole.entities.IntegrationCredential.update(cred.id, {
         status: newStatus,
         last_error: `Connection test failed (HTTP ${errStatus}).`,
-      });
-      await base44.asServiceRole.entities.AuditLog.create({
-        tenant_id, actor_id: user.id, actor_name: user.full_name, actor_role: user.role,
-        action_type: 'XERO_TEST_CONNECTION_FAILED', module: 'finance',
-        target_entity: 'IntegrationCredential', target_record_id: cred.id,
-        details: `Xero connection test failed. HTTP ${errStatus}.`,
-        shield_outcome: 'not_evaluated',
-        category: 'operational',
-        event_source: 'xeroOAuth',
       });
       return Response.json({
         healthy: false,
@@ -811,13 +797,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    return Response.json({ error: `Unknown action: ${action}` }, { status: 400 });
+    return Response.json({ error: `Unknown action: ${action}`, error_code: 'UNKNOWN_ERROR' }, { status: 400 });
 
   } catch (error) {
     console.error('[xeroOAuth] Error:', error.message);
-    // Never expose stack traces or internal details to the customer
-    return Response.json({
-      error: 'An unexpected error occurred. Please try again.',
-    }, { status: 500 });
+    return Response.json({ error: 'An unexpected error occurred. Please try again.', error_code: 'UNKNOWN_ERROR' }, { status: 500 });
   }
 });

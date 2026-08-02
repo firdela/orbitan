@@ -130,7 +130,7 @@ export default function FinanceIntegrationPage() {
           if (data.success) {
             toast({ title: 'Xero connected', description: `Connected to ${data.xero_tenant_name || 'Xero'}` });
           } else if (data.requires_org_selection) {
-            toast({ title: 'Select Organisation', description: 'Choose which Xero organisation to connect.' });
+            toast({ title: 'Organisation Selection Required', description: 'Multiple Xero organisations found. Complete selection in the Integration Hub.' });
           } else if (data.error) {
             toast({ title: 'Connection failed', description: data.error, variant: 'destructive' });
           }

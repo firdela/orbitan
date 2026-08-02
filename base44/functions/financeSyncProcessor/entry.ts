@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
+import { decryptToken } from '../../shared/cryptoUtils.ts';
 
 /**
  * OrbitanOS — Automated FinanceSyncQueue Processor
@@ -193,7 +194,7 @@ Deno.serve(async (req) => {
             tenant_id: entry.tenant_id,
             service_type: 'xero',
           });
-          accessToken = refreshedCreds[0]?.access_token;
+          accessToken = await decryptToken(refreshedCreds[0]?.access_token || '', `xero:${entry.tenant_id}`);
         }
 
         // ── STEP 5: Determine Xero API endpoint ──
@@ -217,6 +218,46 @@ Deno.serve(async (req) => {
           skipped++;
           results.push({ entry_id: entry.id, status: 'skipped', reason: `Unsupported queue_type: ${entry.queue_type}` });
           continue;
+        }
+
+        // ── STEP 5.5: Idempotency check (Build #28.2B) ──
+        const erpTarget = entry.erp_target || 'xero';
+        const idempotencyKey = entry.idempotency_key ||
+          `${entry.tenant_id}:${entry.source_entity}:${entry.source_record_id}:${entry.queue_type}:${erpTarget}`;
+
+        // If this entry already has an ERP reference, Xero succeeded but status update failed
+        if (entry.erp_reference_id) {
+          await base44.asServiceRole.entities.FinanceSyncQueue.update(entry.id, {
+            status: 'synced',
+            skip_reason: 'already_has_erp_reference',
+            synced_at: new Date().toISOString(),
+            idempotency_key: idempotencyKey,
+          });
+          synced++;
+          results.push({ entry_id: entry.id, status: 'synced', reason: 'already_has_erp_reference' });
+          continue;
+        }
+
+        // Check if another entry with the same idempotency key was already synced
+        const alreadySynced = await base44.asServiceRole.entities.FinanceSyncQueue.filter({
+          idempotency_key: idempotencyKey,
+          status: 'synced',
+        });
+        if (alreadySynced && alreadySynced.length > 0) {
+          await base44.asServiceRole.entities.FinanceSyncQueue.update(entry.id, {
+            status: 'skipped',
+            skip_reason: 'duplicate_idempotency_key',
+            erp_reference_id: alreadySynced[0].erp_reference_id,
+            idempotency_key: idempotencyKey,
+          });
+          skipped++;
+          results.push({ entry_id: entry.id, status: 'skipped', reason: 'duplicate_idempotency_key' });
+          continue;
+        }
+
+        // Persist idempotency key if it was just generated
+        if (!entry.idempotency_key) {
+          await base44.asServiceRole.entities.FinanceSyncQueue.update(entry.id, { idempotency_key: idempotencyKey });
         }
 
         // ── STEP 6: Live Xero API call ──
@@ -407,12 +448,18 @@ async function resolveTenantContext(base44, tenantId) {
   const xeroCredential = xeroCreds[0];
   const xeroConnected = xeroCredential && xeroCredential.status === 'connected';
 
+  // Decrypt access token for API use (Build #28.2B)
+  let decryptedAccessToken: string | null = null;
+  if (xeroCredential?.access_token) {
+    decryptedAccessToken = await decryptToken(xeroCredential.access_token, `xero:${tenantId}`);
+  }
+
   return {
     tenantId,
     tenantName: tenant?.name || 'Unknown',
     governanceThresholdSgd,
     xeroConnected,
-    xeroAccessToken: xeroCredential?.access_token || null,
+    xeroAccessToken: decryptedAccessToken,
     xeroTenantId: xeroCredential?.external_tenant_id || null,
     tokenExpiresAt: xeroCredential?.token_expires_at || null,
   };
