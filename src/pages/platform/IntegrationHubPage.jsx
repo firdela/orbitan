@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Loader2, CheckCircle2, XCircle, AlertCircle, RefreshCw, ExternalLink, Zap, Clock,
-  Plug, PlugZap, ShieldCheck, Settings, Link2Off, LifeBuoy, ChevronDown, ChevronUp, ArrowRight,
+  Plug, PlugZap, ShieldCheck, Link2Off, LifeBuoy, ChevronDown, ChevronUp, ArrowRight,
   Building2, AlertTriangle,
 } from 'lucide-react';
 import IntegrationCatalog from '@/components/platform/IntegrationCatalog';

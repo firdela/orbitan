@@ -18,7 +18,7 @@
 // ============================================================
 
 import React, { useEffect, useState } from 'react';
-import { useParams, Navigate, Outlet } from 'react-router-dom';
+import { useParams, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -28,10 +28,12 @@ import AppShell from '@/components/layout/AppShell';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import ManifestNav from '@/components/workspace/ManifestNav';
 import { hydrateManifest } from '@/lib/registry/ManifestHydrator';
-import { Building2 } from 'lucide-react';
+import { Building2, Shield, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function WorkspaceLayout() {
   const { tenantId } = useParams();
+  const navigate = useNavigate();
   const { user, isAuthenticated, isLoadingAuth } = useAuth();
   const {
     memberships,
@@ -134,13 +136,33 @@ export default function WorkspaceLayout() {
   if (!effectiveTenant) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background p-6">
-        <div className="text-center space-y-2 max-w-md">
+        <div className="text-center space-y-4 max-w-md">
           <Building2 className="w-10 h-10 mx-auto text-muted-foreground" />
-          <h2 className="font-heading font-semibold text-lg">Workspace not found</h2>
-          <p className="text-sm text-muted-foreground">
-            This organisation could not be resolved. If you believe this is an error,
-            contact your administrator or return to the gateway.
-          </p>
+          <div>
+            <h2 className="font-heading font-semibold text-lg">Workspace unavailable</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              This organisation could not be resolved. It may have been removed, or your
+              access may have changed.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 max-w-xs mx-auto">
+            {activeMembership?.organisation_id && (
+              <Button variant="default" onClick={() => navigate(`/workspace/${activeMembership.organisation_id}`, { replace: true })}>
+                <Building2 className="w-4 h-4" /> Return to Previous Workspace
+              </Button>
+            )}
+            {isPlatformAdmin && (
+              <Button variant="outline" onClick={() => navigate('/leader-org', { replace: true })}>
+                <Shield className="w-4 h-4" /> Return to Platform Console
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              <RefreshCw className="w-4 h-4" /> Retry
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/workspace', { replace: true })}>
+              Choose Another Workspace
+            </Button>
+          </div>
         </div>
       </div>
     );
