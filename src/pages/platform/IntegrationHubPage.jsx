@@ -105,14 +105,16 @@ export default function IntegrationHubPage() {
   // preserved across the OAuth redirect by WorkspaceProvider's
   // in-memory state (the admin stays on /leader-org during the
   // redirect, and WorkspaceProvider persists across the navigation).
-  const { activeTenantId, tenant: activeTenant, isLoadingWorkspace } = useWorkspace();
+  const { activeTenantId, tenant: activeTenant, isLoadingWorkspace, memberships } = useWorkspace();
+  // Build #28.2F.1: Don't fall back to user.tenant_id while memberships are
+  // still loading — that produces a false "Workspace unavailable" for platform
+  // admins who don't have a tenant_id on their User record. Wait for the
+  // provider to finish resolving, THEN check activeTenantId.
   const tenantId = activeTenantId || user?.data?.tenant_id || user?.tenant_id;
   const isAdmin = user?.role === 'admin';
   const canManage = ['admin', 'tenant_admin'].includes(user?.role);
 
   // ── Build #28.2E — Clean up stale sessionStorage from Build #28.2D ──
-  // The integration_selected_tenant key is no longer used. Remove any
-  // stale value so it doesn't interfere with the canonical WorkspaceProvider.
   useEffect(() => {
     sessionStorage.removeItem('integration_selected_tenant');
   }, []);
@@ -162,8 +164,16 @@ export default function IntegrationHubPage() {
   }, [isAdmin]);
 
   useEffect(() => {
+    // Build #28.2F.1: Only start fetching after workspace is resolved.
+    // If isLoadingWorkspace is true, activeTenantId may be null even
+    // for valid tenants (platform admins with no tenant_id on User).
+    if (isLoadingWorkspace) return;
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
     Promise.all([fetchXeroStatus(), fetchSyncQueue(), fetchPlatformConfig()]).finally(() => setLoading(false));
-  }, [fetchXeroStatus, fetchSyncQueue, fetchPlatformConfig]);
+  }, [fetchXeroStatus, fetchSyncQueue, fetchPlatformConfig, isLoadingWorkspace, tenantId]);
 
   // ── Handle OAuth callback (?code=...&state=... OR ?error=...&error_description=...) ──
   // State is a single-use server-side nonce (Build #28.2B). The backend validates
@@ -403,11 +413,12 @@ export default function IntegrationHubPage() {
     }
   };
 
-  // ── Build #28.2E — Loading state ──
+  // ── Build #28.2F.1 — Loading state ──
   // Show loader while WorkspaceProvider resolves memberships/tenant.
+  // Uses role="status" + aria-live for accessibility.
   if (loading || isLoadingWorkspace) {
     return (
-      <div className="flex justify-center py-24">
+      <div className="flex justify-center py-24" role="status" aria-live="polite">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
