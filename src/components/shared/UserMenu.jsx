@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { useWorkspace } from '@/lib/workspace';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -73,12 +73,23 @@ export default function UserMenu({ variant = 'sidebar', className }) {
     base44.auth.logout('/');
   };
 
+  // ── Build #28.2E — Context-Aware Workspace Switch ──
+  // Mirrors TenantSwitcher: stay on platform routes, navigate
+  // only when switching from a workspace or non-platform context.
+  const location = useLocation();
   const handleSwitchWorkspace = (membership) => {
     const ok = switchWorkspace(membership.organisation_id);
     setOpen(false);
-    if (ok) {
-      navigate(`/workspace/${membership.organisation_id}/dashboard`, { replace: true });
-    }
+    if (!ok) return;
+
+    const currentPath = location.pathname;
+    const isPlatformContext =
+      currentPath.startsWith('/leader-org') ||
+      currentPath.startsWith('/platform/');
+
+    if (isPlatformContext) return;
+
+    navigate(`/workspace/${membership.organisation_id}/dashboard`, { replace: true });
   };
 
   const itemClass =

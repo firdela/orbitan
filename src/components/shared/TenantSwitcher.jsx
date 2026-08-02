@@ -8,7 +8,7 @@
 // ============================================================
 
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useWorkspace } from '@/lib/workspace';
 import { INDUSTRY_LABELS } from '@/lib/orbitan-config';
@@ -60,11 +60,33 @@ export default function TenantSwitcher({ className }) {
   const orgIds = memberships.map((m) => m.organisation_id).filter(Boolean);
   const tenantMap = useTenantNames(orgIds);
 
+  // ── Build #28.2E — Context-Aware Workspace Switch ──
+  // When switching from the Platform Console (/leader-org) or a
+  // platform route (/platform/*), stay on the current page — the
+  // workspace context update alone is sufficient. Integration Hub
+  // and other platform pages consume useWorkspace() and re-render
+  // with the new tenant context automatically.
+  //
+  // When switching from a /workspace/* route, navigate to the new
+  // tenant's workspace dashboard.
+  const location = useLocation();
   const handleSwitch = (membership) => {
     const ok = switchWorkspace(membership.organisation_id);
-    if (ok) {
-      navigate(`/workspace/${membership.organisation_id}/dashboard`, { replace: true });
+    if (!ok) return;
+
+    const currentPath = location.pathname;
+    const isPlatformContext =
+      currentPath.startsWith('/leader-org') ||
+      currentPath.startsWith('/platform/');
+
+    if (isPlatformContext) {
+      // Stay on current page — context switch only.
+      // The current page (e.g. Integration Hub) will re-render
+      // with the new activeTenantId from WorkspaceProvider.
+      return;
     }
+
+    navigate(`/workspace/${membership.organisation_id}/dashboard`, { replace: true });
   };
 
   const filtered = useMemo(() => {

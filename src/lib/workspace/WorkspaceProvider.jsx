@@ -116,9 +116,40 @@ export function WorkspaceProvider({ children }) {
     queryFn: async () => {
       if (!identity?.id && !identity?.email) return [];
       const employees = await resolveAllEmployees(identity);
-      return employees
+      let translated = employees
         .map(translateEmployee)
         .filter((m) => m && m.status === 'active');
+
+      // ── Platform Admin Tenant Access (Build #28.2E) ──
+      // Platform admins may not have Employee membership records for
+      // every tenant. The global Workspace Switcher must show ALL
+      // tenants the admin can access. We synthesize in-memory membership
+      // objects for any Tenant record that doesn't already have an
+      // Employee record — no database writes, no RLS weakening.
+      // Authorization is still enforced by RLS (role: admin reads all).
+      if (identity?.platform_role === 'admin') {
+        try {
+          const allTenants = await base44.entities.Tenant.list('-created_date', 50);
+          const existingOrgIds = new Set(translated.map((m) => m.organisation_id));
+          const synthesized = (allTenants || [])
+            .filter((t) => !existingOrgIds.has(t.id))
+            .map((t) => Object.freeze({
+              user_id: identity.id,
+              organisation_id: t.id,
+              membership_type: 'platform_admin',
+              status: 'active',
+              display_name: t.name,
+              role_assignments: [{ role: 'admin', scope: { tenant_id: t.id, outlet_id: null, company_id: null, department: null } }],
+              source_employee_id: null,
+              _synthesized: true,
+            }));
+          translated = [...translated, ...synthesized];
+        } catch (err) {
+          console.error('[WorkspaceProvider] Admin tenant synthesis failed:', err);
+        }
+      }
+
+      return translated;
     },
     enabled:
       (!!identity?.email || !!identity?.id) && isAuthenticated && linkageReady,
@@ -249,6 +280,10 @@ export function WorkspaceProvider({ children }) {
       // procurement, reports, outlet list, tenant record).
       queryClient.invalidateQueries({ queryKey: ['workspace-tenant'] });
       queryClient.invalidateQueries({ queryKey: ['workspace-outlets'] });
+
+      // Invalidate any other tenant-scoped query caches to prevent
+      // stale data from the previous tenant flashing after the switch.
+      queryClient.invalidateQueries({ queryKey: ['tenant-scoped'] });
 
       setActiveMembership(target);
       setActiveTenantId(target.organisation_id);

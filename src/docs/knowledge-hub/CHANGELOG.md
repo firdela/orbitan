@@ -7,6 +7,30 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2E (Global Workspace Switcher & Tenant Resolution Repair)
+
+### Fixed — Global Workspace Switcher "Workspace not found" (Root Cause)
+- **Root cause:** Three compounding defects: (1) TenantSwitcher always navigated to `/workspace/:tenantId/dashboard` even when switching from `/leader-org` (Platform Console), (2) WorkspaceLayout's `Tenant.get` query had no DEMO_TENANTS fallback (unlike WorkspaceProvider's identical query), causing "Workspace not found" during transient query failures, (3) `integration_selected_tenant` in sessionStorage was a competing workspace source of truth alongside WorkspaceProvider.
+- **Fix:** TenantSwitcher and UserMenu now use context-aware navigation — when on `/leader-org` or `/platform/*`, they call `switchWorkspace()` without navigating away. IntegrationHubPage re-renders with the new `activeTenantId` automatically. WorkspaceLayout now has the same DEMO_TENANTS fallback as WorkspaceProvider. The competing `integration_selected_tenant` sessionStorage state has been removed entirely.
+
+### Added — Platform Admin Tenant Synthesis (WorkspaceProvider)
+- For `role: admin` users, WorkspaceProvider now synthesizes in-memory membership objects for all Tenant records that don't already have an Employee record. This ensures `switchWorkspace()` always finds the target membership for platform admins, even for tenants where they have no Employee record. No database writes, no RLS weakening. Synthesized memberships are marked `_synthesized: true`.
+
+### Changed — Canonical Workspace Source of Truth
+- IntegrationHubPage now uses `activeTenantId` from WorkspaceProvider as the sole tenant identifier. Removed: `selectedTenantId` state, `setSelectedTenantId` callback, `integration_selected_tenant` sessionStorage, admin tenant selection UI, admin workspace context bar (replaced with canonical version using `activeTenant.name` from WorkspaceProvider).
+- Stale sessionStorage cleanup runs on IntegrationHubPage mount to remove any leftover `integration_selected_tenant` from Build #28.2D.
+
+### Improved — Cache Invalidation on Workspace Switch
+- `switchWorkspace()` now also invalidates `['tenant-scoped']` queries to prevent stale data from the previous tenant from flashing after the switch.
+
+### Verified — Backend Runtime
+- `get_status` (tenant_id=6a21598721243d26f81e0155, Renewed Fashion) → HTTP 200: `connected: false`, `configured: true`, `status: "not_connected"`.
+- `get_status` (tenant_id=6a21598721243d26f81e0153, Taqueria) → HTTP 200: `connected: false`, `configured: true`, `status: "not_connected"`.
+- Tenant record for Renewed Fashion verified: `id: 6a21598721243d26f81e0155`, `status: onboarding`, `manifest_key: retail_ops_v1`, `onboarding_completed: true`.
+- Employee records verified: Admin user (Firdaus, user_id 6a2153efb1a18d0ca28c3a3a) has 4 Employee memberships with `tenant_id` values matching real `Tenant.id` values. No identifier mismatch.
+
+---
+
 ## [Unreleased] — Build #28.2D (Workspace Context Resolution & Integration Hub Stabilisation)
 
 ### Fixed — Integration Hub "Workspace not found" (Root Cause)

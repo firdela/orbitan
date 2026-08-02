@@ -23,7 +23,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { useWorkspace } from '@/lib/workspace';
-import { useTenant } from '@/lib/use-tenant';
+import { useTenant, DEMO_TENANTS } from '@/lib/use-tenant';
 import AppShell from '@/components/layout/AppShell';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import ManifestNav from '@/components/workspace/ManifestNav';
@@ -56,6 +56,12 @@ export default function WorkspaceLayout() {
   }, [tenantId, membershipForTenant, activeMembership, switchWorkspace]);
 
   // ── Resolve the Tenant record from the database ─────────
+  // ── Resolve the Tenant record from the database ─────────
+  // Build #28.2E: Added DEMO_TENANTS fallback to match
+  // WorkspaceProvider's queryFn. Without this, if the DB lookup
+  // fails (timing, RLS evaluation, network), the query returns null
+  // and "Workspace not found" appears even for valid tenants.
+  // Both queries share the same key — React Query deduplicates.
   const { data: tenantRecord, isLoading: tenantLoading } = useQuery({
     queryKey: ['workspace-tenant', tenantId],
     queryFn: async () => {
@@ -63,7 +69,10 @@ export default function WorkspaceLayout() {
       try {
         return await base44.entities.Tenant.get(tenantId);
       } catch {
-        return null;
+        // Fallback to pilot roster if DB lookup fails — prevents
+        // "Workspace not found" for valid pilot tenants during
+        // transient query failures or race conditions.
+        return DEMO_TENANTS.find((t) => t.id === tenantId) || null;
       }
     },
     enabled: !!tenantId && isAuthenticated,
