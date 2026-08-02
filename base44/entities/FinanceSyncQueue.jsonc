@@ -1,7 +1,7 @@
 {
   "name": "FinanceSyncQueue",
   "type": "object",
-  "description": "OrbitanOS Finance Integration Layer \u2014 decoupled ERP sync queue. Ensures data consistency even during Xero/external service outages. Every financial event (invoice, PO, write-off) passes through this queue before external sync. Exit-Ready: replace Xero adapter with any ERP without touching business logic.",
+  "description": "OrbitanOS Finance Integration Layer \u2014 decoupled ERP sync queue. Ensures data consistency even during Xero/external service outages. Every financial event (invoice, PO, write-off) passes through this queue before external sync. Build #28.2B adds idempotency_key for deterministic duplicate prevention. Exit-Ready: replace Xero adapter with any ERP without touching business logic.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -29,6 +29,10 @@
     "source_record_id": {
       "type": "string",
       "description": "ID of the source record that triggered this queue entry"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Deterministic key (tenant_id:source_entity:source_record_id:queue_type:erp_target) preventing duplicate ERP record creation. Checked before every Xero API call to ensure double-clicks, retries, and job replays cannot create duplicate invoices."
     },
     "erp_target": {
       "type": "string",
@@ -106,7 +110,7 @@
     },
     "erp_reference_id": {
       "type": "string",
-      "description": "ERP-side ID after successful sync e.g. Xero Invoice GUID"
+      "description": "ERP-side ID after successful sync e.g. Xero Invoice GUID. Presence indicates the record was already created in the ERP, preventing duplicates on retry."
     },
     "last_error": {
       "type": "string",
@@ -114,7 +118,7 @@
     },
     "skip_reason": {
       "type": "string",
-      "description": "Why this entry was skipped e.g. below_threshold, duplicate"
+      "description": "Why this entry was skipped e.g. below_threshold, duplicate, duplicate_idempotency_key"
     },
     "batch_id": {
       "type": "string",

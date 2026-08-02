@@ -1,0 +1,89 @@
+{
+  "name": "OAuthTransaction",
+  "type": "object",
+  "description": "OrbitanOS OAuth Transaction Registry (Build #28.2B) \u2014 single-use, server-side state tokens for OAuth 2.0 flows. Ensures OAuth state cannot be replayed: each transaction tracks the provider, nonce hash (SHA-256), tenant, requesting user, return route, and lifecycle (pending \u2192 processing \u2192 consumed \u2192 expired \u2192 failed). Only the opaque nonce is sent to the external provider as state; the hash is stored so the nonce itself is never persisted. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Orbitan tenant that initiated the OAuth flow"
+    },
+    "provider": {
+      "type": "string",
+      "enum": [
+        "xero",
+        "quickbooks",
+        "myob",
+        "shopify",
+        "google_workspace"
+      ],
+      "description": "OAuth provider this transaction is for"
+    },
+    "nonce_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of the opaque nonce sent as OAuth state. Only the hash is stored \u2014 the raw nonce is never persisted, ensuring a database compromise cannot reveal valid state tokens."
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User who initiated the OAuth flow"
+    },
+    "return_route": {
+      "type": "string",
+      "description": "Frontend route to return the user to after the OAuth callback"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "consumed",
+        "expired",
+        "failed"
+      ],
+      "default": "pending",
+      "description": "Transaction lifecycle state. pending \u2192 processing (during code exchange) \u2192 consumed (success). expired = timeout. failed = exchange error."
+    },
+    "environment": {
+      "type": "string",
+      "description": "Deployment environment at creation time (live or preview)"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this state token expires (10 minutes from creation)"
+    },
+    "consumed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this transaction was consumed (successfully or otherwise)"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "provider",
+    "nonce_hash",
+    "user_id",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
