@@ -9,12 +9,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
 import { useWorkspace } from '@/lib/workspace';
 import { INDUSTRY_LABELS } from '@/lib/orbitan-config';
-import { DEMO_TENANTS } from '@/lib/use-tenant';
+import { useTenantNames } from '@/lib/hooks/useTenantNames';
 import { Building2, ChevronRight, Check, Shield, Search, Plus, ArrowRight, Layers } from 'lucide-react';
 import {
   DropdownMenu,
@@ -56,35 +54,11 @@ export default function TenantSwitcher({ className }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
 
-  // ── Hydrate Tenant records for ALL memberships ──
-  // The membership objects carry organisation_id but use the Employee's
-  // full_name as display_name. We fetch the actual Tenant records so the
-  // switcher shows the business/workspace name, not the user's personal name.
-  const membershipIds = useMemo(
-    () => memberships.map((m) => m.organisation_id).filter(Boolean),
-    [memberships]
-  );
-
-  const { data: tenantRecords = [] } = useQuery({
-    queryKey: ['switcher-tenants', membershipIds.join(',')],
-    queryFn: async () => {
-      if (!membershipIds.length) return [];
-      const results = await Promise.all(
-        membershipIds.map((id) => base44.entities.Tenant.get(id).catch(() => null))
-      );
-      return results.filter(Boolean);
-    },
-    enabled: membershipIds.length > 0,
-    staleTime: 60 * 1000,
-  });
-
-  // Lookup map: tenant_id → Tenant record (DB first, DEMO_TENANTS fallback)
-  const tenantMap = useMemo(() => {
-    const map = {};
-    tenantRecords.forEach((t) => { map[t.id] = t; });
-    DEMO_TENANTS.forEach((t) => { if (!map[t.id]) map[t.id] = t; });
-    return map;
-  }, [tenantRecords]);
+  // ── Shared tenant-name hydration (Build #28.2A) ──
+  // Uses the canonical useTenantNames hook so TenantSwitcher and UserMenu
+  // share the same resolution logic, cache, and fallback behaviour.
+  const orgIds = memberships.map((m) => m.organisation_id).filter(Boolean);
+  const tenantMap = useTenantNames(orgIds);
 
   const handleSwitch = (membership) => {
     const ok = switchWorkspace(membership.organisation_id);

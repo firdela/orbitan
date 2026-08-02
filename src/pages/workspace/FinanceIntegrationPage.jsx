@@ -68,8 +68,8 @@ export default function FinanceIntegrationPage() {
       const data = res.data || res;
       if (!data.configured) {
         toast({
-          title: 'Xero Not Yet Configured',
-          description: 'The platform administrator needs to add the OAuth credentials before you can connect. This is a one-time setup step.',
+          title: 'Xero Temporarily Unavailable',
+          description: 'Xero integration is temporarily unavailable. Please try again later or contact Orbitan Support.',
           variant: 'default',
         });
         return;
@@ -116,22 +116,24 @@ export default function FinanceIntegrationPage() {
     }
   };
 
-  // OAuth callback handling: if URL has ?code, exchange it.
+  // OAuth callback handling: if URL has ?code&state, exchange it.
+  // State is now an opaque HMAC-signed token validated server-side.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
-    const stateTenant = params.get('state');
-    if (code && stateTenant && stateTenant === tenantId) {
+    const state = params.get('state');
+    if (code && state) {
       (async () => {
         try {
-          const res = await base44.functions.invoke('xeroOAuth', { action: 'exchange_code', tenant_id: stateTenant, code });
+          const res = await base44.functions.invoke('xeroOAuth', { action: 'exchange_code', code, state });
           const data = res.data || res;
           if (data.success) {
             toast({ title: 'Xero connected', description: `Connected to ${data.xero_tenant_name || 'Xero'}` });
+          } else if (data.requires_org_selection) {
+            toast({ title: 'Select Organisation', description: 'Choose which Xero organisation to connect.' });
           } else if (data.error) {
             toast({ title: 'Connection failed', description: data.error, variant: 'destructive' });
           }
-          // clean URL
           window.history.replaceState({}, '', window.location.pathname);
           loadStatus();
         } catch (e) {
@@ -205,9 +207,9 @@ export default function FinanceIntegrationPage() {
         </div>
 
         {status && !status.configured && (
-          <div className="mt-4 bg-orbitan-amber-light border border-amber-200 rounded-lg p-3 text-xs text-amber-800 flex items-start gap-2">
+          <div className="mt-4 bg-muted/50 border border-border rounded-lg p-3 text-xs text-muted-foreground flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>{status.message || 'Xero integration is not configured yet. The platform admin must add XERO_CLIENT_ID and XERO_CLIENT_SECRET secrets. Once added, finance teams can connect their Xero organisation here.'}</span>
+            <span>Xero integration is temporarily unavailable. Please try again later or contact Orbitan Support.</span>
           </div>
         )}
 

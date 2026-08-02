@@ -77,8 +77,8 @@ export function classifyIntegrationError(err, opts = {}) {
     combinedMsg.includes('client_secret')
   ) {
     return {
-      title: `${service === 'xero' ? 'Xero' : 'Integration'} Not Yet Configured`,
-      message: 'The platform administrator needs to add the OAuth credentials before you can connect. This is a one-time platform setup step — once added, all tenants can connect their own accounts.',
+      title: `${service === 'xero' ? 'Xero' : 'Integration'} Temporarily Unavailable`,
+      message: `${service === 'xero' ? 'Xero' : 'This integration'} is temporarily unavailable. Please try again later or contact Orbitan Support.`,
       variant: 'info',
       action: { label: null, to: null, dismiss: true },
     };

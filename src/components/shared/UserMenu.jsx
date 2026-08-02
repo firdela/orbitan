@@ -11,7 +11,8 @@ import {
   Check, Plus, ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { PLATFORM_IDENTITY } from '@/lib/orbitan-config';
+import { PLATFORM_IDENTITY, INDUSTRY_LABELS } from '@/lib/orbitan-config';
+import { useTenantNames } from '@/lib/hooks/useTenantNames';
 
 const APP_VERSION = `${PLATFORM_IDENTITY.os} v${PLATFORM_IDENTITY.version}`;
 const ENV_LABEL = import.meta.env.MODE === 'production' ? 'Production' : 'Preview';
@@ -41,6 +42,12 @@ export default function UserMenu({ variant = 'sidebar', className }) {
   const { tenant, activeRole, memberships, activeMembership, switchWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+
+  // ── Shared tenant-name hydration (Build #28.2A) ──
+  // Resolves canonical Tenant.name for every membership so workspace
+  // rows show the business name, not the Employee's personal name.
+  const orgIds = memberships.map((m) => m.organisation_id).filter(Boolean);
+  const tenantMap = useTenantNames(orgIds);
 
   const isAdmin = user?.role === 'admin';
   const displayName = user?.full_name || 'User';
@@ -140,30 +147,53 @@ export default function UserMenu({ variant = 'sidebar', className }) {
               </Link>
             </div>
           ) : memberships.length === 1 ? (
-            <div className="px-3 py-2 flex items-center gap-2.5 rounded-lg bg-accent/50">
-              <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-              <span className="flex-1 text-sm text-foreground truncate">
-                {memberships[0].display_name || 'Single workspace'}
-              </span>
-              <Check className="w-3.5 h-3.5 flex-shrink-0 text-orbitan-blue" />
-            </div>
+            (() => {
+              const m = memberships[0];
+              const wsTenant = tenantMap[m.organisation_id];
+              const wsName = wsTenant?.name || 'Single workspace';
+              const wsRole = m.role_assignments?.[0]?.role || m.role;
+              const wsIndustry = wsTenant?.industry;
+              return (
+                <div className="px-3 py-2 flex items-center gap-2.5 rounded-lg bg-accent/50">
+                  <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-sm text-foreground truncate">{wsName}</span>
+                    <span className="block text-[10px] text-muted-foreground truncate">
+                      {ROLE_LABELS[wsRole] || wsRole || 'Member'}
+                      {wsIndustry && ` · ${INDUSTRY_LABELS[wsIndustry] || wsIndustry}`}
+                    </span>
+                  </div>
+                  <Check className="w-3.5 h-3.5 flex-shrink-0 text-orbitan-blue" />
+                </div>
+              );
+            })()
           ) : (
             <div className="space-y-0.5" role="group" aria-label="Switch workspace">
               {memberships.slice(0, 5).map((m) => {
                 const isActive = activeMembership?.organisation_id === m.organisation_id;
+                const wsTenant = tenantMap[m.organisation_id];
+                const wsName = wsTenant?.name || 'Unnamed Workspace';
+                const wsRole = m.role_assignments?.[0]?.role || m.role;
+                const wsIndustry = wsTenant?.industry;
                 return (
                   <button
                     key={m.organisation_id}
                     type="button"
                     onClick={() => handleSwitchWorkspace(m)}
                     aria-current={isActive ? 'true' : undefined}
-                    className={cn(itemClass, isActive && 'bg-accent text-foreground')}
+                    className={cn(itemClass, isActive && 'bg-accent text-foreground', 'flex-col items-start gap-0.5 py-2')}
                   >
-                    <Building2 className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 text-left truncate">{m.display_name || 'Unnamed Workspace'}</span>
-                    {isActive
-                      ? <Check className="w-3.5 h-3.5 flex-shrink-0 text-orbitan-blue" />
-                      : <ArrowRight className="w-3 h-3 flex-shrink-0 text-muted-foreground/40" />}
+                    <div className="flex items-center gap-2.5 w-full">
+                      <Building2 className="w-4 h-4 flex-shrink-0" />
+                      <span className="flex-1 text-left truncate text-sm font-medium">{wsName}</span>
+                      {isActive
+                        ? <Check className="w-3.5 h-3.5 flex-shrink-0 text-orbitan-blue" />
+                        : <ArrowRight className="w-3 h-3 flex-shrink-0 text-muted-foreground/40" />}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground pl-6 truncate">
+                      {ROLE_LABELS[wsRole] || wsRole || 'Member'}
+                      {wsIndustry && ` · ${INDUSTRY_LABELS[wsIndustry] || wsIndustry}`}
+                    </span>
                   </button>
                 );
               })}

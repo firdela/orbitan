@@ -7,6 +7,56 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2A (User Profile Workspace Identity & Privacy-First Xero Integration)
+
+### Fixed — User Profile Dropdown Workspace Names
+- **Root cause:** The User Profile dropdown (`UserMenu`) displayed `membership.display_name` (Employee `full_name`) as the workspace label — showing "Firdaus (Founder)" for every workspace instead of the actual tenant/business name.
+- **Fix:** Extracted a shared `useTenantNames` hook used by both `TenantSwitcher` and `UserMenu`. Both components now hydrate canonical Tenant records and display `Tenant.name` as the primary label. Each workspace row shows: tenant name (primary), role badge + industry (secondary). The identity header retains the user's personal name. No competing workspace resolution logic — one shared hook.
+- **Consistency:** Selected workspace is now identical across: header workspace selector, User Profile dropdown, profile-menu footer, WorkspaceProvider, TenantProvider, and the canonical `/workspace/:tenantId/...` route. Switching from the profile menu updates context, route, header, footer, and checkmark. Selection persists after refresh.
+
+### Added — Privacy-First Xero Customer Connection Experience
+- **Removed all developer-facing content** from customer-facing integration UI. Customers no longer see: `XERO_CLIENT_ID`, `XERO_CLIENT_SECRET`, `developer.xero.com`, `Base44 Settings`, environment variable instructions, redirect URI instructions, or backend setup steps.
+- **Customer-facing states:** Connected (with org name, connected date, token health, sync metadata), Not Connected (with Connect Xero button + privacy reassurance), Temporarily Unavailable (neutral message + Contact Support), Reconnect Required, Action Required.
+- **Platform misconfiguration UX:** When platform credentials are missing, normal customers see "Xero integration is temporarily unavailable" + Contact Support. No "Critical" status for internal deployment configuration issues.
+- **Platform admin diagnostics:** Authorised platform admins get a separate collapsible "Platform Integration Diagnostics" panel showing configuration health (Client ID configured: Yes/No, Client Secret configured: Yes/No, redirect URI, scopes) without exposing secret values. This is separate from the customer-facing integration card.
+- **Multi-organisation selection:** When a user authorises multiple Xero organisations, they are presented with a selection list instead of auto-selecting the first. A new `select_organisation` action persists the user's choice.
+- **Privacy reassurance:** Connected state displays "Orbitan never receives your Xero password. You may disconnect at any time. Only authorised tenant administrators can manage this connection."
+- **Disconnect UX:** Confirmation dialog explains which syncs will stop and that historical records remain. Token material is cleared on disconnect. Best-effort token revocation at Xero.
+
+### Added — Secure OAuth State (HMAC-Signed)
+- **Before:** OAuth `state` parameter was the raw `tenant_id` — predictable, no replay protection, no user binding, no expiry.
+- **After:** `state` is an opaque HMAC-SHA256-signed token containing: cryptographic nonce, tenant_id, user_id, return route, created_at, expires_at (10-minute TTL). The signing key is derived from `XERO_CLIENT_SECRET` (server-side only). The token is opaque to Xero and the browser — only the backend can decode/verify.
+- **Validation:** On callback, the backend verifies the HMAC signature, checks expiry, and resolves the tenant_id from the state token. Invalid, expired, or tampered state is rejected. The frontend no longer sends `tenant_id` in the `exchange_code` call — it is resolved from the signed state.
+- **Portability:** Uses Web Crypto API (HMAC-SHA256) — portable to any runtime. No database entity required for state validation (OAuth authorization codes are one-time use by nature). Future enhancement: persistent `OAuthTransaction` entity for consumed-state tracking.
+
+### Added — Portable Secrets Adapter
+- All secret retrieval is isolated behind a `getSecret()` adapter function. Application code never imports Base44 environment configuration directly.
+- Current adapter: Base44/Deno environment variables. Future adapters: AWS Secrets Manager, Google Secret Manager, Azure Key Vault, HashiCorp Vault. Only the adapter function needs to change — no application logic rewrite.
+
+### Improved — Token Handling & Error Safety
+- Token refresh responses no longer return `access_token` to the caller (internal-only).
+- All error responses use customer-safe messages — never raw provider responses, stack traces, or token fragments.
+- `get_status` returns `neutral` sync_health (not `critical`) when the platform is not configured — a deployment configuration issue is not a customer-facing critical status.
+- Disconnect now attempts best-effort token revocation at Xero and clears token material from the credential record.
+
+### Updated — Finance Integration Page (Workspace Route)
+- Removed developer-facing amber warning with `XERO_CLIENT_ID`/`XERO_CLIENT_SECRET` instructions.
+- Replaced with neutral "temporarily unavailable" message for customers.
+- OAuth callback now uses state-based validation (no raw `tenant_id` comparison).
+
+### Updated — Integration Error Classification
+- "Not Yet Configured" messages replaced with "Temporarily Unavailable" — no mention of platform admin, OAuth credentials, or setup steps.
+
+### RBAC / RLS
+- No changes. `IntegrationCredential` RLS remains: admin-only writes, tenant_admin read for own tenant, no frontend token access.
+- `xeroOAuth` function enforces: only `admin` and `tenant_admin` roles can connect, reconnect, select organisation, sync, test, or disconnect.
+- Platform config action requires `admin` role.
+- Token records have no frontend read permission (RLS blocks direct entity reads).
+
+### Files
+- **Created:** `src/lib/hooks/useTenantNames.js`
+- **Modified:** `src/components/shared/UserMenu.jsx`, `src/components/shared/TenantSwitcher.jsx`, `src/pages/platform/IntegrationHubPage.jsx`, `src/pages/workspace/FinanceIntegrationPage.jsx`, `src/lib/integration-errors.js`, `base44/functions/xeroOAuth/entry.ts`
+
 ## [Unreleased] — Build #28.2 (Workspace Identity, Xero Recovery, Leader Console IA & Dashboard Refinement)
 
 ### Fixed — Workspace Switcher Identity
