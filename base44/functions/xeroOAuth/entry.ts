@@ -36,17 +36,27 @@ const XERO_TOKEN_URL = 'https://identity.xero.com/connect/token';
 const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
 const XERO_REVOCATION_URL = 'https://identity.xero.com/connect/revocation';
 
-// ── Least-privilege scopes ──
-// NOTE: Xero's OAuth 2.0 (built on IdentityServer) requires `openid` to be
-// present whenever `offline_access` is requested. Without `openid`, Xero
-// rejects the authorization request with `invalid_scope`. This was the root
-// cause of the INVALID_SCOPE error in Build #28.2C.
+// ── Least-privilege granular scopes (Build #28.2C — March 2026 migration) ──
+// Xero's OAuth 2.0 (built on IdentityServer) requires `openid` to be present
+// whenever `offline_access` is requested. Without `openid`, Xero rejects the
+// authorization request with `invalid_scope`.
+//
+// The Orbitan Xero app was created after Xero's March 2026 granular-scope
+// transition. The deprecated broad scope `accounting.transactions` has been
+// replaced with the smallest valid granular set required by the current MVP:
+//   - accounting.invoices       — invoice create/read/update (sales sync)
+//   - accounting.contacts       — contact create/read/update (customer/supplier sync)
+//   - accounting.settings.read  — account, tax-rate, currency, organisation mappings
+//   - offline_access            — refresh tokens for long-lived connections
+//   - openid                    — OIDC requirement for offline_access (IdentityServer)
+//
+// No payments, bank transactions, payroll, journals, or reports are requested.
 const XERO_SCOPES = [
   'openid',
   'offline_access',
-  'accounting.transactions',
-  'accounting.settings.read',
+  'accounting.invoices',
   'accounting.contacts',
+  'accounting.settings.read',
 ].join(' ');
 
 // ── Approved Orbitan origins allowlist ──

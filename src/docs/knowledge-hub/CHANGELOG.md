@@ -7,27 +7,49 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — Build #28.2C (Xero INVALID_SCOPE Fix & Integration Hub Stabilisation)
+## [Unreleased] — Build #28.2C (Xero Granular Scope Migration, INVALID_SCOPE Fix & PWA Callback Repair)
+
+### Changed — Xero Granular Scope Migration (March 2026 Transition)
+- **Root cause:** The Orbitan Xero application was created after Xero's March 2026 granular-scope transition. The scope `accounting.transactions` is a deprecated broad scope that must be replaced with the smallest valid granular scope set required by the current MVP.
+- **Fix:** Replaced `accounting.transactions` with `accounting.invoices`. Full granular scope string is now: `openid offline_access accounting.invoices accounting.contacts accounting.settings.read`.
+- **Scope justification:** `accounting.invoices` for invoice create/read/update; `accounting.contacts` for contact sync; `accounting.settings.read` for account/tax-rate/currency/org mappings; `offline_access` for refresh tokens; `openid` required by IdentityServer for `offline_access`.
+- **Excluded:** No payments, bank transactions, payroll, journals, or reports — none required by the current MVP.
+- **Runtime evidence:** `get_auth_url` returns HTTP 200 with `scope=openid+offline_access+accounting.invoices+accounting.contacts+accounting.settings.read`.
 
 ### Fixed — Xero INVALID_SCOPE Error
-- **Root cause:** Xero's OAuth 2.0 (built on IdentityServer) requires the `openid` scope to be present whenever `offline_access` is requested. Without `openid`, Xero rejects the authorization request with `invalid_scope`, preventing the OAuth flow from starting. The Build #28.2B scopes were `offline_access accounting.transactions accounting.settings.read accounting.contacts` — missing `openid`.
-- **Fix:** Added `openid` as the first scope in `XERO_SCOPES`. Full scope string is now `openid offline_access accounting.transactions accounting.settings.read accounting.contacts`. Verified via runtime test: `required_scopes` now includes `openid`.
-- **Evidence:** Xero Developer documentation and StackOverflow confirm `openid` is required alongside `offline_access`.
+- **Root cause:** Xero's OAuth 2.0 (built on IdentityServer) requires the `openid` scope whenever `offline_access` is requested. Without `openid`, Xero rejects the authorization request with `invalid_scope`.
+- **Fix:** Added `openid` as the first scope in `XERO_SCOPES` (carried from prior turn).
+
+### Fixed — Blank Screen on OAuth Callback
+- **Root cause (1):** The PWA service worker could serve a stale cached app shell from a previous deployment containing the old OAuth implementation. The old code would not handle Xero error callbacks (`error`/`error_description`), leaving the page blank.
+- **Root cause (2):** The OAuth callback handler only checked for `code`/`state` params. Xero error callbacks (user denied consent, invalid_scope, invalid_client, redirect_uri mismatch) were silently ignored, leaving the page in an indefinite loading state.
+- **Fix (1):** Rewrote service worker (`public/sw.js`): cache version bumped to `orbitan-os-v28-2c-20260802`; all previous caches purged on install; OAuth callback route, API/auth endpoints, and any URL containing OAuth callback params (`code`, `state`, `error`, `error_description`) are NEVER cached — always pass through to network; navigation requests use network-first with offline fallback; `skipWaiting()` + `clients.claim()` for immediate activation.
+- **Fix (2):** The OAuth callback `useEffect` now checks for `error`/`error_description` params first and shows a customer-friendly toast with plain-language explanation. All OAuth params (including `error` and `error_description`) are cleaned from the URL after processing. Applied to callback handler, org-selection handler, and error callback handler.
+
+### Fixed — Connect Button Security & Reliability
+- **URL host validation:** `handleConnect` now validates the returned `auth_url` is a valid URL whose host is `login.xero.com` or `identity.xero.com` before redirecting — prevents open-redirect attacks.
+- **Duplicate-click guard:** Added explicit `if (connecting) return` guard to prevent duplicate OAuth transactions.
+- **Reliable redirect:** Changed from `window.location.href = data.auth_url` to `window.location.assign(data.auth_url)` for full-page navigation reliability.
+- **Structured errors:** If the backend returns an invalid/empty URL or the host validation fails, a structured inline toast is shown instead of a blank screen.
 
 ### Fixed — Integration Hub URL Rewrite Bug
-- **Root cause:** The IntegrationHubPage OAuth callback handler and org-selection handler hardcoded `window.history.replaceState({}, document.title, '/platform/integrations')`. When the page was embedded as a tab inside LeaderOrg (`/leader-org?section=integration-hub`), this rewrote the URL to `/platform/integrations` — a different route. A browser refresh after the callback landed the user on the standalone page, not LeaderOrg.
-- **Fix:** Changed URL cleanup to remove only `code` and `state` query parameters, preserving the current pathname and other query params (e.g., `section=integration-hub`). Applied to both the OAuth callback handler and the `handleSelectOrg` function.
+- **Root cause:** The IntegrationHubPage OAuth callback handler hardcoded `window.history.replaceState` to `/platform/integrations`. When embedded as a tab inside LeaderOrg (`/leader-org?section=integration-hub`), this rewrote the URL to a different route.
+- **Fix:** URL cleanup now removes only OAuth callback params (`code`, `state`, `error`, `error_description`), preserving the current pathname and other query params.
 
 ### Fixed — Duplicate Integration Hub Rendering
-- **Root cause:** LeaderOrg rendered `<IntegrationHubPage />` under two separate tab keys (`integration-hub` and `integration-health`), both showing the same content. The `integration-health` tab was redundant.
-- **Fix:** Removed the `integration-health` TabsContent from LeaderOrg. Changed the `integration-health` nav item in UnifiedCommandNav from `type: 'tab'` to `type: 'route'`, so it navigates to the standalone `/platform/integrations` page. The `integration-hub` nav item remains `type: 'tab'`.
+- **Root cause:** LeaderOrg rendered `<IntegrationHubPage />` under two separate tab keys (`integration-hub` and `integration-health`).
+- **Fix:** Removed the `integration-health` TabsContent from LeaderOrg. Changed the `integration-health` nav item in UnifiedCommandNav from `type: 'tab'` to `type: 'route'`.
+
+### Verified — Runtime Evidence
+- `get_platform_config` → HTTP 200: `required_scopes: ["openid", "offline_access", "accounting.invoices", "accounting.contacts", "accounting.settings.read"]`, `oauth_ready: true`, `redirect_uri: "https://orbitan.io/platform/integrations"`.
+- `get_auth_url` → HTTP 200: `auth_url` contains granular scopes, correct redirect URI, valid Xero host.
+- Service worker: `CACHE_NAME` bumped, old caches purged on install, callback route never cached.
 
 ### Verified — Route Integrity
 - `/platform/integrations` — standalone page ✅
 - `/leader-org?section=integration-hub` — embedded tab in LeaderOrg ✅
 - `/integration-health` → redirects to `/platform/integrations` ✅
 - `/integration-directory` → redirects to `/leader-org?section=integration-hub` ✅
-- No dead navigation links found in navigation registry, UnifiedCommandNav, GlobalSearchBar, or route aliases.
 
 ## [Unreleased] — Build #28.2B (Xero OAuth Domain, Callback & Security Hardening)
 

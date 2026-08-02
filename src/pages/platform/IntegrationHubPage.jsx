@@ -135,13 +135,41 @@ export default function IntegrationHubPage() {
     Promise.all([fetchXeroStatus(), fetchSyncQueue(), fetchPlatformConfig()]).finally(() => setLoading(false));
   }, [fetchXeroStatus, fetchSyncQueue, fetchPlatformConfig]);
 
-  // ── Handle OAuth callback (?code=...&state=...) ──
-  // State is now an opaque HMAC-signed token (Build #28.2A).
-  // The backend validates the signature, expiry, and user/tenant binding.
+  // ── Handle OAuth callback (?code=...&state=... OR ?error=...&error_description=...) ──
+  // State is a single-use server-side nonce (Build #28.2B). The backend validates
+  // expiry, user/tenant binding, and prevents replay of consumed state.
+  // Xero returns error/error_description if the user denies consent or if the
+  // request is invalid (e.g. invalid_scope, invalid_client, redirect_uri_mismatch).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     const state = params.get('state');
+    const error = params.get('error');
+    const errorDescription = params.get('error_description');
+
+    // ── Provider error callback (user denied, invalid_scope, etc.) ──
+    if (error) {
+      const friendlyMessage = error === 'access_denied'
+        ? 'You declined to authorise Xero. You can reconnect anytime.'
+        : error === 'invalid_scope'
+        ? 'The requested permissions are not valid for this Xero app. Please contact Orbitan Support.'
+        : error === 'invalid_client'
+        ? 'The Xero application configuration is invalid. Please contact Orbitan Support.'
+        : `Xero returned an error: ${error}. Please try again or contact Orbitan Support.`;
+      toast({ title: 'Xero Connection Failed', description: friendlyMessage, variant: 'destructive' });
+      // Clean all OAuth callback params from URL
+      const cbParams = new URLSearchParams(window.location.search);
+      cbParams.delete('code');
+      cbParams.delete('state');
+      cbParams.delete('error');
+      cbParams.delete('error_description');
+      const cleanUrl = cbParams.toString()
+        ? `${window.location.pathname}?${cbParams.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      return;
+    }
+
     if (code && state) {
       setConnecting(true);
       base44.functions.invoke('xeroOAuth', { action: 'exchange_code', code, state })
@@ -163,11 +191,13 @@ export default function IntegrationHubPage() {
         })
         .finally(() => {
           setConnecting(false);
-          // Clean OAuth callback params from URL — preserve current path + other query params
+          // Clean ALL OAuth callback params from URL — preserve current path + other query params
           // (e.g. ?section=integration-hub when embedded in LeaderOrg)
           const cbParams = new URLSearchParams(window.location.search);
           cbParams.delete('code');
           cbParams.delete('state');
+          cbParams.delete('error');
+          cbParams.delete('error_description');
           const cleanUrl = cbParams.toString()
             ? `${window.location.pathname}?${cbParams.toString()}`
             : window.location.pathname;
@@ -181,6 +211,7 @@ export default function IntegrationHubPage() {
       toast({ title: 'No Workspace Selected', description: 'Please select a workspace before connecting Xero.', variant: 'destructive' });
       return;
     }
+    if (connecting) return; // Block duplicate clicks
     setConnecting(true);
     try {
       const res = await base44.functions.invoke('xeroOAuth', { action: 'get_auth_url', tenant_id: tenantId });
@@ -192,7 +223,25 @@ export default function IntegrationHubPage() {
         });
         return;
       }
-      if (data.auth_url) window.location.href = data.auth_url;
+      if (!data.auth_url || typeof data.auth_url !== 'string') {
+        toast({ title: 'Connection Failed', description: 'Could not generate a valid Xero authorisation URL. Please try again.', variant: 'destructive' });
+        return;
+      }
+      // Validate the URL host is Xero before redirecting (prevent open-redirect)
+      let parsedUrl;
+      try {
+        parsedUrl = new URL(data.auth_url);
+      } catch {
+        toast({ title: 'Connection Failed', description: 'The generated authorisation URL is invalid. Please contact Orbitan Support.', variant: 'destructive' });
+        return;
+      }
+      const ALLOWED_HOSTS = ['login.xero.com', 'identity.xero.com'];
+      if (!ALLOWED_HOSTS.includes(parsedUrl.hostname)) {
+        toast({ title: 'Connection Failed', description: 'The authorisation URL does not point to Xero. Aborting for security.', variant: 'destructive' });
+        return;
+      }
+      // Full-page navigation to Xero consent — use assign() for reliability
+      window.location.assign(data.auth_url);
     } catch (err) {
       const e = classifyIntegrationError(err, { action: 'connect', service: 'xero' });
       toast({ title: e.title, description: e.message, variant: e.variant === 'error' ? 'destructive' : 'default' });
@@ -227,6 +276,8 @@ export default function IntegrationHubPage() {
       const cbParams = new URLSearchParams(window.location.search);
       cbParams.delete('code');
       cbParams.delete('state');
+      cbParams.delete('error');
+      cbParams.delete('error_description');
       const cleanUrl = cbParams.toString()
         ? `${window.location.pathname}?${cbParams.toString()}`
         : window.location.pathname;
