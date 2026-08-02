@@ -7,6 +7,34 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2D (Workspace Context Resolution & Integration Hub Stabilisation)
+
+### Fixed — Integration Hub "Workspace not found" (Root Cause)
+- **Root cause:** Platform admins (`role: 'admin'`) have no Employee memberships, so `WorkspaceProvider` cannot resolve an `activeTenantId` for them. IntegrationHubPage resolved `tenantId = activeTenantId || user?.data?.tenant_id || user?.tenant_id` — all three are null for platform admins. The page loaded but could not fetch Xero status or connect, producing the "Workspace not found" symptom.
+- **Fix:** Added an explicit tenant selector to IntegrationHubPage for platform admins. When no workspace tenant is resolved and the user is an admin, the page fetches all tenants from the database and displays a selection list. Once a tenant is selected, `selectedTenantId` drives all Xero operations (status, connect, sync, disconnect, test). Tenant users with resolved workspaces skip the selector entirely — zero behaviour change for them.
+- **Resolution chain:** `workspaceTenantId = activeTenantId || user?.data?.tenant_id || user?.tenant_id`; `tenantId = workspaceTenantId || selectedTenantId`.
+
+### Added — Admin Workspace Context Bar
+- When a platform admin selects a tenant, a context bar appears at the top of the Integration Hub showing "Managing integrations for: [Tenant Name]" with a "Switch Workspace" button. This ensures the admin always knows which tenant's integrations they are managing.
+
+### Added — Graceful Recovery UI
+- When workspace context truly cannot be resolved (non-admin with no tenant), the page now displays a "Workspace unavailable" recovery card with "Reload Workspace" and "Go to Workspace Switcher" buttons — never a blank page.
+- Diagnostic logging via `console.error` is preserved in the fetch callbacks.
+
+### Verified — Navigation Consistency
+- All navigation paths (LeaderOrg tab, standalone route, QuickAccess, UserMenu, deep links) converge on the same IntegrationHubPage component with the same tenant resolution logic. No blank screen, no "Workspace not found", no missing tenant.
+
+### Verified — Backend Runtime
+- `get_platform_config` → HTTP 200: `oauth_ready: true`, `redirect_uri: "https://orbitan.io/platform/integrations"`, granular scopes confirmed.
+- `get_status` (tenant_id provided) → HTTP 200: `connected: false`, `configured: true`, `status: "not_connected"`, `message: "Xero is ready to connect."`
+- No existing IntegrationCredential records — confirms Xero was never successfully connected due to the prior scope + workspace issues.
+
+### Preserved
+- RLS: No changes. IntegrationCredential RLS already restricts access to admins and matching tenant_admins.
+- RBAC: No changes. `canManage` check (`['admin', 'tenant_admin']`) preserved.
+- Architecture: No changes. WorkspaceProvider, TenantProvider, GlobalOutletContext, and the xeroOAuth backend function are untouched.
+- Xero OAuth scopes, redirect URI, and backend logic unchanged from Build #28.2C.
+
 ## [Unreleased] — Build #28.2C (Xero Granular Scope Migration, INVALID_SCOPE Fix & PWA Callback Repair)
 
 ### Changed — Xero Granular Scope Migration (March 2026 Transition)

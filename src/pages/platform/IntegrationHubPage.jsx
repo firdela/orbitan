@@ -28,6 +28,7 @@ import {
 import IntegrationCatalog from '@/components/platform/IntegrationCatalog';
 import { cn } from '@/lib/utils';
 import { classifyIntegrationError } from '@/lib/integration-errors';
+import { Building2, AlertTriangle, Plus } from 'lucide-react';
 
 const STATUS_CONFIG = {
   connected: { icon: CheckCircle2, color: 'text-orbitan-green', bg: 'bg-orbitan-green-light', border: 'border-orbitan-green/30', label: 'Connected' },
@@ -86,9 +87,33 @@ export default function IntegrationHubPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { activeTenantId } = useWorkspace();
-  const tenantId = activeTenantId || user?.data?.tenant_id || user?.tenant_id;
+  const workspaceTenantId = activeTenantId || user?.data?.tenant_id || user?.tenant_id;
   const isAdmin = user?.role === 'admin';
   const canManage = ['admin', 'tenant_admin'].includes(user?.role);
+
+  // ── Build #28.2D — Admin Tenant Selection ──
+  // Platform admins have no Employee memberships, so WorkspaceProvider
+  // can't resolve a tenant for them. They must explicitly select which
+  // tenant to manage integrations for. This preserves the privacy-first
+  // architecture: the admin chooses the tenant context, and all Xero
+  // operations are scoped to that tenant_id.
+  //
+  // selectedTenantId is persisted in sessionStorage so it survives the
+  // full-page OAuth redirect to Xero and back. Without this, the admin
+  // would return from Xero to a page with no tenant context and be
+  // unable to see the connection result.
+  const [selectedTenantId, setSelectedTenantIdState] = useState(
+    () => sessionStorage.getItem('integration_selected_tenant') || null
+  );
+  const [tenants, setTenants] = useState([]);
+  const [tenantsLoading, setTenantsLoading] = useState(false);
+  const tenantId = workspaceTenantId || selectedTenantId;
+
+  const setSelectedTenantId = useCallback((id) => {
+    setSelectedTenantIdState(id);
+    if (id) sessionStorage.setItem('integration_selected_tenant', id);
+    else sessionStorage.removeItem('integration_selected_tenant');
+  }, []);
 
   const [xeroStatus, setXeroStatus] = useState(null);
   const [platformConfig, setPlatformConfig] = useState(null);
@@ -134,6 +159,19 @@ export default function IntegrationHubPage() {
   useEffect(() => {
     Promise.all([fetchXeroStatus(), fetchSyncQueue(), fetchPlatformConfig()]).finally(() => setLoading(false));
   }, [fetchXeroStatus, fetchSyncQueue, fetchPlatformConfig]);
+
+  // ── Build #28.2D — Fetch tenant list for admin selection ──
+  // Only fetches when: (a) user is admin, (b) no workspace tenant was
+  // resolved by WorkspaceProvider. Tenant users skip this entirely —
+  // their tenant is resolved automatically.
+  useEffect(() => {
+    if (!isAdmin || workspaceTenantId) return;
+    setTenantsLoading(true);
+    base44.entities.Tenant.list('-created_date', 50)
+      .then((list) => setTenants(list || []))
+      .catch(() => setTenants([]))
+      .finally(() => setTenantsLoading(false));
+  }, [isAdmin, workspaceTenantId]);
 
   // ── Handle OAuth callback (?code=...&state=... OR ?error=...&error_description=...) ──
   // State is a single-use server-side nonce (Build #28.2B). The backend validates
@@ -344,6 +382,107 @@ export default function IntegrationHubPage() {
     );
   }
 
+  // ── Build #28.2D — Workspace Context Resolution ──
+  // Platform admins without a workspace tenant must select one.
+  // Tenant users with a resolved workspace skip this entirely.
+  const needsTenantSelection = isAdmin && !workspaceTenantId && !selectedTenantId;
+
+  // ── Graceful Recovery (Priority 4) ──
+  // If workspace truly can't be resolved (non-admin with no tenant),
+  // never show a blank page — show recovery actions.
+  const workspaceUnresolvable = !tenantId && !needsTenantSelection;
+
+  if (workspaceUnresolvable) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 animate-fade-in max-w-2xl mx-auto">
+        <PageHeader title="Integration Hub" />
+        <Card>
+          <CardContent className="p-8 text-center space-y-4">
+            <div className="w-14 h-14 rounded-xl bg-orbitan-amber-light flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-7 h-7 text-orbitan-amber-700" />
+            </div>
+            <div>
+              <h3 className="font-heading font-semibold text-lg">Workspace unavailable</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                We couldn&rsquo;t resolve your workspace context. This may happen after a session
+                timeout or if your workspace assignment changed.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+              <Button variant="default" onClick={() => window.location.reload()}>
+                <RefreshCw className="w-4 h-4" /> Reload Workspace
+              </Button>
+              <Button variant="outline" onClick={() => window.location.assign('/workspace')}>
+                <Building2 className="w-4 h-4" /> Go to Workspace Switcher
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground pt-2">
+              If this persists, contact your administrator or Orbitan Support.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (needsTenantSelection) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 animate-fade-in max-w-2xl mx-auto">
+        <PageHeader
+          title="Integration Hub"
+          subtitle="Select a workspace to manage its external service connections."
+        />
+        <Card>
+          <CardContent className="p-6">
+            {tenantsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading workspaces…</span>
+              </div>
+            ) : tenants.length === 0 ? (
+              <div className="text-center py-8 space-y-3">
+                <Building2 className="w-10 h-10 mx-auto text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  No workspaces found. Onboard a tenant first to manage integrations.
+                </p>
+                <Button size="sm" onClick={() => window.location.assign('/onboarding')}>
+                  <Plus className="w-3.5 h-3.5" /> Onboard Tenant
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Choose which workspace&rsquo;s integrations to manage. You can switch at any time.
+                </p>
+                {tenants.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setSelectedTenantId(t.id)}
+                    className="w-full flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:bg-accent hover:border-primary/30 transition-colors text-left group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-orbitan-blue-light flex items-center justify-center flex-shrink-0">
+                        <Building2 className="w-4 h-4 text-orbitan-blue" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{t.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {t.industry?.replace(/_/g, ' ')} · {t.subscription_plan?.replace('orbitan_', '')}
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const status = xeroStatus?.status || 'not_connected';
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.not_connected;
   const StatusIcon = statusConfig.icon;
@@ -378,6 +517,23 @@ export default function IntegrationHubPage() {
         title="Integration Hub"
         subtitle="Connect external services and monitor sync health. Your data stays tenant-isolated."
       />
+
+      {/* ── Build #28.2D — Admin Workspace Context Bar ── */}
+      {isAdmin && selectedTenantId && !workspaceTenantId && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-orbitan-blue/30 bg-orbitan-blue-light/50 px-4 py-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <Building2 className="w-4 h-4 text-orbitan-blue flex-shrink-0" />
+            <span className="text-sm text-muted-foreground">Managing integrations for:</span>
+            <span className="text-sm font-medium truncate">
+              {tenants.find((t) => t.id === selectedTenantId)?.name || selectedTenantId}
+            </span>
+          </div>
+          <Button size="sm" variant="ghost" className="text-xs gap-1.5 flex-shrink-0" onClick={() => setSelectedTenantId(null)}>
+            Switch Workspace
+            <ArrowRight className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
 
       {/* ── KPI Dashboard ── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
