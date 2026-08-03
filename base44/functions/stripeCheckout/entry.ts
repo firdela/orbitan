@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     // Resolve the price ID via lookup key — works in both Live and Test mode
     const priceId = await resolvePriceId(stripe, PLAN_LOOKUP_KEYS[plan_key]);
 
-    const origin = req.headers.get('origin') || 'https://app.orbitan.com';
+    const origin = req.headers.get('origin') || 'https://orbitan.net';
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',

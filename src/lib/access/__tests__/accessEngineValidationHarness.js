@@ -49,7 +49,7 @@ export function runAccessEngineValidation() {
 
   // ── Fixtures ─────────────────────────────────────────────────
   const workerIdentity = { id: 'u_worker', email: 'ali@orbitan.dev', platform_role: null };
-  const platformOwner = { id: 'u_admin', email: 'coffeeteabreak12@gmail.com', platform_role: 'admin' };
+  const platformOwner = { id: 'u_admin', email: 'platform-owner@orbitan.net', platform_role: 'admin' };
 
   const empT1 = {
     id: 'e1', user_id: 'u_worker', tenant_id: 't1', outlet_id: 'o1',

@@ -79,7 +79,7 @@ export default function MaintenanceView({ settings = {} }) {
             </Button>
             <Button
               className="flex-1 bg-[#2563EB] hover:bg-[#1D4ED8] text-white gap-2"
-              onClick={() => window.location.href = 'mailto:support@orbitan.io'}
+              onClick={() => window.location.href = 'mailto:support@orbitan.net'}
             >
               <Mail className="w-4 h-4" /> Contact Support
             </Button>

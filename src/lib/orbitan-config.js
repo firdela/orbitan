@@ -20,6 +20,39 @@ export const PLATFORM_IDENTITY = {
 };
 
 // ============================================================
+// CANONICAL URLS — Build #28.2F.2
+// Single source of truth for all Orbitan domain references.
+// All backend functions, frontend links, email templates, and
+// metadata must consume these values — never hardcode domains.
+// ============================================================
+export const CANONICAL_URLS = {
+  PUBLIC_ORIGIN: 'https://orbitan.net',
+  XERO_CALLBACK: 'https://orbitan.net/platform/integrations',
+  SUPPORT_URL: '/support',
+  LEGAL_URL: '/legal',
+  PRIVACY_URL: '/legal#privacy',
+  TERMS_URL: '/legal#terms',
+  STATUS_URL: '/status',
+};
+
+// ============================================================
+// PUBLIC EMAIL IDENTITIES — Build #28.2F.2
+// Customer-facing sender and contact addresses.
+// Private forwarding destinations are NEVER stored in code,
+// entities, UI, or API responses. Email routing is managed
+// externally through Cloudflare and Resend.
+// ============================================================
+export const EMAIL_IDENTITIES = {
+  hello: 'Orbitan <hello@orbitan.net>',
+  news: 'Orbitan News <news@orbitan.net>',
+  sales: 'Orbitan Sales <sales@orbitan.net>',
+  support: 'Orbitan Support <support@orbitan.net>',
+  notifications: 'Orbitan Notifications <notifications@orbitan.net>',
+  billing: 'Orbitan Billing <billing@orbitan.net>',
+  finance: 'Orbitan Finance <finance@orbitan.net>',
+};
+
+// ============================================================
 // OPERATING CYCLE — The 6 Principles of OrbitanOS
 // ============================================================
 export const OPERATING_CYCLE = {

@@ -34,10 +34,11 @@ import { resolvePrecedence } from './precedence.js';
 
 export const ACCESS_ENGINE_VERSION = '1.0.0';
 
-// Bootstrap Platform Owner (ADR-0050 §10). Isolated, documented, and
-// designed to evolve into a configurable platform-level entitlement
-// (Implementation Rule 4). Do not duplicate this value elsewhere.
-const PLATFORM_OWNER_BOOTSTRAP_EMAIL = 'coffeeteabreak12@gmail.com';
+// Build #28.2F.2: Private bootstrap email removed from source code.
+// Platform ownership is determined by platform_role === 'admin',
+// not by email matching. The email-based bootstrap was a legacy
+// M1 mechanism that violated the privacy principle of never
+// storing private addresses in code.
 
 export function createAccessEngine({ resolvers = {}, policyEngine = createPolicyEngine() } = {}) {
   const engine = Object.freeze({
@@ -191,10 +192,11 @@ async function resolve(resolver, value, ctx) {
 
 function isPlatformOwner(identity) {
   if (!identity) return false;
-  // Bootstrap check (email) + platform role. Evolves to a configurable
-  // platform entitlement in a later milestone (Implementation Rule 4).
+  // Build #28.2F.2: Platform ownership is determined by role only.
+  // The legacy email-based bootstrap has been removed to prevent
+  // private address exposure in source code.
   if (identity.platform_role === 'admin') return true;
-  if (identity.email && identity.email.toLowerCase() === PLATFORM_OWNER_BOOTSTRAP_EMAIL) return true;
+  if (identity.role === 'admin') return true;
   return false;
 }
 

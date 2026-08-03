@@ -28,7 +28,7 @@ import { encryptToken, decryptToken, isEncryptionAvailable, sha256Hash, generate
  *   - No token values, secrets, or stack traces in responses or audit logs
  *   - Redirect URI is backend-only (XERO_REDIRECT_URI), validated against allowlist
  *
- * CANONICAL DOMAIN: https://orbitan.io (supersedes app.orbitan.com)
+ * CANONICAL DOMAIN: https://orbitan.net (Build #28.2F.2 — supersedes orbitan.io)
  */
 
 const XERO_AUTH_URL = 'https://login.xero.com/identity/connect/authorize';
@@ -61,9 +61,10 @@ const XERO_SCOPES = [
 
 // ── Approved Orbitan origins allowlist ──
 // The redirect URI must start with one of these.
+// Build #28.2F.2: Migrated from orbitan.io to orbitan.net.
 const ALLOWED_ORIGINS = [
-  'https://orbitan.io',
-  'https://www.orbitan.io',
+  'https://orbitan.net',
+  'https://www.orbitan.net',
 ];
 
 // ── Portable secrets adapter ──

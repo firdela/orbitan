@@ -224,7 +224,7 @@ export function runAccessEngineTests() {
   test('AccessEngine: Platform Owner without workspace is denied (no blind bypass)', async () => {
     const engine = createAccessEngine();
     const d = await engine.evaluate({
-      identity: { id: 'po', email: 'coffeeteabreak12@gmail.com', role: 'admin' },
+      identity: { id: 'po', email: 'platform-owner@orbitan.net', role: 'admin' },
       resource: res({}),
       action: 'inventory.read',
     });
@@ -235,7 +235,7 @@ export function runAccessEngineTests() {
   test('AccessEngine: Platform Owner WITH selected tenant context is allowed', async () => {
     const engine = createAccessEngine();
     const d = await engine.evaluate({
-      identity: { id: 'po', email: 'coffeeteabreak12@gmail.com', role: 'admin' },
+      identity: { id: 'po', email: 'platform-owner@orbitan.net', role: 'admin' },
       workspace: { tenant_id: T },
       membership: null,
       permissions: [],

@@ -237,7 +237,7 @@ export default function Checkout() {
             Unlimited scale, custom SLAs, white-labelling, and dedicated support.
           </p>
           <p className="text-sm text-marketing-gold font-semibold mb-4">Starting from S$1,999/month</p>
-          <a href="mailto:sales@orbitan.com">
+          <a href="mailto:sales@orbitan.net">
             <Button variant="outline" className="border-marketing-gold/40 text-marketing-gold hover:bg-marketing-gold/10">
               Contact Sales
             </Button>

@@ -15,10 +15,10 @@ const fadeUp = {
 
 const SECURITY_EVENTS = [
   { id: 1, timestamp: '2026-07-31 17:15:22', type: 'failed_login', severity: 'warning', user: 'unknown@example.com', ip: '203.0.113.42', action: 'Failed login attempt (3rd)', resolved: false },
-  { id: 2, timestamp: '2026-07-31 16:45:10', type: 'role_change', severity: 'info', user: 'admin@orbitan.io', ip: '198.51.100.1', action: 'Promoted user to outlet_manager', resolved: true },
+  { id: 2, timestamp: '2026-07-31 16:45:10', type: 'role_change', severity: 'info', user: 'admin@orbitan.net', ip: '198.51.100.1', action: 'Promoted user to outlet_manager', resolved: true },
   { id: 3, timestamp: '2026-07-31 15:30:00', type: 'shield_block', severity: 'critical', user: 'worker@taqueria.sg', ip: '198.51.100.5', action: 'Shield blocked: attempted delete on locked payroll record', resolved: true },
   { id: 4, timestamp: '2026-07-31 14:20:33', type: 'suspicious_activity', severity: 'warning', user: 'user@renewed.sg', ip: '203.0.113.99', action: 'Multiple rapid API calls detected (rate limit warning)', resolved: false },
-  { id: 5, timestamp: '2026-07-31 12:00:00', type: 'session_expired', severity: 'info', user: 'manager@orbitan.io', ip: '198.51.100.2', action: 'Session expired and refreshed', resolved: true },
+  { id: 5, timestamp: '2026-07-31 12:00:00', type: 'session_expired', severity: 'info', user: 'manager@orbitan.net', ip: '198.51.100.2', action: 'Session expired and refreshed', resolved: true },
 ];
 
 const SEVERITY_CONFIG = {

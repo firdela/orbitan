@@ -7,7 +7,27 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — Build #28.2E (Global Workspace Switcher & Tenant Resolution Repair)
+## [Unreleased] — Build #28.2F.2 (Orbitan.NET Domain Migration & Integration Hub Navigation Fix)
+
+### Changed — Canonical Domain Migration (orbitan.io → orbitan.net)
+- All active runtime and customer-facing references migrated from `orbitan.io` to `orbitan.net`.
+- New `CANONICAL_URLS` registry in `orbitan-config.js` is the single source of truth for all domain references (PUBLIC_ORIGIN, XERO_CALLBACK, SUPPORT_URL, LEGAL_URL, PRIVACY_URL, TERMS_URL, STATUS_URL).
+- New `EMAIL_IDENTITIES` registry defines public sender addresses: `hello@`, `news@`, `sales@`, `support@`, `notifications@`, `billing@`, `finance@orbitan.net`.
+- Xero OAuth `ALLOWED_ORIGINS` updated to `orbitan.net` / `www.orbitan.net`.
+- Stripe checkout fallback origin updated to `https://orbitan.net`.
+- `index.html` now includes canonical URL, Open Graph, and Twitter Card meta tags.
+- Historical ADRs (0060, 0061, 0062) retain original domain references for audit trail integrity; ADR-0066 documents the migration.
+
+### Fixed — Integration Hub Dropdown Navigation (Build #28.2F.2)
+- **Root cause:** `integration-hub` nav item was configured as `type: 'tab'` in `UnifiedCommandNav.jsx`, causing `onTabChange()` to be called instead of `navigate('/platform/integrations')`. The dropdown closed but no route navigation occurred.
+- **Fix:** Changed `integration-hub` to `type: 'route'`. Refactored all dropdown route items to use the proper Radix `asChild` + `Link` composition pattern — no `setTimeout`, no full-page reload. Works for mouse, touch, Enter, and Space.
+
+### Removed — Private Gmail Address Exposure
+- Hardcoded private Gmail address (`coffeeteabreak12@gmail.com`) removed from `AccessEngine.js` (`PLATFORM_OWNER_BOOTSTRAP_EMAIL`). Platform ownership is now determined by `role === 'admin'` only.
+- Test fixture emails in `runTests.js` and `accessEngineValidationHarness.js` replaced with `platform-owner@orbitan.net`.
+- Final secret scan: no private Gmail addresses, no `orbitan.io` runtime URLs, no `orbitan.com` runtime URLs remain in source code.
+
+## [Released] — Build #28.2E (Global Workspace Switcher & Tenant Resolution Repair)
 
 ### Fixed — Global Workspace Switcher "Workspace not found" (Root Cause)
 - **Root cause:** Three compounding defects: (1) TenantSwitcher always navigated to `/workspace/:tenantId/dashboard` even when switching from `/leader-org` (Platform Console), (2) WorkspaceLayout's `Tenant.get` query had no DEMO_TENANTS fallback (unlike WorkspaceProvider's identical query), causing "Workspace not found" during transient query failures, (3) `integration_selected_tenant` in sessionStorage was a competing workspace source of truth alongside WorkspaceProvider.

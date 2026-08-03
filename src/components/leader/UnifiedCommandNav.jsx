@@ -71,7 +71,7 @@ const NAV_CATEGORIES = [
     id: 'integrations',
     label: 'Integrations',
     icon: Plug,
-    primary: { key: 'integration-hub', type: 'tab', label: 'Integration Hub' },
+    primary: { key: 'integration-hub', type: 'route', label: 'Integration Hub' },
     items: [
       { key: 'integration-health', type: 'route' },
     ],
@@ -137,6 +137,31 @@ export default function UnifiedCommandNav({ activeTab, onTabChange }) {
     }
   };
 
+  // ── Render a single dropdown item ──
+  // Route items use asChild + Link (proper Radix pattern — no
+  // menu-closing-before-navigation race condition, no setTimeout).
+  // Tab items use onClick + onTabChange (stay within LeaderOrg).
+  const renderDropdownItem = (entry, className = 'gap-2 cursor-pointer') => {
+    const item = getNavItemByKey(entry.key);
+    if (!item) return null;
+    if (entry.type === 'route') {
+      return (
+        <DropdownMenuItem asChild key={entry.key} className={className}>
+          <Link to={item.route}>{entry.label || item.label}</Link>
+        </DropdownMenuItem>
+      );
+    }
+    return (
+      <DropdownMenuItem
+        key={entry.key}
+        onClick={() => handleItem(entry)}
+        className={className}
+      >
+        {entry.label || item.label}
+      </DropdownMenuItem>
+    );
+  };
+
   const isActiveCategory = (cat) => {
     if (cat.primary?.type === 'tab' && activeTab === cat.primary.key) return true;
     if (cat.items?.some((i) => i.type === 'tab' && i.key === activeTab)) return true;
@@ -183,19 +208,9 @@ export default function UnifiedCommandNav({ activeTab, onTabChange }) {
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
                     {group.section}
                   </p>
-                  {group.items.map((entry) => {
-                    const item = getNavItemByKey(entry.key);
-                    if (!item) return null;
-                    return (
-                      <DropdownMenuItem
-                        key={entry.key}
-                        onClick={() => handleItem(entry)}
-                        className="gap-2 cursor-pointer rounded-md px-2 py-1.5 text-sm"
-                      >
-                        {item.label}
-                      </DropdownMenuItem>
-                    );
-                  })}
+                  {group.items.map((entry) =>
+                    renderDropdownItem(entry, 'gap-2 cursor-pointer rounded-md px-2 py-1.5 text-sm')
+                  )}
                 </div>
               ))}
             </div>
@@ -217,31 +232,28 @@ export default function UnifiedCommandNav({ activeTab, onTabChange }) {
         <DropdownMenuContent align="start" className="w-56 max-h-[80vh] overflow-y-auto">
           {cat.primary && (
             <>
-              <DropdownMenuItem
-                onClick={() => handleItem(cat.primary)}
-                className="gap-2 font-medium text-primary focus:text-primary"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-                {cat.primary.label || getNavItemByKey(cat.primary.key)?.label}
-              </DropdownMenuItem>
+              {cat.primary.type === 'route' ? (
+                <DropdownMenuItem asChild className="gap-2 font-medium text-primary focus:text-primary">
+                  <Link to={getNavItemByKey(cat.primary.key)?.route}>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                    {cat.primary.label || getNavItemByKey(cat.primary.key)?.label}
+                  </Link>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => handleItem(cat.primary)}
+                  className="gap-2 font-medium text-primary focus:text-primary"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                  {cat.primary.label || getNavItemByKey(cat.primary.key)?.label}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
             </>
           )}
           {cat.items
             .filter((i) => !cat.primary || i.key !== cat.primary.key)
-            .map((entry) => {
-              const item = getNavItemByKey(entry.key);
-              if (!item) return null;
-              return (
-                <DropdownMenuItem
-                  key={entry.key}
-                  onClick={() => handleItem(entry)}
-                  className="gap-2 cursor-pointer"
-                >
-                  {entry.label || item.label}
-                </DropdownMenuItem>
-              );
-            })}
+            .map((entry) => renderDropdownItem(entry, 'gap-2 cursor-pointer'))}
         </DropdownMenuContent>
       </DropdownMenu>
     );
