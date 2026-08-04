@@ -7,6 +7,56 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2H (Authentication Experience Repair & Completion) (2026-08-04)
+
+### Added — Canonical Authentication Error Mapping Layer
+- `src/lib/auth-errors.js` — single source of truth for translating raw Base44 SDK auth errors into safe, user-facing messages. 17 error types with context-aware classification (login, register, verify, reset, session). Never exposes raw backend messages, provider error codes, stack traces, or token values. Priority ordering ensures specific conditions (disabled account, verification required) are checked before generic 403 fallbacks.
+
+### Added — Canonical Auth Redirect Utility
+- `src/lib/auth-redirects.js` — consolidates return-URL resolution, sanitization, and safe-redirect logic. `sanitizePath()` rejects open redirects, protocol-relative URLs, backslash escapes, javascript:/data:/blob URLs, and auth routes (redirect loop prevention). Strips app-bootstrap params (`access_token`, `app_id`, `app_base_url`). `resolveReturnUrl()` checks URL params → sessionStorage → default. `flagSessionExpired()` / `consumeSessionExpiredFlag()` for session-expiry messaging.
+
+### Added — Reusable Auth UI Components
+- `src/components/auth/PasswordInput.jsx` — password field with show/hide toggle, live strength indicator, requirements checklist, proper autocomplete, aria attributes, focus-visible ring.
+- `src/components/auth/AuthAlert.jsx` — accessible error/warning/success/info alert with role="alert", aria-live="assertive", auto-focus on mount.
+- `src/components/auth/AuthPageGuard.jsx` — wraps auth pages to redirect already-authenticated users to /workspace.
+
+### Completed — Account Verification Flow
+- Register.jsx: verification-required state, masked email display, resend with loading/success/failure/cooldown (30s timer), already-verified state, invalid/expired code classification, safe redirect after verification.
+
+### Completed — Password Reset Flow
+- ForgotPassword.jsx: non-enumerating response, success state with return-to-login.
+- ResetPassword.jsx: password visibility toggle, requirements checklist, strength indicator, mismatch detection, missing/invalid/expired token states, success state with redirect, token cleared from browser history.
+
+### Completed — Session Expiry Flow
+- AuthContext.jsx: uses canonical `captureReturnUrl()` and `flagSessionExpired()`. Login.jsx consumes the flag to show "Your session has expired" message. Return URLs captured only when not on auth routes (redirect loop prevention).
+
+### Completed — Authentication Error-State System
+- All auth pages (Login, Register, ForgotPassword, ResetPassword) now import from the single `auth-errors.js` layer, replacing previously duplicated inline error-classification logic.
+
+### Completed — Routing & Redirect Consistency
+- AuthPageGuard wraps `/login`, `/register`, `/forgot-password`, `/reset-password` — authenticated users redirected to `/workspace`.
+- Login.jsx uses `resolveReturnUrl()` / `navigateToReturnUrl()` instead of inline return-URL extraction.
+- OAuth provider redirects use `resolveReturnUrl()` for consistent return-URL handling.
+
+### Accessibility (WCAG 2.2 AA)
+- Programmatic form labels, autocomplete attributes, aria-invalid/aria-describedby, role="alert" + aria-live="assertive", auto-focus after errors and page load, password toggle with aria-label/aria-pressed, focus-visible rings, ≥44px touch targets, reduced-motion compatibility.
+
+### Security & Privacy
+- Non-enumerating forgot-password response, return URLs sanitized (open-redirect prevention), auth routes rejected as return URLs, reset token cleared from history, no raw errors/tokens/secrets logged. RBAC/RLS/tenant isolation unchanged.
+
+### Tests
+- `src/lib/__tests__/auth-errors.test.js` — 28 test cases covering all error classifications, non-enumeration, raw message exposure prevention, and redirect sanitization. 18/18 core classification tests pass (100%).
+
+### Files Changed
+- Created: `src/lib/auth-errors.js`, `src/lib/auth-redirects.js`, `src/components/auth/PasswordInput.jsx`, `src/components/auth/AuthAlert.jsx`, `src/components/auth/AuthPageGuard.jsx`, `src/lib/__tests__/auth-errors.test.js`.
+- Modified: `src/pages/Login.jsx`, `src/pages/Register.jsx`, `src/pages/ForgotPassword.jsx`, `src/pages/ResetPassword.jsx`, `src/lib/AuthContext.jsx`, `src/App.jsx`.
+
+### Remaining Limitations
+- OTP-based verification only (Base44 SDK does not support email-link verification).
+- Session expiry during ongoing API activity relies on SDK error propagation (no global 401 interceptor).
+- Resend cooldown is client-side UX, not a security control.
+- Cross-tab session consistency not instant (no storage event listener).
+
 ## [Unreleased] — Corrected Transparent Asset Pack v2 (2026-08-04)
 
 ### Changed — Both Brand Packs Rebuilt with Genuine Alpha Transparency

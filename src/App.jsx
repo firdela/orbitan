@@ -14,6 +14,7 @@ import { CurrencyProvider } from '@/lib/CurrencyContext';
 import SystemGuard from '@/components/layout/SystemGuard';
 import RoleGateway from '@/components/auth/RoleGateway';
 import AuthGateway from '@/components/auth/AuthGateway';
+import AuthPageGuard from '@/components/auth/AuthPageGuard';
 
 // Page imports
 import Login from '@/pages/Login';
@@ -191,10 +192,11 @@ const AuthenticatedApp = () => {
       <Route path="/checkout/cancelled" element={<CheckoutCancelled />} />
 
       {/* Auth Pages — Login, Register, Forgot Password, Reset Password */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+      {/* AuthPageGuard redirects already-authenticated users to their workspace */}
+      <Route path="/login" element={<AuthPageGuard><Login /></AuthPageGuard>} />
+      <Route path="/register" element={<AuthPageGuard><Register /></AuthPageGuard>} />
+      <Route path="/forgot-password" element={<AuthPageGuard><ForgotPassword /></AuthPageGuard>} />
+      <Route path="/reset-password" element={<AuthPageGuard><ResetPassword /></AuthPageGuard>} />
 
       {/* Orbitan Auth Gateway — Intelligent Entry Hub */}
       <Route path="/auth/gateway" element={<AuthGateway />} />

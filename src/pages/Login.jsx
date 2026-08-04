@@ -1,79 +1,85 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
+import { LogIn, Mail, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import AuthAlert from "@/components/auth/AuthAlert";
+import PasswordInput from "@/components/auth/PasswordInput";
 import GoogleIcon from "@/components/GoogleIcon";
 import { MicrosoftIcon, AppleIcon } from "@/components/SSOIcons";
+import { classifyLoginError, AUTH_ERROR_TYPES } from "@/lib/auth-errors";
+import { navigateToReturnUrl, consumeSessionExpiredFlag, resolveReturnUrl } from "@/lib/auth-redirects";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
+  const formRef = useRef(null);
+
+  // Show "session expired" message if the user was redirected here by AuthContext
+  useEffect(() => {
+    const expired = consumeSessionExpiredFlag();
+    if (expired) {
+      setInfo("Your session has expired. Please sign in again to continue.");
+    }
+  }, []);
+
+  // Focus the first field on mount for keyboard users
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const firstField = formRef.current?.querySelector('input[type="email"]');
+      if (firstField) firstField.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setInfo("");
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
-      // Build #28.2G.1 — Return to the originally requested page after login.
-      // Checks URL params, then sessionStorage fallback from AuthContext.
-      const urlParams = new URLSearchParams(window.location.search);
-      const returnUrl = urlParams.get("next") || urlParams.get("returnUrl");
-      let destination = "/workspace";
-      if (returnUrl && returnUrl.startsWith("/") && !returnUrl.startsWith("//")) {
-        destination = returnUrl;
-      } else {
-        try {
-          const stored = sessionStorage.getItem("orbitan_auth_return_url");
-          if (stored && stored.startsWith("/") && !stored.startsWith("//") && !stored.startsWith("/login")) {
-            destination = stored;
-          }
-        } catch {
-          // sessionStorage unavailable — use default
-        }
-      }
-      // Clear the stored return URL
-      try { sessionStorage.removeItem("orbitan_auth_return_url"); } catch {}
-      window.location.href = destination;
+      // Use the canonical redirect utility — validates and sanitizes the return URL
+      navigateToReturnUrl("/workspace");
     } catch (err) {
-      // Build #28.2G.1 — Never expose sensitive auth details. Show user-friendly messages.
-      const msg = err?.message || "";
-      if (msg.includes("rate") || msg.includes("too many") || msg.includes("429")) {
-        setError("Too many login attempts. Please wait a moment and try again.");
-      } else if (msg.includes("disabled") || msg.includes("banned") || msg.includes("suspended")) {
-        setError("Your account has been suspended. Please contact your administrator.");
-      } else if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
-        setError("Unable to connect. Please check your internet connection and try again.");
+      const authError = classifyLoginError(err);
+
+      // If verification is required, show a helpful message with a link to resend
+      if (authError.type === AUTH_ERROR_TYPES.VERIFICATION_REQUIRED) {
+        setError(authError.message);
+        setInfo("");
       } else {
-        setError("Invalid email or password. Please try again.");
+        setError(authError.message);
       }
+
+      // Focus the form for screen readers after error
+      setTimeout(() => {
+        const errorEl = formRef.current?.querySelector('[role="alert"]');
+        errorEl?.focus();
+      }, 50);
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogle = () => {
-    // Build #28.2G.1 — Preserve return path for OAuth redirects
-    const urlParams = new URLSearchParams(window.location.search);
-    const returnUrl = urlParams.get("next") || "/workspace";
+    const returnUrl = resolveReturnUrl("/workspace");
     base44.auth.loginWithProvider("google", returnUrl);
   };
 
   const handleMicrosoft = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const returnUrl = urlParams.get("next") || "/workspace";
+    const returnUrl = resolveReturnUrl("/workspace");
     base44.auth.loginWithProvider("microsoft", returnUrl);
   };
 
   const handleApple = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const returnUrl = urlParams.get("next") || "/workspace";
+    const returnUrl = resolveReturnUrl("/workspace");
     base44.auth.loginWithProvider("apple", returnUrl);
   };
 
@@ -127,13 +133,10 @@ export default function Login() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-          {error}
-        </div>
-      )}
+      {info && <AuthAlert variant="warning" message={info} />}
+      {error && <AuthAlert variant="error" message={error} />}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <div className="relative">
@@ -151,26 +154,18 @@ export default function Login() {
             />
           </div>
         </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-            <Link to="/forgot-password" className="text-xs text-blue-400 hover:underline">
-              Forgot password?
-            </Link>
-          </div>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 h-12"
-              required
-            />
-          </div>
+        <PasswordInput
+          id="password"
+          label="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+          autoFocus={false}
+        />
+        <div className="flex justify-end">
+          <Link to="/forgot-password" className="text-xs text-blue-400 hover:underline">
+            Forgot password?
+          </Link>
         </div>
         <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
           {loading ? (

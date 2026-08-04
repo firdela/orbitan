@@ -3,6 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 import { createAxiosClient } from '@base44/sdk/dist/utils/axios-client';
 import { applyPreferences } from '@/lib/preferences';
+import { captureReturnUrl, flagSessionExpired, isAuthRoute } from '@/lib/auth-redirects';
+import { classifySessionError } from '@/lib/auth-errors';
 
 const AuthContext = createContext();
 
@@ -108,20 +110,18 @@ export const AuthProvider = ({ children }) => {
       
       // If user auth fails, it might be an expired token
       if (error.status === 401 || error.status === 403) {
-        // Build #28.2G.1 — Capture return URL before auth error state clears it.
-        const currentPath = window.location.pathname + window.location.search;
-        const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/gateway'];
-        const isAuthRoute = authRoutes.some(r => window.location.pathname.startsWith(r));
-        if (!isAuthRoute) {
-          try {
-            sessionStorage.setItem('orbitan_auth_return_url', currentPath);
-          } catch {
-            // sessionStorage unavailable — best-effort
-          }
-        }
+        // Build #28.2G.1 → #28.2H — Use canonical redirect utilities.
+        // Capture the return URL so the user returns to their intended page
+        // after re-authentication. Only capture if NOT on an auth route
+        // (to prevent redirect loops). Flag session expiry so the login
+        // page can show a "your session expired" message.
+        captureReturnUrl();
+        flagSessionExpired();
+
+        const sessionError = classifySessionError(error);
         setAuthError({
           type: 'auth_required',
-          message: 'Your session has expired. Please sign in again to continue.'
+          message: sessionError.message,
         });
       }
     }
@@ -141,19 +141,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
-    // Build #28.2G.1 — Preserve the current path for post-login return.
-    // Capture pathname + search so the user returns to their intended page,
-    // not just the default workspace. Strip auth-related query params.
+    // Build #28.2G.1 → #28.2H — Use canonical redirect utility.
+    // captureReturnUrl() only captures if NOT on an auth route,
+    // preventing redirect loops. If on an auth route, defaults to "/".
+    captureReturnUrl();
+    flagSessionExpired();
+
+    // Determine the return URL — either the captured path or "/"
     const currentPath = window.location.pathname + window.location.search;
-    const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/gateway'];
-    const isAuthRoute = authRoutes.some(r => window.location.pathname.startsWith(r));
-    const returnUrl = isAuthRoute ? '/' : currentPath;
-    // Store in sessionStorage as fallback for cross-tab/multi-mount scenarios
-    try {
-      sessionStorage.setItem('orbitan_auth_return_url', returnUrl);
-    } catch {
-      // sessionStorage may be unavailable in private browsing — best-effort
-    }
+    const returnUrl = isAuthRoute() ? '/' : currentPath;
+
     // Use the SDK's redirectToLogin method with the return URL
     base44.auth.redirectToLogin(returnUrl);
   };

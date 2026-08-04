@@ -1,11 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import AuthAlert from "@/components/auth/AuthAlert";
+import PasswordInput from "@/components/auth/PasswordInput";
+import { classifyResetError } from "@/lib/auth-errors";
+import { clearReturnUrl } from "@/lib/auth-redirects";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -16,14 +19,33 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const formRef = useRef(null);
+
+  // Focus first field on mount
+  useEffect(() => {
+    if (resetToken && !success) {
+      const timer = setTimeout(() => {
+        const firstField = formRef.current?.querySelector('input');
+        if (firstField) firstField.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [resetToken, success]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Passwords do not match. Please ensure both fields are identical.");
       return;
     }
+
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
     setLoading(true);
     try {
       await base44.auth.resetPassword({ resetToken, newPassword });
@@ -32,33 +54,29 @@ export default function ResetPassword() {
       // reset link cannot be reused via the back button or history navigation.
       // The platform auth backend invalidates the token server-side; this
       // client-side measure prevents the token URL from lingering in history.
-      try { sessionStorage.removeItem("orbitan_auth_return_url"); } catch {}
-      setTimeout(() => window.location.replace("/login"), 1500);
+      clearReturnUrl();
+      setTimeout(() => window.location.replace("/login"), 2000);
     } catch (err) {
-      // Build #28.2G.1 — Reset-specific error messages without sensitive details
-      const msg = err?.message || "";
-      if (msg.includes("expired") || msg.includes("invalid") || msg.includes("token")) {
-        setError("This password reset link has expired or is no longer valid. Please request a new one.");
-      } else if (msg.includes("rate") || msg.includes("too many") || msg.includes("429")) {
-        setError("Too many attempts. Please wait a moment before trying again.");
-      } else if (msg.includes("weak") || msg.includes("password")) {
-        setError("Password is too weak. Please use at least 8 characters with a mix of letters and numbers.");
-      } else if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
-        setError("Unable to connect. Please check your internet connection and try again.");
-      } else {
-        setError("Unable to reset your password. Please try again or request a new reset link.");
-      }
+      const authError = classifyResetError(err);
+      setError(authError.message);
+
+      // Focus the error alert for screen readers
+      setTimeout(() => {
+        const errorEl = formRef.current?.querySelector('[role="alert"]');
+        errorEl?.focus();
+      }, 50);
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Missing Token ──
   if (!resetToken) {
     return (
       <AuthLayout
         icon={AlertTriangle}
         title="Invalid reset link"
-        subtitle="This password reset link is missing or invalid"
+        subtitle="This password reset link is missing or incomplete"
         footer={
           <Link to="/forgot-password" className="text-blue-400 font-medium hover:underline">
             Request a new link
@@ -66,12 +84,14 @@ export default function ResetPassword() {
         }
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-200 text-center">
-            The link you used appears to be incomplete. Please request a new password reset email.
-          </p>
+          <AuthAlert
+            variant="warning"
+            message="The link you used appears to be incomplete or invalid. Please request a new password reset email."
+            autoFocus={true}
+          />
           <Link to="/forgot-password">
             <Button variant="outline" className="w-full h-11 border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.08] rounded-xl gap-2">
-              Request New Link
+              Request new link
             </Button>
           </Link>
         </div>
@@ -79,12 +99,13 @@ export default function ResetPassword() {
     );
   }
 
+  // ── Success State ──
   if (success) {
     return (
       <AuthLayout
         icon={CheckCircle2}
-        title="Password reset"
-        subtitle="Your password has been updated successfully"
+        title="Password updated"
+        subtitle="Your password has been changed successfully"
         footer={
           <Link to="/login" className="text-blue-400 font-medium hover:underline">
             Go to login
@@ -92,7 +113,7 @@ export default function ResetPassword() {
         }
       >
         <div className="flex flex-col items-center gap-3 text-center">
-          <CheckCircle2 className="w-12 h-12 text-orbitan-green" />
+          <CheckCircle2 className="w-12 h-12 text-orbitan-green" aria-hidden="true" />
           <p className="text-sm text-slate-200">
             Your password was changed successfully. You will be redirected to the login page shortly.
           </p>
@@ -101,51 +122,40 @@ export default function ResetPassword() {
     );
   }
 
+  // ── Reset Form ──
   return (
     <AuthLayout
       icon={Lock}
       title="New password"
       subtitle="Enter your new password below"
+      footer={
+        <Link to="/login" className="text-blue-400 font-medium hover:underline">
+          Back to log in
+        </Link>
+      }
     >
-      {error && (
-        <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-          {error}
-        </div>
-      )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="password">New Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              autoFocus
-              placeholder="••••••••"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="pl-10 h-12"
-              required
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirm">Confirm Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="confirm"
-              type="password"
-              autoComplete="new-password"
-              placeholder="••••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="pl-10 h-12"
-              required
-            />
-          </div>
-        </div>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+        {error && <AuthAlert variant="error" message={error} />}
+
+        <PasswordInput
+          id="password"
+          label="New Password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          autoComplete="new-password"
+          autoFocus={true}
+          showRequirements={true}
+          showStrength={true}
+        />
+        <PasswordInput
+          id="confirm"
+          label="Confirm Password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          autoComplete="new-password"
+          autoFocus={false}
+          error={confirmPassword && newPassword !== confirmPassword ? "Passwords do not match" : ""}
+        />
         <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
           {loading ? (
             <>

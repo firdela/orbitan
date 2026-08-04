@@ -1,15 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
+import { UserPlus, Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
+import AuthAlert from "@/components/auth/AuthAlert";
+import PasswordInput from "@/components/auth/PasswordInput";
 import GoogleIcon from "@/components/GoogleIcon";
 import { MicrosoftIcon, AppleIcon } from "@/components/SSOIcons";
-import { toast } from "@/components/ui/use-toast";
+import { classifyRegisterError, classifyVerifyError, AUTH_ERROR_TYPES } from "@/lib/auth-errors";
+import { navigateToReturnUrl, resolveReturnUrl } from "@/lib/auth-redirects";
+
+const RESEND_COOLDOWN_SECONDS = 30;
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -19,31 +24,66 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const otpFormRef = useRef(null);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  // Focus first OTP slot when OTP view shows
+  useEffect(() => {
+    if (showOtp) {
+      const timer = setTimeout(() => {
+        const firstSlot = otpFormRef.current?.querySelector('input');
+        firstSlot?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showOtp]);
+
+  // Mask email for display (e.g., f***@example.com)
+  const maskedEmail = (() => {
+    if (!email) return "";
+    const [localPart, domain] = email.split("@");
+    if (!domain) return email;
+    if (localPart.length <= 2) return `${localPart[0]}***@${domain}`;
+    return `${localPart[0]}${"*".repeat(Math.min(localPart.length - 1, 3))}@${domain}`;
+  })();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Passwords do not match. Please ensure both fields are identical.");
       return;
     }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+
     setLoading(true);
     try {
       await base44.auth.register({ email, password });
       setShowOtp(true);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err) {
-      // Build #28.2G.1 — User-friendly error messages without sensitive details
-      const msg = err?.message || "";
-      if (msg.includes("already") || msg.includes("exists") || msg.includes("409")) {
-        setError("An account with this email already exists. Please log in instead.");
-      } else if (msg.includes("rate") || msg.includes("too many") || msg.includes("429")) {
-        setError("Too many registration attempts. Please wait a moment and try again.");
-      } else if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
-        setError("Unable to connect. Please check your internet connection and try again.");
-      } else if (msg.includes("weak") || msg.includes("password")) {
-        setError("Password is too weak. Please use at least 8 characters with a mix of letters and numbers.");
-      } else {
-        setError("Unable to create your account. Please try again.");
+      const authError = classifyRegisterError(err);
+      setError(authError.message);
+
+      // If already verified, show a success state with link to login
+      if (authError.type === AUTH_ERROR_TYPES.ACCOUNT_EXISTS) {
+        setError(authError.message);
       }
     } finally {
       setLoading(false);
@@ -58,112 +98,133 @@ export default function Register() {
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
       }
-      // Build #28.2G.1 — Check for stored return URL after verification
-      let destination = "/workspace";
-      try {
-        const stored = sessionStorage.getItem("orbitan_auth_return_url");
-        if (stored && stored.startsWith("/") && !stored.startsWith("//") && !stored.startsWith("/login") && !stored.startsWith("/register")) {
-          destination = stored;
-        }
-        sessionStorage.removeItem("orbitan_auth_return_url");
-      } catch {}
-      window.location.href = destination;
+      // Use canonical redirect utility
+      navigateToReturnUrl("/workspace");
     } catch (err) {
-      // Build #28.2G.1 — OTP-specific error messages
-      const msg = err?.message || "";
-      if (msg.includes("expired")) {
-        setError("This verification code has expired. Please request a new one.");
-      } else if (msg.includes("rate") || msg.includes("too many") || msg.includes("429")) {
-        setError("Too many attempts. Please wait a moment before trying again.");
-      } else if (msg.includes("invalid") || msg.includes("wrong") || msg.includes("mismatch")) {
-        setError("The verification code is incorrect. Please check and try again.");
-      } else {
-        setError("Unable to verify your code. Please try again or request a new code.");
-      }
+      const authError = classifyVerifyError(err);
+      setError(authError.message);
+
+      // Focus the error alert for screen readers
+      setTimeout(() => {
+        const errorEl = otpFormRef.current?.querySelector('[role="alert"]');
+        errorEl?.focus();
+      }, 50);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResend = async () => {
+  const handleResend = useCallback(async () => {
+    if (resendCooldown > 0 || resendLoading) return;
+
     setError("");
+    setResendSuccess(false);
+    setResendLoading(true);
     try {
       await base44.auth.resendOtp(email);
-      toast({
-        title: "Code sent",
-        description: "Check your email for the new code.",
-      });
+      setResendSuccess(true);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setResendSuccess(false), 5000);
     } catch (err) {
-      setError(err.message || "Failed to resend code");
+      const authError = classifyVerifyError(err);
+      setError(authError.message);
+    } finally {
+      setResendLoading(false);
     }
-  };
+  }, [email, resendCooldown, resendLoading]);
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/workspace");
+    const returnUrl = resolveReturnUrl("/workspace");
+    base44.auth.loginWithProvider("google", returnUrl);
   };
 
   const handleMicrosoft = () => {
-    base44.auth.loginWithProvider("microsoft", "/workspace");
+    const returnUrl = resolveReturnUrl("/workspace");
+    base44.auth.loginWithProvider("microsoft", returnUrl);
   };
 
   const handleApple = () => {
-    base44.auth.loginWithProvider("apple", "/workspace");
+    const returnUrl = resolveReturnUrl("/workspace");
+    base44.auth.loginWithProvider("apple", returnUrl);
   };
 
+  // ── OTP Verification View ──
   if (showOtp) {
     return (
       <AuthLayout
         icon={Mail}
         title="Verify your email"
-        subtitle={`We sent a code to ${email}`}
+        subtitle={`We sent a 6-digit code to ${maskedEmail}`}
+        footer={
+          <Link to="/login" className="text-blue-400 font-medium hover:underline">
+            Back to log in
+          </Link>
+        }
       >
-        {error && (
-          <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-            {error}
-          </div>
-        )}
-        <div className="flex justify-center mb-6">
-          <InputOTP
-            maxLength={6}
-            value={otpCode}
-            onChange={setOtpCode}
-            autoFocus
-            autoComplete="one-time-code"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-        <Button
-          className="w-full h-12 font-medium"
-          onClick={handleVerify}
-          disabled={loading || otpCode.length < 6}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Verifying...
-            </>
-          ) : (
-            "Verify"
+        <div ref={otpFormRef}>
+          {error && <AuthAlert variant="error" message={error} />}
+          {resendSuccess && (
+            <AuthAlert variant="success" message="A new verification code has been sent to your email." />
           )}
-        </Button>
-        <p className="text-center text-sm text-slate-400 mt-4">
-          Didn't receive the code?{" "}
-          <button onClick={handleResend} className="text-blue-400 font-medium hover:underline">
-            Resend
-          </button>
-        </p>
+
+          <div className="flex justify-center mb-6">
+            <InputOTP
+              maxLength={6}
+              value={otpCode}
+              onChange={setOtpCode}
+              autoFocus
+              autoComplete="one-time-code"
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+          </div>
+
+          <Button
+            className="w-full h-12 font-medium"
+            onClick={handleVerify}
+            disabled={loading || otpCode.length < 6}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Verifying...
+              </>
+            ) : (
+              "Verify email"
+            )}
+          </Button>
+
+          <p className="text-center text-sm text-slate-400 mt-4">
+            {resendCooldown > 0 ? (
+              <>Resend available in {resendCooldown}s</>
+            ) : (
+              <>
+                Didn't receive the code?{" "}
+                <button
+                  onClick={handleResend}
+                  disabled={resendLoading}
+                  className="text-blue-400 font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resendLoading ? "Sending..." : "Resend code"}
+                </button>
+              </>
+            )}
+          </p>
+        </div>
       </AuthLayout>
     );
   }
 
+  // ── Registration Form View ──
   return (
     <AuthLayout
       icon={UserPlus}
@@ -214,11 +275,7 @@ export default function Register() {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-          {error}
-        </div>
-      )}
+      {error && <AuthAlert variant="error" message={error} />}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
@@ -238,38 +295,25 @@ export default function Register() {
             />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 h-12"
-              required
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirm">Confirm Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              id="confirm"
-              type="password"
-              autoComplete="new-password"
-              placeholder="••••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="pl-10 h-12"
-              required
-            />
-          </div>
-        </div>
+        <PasswordInput
+          id="password"
+          label="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          autoFocus={false}
+          showRequirements={true}
+          showStrength={true}
+        />
+        <PasswordInput
+          id="confirm"
+          label="Confirm Password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          autoComplete="new-password"
+          autoFocus={false}
+          error={confirmPassword && password !== confirmPassword ? "Passwords do not match" : ""}
+        />
         <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
           {loading ? (
             <>

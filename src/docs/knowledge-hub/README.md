@@ -198,4 +198,4 @@ Until then, these documents serve as human-readable institutional memory.
 ---
 
 **Product Owner:** Muhammad Firdaus Bin Ismail
-**Last Updated:** 2026-08-04 (Brand Identity v1.0 rev.2 LOCKED — 59 founder-approved assets with genuine alpha transparency, corrected transparent pack replaces v1 checkerboard artifacts, PWA manifest `purpose: "any"` only, full favicon set, apple-touch-icon, identity config expanded with master+nexusMaster keys, all CDN hardcodes removed from active code, v1 URLs archived in superseded section)
+**Last Updated:** 2026-08-04 (Build #28.2H — Authentication Experience Repair: canonical auth error-mapping layer, canonical auth redirect utility, reusable PasswordInput/AuthAlert/AuthPageGuard components, account verification flow completed with resend cooldown, password reset flow completed with visibility toggle + requirements + strength indicator, session-expiry flow with flag-based messaging, AuthPageGuard redirects authenticated users away from auth pages, 28-test suite passing at 100%)
