@@ -67,6 +67,7 @@ assets through `LOGO_ASSETS` — never hardcode CDN URLs in components).
 | `orbitan-favicon-32x32` | `1f68c12af_orbitan-favicon-32x32.png` | 32×32 | Favicon PNG | approved |
 | `orbitan-favicon-48x48` | `19697a43a_orbitan-favicon-48x48.png` | 48×48 | Favicon PNG | approved |
 | `orbitan-favicon-ico` | `3ecafbc42_orbitan-favicon.ico` | multi-size | Favicon .ico | approved |
+| `orbitan-social-banner` | `348a29f76_Orbitanbanner.png` | 1200×630 | Social banner (og:image, twitter:image) | approved |
 
 ### Orbit Nexus Assets
 
@@ -120,9 +121,13 @@ correct assets for maskable usage, distinct from the standard transparency-backg
 
 ## Social Banner
 
-No approved social banner exists. `og:image` and `twitter:image` are
-intentionally omitted from `index.html`. A 1200×630 social banner is pending
-founder design and approval.
+**✅ APPROVED (2026-08-04).** Founder-supplied 1200×630 social banner registered
+as `orbitan-social-banner` in `asset-manifest.json` and `LOGO_ASSETS.socialBanner`
+in `orbitan-identity.js`.
+
+Wired into `index.html` as `og:image` and `twitter:image` with descriptive alt text.
+The banner features a blueprint-style drafting-paper background with the Orbitan
+"O" mark, brand wordmark, tagline, and four engineering-callout boxes.
 
 ## Identity Configuration
 
@@ -140,7 +145,6 @@ Components must never hardcode CDN URLs. See `LOGO_ASSETS` for canonical keys.
 
 ## Remaining Limitations
 
-- No approved social banner (1200×630). `og:image` intentionally omitted.
 - No standalone wordmark SVG file (wordmark is composed in `OrbitanWordmark.jsx`
   using Sora Bold typography + mark image).
 - Orbit Nexus product pages do not yet use the dedicated Nexus favicon set —

@@ -37,6 +37,7 @@ const ORBITAN = {
   favicon16:      `${CDN}/ac0d857d8_orbitan-favicon-16x16.png`,
   favicon32:      `${CDN}/1f68c12af_orbitan-favicon-32x32.png`,
   favicon48:      `${CDN}/19697a43a_orbitan-favicon-48x48.png`,
+  socialBanner:   `${CDN}/348a29f76_Orbitanbanner.png`, // Founder-approved social banner (1200×630)
 };
 
 // ── Approved Orbit Nexus mark — founder-supplied asset pack (2026-08-04) ──
@@ -85,6 +86,9 @@ export const LOGO_ASSETS = {
   nexusMarkSm:    ORBIT_NEXUS.mark48,          // Nexus small mark
   nexusAppIcon192: ORBIT_NEXUS.appIcon192,     // Nexus PWA icon 192×192
   nexusAppIcon512: ORBIT_NEXUS.appIcon512,     // Nexus PWA icon 512×512
+
+  // ── Social / marketing banner ──
+  socialBanner: ORBITAN.socialBanner, // Founder-approved 1200×630 social banner (og:image / twitter:image)
 
   // ── Wordmark / lockup — text-based (no separate image asset needed) ──
   // wordmark and lockupHorizontal are composed in OrbitanWordmark.jsx

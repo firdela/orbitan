@@ -19,6 +19,7 @@ cropped, distorted, or reinterpreted without explicit founder approval.
 | Favicons | **LOCKED** | Founder-approved, 2026-08-04 |
 | PWA icons (any + maskable) | **LOCKED** | Founder-approved, 2026-08-04 |
 | Apple Touch Icon | **LOCKED** | Founder-approved, 2026-08-04 |
+| Social banner (1200×630) | **LOCKED** | Founder-approved, 2026-08-04 |
 | Brand colours | **LOCKED** | src/index.css design token system |
 | Identity architecture | **LOCKED** | src/lib/orbitan-identity.js |
 
@@ -100,8 +101,13 @@ Any change to locked brand elements requires:
 
 | Asset | Status |
 |-------|--------|
-| Approved social banner (1200×630) | Pending founder design |
 | Orbit Nexus favicon integration in Nexus pages | Deferred to Nexus standalone product launch |
+
+## Social Banner — APPROVED (2026-08-04)
+
+| Asset | Status |
+|-------|--------|
+| `orbitan-social-banner` (1200×630) | **APPROVED** — founder-supplied, wired as `og:image` / `twitter:image` in `index.html` |
 
 ---
 

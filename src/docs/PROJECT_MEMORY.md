@@ -188,7 +188,7 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - **Apple touch icon correct:** 180×180 founder-approved composition.
 - **CDN hardcodes eliminated:** `WelcomeGateway.jsx` (3 instances), `Landing.jsx` (1 instance). Zero remaining hardcoded CDN URLs in component code.
 - **Brand Identity frozen:** `src/docs/knowledge-hub/foundations/BrandIdentityV1.md` — lock declaration alongside RA-0000/RA-0004/RA-0005.
-- **Social banner:** No approved banner exists. `og:image` and `twitter:image` intentionally omitted.
+- **Social banner:** Founder-approved 1200×630 banner registered (`orbitan-social-banner`). Wired as `og:image` / `twitter:image` in `index.html` with descriptive alt text. `LOGO_ASSETS.socialBanner` key added to identity config.
 - **Orbit Nexus brand isolation:** Nexus assets registered and isolated. Nexus favicon set available for Nexus standalone product when it ships.
 
 ## Production-Repair Build: Experience Architecture Corrections (2026-08-04)

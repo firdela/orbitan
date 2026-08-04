@@ -7,6 +7,16 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Social Banner Approved (2026-08-04)
+
+### Added — Founder-Approved Social Banner
+- **Asset:** `orbitan-social-banner` (`348a29f76_Orbitanbanner.png`, 1200×630).
+- **Wired into `index.html`:** `og:image`, `og:image:alt`, `twitter:image`, `twitter:image:alt` meta tags now point to the approved banner. Previous "intentionally omitted" comment removed.
+- **Identity config:** `LOGO_ASSETS.socialBanner` key added to `orbitan-identity.js` (resolves through `ORBITAN.socialBanner` constant).
+- **Asset registry:** `orbitan-social-banner` entry added to `social_assets` section of `asset-manifest.json` with full metadata and description.
+- **Brand README:** Social Banner section updated from "pending" to "APPROVED". Banner row added to Orbitan Assets table.
+- **BrandIdentityV1.md:** Social banner added to LOCKED elements table. Pending section updated.
+
 ## [Unreleased] — Brand Identity v1.0 LOCKED (2026-08-04)
 
 ### Added — Founder-Approved Brand Asset Pack (52 assets)

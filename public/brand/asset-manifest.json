@@ -75,6 +75,17 @@
     "favicon_png_fallback_legacy": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/16aaf935a_Orbitan3dlogotransparentcopy.png", "status": "superseded", "superseded_by": "orbitan-favicon-ico orbitan-favicon-16x16 orbitan-favicon-32x32 orbitan-favicon-48x48", "notes": "Previously used as favicon PNG fallback. Superseded by dedicated favicon set." }
   },
   "social_assets": {
-    "_note": "No approved social banner exists. og:image and twitter:image are intentionally omitted from index.html. A 1200x630 banner is pending founder design and approval."
+    "orbitan-social-banner": {
+      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/348a29f76_Orbitanbanner.png",
+      "dimensions": "1200x630",
+      "format": "png",
+      "status": "approved",
+      "product": "orbitan",
+      "category": "social",
+      "logo_key": "LOGO_ASSETS.socialBanner",
+      "usage": "Social media banner — og:image, twitter:image, marketing embeds",
+      "description": "Founder-approved social banner. Blueprint-style drafting-paper background with Orbitan 'O' mark, brand wordmark, tagline, and four engineering-callout boxes (Systems/People/Operations/Knowledge/Growth · One Workforce One Platform Infinite Possibilities · Unified Connected Empowered · Designed for Every Industry Built to Scale).",
+      "approved_date": "2026-08-04"
+    }
   }
 }
