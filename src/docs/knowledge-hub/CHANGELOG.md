@@ -7,6 +7,20 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Corrected Transparent Asset Pack v2 (2026-08-04)
+
+### Changed — Both Brand Packs Rebuilt with Genuine Alpha Transparency
+- **Root cause resolved:** Original asset packs had embedded checkerboard pixels (flat grey/white pixels in the alpha region) — not genuinely transparent PNGs. Founder rebuilt both packs from source.
+- **Transparency verified:** Orbitan master 1254×1254 — alpha_min=0, alpha_max=255, 1,064,826 fully transparent px, 20,327 anti-aliased px. Orbit Nexus master — 970,605 fully transparent px, 37,447 anti-aliased px.
+- **All 19 Orbitan mark sizes replaced** (16→4096px) with corrected transparent URLs in `orbitan-identity.js`.
+- **All 19 Orbit Nexus mark sizes replaced** (16→4096px) with corrected transparent URLs.
+- **App icons (both packs):** New corrected transparent URLs. `manifest.json` updated — `purpose: "maskable"` declarations removed. Only `purpose: "any"` declared. Maskable icons require separate safe-zone-compliant compositions.
+- **Favicons (both packs):** All 4 files per pack (16, 32, 48, .ico) updated to corrected URLs in `index.html`, `orbitan-identity.js`.
+- **Apple touch icons (both packs):** Updated to corrected transparent URLs.
+- **Verified master PNGs added:** `ORBITAN.master` and `ORBIT_NEXUS.master` registered in `orbitan-identity.js`. `LOGO_ASSETS.master` and `LOGO_ASSETS.nexusMaster` exported.
+- **`asset-manifest.json` rebuilt as v2.0.0:** Structured by product → master/marks/app_icons/favicons. Alpha verification data embedded. Superseded v1 URLs archived in `superseded` section.
+- **`BrandIdentityV1.md` updated:** Master assets documented, PWA maskable status corrected, pending maskable-safe icons added to pending table.
+
 ## [Unreleased] — Social Banner Approved (2026-08-04)
 
 ### Added — Founder-Approved Social Banner

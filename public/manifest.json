@@ -1,44 +1,26 @@
 {
-  "name": "OrbitanOS — The Workforce Operating System",
+  "name": "OrbitanOS",
   "short_name": "Orbitan",
-  "description": "OrbitanOS — the workforce operating system for modern organisations. Manage people, operations, inventory, compliance, and AI intelligence in one platform.",
+  "description": "The Workforce Operating System for modern organisations.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F7F8F9",
+  "orientation": "portrait-primary",
+  "background_color": "#0A0F1A",
   "theme_color": "#2563EB",
-  "orientation": "any",
   "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/015a99453_orbitan-android-chrome-192x192.png",
+      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/a5427bd5a_orbitan-android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/354dae876_orbitan-android-chrome-512x512.png",
+      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/6ae468ddc_orbitan-android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/015a99453_orbitan-android-chrome-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/354dae876_orbitan-android-chrome-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ]
 }

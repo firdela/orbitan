@@ -19,46 +19,71 @@ const CDN = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39';
 // App icons: orbitan-android-chrome-*, orbitan-apple-touch-icon — purpose-built compositions
 // Favicons: orbitan-favicon-* — dedicated favicon compositions at correct sizes
 const ORBITAN = {
-  mark512:        `${CDN}/98099aa9f_orbitan-mark-512.png`,
-  mark256:        `${CDN}/dace21675_orbitan-mark-256.png`,
-  mark192:        `${CDN}/5d8c3405b_orbitan-mark-192.png`,
-  mark180:        `${CDN}/5514bbeb2_orbitan-mark-180.png`,
-  mark128:        `${CDN}/e2627a2e9_orbitan-mark-128.png`,
-  mark96:         `${CDN}/18b794d67_orbitan-mark-96.png`,
-  mark72:         `${CDN}/f64e3e0ff_orbitan-mark-72.png`,
-  mark64:         `${CDN}/c409a041b_orbitan-mark-64.png`,
-  mark48:         `${CDN}/26072f988_orbitan-mark-48.png`,
-  mark32:         `${CDN}/9b29cd972_orbitan-mark-32.png`,
-  mark24:         `${CDN}/749caab5a_orbitan-mark-24.png`,
-  mark16:         `${CDN}/7b3567715_orbitan-mark-16.png`,
-  appIcon192:     `${CDN}/015a99453_orbitan-android-chrome-192x192.png`,
-  appIcon512:     `${CDN}/354dae876_orbitan-android-chrome-512x512.png`,
-  appleTouchIcon: `${CDN}/42c8f6db0_orbitan-apple-touch-icon.png`,
-  favicon16:      `${CDN}/ac0d857d8_orbitan-favicon-16x16.png`,
-  favicon32:      `${CDN}/1f68c12af_orbitan-favicon-32x32.png`,
-  favicon48:      `${CDN}/19697a43a_orbitan-favicon-48x48.png`,
+  // Mark series — corrected transparent pack (2026-08-04), genuine alpha channel, no checkerboard
+  mark4096:       `${CDN}/534d5632a_orbitan-mark-4096.png`,
+  mark2048:       `${CDN}/488b4be03_orbitan-mark-2048.png`,
+  mark1024:       `${CDN}/cf12f0b98_orbitan-mark-1024.png`,
+  mark512:        `${CDN}/3f8478f3b_orbitan-mark-512.png`,
+  mark384:        `${CDN}/9651c783b_orbitan-mark-384.png`,
+  mark256:        `${CDN}/ab30dda12_orbitan-mark-256.png`,
+  mark192:        `${CDN}/8aa45682c_orbitan-mark-192.png`,
+  mark180:        `${CDN}/07eb467e7_orbitan-mark-180.png`,
+  mark167:        `${CDN}/1cfccded9_orbitan-mark-167.png`,
+  mark152:        `${CDN}/362507a64_orbitan-mark-152.png`,
+  mark144:        `${CDN}/0fe847dd0_orbitan-mark-144.png`,
+  mark128:        `${CDN}/695a587ca_orbitan-mark-128.png`,
+  mark96:         `${CDN}/f3f966a35_orbitan-mark-96.png`,
+  mark72:         `${CDN}/8b9bc48d2_orbitan-mark-72.png`,
+  mark64:         `${CDN}/3f8bb5549_orbitan-mark-64.png`,
+  mark48:         `${CDN}/07e20034a_orbitan-mark-48.png`,
+  mark32:         `${CDN}/388a276e0_orbitan-mark-32.png`,
+  mark24:         `${CDN}/cbb4e5d8f_orbitan-mark-24.png`,
+  mark16:         `${CDN}/3a3a41088_orbitan-mark-16.png`,
+  master:         `${CDN}/5b691cc7e_orbitan-master-transparent.png`, // 1254×1254 verified master
+  // App icons — transparent 'any' purpose only (not maskable-certified)
+  appIcon192:     `${CDN}/a5427bd5a_orbitan-android-chrome-192x192.png`,
+  appIcon512:     `${CDN}/6ae468ddc_orbitan-android-chrome-512x512.png`,
+  appleTouchIcon: `${CDN}/6d567efff_orbitan-apple-touch-icon.png`,
+  // Favicon series
+  favicon16:      `${CDN}/5d0083b5f_orbitan-favicon-16x16.png`,
+  favicon32:      `${CDN}/bc8ac0b61_orbitan-favicon-32x32.png`,
+  favicon48:      `${CDN}/ce1e8dc82_orbitan-favicon-48x48.png`,
+  faviconIco:     `${CDN}/c4450dc86_orbitan-favicon.ico`,
   socialBanner:   `${CDN}/348a29f76_Orbitanbanner.png`, // Founder-approved social banner (1200×630)
 };
 
 // ── Approved Orbit Nexus mark — founder-supplied asset pack (2026-08-04) ──
 const ORBIT_NEXUS = {
-  mark512:        `${CDN}/e7027b0eb_orbit-nexus-mark-512.png`,
-  mark256:        `${CDN}/e24ff8876_orbit-nexus-mark-256.png`,
-  mark192:        `${CDN}/c75b637ad_orbit-nexus-mark-192.png`,
-  mark180:        `${CDN}/6ab7c6733_orbit-nexus-mark-180.png`,
-  mark128:        `${CDN}/f7c33cc8a_orbit-nexus-mark-128.png`,
-  mark96:         `${CDN}/5501f5075_orbit-nexus-mark-96.png`,
-  mark64:         `${CDN}/d2d9fabc4_orbit-nexus-mark-64.png`,
-  mark48:         `${CDN}/69aa09c2a_orbit-nexus-mark-48.png`,
-  mark32:         `${CDN}/555127992_orbit-nexus-mark-32.png`,
-  mark24:         `${CDN}/409be8571_orbit-nexus-mark-24.png`,
-  mark16:         `${CDN}/22cf4d1ca_orbit-nexus-mark-16.png`,
-  appIcon192:     `${CDN}/baceae7f8_orbit-nexus-android-chrome-192x192.png`,
-  appIcon512:     `${CDN}/12c3857db_orbit-nexus-android-chrome-512x512.png`,
-  appleTouchIcon: `${CDN}/2b2f5cdb5_orbit-nexus-apple-touch-icon.png`,
-  favicon16:      `${CDN}/40f56492d_orbit-nexus-favicon-16x16.png`,
-  favicon32:      `${CDN}/020b2b639_orbit-nexus-favicon-32x32.png`,
-  favicon48:      `${CDN}/f44c715a9_orbit-nexus-favicon-48x48.png`,
+  // Mark series — corrected transparent pack (2026-08-04), genuine alpha channel, no checkerboard
+  mark4096:       `${CDN}/0b4ce01b1_orbit-nexus-mark-4096.png`,
+  mark2048:       `${CDN}/92dba4696_orbit-nexus-mark-2048.png`,
+  mark1024:       `${CDN}/e43172987_orbit-nexus-mark-1024.png`,
+  mark512:        `${CDN}/66cefa242_orbit-nexus-mark-512.png`,
+  mark384:        `${CDN}/0bedbb6ab_orbit-nexus-mark-384.png`,
+  mark256:        `${CDN}/4d3027f67_orbit-nexus-mark-256.png`,
+  mark192:        `${CDN}/5f7cb74c1_orbit-nexus-mark-192.png`,
+  mark180:        `${CDN}/1704ceb9f_orbit-nexus-mark-180.png`,
+  mark167:        `${CDN}/5e2b4db58_orbit-nexus-mark-167.png`,
+  mark152:        `${CDN}/d4ef7af75_orbit-nexus-mark-152.png`,
+  mark144:        `${CDN}/96076e0bb_orbit-nexus-mark-144.png`,
+  mark128:        `${CDN}/0825fe36b_orbit-nexus-mark-128.png`,
+  mark96:         `${CDN}/8d5f40e9f_orbit-nexus-mark-96.png`,
+  mark72:         `${CDN}/2109c2e6a_orbit-nexus-mark-72.png`,
+  mark64:         `${CDN}/65bda1c7b_orbit-nexus-mark-64.png`,
+  mark48:         `${CDN}/f68d615be_orbit-nexus-mark-48.png`,
+  mark32:         `${CDN}/9b4b24815_orbit-nexus-mark-32.png`,
+  mark24:         `${CDN}/489295e6d_orbit-nexus-mark-24.png`,
+  mark16:         `${CDN}/d7ac31a63_orbit-nexus-mark-16.png`,
+  master:         `${CDN}/63aa1eb45_orbit-nexus-mark-master-transparent.png`, // 1254×1254 verified master
+  // App icons — transparent 'any' purpose only (not maskable-certified)
+  appIcon192:     `${CDN}/1d9f64267_orbit-nexus-android-chrome-192x192.png`,
+  appIcon512:     `${CDN}/dbe17a146_orbit-nexus-android-chrome-512x512.png`,
+  appleTouchIcon: `${CDN}/6966d2e45_orbit-nexus-apple-touch-icon.png`,
+  // Favicon series
+  favicon16:      `${CDN}/42ec9ac89_orbit-nexus-favicon-16x16.png`,
+  favicon32:      `${CDN}/7ee6e306f_orbit-nexus-favicon-32x32.png`,
+  favicon48:      `${CDN}/a41c02143_orbit-nexus-favicon-48x48.png`,
+  faviconIco:     `${CDN}/69fb1d6f4_orbit-nexus-favicon.ico`,
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -66,14 +91,15 @@ const ORBIT_NEXUS = {
 // Brand Identity v1.0 — LOCKED (2026-08-04)
 // ─────────────────────────────────────────────────────────────
 export const LOGO_ASSETS = {
-  // ── Orbitan primary mark (transparent, for UI components) ──
-  mark:       ORBITAN.mark512,   // Primary mark — navigation, headers, lockups (largest available)
-  mark3D:     ORBITAN.mark512,   // Alias for mark — retained for backward compat
-  loaderMark: ORBITAN.mark192,   // OrbitanLoader centre — approved mark at loader size
+  // ── Orbitan primary mark (corrected transparent pack, genuine alpha) ──
+  mark:       ORBITAN.mark512,   // Primary mark — navigation, headers, lockups
+  mark3D:     ORBITAN.mark512,   // Alias retained for backward compat
+  loaderMark: ORBITAN.mark192,   // OrbitanLoader centre
   markSm:     ORBITAN.mark48,    // Small mark (nav icons, list items)
   markXs:     ORBITAN.mark32,    // Extra-small mark (badges, chips)
+  master:     ORBITAN.master,    // 1254×1254 verified transparent master
 
-  // ── Orbitan PWA / device icons ──
+  // ── Orbitan PWA / device icons (transparent 'any' — not maskable-certified) ──
   appIcon192:     ORBITAN.appIcon192,     // PWA icon 192×192 (any)
   appIcon512:     ORBITAN.appIcon512,     // PWA icon 512×512 (any)
   appleTouchIcon: ORBITAN.appleTouchIcon, // iOS apple-touch-icon 180×180
@@ -81,18 +107,18 @@ export const LOGO_ASSETS = {
   favicon32:      ORBITAN.favicon32,      // Favicon 32×32
   favicon48:      ORBITAN.favicon48,      // Favicon 48×48
 
-  // ── Orbit Nexus product identity ──
-  nexusLogo:      ORBIT_NEXUS.mark512,        // Nexus primary mark
-  nexusMarkSm:    ORBIT_NEXUS.mark48,          // Nexus small mark
-  nexusAppIcon192: ORBIT_NEXUS.appIcon192,     // Nexus PWA icon 192×192
-  nexusAppIcon512: ORBIT_NEXUS.appIcon512,     // Nexus PWA icon 512×512
+  // ── Orbit Nexus product identity (corrected transparent pack) ──
+  nexusLogo:       ORBIT_NEXUS.mark512,    // Nexus primary mark
+  nexusMarkSm:     ORBIT_NEXUS.mark48,     // Nexus small mark
+  nexusMaster:     ORBIT_NEXUS.master,     // 1254×1254 verified transparent master
+  nexusAppIcon192: ORBIT_NEXUS.appIcon192, // Nexus PWA icon 192×192 (any)
+  nexusAppIcon512: ORBIT_NEXUS.appIcon512, // Nexus PWA icon 512×512 (any)
 
   // ── Social / marketing banner ──
   socialBanner: ORBITAN.socialBanner, // Founder-approved 1200×630 social banner (og:image / twitter:image)
 
   // ── Wordmark / lockup — text-based (no separate image asset needed) ──
-  // wordmark and lockupHorizontal are composed in OrbitanWordmark.jsx
-  // using the mark image + Sora Bold typography — no separate image file required.
+  // Composed in OrbitanWordmark.jsx using mark + Sora Bold typography.
 };
 
 // ─────────────────────────────────────────────────────────────

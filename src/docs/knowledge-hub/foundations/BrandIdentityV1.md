@@ -17,7 +17,7 @@ cropped, distorted, or reinterpreted without explicit founder approval.
 | Orbitan logo (mark) | **LOCKED** | Founder-approved, 2026-08-04 |
 | Orbit Nexus logo (mark) | **LOCKED** | Founder-approved, 2026-08-04 |
 | Favicons | **LOCKED** | Founder-approved, 2026-08-04 |
-| PWA icons (any + maskable) | **LOCKED** | Founder-approved, 2026-08-04 |
+| PWA icons (any — not maskable-certified) | **LOCKED** | Founder-approved, 2026-08-04 rev.2 |
 | Apple Touch Icon | **LOCKED** | Founder-approved, 2026-08-04 |
 | Social banner (1200×630) | **LOCKED** | Founder-approved, 2026-08-04 |
 | Brand colours | **LOCKED** | src/index.css design token system |
@@ -35,9 +35,11 @@ canonically through `LOGO_ASSETS` in `src/lib/orbitan-identity.js`.
 **Mark series (19 sizes):** 16, 24, 32, 48, 64, 72, 96, 128, 144, 152, 167, 180,
 192, 256, 384, 512, 1024, 2048, 4096 px (all transparent background, square).
 
+**Master:** `orbitan-master-transparent.png` (1254×1254, alpha_min=0, alpha_max=255, verified genuine transparency)
+
 **App icon series (3):**
-- `orbitan-android-chrome-192x192.png` (192×192, any + maskable)
-- `orbitan-android-chrome-512x512.png` (512×512, any + maskable)
+- `orbitan-android-chrome-192x192.png` (192×192, purpose: any — **not maskable-certified**)
+- `orbitan-android-chrome-512x512.png` (512×512, purpose: any — **not maskable-certified**)
 - `orbitan-apple-touch-icon.png` (180×180, iOS)
 
 **Favicon series (4):**
@@ -48,13 +50,15 @@ canonically through `LOGO_ASSETS` in `src/lib/orbitan-identity.js`.
 
 ### Orbit Nexus (26 assets)
 
+**Master:** `orbit-nexus-mark-master-transparent.png` (1254×1254, alpha_min=0, alpha_max=255, verified genuine transparency)
+
 **Mark series (19 sizes):** 16, 24, 32, 48, 64, 72, 96, 128, 144, 152, 167, 180,
 192, 256, 384, 512, 1024, 2048, 4096 px.
 
 **App icon series (3):**
-- `orbit-nexus-android-chrome-192x192.png` (192×192)
-- `orbit-nexus-android-chrome-512x512.png` (512×512)
-- `orbit-nexus-apple-touch-icon.png` (180×180)
+- `orbit-nexus-android-chrome-192x192.png` (192×192, purpose: any — **not maskable-certified**)
+- `orbit-nexus-android-chrome-512x512.png` (512×512, purpose: any — **not maskable-certified**)
+- `orbit-nexus-apple-touch-icon.png` (180×180, iOS)
 
 **Favicon series (4):**
 - `orbit-nexus-favicon.ico`
@@ -102,6 +106,7 @@ Any change to locked brand elements requires:
 | Asset | Status |
 |-------|--------|
 | Orbit Nexus favicon integration in Nexus pages | Deferred to Nexus standalone product launch |
+| Maskable-safe PWA icons (both products) | Requires separate safe-zone-compliant compositions — do not declare existing icons as maskable |
 
 ## Social Banner — APPROVED (2026-08-04)
 
