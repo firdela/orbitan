@@ -180,15 +180,17 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
   migration to orbitan.net complete. Repository consolidation complete.
   Authentication hardening in progress.
 
-## Build: Experience Architecture & Brand Asset Repository v1.0 (2026-08-04)
-- **Experience Architecture created:** `src/docs/knowledge-hub/design/Orbitan-Experience-Architecture.md` — consolidated canonical document covering 24 sections: experience purpose, Engineered Simplicity philosophy, visual DNA, interaction principles, product-family inheritance, logo system, product logo system, app-icon system, favicon system, iconography, typography, colour system, blueprint language, illustration, motion, photography, responsive behaviour, WCAG 2.2 AA, AI experience, feedback/loading/empty/error states, asset naming, quality gates, misuse rules, and governance/ADR requirements.
-- **Brand asset registry created:** `public/brand/README.md` + `public/brand/asset-manifest.json` — canonical inventory of all approved brand assets (5 CDN-hosted PNG masters + 1 original SVG favicon). Documents pending assets that require vector masters.
-- **SVG favicon created:** `public/favicon.svg` — original Orbit Ring brand element (6-R principle colours as arcs). NOT a redraw of the Orbitan 3D logo — it is an independent brand symbol already established in OrbitanLoader.jsx.
-- **Social banner generated:** AI-generated 1200x630 social banner with Orbitan brand aesthetic (dark navy, orbit ring, drafting grid). Documented as a generated placeholder, not an approved master.
-- **index.html updated:** Added SVG favicon link, og:image, twitter:image, twitter:title/description, dual theme-color (dark/light), updated build tag to #28.2H.
-- **manifest.json updated:** Added SVG favicon as primary icon, added maskable icon entries (purpose: "maskable") for Android adaptive icons.
-- **Cross-references added:** DesignPrinciples.md, Accessibility.md, ResponsiveStandards.md, BrandGuidelines.md now link to the canonical Experience Architecture.
-- **WCAG upgraded:** Target standard updated from WCAG 2.1 AA to WCAG 2.2 AA. Seven new 2.2 criteria documented and verified as implemented.
+## Production-Repair Build: Experience Architecture Corrections (2026-08-04)
+- **Experience Architecture retained:** `src/docs/knowledge-hub/design/Orbitan-Experience-Architecture.md` — canonical 24-section design document. Claims corrected: WCAG 2.2 criteria reclassified as "target standard, partially implemented, requiring full platform audit" (not "verified"). Component 50-line rule qualified as target. Hardcoded colour and Lucide-only claims qualified.
+- **Brand asset registry corrected:** `public/brand/README.md` + `public/brand/asset-manifest.json` — all assets classified as `approved`, `approved_interim`, or `pending_source`. AI social banner reclassified as "removed from production metadata." OrbitanLoader hardcoding documented as resolved.
+- **SVG favicon retained:** `public/favicon.svg` — original Orbit Ring brand element. NOT a redraw of the Orbitan 3D logo.
+- **AI social banner removed:** Previous AI-generated 1200×630 social banner removed from `index.html` production metadata (`og:image`, `twitter:image`). Incorrect symbol geometry and non-standard typography. No approved social banner exists — metadata intentionally omitted.
+- **manifest.json corrected:** Removed incorrect `purpose: "maskable"` declarations — ordinary CDN raster PNGs do not respect the maskable safe zone. Only `purpose: "any"` icons remain. Proper maskable icons pending source artwork.
+- **OrbitanLoader fixed:** Added `loaderMark` key to `LOGO_ASSETS` in `orbitan-identity.js`. `OrbitanLoader.jsx` no longer hardcodes CDN URL — uses `LOGO_ASSETS.loaderMark`.
+- **Apple touch icon:** Documented as approved_interim fallback — not specifically composed or sized for 180×180 iOS requirement.
+- **Cross-references retained:** DesignPrinciples.md, Accessibility.md, ResponsiveStandards.md, BrandGuidelines.md link to canonical Experience Architecture.
+- **WCAG standard:** Target standard updated from WCAG 2.1 AA to WCAG 2.2 AA. Structural foundations exist (semantic HTML, token-based theming, reduced-motion, focus rings, keyboard operability). Full platform-wide audit not completed. Each criterion classified as "partially implemented."
+- **GitHub repository:** `https://github.com/firdela/orbitan` — correctly documented as public (not private).
 - **Limitation documented:** No vector (SVG) master of the Orbitan 3D mark exists. All approved masters are raster PNGs on the Base44 CDN. Vector reconstruction is pending. No fake SVG masters created from raster images.
 
 ## Build #28.2G.1 — Post-Validation Cleanup (2026-08-04)

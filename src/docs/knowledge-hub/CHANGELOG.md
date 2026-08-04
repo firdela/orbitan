@@ -7,51 +7,47 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased] — Experience Architecture & Brand Asset Repository v1.0 (2026-08-04)
+## [Unreleased] — Production-Repair Build: Experience Architecture Corrections (2026-08-04)
 
-### Added — Canonical Experience Architecture
-- Created `src/docs/knowledge-hub/design/Orbitan-Experience-Architecture.md` — the single source of truth for the Orbitan experience across 24 sections: experience purpose, Engineered Simplicity philosophy, visual DNA (Titanium Architecture, Orbit Geometry, Engineering Drafting Language, Premium Restraint), interaction principles, product-family inheritance, logo system (approved masters, variants, clear space, minimum sizes, misuse rules), product logo system (OrbitanOS, Orbit Nexus), app-icon system, favicon system, iconography system (lucide-react only), typography system (Sora/Inter), colour system (semantic tokens, brand colours, plan colours, pack colours, marketing surfaces), blueprint language, illustration language, motion language, photography direction, responsive behaviour, WCAG 2.2 AA requirements, AI experience behaviour, feedback/loading/empty/error states, asset naming and export rules, quality gates, misuse rules, and governance/ADR requirements.
-- Older design documents (Golden UI/UX Standard, DesignPrinciples, Accessibility, ResponsiveStandards, BrandGuidelines) remain as focused supplements with cross-references to the canonical Experience Architecture.
+### Fixed — PWA Manifest (Task 1)
+- `public/manifest.json` restored and corrected. Removed incorrect `purpose: "maskable"` declarations — ordinary CDN raster PNGs do not respect the maskable safe zone and would be clipped by Android adaptive icon shells. Only `purpose: "any"` icons remain (SVG favicon + CDN raster fallback). Proper 192×192 and 512×512 maskable icons are pending authoritative source artwork with safe-zone composition.
 
-### Added — Brand Asset Repository
-- Created `public/brand/README.md` — canonical brand asset registry documenting all 5 approved CDN-hosted PNG masters and 1 original SVG favicon.
-- Created `public/brand/asset-manifest.json` — machine-readable asset registry with status tracking (approved / pending / missing) for all brand assets.
-- Documented target directory structure: `public/brand/{orbitan,orbit-nexus,favicons,app-icons,social,email,product-icons}/`.
+### Fixed — OrbitanLoader Asset Reference (Task 3)
+- Added `loaderMark` key to `LOGO_ASSETS` in `src/lib/orbitan-identity.js` for the blue circular loader mark.
+- `OrbitanLoader.jsx` no longer hardcodes the CDN URL. It now imports and uses `LOGO_ASSETS.loaderMark` through the canonical identity configuration.
+- No visual change — the same approved asset is used; only the reference path changed.
 
-### Added — SVG Favicon
-- Created `public/favicon.svg` — original Orbit Ring brand element (6-R principle colours as six arcs on dark background). This is NOT a redraw of the Orbitan 3D logo; it is an independent brand symbol already established in `OrbitanLoader.jsx`.
+### Fixed — AI Placeholder Removed from Production Metadata (Task 4)
+- Removed `og:image`, `og:image:width`, `og:image:height`, `og:image:alt`, and `twitter:image` from `index.html`. The previous AI-generated social banner had incorrect symbol geometry and non-standard typography. No approved social banner exists. Social image metadata is intentionally omitted until an approved 1200×630 banner is designed.
+- Retained: `og:title`, `og:description`, `og:type`, `og:url`, `twitter:card`, `twitter:title`, `twitter:description`.
 
-### Added — Social Share Banner
-- Generated AI social banner (1200×630) with Orbitan brand aesthetic: dark navy background, orbit ring, engineering grid, OrbitanOS wordmark and tagline. Documented as a generated placeholder, not an approved master.
+### Fixed — Documentation Claims Corrected (Task 6)
+- **Experience Architecture:** WCAG 2.2 criteria reclassified from "✅ verified" to "⚠️ partially implemented — target standard, requiring full platform audit." Component 50-line rule qualified as target standard, not fully verified. Hardcoded colour rule qualified. Icon library claim qualified. App-icon table corrected to show maskable declarations were removed.
+- **Brand Asset Registry:** `public/brand/README.md` and `asset-manifest.json` corrected. All assets classified as `approved`, `approved_interim`, or `pending_source`. AI social banner reclassified from "generated placeholder" to "removed from production metadata." OrbitanLoader hardcoding documented as resolved.
+- **GitHub repository:** Correctly described as public (`https://github.com/firdela/orbitan`), not private.
 
-### Updated — index.html
-- Added SVG favicon link (`<link rel="icon" type="image/svg+xml" href="/favicon.svg" />`).
-- Added Open Graph image metadata (`og:image`, `og:image:width`, `og:image:height`, `og:image:alt`).
-- Added Twitter card image metadata (`twitter:title`, `twitter:description`, `twitter:image`).
-- Added dual theme-color for light/dark mode (`media="(prefers-color-scheme: ...)"`).
-- Updated build tag to #28.2H.
+### Added — Canonical Experience Architecture (Prior Build, Retained)
+- `src/docs/knowledge-hub/design/Orbitan-Experience-Architecture.md` — canonical 24-section design document. Claims corrected in this build.
+- Older design documents remain as focused supplements with cross-references to the canonical Experience Architecture.
 
-### Updated — manifest.json
-- Added SVG favicon as primary PWA icon (`purpose: "any"`, `type: "image/svg+xml"`).
-- Added maskable icon entries (`purpose: "maskable"`) for Android adaptive icon support.
-- Kept existing CDN raster icons as fallback.
+### Added — Brand Asset Registry (Prior Build, Corrected)
+- `public/brand/README.md` — canonical brand asset registry.
+- `public/brand/asset-manifest.json` — machine-readable asset registry with corrected status classifications.
 
-### Updated — WCAG Standard
-- Upgraded target from WCAG 2.1 AA to WCAG 2.2 AA.
-- Documented seven new WCAG 2.2 success criteria: 2.4.11 (Focus Not Obscured), 2.5.7 (Dragging Movements), 2.5.8 (Target Size), 3.2.6 (Consistent Help), 3.3.7 (Redundant Entry), 3.3.8 (Accessible Authentication). All verified as implemented.
+### Added — SVG Favicon (Prior Build, Retained)
+- `public/favicon.svg` — original Orbit Ring brand element. NOT a redraw of the Orbitan 3D logo.
 
-### Updated — Cross-References
-- `DesignPrinciples.md`, `Accessibility.md`, `ResponsiveStandards.md`, `BrandGuidelines.md` now link to the canonical Experience Architecture.
-
-### Limitations Documented
-- No vector (SVG) master of the Orbitan 3D mark exists. All approved masters are raster PNGs on the Base44 CDN.
-- No vector master of the Orbit Nexus mark exists. The approved master is a raster PNG.
+### Limitations Documented (Honest)
+- No vector (SVG) master of the Orbitan 3D mark exists. All approved masters are raster PNGs on the Base44 CDN. No fake SVG masters created from raster images.
+- No vector master of the Orbit Nexus mark exists.
 - Maskable PWA icons, .ico favicon, PNG favicon sizes, properly-sized Apple touch icon, and iOS 1024×1024 app icon are pending the availability of vector masters.
-- The AI-generated social banner is a placeholder. A properly designed banner with the exact Orbitan wordmark and logo geometry is pending.
-- No fake SVG masters were created from raster images. No approved logo was redrawn or distorted.
+- No approved social banner exists. AI placeholder removed from production metadata.
+- WCAG 2.2 AA is the target standard. Structural foundations exist but a full platform-wide audit has not been completed.
+- Component 50-line rule is a target standard for new files. Some legacy files may exceed this.
+- Apple touch icon uses interim CDN raster, not a properly composed 180×180 icon.
 
 ### Documentation
-- `PROJECT_MEMORY.md` updated with build record.
+- `PROJECT_MEMORY.md` updated with corrected build record.
 - `README.md` updated with latest build tag.
 - `CHANGELOG.md` (this file) updated.
 

@@ -197,4 +197,4 @@ Until then, these documents serve as human-readable institutional memory.
 ---
 
 **Product Owner:** Muhammad Firdaus Bin Ismail
-**Last Updated:** 2026-08-04 (Build: Experience Architecture & Brand Asset Repository v1.0 — canonical design document + brand asset registry + SVG favicon + social banner + WCAG 2.2 AA upgrade)
+**Last Updated:** 2026-08-04 (Production-Repair Build — manifest restored, maskable declarations corrected, OrbitanLoader asset reference fixed, AI placeholder removed from metadata, documentation claims corrected, brand asset registry verified)

@@ -7,8 +7,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
+import { LOGO_ASSETS } from '@/lib/orbitan-identity';
 
 // The 6R principle colours for the orbit ring segments
 const R_COLORS = [
@@ -103,7 +102,7 @@ export default function OrbitanLoader({
 
         {/* Static Orbitan logo in center */}
         <img
-          src={LOGO_URL}
+          src={LOGO_ASSETS.loaderMark}
           alt="Orbitan"
           width={s.logo}
           height={s.logo}

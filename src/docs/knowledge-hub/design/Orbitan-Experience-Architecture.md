@@ -204,11 +204,11 @@ All products in the Orbit ecosystem inherit the Orbitan visual DNA:
 
 | Size | Source | Status |
 |------|--------|--------|
-| 192×192 | CDN raster (`86d84f31e_Orbitan3dlogo.png`) | ✅ Wired in manifest.json |
-| 512×512 | CDN raster (same URL) | ✅ Wired in manifest.json |
-| Maskable 192 | — | ❌ Missing |
-| Maskable 512 | — | ❌ Missing |
-| Apple Touch (180×180) | CDN raster (same URL, not sized) | ⚠️ Using non-sized CDN PNG |
+| 192×192 (any) | CDN raster (`86d84f31e_Orbitan3dlogo.png`) | ⚠️ Interim — wired in manifest.json as `purpose: "any"` |
+| 512×512 (any) | CDN raster (same URL) | ⚠️ Interim — wired in manifest.json as `purpose: "any"` |
+| Maskable 192 | — | ❌ Missing — previous incorrect declarations removed |
+| Maskable 512 | — | ❌ Missing — previous incorrect declarations removed |
+| Apple Touch (180×180) | CDN raster (same URL, not sized) | ⚠️ Interim fallback — not specifically composed for iOS |
 | iOS Master (1024×1024) | — | ❌ Missing |
 
 ### 8.2 Requirements (Pending Vector Master)
@@ -390,8 +390,8 @@ Fonts are loaded via Google Fonts `@import` at the top of `src/index.css`:
 
 ### 12.6 Rules
 
-- **No hardcoded colour values in JSX.** Use Tailwind classes mapped to tokens (`bg-primary`, `text-foreground`, `text-orbitan-blue`).
-- **No inline styles** for colours — use Tailwind classes.
+- **No hardcoded colour values in JSX.** Use Tailwind classes mapped to tokens (`bg-primary`, `text-foreground`, `text-orbitan-blue`). *(Target standard — some legacy files may still contain inline styles; new code must comply.)*
+- **No inline styles** for colours — use Tailwind classes. *(Target standard.)*
 - **New tokens** only when semantic tokens are insufficient and the value is reused.
 - The existing token system is the only token system. Do not create a second one.
 
@@ -529,26 +529,31 @@ Additionally, the `.reduce-motion` class (applied via Accessibility settings) an
 
 > See also: [Accessibility.md](./Accessibility.md)
 
-Orbitan targets **WCAG 2.2 AA** compliance as a minimum. The platform already implements WCAG 2.1 AA; the upgrade to 2.2 adds:
+Orbitan targets **WCAG 2.2 AA** compliance as a minimum. This is a **target
+standard** — the platform has structural foundations (semantic HTML, token-based
+theming, reduced-motion support, focus rings, keyboard operability) but a full
+platform-wide WCAG 2.2 audit has not been completed. Each criterion below is
+classified as **partially implemented** until verified across every screen and
+component.
 
-### 18.1 New in 2.2 (Must Implement)
+### 18.1 New in 2.2 (Target Standard — Partially Implemented)
 
-| Criterion | Status | Implementation |
-|-----------|--------|----------------|
-| 2.4.11 Focus Not Obscured (Minimum) | ✅ | Focus rings use `--ring` token; sticky headers do not obscure focused elements |
-| 2.4.12 Focus Not Obscured (Enhanced) | ⚠️ AAA | Not required for AA |
-| 2.5.7 Dragging Movements | ✅ | Alternative keyboard/tap actions provided for all drag operations (DnD has keyboard fallback) |
-| 2.5.8 Target Size (Minimum) | ✅ | 24×24px minimum for non-essential targets; 44×44px for primary actions |
-| 3.2.6 Consistent Help | ✅ | Help links are in consistent locations (UserMenu, Support Portal) |
-| 3.3.7 Redundant Entry | ✅ | Information previously entered is auto-populated or available for selection |
-| 3.3.8 Accessible Authentication (Minimum) | ✅ | No cognitive function test for login; SSO + email/password |
+| Criterion | Status | Notes |
+|-----------|--------|-------|
+| 2.4.11 Focus Not Obscured (Minimum) | ⚠️ Partial | Focus rings use `--ring` token; most sticky headers do not obscure focus. Full audit pending. |
+| 2.4.12 Focus Not Obscured (Enhanced) | — | AAA criterion, not required for AA. |
+| 2.5.7 Dragging Movements | ⚠️ Partial | DnD library (@hello-pangea/dnd) supports keyboard activation. Full verification across all drag surfaces pending. |
+| 2.5.8 Target Size (Minimum) | ⚠️ Partial | Most primary actions meet 44×44px. Some inline icon buttons may be smaller. Full audit pending. |
+| 3.2.6 Consistent Help | ⚠️ Partial | Help links present in UserMenu and Support Portal. Consistency across all views not fully verified. |
+| 3.3.7 Redundant Entry | ⚠️ Partial | Some forms auto-populate. Not verified across all multi-step flows. |
+| 3.3.8 Accessible Authentication (Minimum) | ⚠️ Partial | Login uses email/password + SSO (no cognitive function test). OTP flow may need review. |
 
-### 18.2 Ongoing Requirements (WCAG 2.1 AA — Already Implemented)
+### 18.2 Ongoing Requirements (WCAG 2.1 AA — Target Standard, Partially Implemented)
 
-- **Perceivable:** Alt text, semantic HTML, captions, contrast ratios (4.5:1 normal text, 3:1 large text).
-- **Operable:** Keyboard navigation, focus management, no keyboard traps, `prefers-reduced-motion`.
-- **Understandable:** Clear error messages, form labels, predictable navigation.
-- **Robust:** Valid HTML, ARIA where needed, compatible with assistive technologies.
+- **Perceivable:** Alt text, semantic HTML, captions, contrast ratios (4.5:1 normal text, 3:1 large text). Structural foundations in place; full audit pending.
+- **Operable:** Keyboard navigation, focus management, no keyboard traps, `prefers-reduced-motion`. Core patterns implemented; per-screen verification ongoing.
+- **Understandable:** Clear error messages, form labels, predictable navigation. Implemented in core flows; not exhaustively verified.
+- **Robust:** Valid HTML, ARIA where needed, compatible with assistive technologies. Foundation in place; full AT testing pending.
 
 ### 18.3 Accessibility Features
 
@@ -697,9 +702,9 @@ Every feature or screen is considered complete only when ALL of the following pa
 ### 22.4 Technical
 - [ ] No broken imports or asset URLs
 - [ ] No console errors
-- [ ] Component files ≤50 lines
+- [ ] Component files ≤50 lines *(target standard — not every legacy file meets this; new files must comply)*
 - [ ] Every component exported as default
-- [ ] lucide-react icons only
+- [ ] lucide-react icons only *(verified as the only icon library in installed packages; per-file audit not exhaustive)*
 - [ ] No `require()` or `module.exports` (ESM only)
 
 ---
