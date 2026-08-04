@@ -51,7 +51,8 @@ knowledge-hub/
 ├── foundations/                 ← 🧊 Frozen Foundations v1.0
 │   ├── Orbitan-Frozen-Foundations-v1.md
 │   ├── MVP-Charter.md
-│   └── Build-Manifest.md
+│   ├── Build-Manifest.md
+│   └── BrandIdentityV1.md       ← 🔒 Brand Identity v1.0 (LOCKED 2026-08-04)
 ├── decision-records/            ← ADRs + Reference Architectures (RA-0000/0004/0005)
 │   ├── RA-0000.md               ← Architecture Governance Framework (FROZEN)
 │   ├── RA-0004.md               ← Platform Services Architecture (FROZEN)
@@ -197,4 +198,4 @@ Until then, these documents serve as human-readable institutional memory.
 ---
 
 **Product Owner:** Muhammad Firdaus Bin Ismail
-**Last Updated:** 2026-08-04 (Production-Repair Build — manifest restored, maskable declarations corrected, OrbitanLoader asset reference fixed, AI placeholder removed from metadata, documentation claims corrected, brand asset registry verified)
+**Last Updated:** 2026-08-04 (Brand Identity v1.0 LOCKED — 52 founder-approved assets registered, PWA manifest complete, full favicon set, apple-touch-icon, maskable icons, identity config expanded, all CDN hardcodes removed, Brand Identity v1.0 frozen foundations doc created)

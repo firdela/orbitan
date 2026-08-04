@@ -17,16 +17,28 @@
       "purpose": "any"
     },
     {
-      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/86d84f31e_Orbitan3dlogo.png",
+      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/015a99453_orbitan-android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/86d84f31e_Orbitan3dlogo.png",
+      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/354dae876_orbitan-android-chrome-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/015a99453_orbitan-android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/354dae876_orbitan-android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

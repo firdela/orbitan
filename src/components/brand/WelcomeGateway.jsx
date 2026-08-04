@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import {
   Search, MapPin, Building2, Store, Factory, Warehouse, ChevronRight, Loader2
 } from 'lucide-react';
-
-const LOGO_URL = 'https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png';
+import { LOGO_ASSETS } from '@/lib/orbitan-identity';
 
 const PRINCIPLES = [
   'Renew', 'Relate', 'Respond', 'Refine', 'Regulate', 'Reach',
@@ -104,7 +103,7 @@ export default function WelcomeGateway() {
           className="max-w-sm w-full space-y-6"
         >
           <motion.img
-            src={LOGO_URL}
+            src={LOGO_ASSETS.mark}
             alt="Orbitan"
             className="w-16 h-16 mx-auto"
             animate={{ rotate: 360 }}
@@ -157,7 +156,7 @@ export default function WelcomeGateway() {
             className="flex flex-col items-center gap-6 z-10"
           >
             <motion.img
-              src={LOGO_URL}
+              src={LOGO_ASSETS.mark}
               alt="Orbitan"
               className="w-32 h-32 md:w-40 md:h-40"
               initial={{ scale: 0.2, rotate: -180, opacity: 0 }}
@@ -188,7 +187,7 @@ export default function WelcomeGateway() {
           >
             {/* Small persistent logo */}
             <motion.img
-              src={LOGO_URL}
+              src={LOGO_ASSETS.mark}
               alt="Orbitan"
               className="w-12 h-12 opacity-80"
               initial={{ opacity: 0, y: -10 }}

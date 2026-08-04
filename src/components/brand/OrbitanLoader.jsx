@@ -100,10 +100,11 @@ export default function OrbitanLoader({
           />
         </svg>
 
-        {/* Static Orbitan logo in center */}
+        {/* Static Orbitan mark in center — approved Brand Identity v1.0 asset */}
         <img
           src={LOGO_ASSETS.loaderMark}
-          alt="Orbitan"
+          alt=""
+          aria-hidden="true"
           width={s.logo}
           height={s.logo}
           className="relative z-10 object-contain drop-shadow-sm"

@@ -1,158 +1,80 @@
 {
   "_meta": {
-    "description": "Orbitan Brand Asset Registry — machine-readable inventory of all brand assets",
-    "last_updated": "2026-08-04",
-    "github_repository": "https://github.com/firdela/orbitan",
-    "repository_visibility": "public",
+    "description": "Orbitan Brand Asset Registry — Brand Identity v1.0 LOCKED",
+    "lock_date": "2026-08-04",
+    "authority": "Muhammad Firdaus Bin Ismail (Founder)",
     "cdn_prefix": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39",
     "identity_config": "src/lib/orbitan-identity.js",
-    "status_values": ["approved", "approved_interim", "generated_placeholder", "pending_source", "missing"]
+    "total_assets": 52,
+    "orbitan_assets": 26,
+    "orbit_nexus_assets": 26,
+    "status_values": ["approved", "approved_interim", "pending_source"]
   },
-  "assets": {
-    "orbitan_symbol_3d_transparent": {
-      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png",
-      "file_type": "png",
-      "status": "approved",
-      "intended_usage": "Primary logo mark — navigation, headers, lockups",
-      "known_limitations": "Raster only. No vector master exists. Cannot be used for maskable icons or favicon sizing without quality loss.",
-      "code_references": ["LOGO_ASSETS.mark", "LOGO_ASSETS.mark3D", "OrbitanWordmark.jsx"]
-    },
-    "orbitan_symbol_blue_circular_on_black": {
-      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png",
-      "file_type": "png",
-      "status": "approved",
-      "intended_usage": "OrbitanLoader centre mark",
-      "known_limitations": "Raster only. Optimised for dark backgrounds. Not suitable for light surfaces.",
-      "code_references": ["LOGO_ASSETS.loaderMark", "OrbitanLoader.jsx"]
-    },
-    "orbitan_3d_logo_opaque": {
-      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/86d84f31e_Orbitan3dlogo.png",
-      "file_type": "png",
-      "status": "approved_interim",
-      "intended_usage": "PWA icon (any), apple-touch-icon (interim)",
-      "known_limitations": "Raster only. Not specifically composed or sized for 180×180 Apple touch icon or 192/512 PWA icons. Not maskable-safe. Used as interim fallback until vector master exists.",
-      "code_references": ["index.html (apple-touch-icon)", "public/manifest.json (icons)"]
-    },
-    "orbitan_3d_logo_transparent_copy": {
-      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/16aaf935a_Orbitan3dlogotransparentcopy.png",
-      "file_type": "png",
-      "status": "approved_interim",
-      "intended_usage": "Favicon PNG fallback (legacy browsers)",
-      "known_limitations": "Raster only. Not sized for favicon dimensions (16/32/48). Interim fallback behind SVG favicon.",
-      "code_references": ["index.html (icon png fallback)"]
-    },
-    "orbit_nexus_logo": {
-      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/563ef4f42_OrbitNexusLogo.png",
-      "file_type": "png",
-      "status": "approved",
-      "intended_usage": "Orbit Nexus product mark",
-      "known_limitations": "Raster only. No vector master exists. Do not silently redesign.",
-      "code_references": ["LOGO_ASSETS.nexusLogo"]
-    },
-    "orbit_ring_favicon": {
-      "url": "/favicon.svg",
-      "file_type": "svg",
-      "status": "approved",
-      "intended_usage": "SVG favicon — modern browsers",
-      "known_limitations": "Original Orbit Ring brand element, not the Orbitan 3D logo. Six colour arcs render distinctly at 16×16 and above.",
-      "code_references": ["public/favicon.svg", "index.html (icon svg)", "public/manifest.json (icons)", "OrbitanLoader.jsx (R_COLORS)"]
-    }
+  "orbitan_assets": {
+    "orbitan-mark-16":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b3567715_orbitan-mark-16.png",   "dimensions": "16x16",   "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Tiny mark — badges, tabs" },
+    "orbitan-mark-24":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/749caab5a_orbitan-mark-24.png",   "dimensions": "24x24",   "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "LOGO_ASSETS.markXs", "usage": "Extra-small mark" },
+    "orbitan-mark-32":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/9b29cd972_orbitan-mark-32.png",   "dimensions": "32x32",   "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "LOGO_ASSETS.markXs", "usage": "Small mark" },
+    "orbitan-mark-48":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/26072f988_orbitan-mark-48.png",   "dimensions": "48x48",   "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "LOGO_ASSETS.markSm", "usage": "Small mark — nav, list items" },
+    "orbitan-mark-64":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/c409a041b_orbitan-mark-64.png",   "dimensions": "64x64",   "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Medium mark" },
+    "orbitan-mark-72":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/f64e3e0ff_orbitan-mark-72.png",   "dimensions": "72x72",   "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Mark" },
+    "orbitan-mark-96":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/18b794d67_orbitan-mark-96.png",   "dimensions": "96x96",   "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Mark" },
+    "orbitan-mark-128":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/e2627a2e9_orbitan-mark-128.png",  "dimensions": "128x128", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Mark" },
+    "orbitan-mark-144":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/e660f6b59_orbitan-mark-144.png",  "dimensions": "144x144", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Mark" },
+    "orbitan-mark-152":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/2d2df8364_orbitan-mark-152.png",  "dimensions": "152x152", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Mark" },
+    "orbitan-mark-167":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/58d3a248a_orbitan-mark-167.png",  "dimensions": "167x167", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Mark" },
+    "orbitan-mark-180":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/5514bbeb2_orbitan-mark-180.png",  "dimensions": "180x180", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Mark (general 180px)" },
+    "orbitan-mark-192":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/5d8c3405b_orbitan-mark-192.png",  "dimensions": "192x192", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "LOGO_ASSETS.loaderMark", "usage": "OrbitanLoader centre mark" },
+    "orbitan-mark-256":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/dace21675_orbitan-mark-256.png",  "dimensions": "256x256", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Mark" },
+    "orbitan-mark-384":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/9bb554b7e_orbitan-mark-384.png",  "dimensions": "384x384", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Mark" },
+    "orbitan-mark-512":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/98099aa9f_orbitan-mark-512.png",  "dimensions": "512x512", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "LOGO_ASSETS.mark / LOGO_ASSETS.mark3D", "usage": "Primary mark — navigation, headers, lockups" },
+    "orbitan-mark-1024": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/cf84c9c19_orbitan-mark-1024.png", "dimensions": "1024x1024", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "High-res master" },
+    "orbitan-mark-2048": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/95e1d638f_orbitan-mark-2048.png", "dimensions": "2048x2048", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Ultra-high-res master" },
+    "orbitan-mark-4096": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/388bce822_orbitan-mark-4096.png", "dimensions": "4096x4096", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "master", "logo_key": "—", "usage": "Print / source master" },
+    "orbitan-android-chrome-192x192": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/015a99453_orbitan-android-chrome-192x192.png", "dimensions": "192x192", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "app-icons", "logo_key": "LOGO_ASSETS.appIcon192", "usage": "PWA manifest icon (any + maskable 192×192)", "pwa_purpose": "any maskable" },
+    "orbitan-android-chrome-512x512": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/354dae876_orbitan-android-chrome-512x512.png", "dimensions": "512x512", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "app-icons", "logo_key": "LOGO_ASSETS.appIcon512", "usage": "PWA manifest icon (any + maskable 512×512)", "pwa_purpose": "any maskable" },
+    "orbitan-apple-touch-icon": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/42c8f6db0_orbitan-apple-touch-icon.png", "dimensions": "180x180", "format": "png", "transparent": false, "status": "approved", "product": "orbitan", "category": "app-icons", "logo_key": "LOGO_ASSETS.appleTouchIcon", "usage": "iOS apple-touch-icon (180×180)" },
+    "orbitan-favicon-16x16": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/ac0d857d8_orbitan-favicon-16x16.png", "dimensions": "16x16", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "favicons", "logo_key": "LOGO_ASSETS.favicon16", "usage": "Favicon PNG 16×16" },
+    "orbitan-favicon-32x32": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/1f68c12af_orbitan-favicon-32x32.png", "dimensions": "32x32", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "favicons", "logo_key": "LOGO_ASSETS.favicon32", "usage": "Favicon PNG 32×32" },
+    "orbitan-favicon-48x48": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/19697a43a_orbitan-favicon-48x48.png", "dimensions": "48x48", "format": "png", "transparent": true, "status": "approved", "product": "orbitan", "category": "favicons", "logo_key": "LOGO_ASSETS.favicon48", "usage": "Favicon PNG 48×48" },
+    "orbitan-favicon-ico": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/3ecafbc42_orbitan-favicon.ico", "dimensions": "multi-size", "format": "ico", "transparent": true, "status": "approved", "product": "orbitan", "category": "favicons", "logo_key": "—", "usage": "Favicon .ico (legacy browsers)" }
   },
-  "pending_assets": {
-    "orbitan_symbol_svg": {
-      "description": "Primary logo vector master (SVG)",
-      "status": "pending_source",
-      "blocks": ["monochrome_variants", "favicon_ico", "favicon_png_sizes", "maskable_icons", "apple_touch_icon_180", "ios_app_icon_1024"],
-      "note": "Cannot be derived from raster. Requires original vector artwork from founder or designer."
-    },
-    "orbitan_wordmark_svg": {
-      "description": "Wordmark vector (Sora Bold, outlined)",
-      "status": "pending_source",
-      "blocks": ["lockup_horizontal_svg"],
-      "note": "Requires font outline export."
-    },
-    "orbitan_lockup_horizontal_svg": {
-      "description": "Symbol + wordmark horizontal lockup (SVG)",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Depends on orbitan_symbol_svg and orbitan_wordmark_svg."
-    },
-    "monochrome_variants": {
-      "description": "Monochrome symbol variants (black, white)",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Depends on orbitan_symbol_svg."
-    },
-    "favicon_ico": {
-      "description": "Multi-size favicon (.ico, 16/32/48)",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Requires vector master for clean multi-size export."
-    },
-    "favicon_png_sizes": {
-      "description": "PNG favicons (16×16, 32×32, 48×48)",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Requires vector master for clean multi-size export."
-    },
-    "maskable_icons": {
-      "description": "PWA maskable icons (192×192, 512×512) with safe-zone composition",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Requires artwork composed within 80% safe zone. Ordinary raster logos are NOT maskable-safe and must not be declared as maskable."
-    },
-    "apple_touch_icon_180": {
-      "description": "Apple touch icon (180×180, properly composed for iOS)",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Current apple-touch-icon uses interim CDN raster. Not specifically sized or composed for iOS."
-    },
-    "ios_app_icon_1024": {
-      "description": "iOS app icon master (1024×1024)",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Requires square-optimised vector composition."
-    },
-    "social_banner_approved": {
-      "description": "Social share banner (1200×630, approved master)",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Previous AI-generated placeholder was removed from production metadata (og:image, twitter:image). Requires manual design and founder approval."
-    },
-    "orbit_nexus_symbol_svg": {
-      "description": "Orbit Nexus vector master (SVG)",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Approved master is raster PNG. Do not silently redesign."
-    },
-    "email_avatar": {
-      "description": "Email template avatar",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Requires vector master."
-    },
-    "notification_icon": {
-      "description": "Push notification icon",
-      "status": "pending_source",
-      "blocks": [],
-      "note": "Requires vector master."
-    }
+  "orbit_nexus_assets": {
+    "orbit-nexus-mark-16":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/22cf4d1ca_orbit-nexus-mark-16.png",   "dimensions": "16x16",   "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark (tiny)" },
+    "orbit-nexus-mark-24":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/409be8571_orbit-nexus-mark-24.png",   "dimensions": "24x24",   "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "LOGO_ASSETS.nexusMarkSm", "usage": "Nexus mark (xs)" },
+    "orbit-nexus-mark-32":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/555127992_orbit-nexus-mark-32.png",   "dimensions": "32x32",   "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "LOGO_ASSETS.nexusMarkSm", "usage": "Nexus mark (sm)" },
+    "orbit-nexus-mark-48":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/69aa09c2a_orbit-nexus-mark-48.png",   "dimensions": "48x48",   "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "LOGO_ASSETS.nexusMarkSm", "usage": "Nexus mark (md)" },
+    "orbit-nexus-mark-64":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/d2d9fabc4_orbit-nexus-mark-64.png",   "dimensions": "64x64",   "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark" },
+    "orbit-nexus-mark-72":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7bf161c99_orbit-nexus-mark-72.png",   "dimensions": "72x72",   "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark" },
+    "orbit-nexus-mark-96":   { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/5501f5075_orbit-nexus-mark-96.png",   "dimensions": "96x96",   "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark" },
+    "orbit-nexus-mark-128":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/f7c33cc8a_orbit-nexus-mark-128.png",  "dimensions": "128x128", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark" },
+    "orbit-nexus-mark-144":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/98ec7b674_orbit-nexus-mark-144.png",  "dimensions": "144x144", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark" },
+    "orbit-nexus-mark-152":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/c5e7436ed_orbit-nexus-mark-152.png",  "dimensions": "152x152", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark" },
+    "orbit-nexus-mark-167":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/2ccdd75ec_orbit-nexus-mark-167.png",  "dimensions": "167x167", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark" },
+    "orbit-nexus-mark-180":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/6ab7c6733_orbit-nexus-mark-180.png",  "dimensions": "180x180", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark (180px)" },
+    "orbit-nexus-mark-192":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/c75b637ad_orbit-nexus-mark-192.png",  "dimensions": "192x192", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark (192px)" },
+    "orbit-nexus-mark-256":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/e24ff8876_orbit-nexus-mark-256.png",  "dimensions": "256x256", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark" },
+    "orbit-nexus-mark-384":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/3d92feba2_orbit-nexus-mark-384.png",  "dimensions": "384x384", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus mark" },
+    "orbit-nexus-mark-512":  { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/e7027b0eb_orbit-nexus-mark-512.png",  "dimensions": "512x512", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "LOGO_ASSETS.nexusLogo", "usage": "Nexus primary mark" },
+    "orbit-nexus-mark-1024": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/72724b3ed_orbit-nexus-mark-1024.png", "dimensions": "1024x1024", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus high-res master" },
+    "orbit-nexus-mark-2048": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/c846687c6_orbit-nexus-mark-2048.png", "dimensions": "2048x2048", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus ultra-high-res master" },
+    "orbit-nexus-mark-4096": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/e51a64794_orbit-nexus-mark-4096.png", "dimensions": "4096x4096", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "master", "logo_key": "—", "usage": "Nexus print/source master" },
+    "orbit-nexus-android-chrome-192x192": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/baceae7f8_orbit-nexus-android-chrome-192x192.png", "dimensions": "192x192", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "app-icons", "logo_key": "LOGO_ASSETS.nexusAppIcon192", "usage": "Nexus PWA icon 192×192" },
+    "orbit-nexus-android-chrome-512x512": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/12c3857db_orbit-nexus-android-chrome-512x512.png", "dimensions": "512x512", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "app-icons", "logo_key": "LOGO_ASSETS.nexusAppIcon512", "usage": "Nexus PWA icon 512×512" },
+    "orbit-nexus-apple-touch-icon": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/2b2f5cdb5_orbit-nexus-apple-touch-icon.png", "dimensions": "180x180", "format": "png", "transparent": false, "status": "approved", "product": "orbit-nexus", "category": "app-icons", "logo_key": "—", "usage": "Nexus iOS apple-touch-icon" },
+    "orbit-nexus-favicon-16x16": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/40f56492d_orbit-nexus-favicon-16x16.png", "dimensions": "16x16", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "favicons", "logo_key": "—", "usage": "Nexus favicon 16×16 (for Nexus standalone product)" },
+    "orbit-nexus-favicon-32x32": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/020b2b639_orbit-nexus-favicon-32x32.png", "dimensions": "32x32", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "favicons", "logo_key": "—", "usage": "Nexus favicon 32×32" },
+    "orbit-nexus-favicon-48x48": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/f44c715a9_orbit-nexus-favicon-48x48.png", "dimensions": "48x48", "format": "png", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "favicons", "logo_key": "—", "usage": "Nexus favicon 48×48" },
+    "orbit-nexus-favicon-ico": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/4b06e0a19_orbit-nexus-favicon.ico", "dimensions": "multi-size", "format": "ico", "transparent": true, "status": "approved", "product": "orbit-nexus", "category": "favicons", "logo_key": "—", "usage": "Nexus favicon .ico (for Nexus standalone product)" }
   },
-  "removed_defects": [
-    {
-      "defect": "AI-generated social banner used in og:image and twitter:image",
-      "resolution": "Removed from index.html. No approved social banner exists. Social image metadata intentionally omitted.",
-      "date": "2026-08-04"
-    },
-    {
-      "defect": "Ordinary CDN raster PNGs declared as purpose:maskable in manifest.json",
-      "resolution": "Maskable declarations removed. Artwork does not respect maskable safe zone. Proper maskable icons pending source artwork.",
-      "date": "2026-08-04"
-    },
-    {
-      "defect": "OrbitanLoader.jsx hardcoded CDN URL instead of using LOGO_ASSETS",
-      "resolution": "Added loaderMark key to LOGO_ASSETS. OrbitanLoader now imports and uses LOGO_ASSETS.loaderMark.",
-      "date": "2026-08-04"
-    }
-  ]
+  "legacy_cdn_assets": {
+    "_note": "Pre-Brand-Identity-v1.0 CDN assets. Retained for backward compatibility where still referenced. Migrate all references to orbitan_assets above.",
+    "orbitan_3d_logo_transparent_legacy": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png", "status": "superseded", "superseded_by": "orbitan-mark-512", "notes": "Superseded by the founder-approved mark series. Still referenced in legacy code paths." },
+    "orbitan_3d_logo_opaque_legacy": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/86d84f31e_Orbitan3dlogo.png", "status": "superseded", "superseded_by": "orbitan-android-chrome-192x192", "notes": "Previously used as PWA icon. Superseded by approved android-chrome icons." },
+    "orbitan_loader_mark_legacy": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png", "status": "superseded", "superseded_by": "orbitan-mark-192", "notes": "Previously used as OrbitanLoader centre. Superseded by orbitan-mark-192 (LOGO_ASSETS.loaderMark)." },
+    "orbit_nexus_logo_legacy": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/563ef4f42_OrbitNexusLogo.png", "status": "superseded", "superseded_by": "orbit-nexus-mark-512", "notes": "Superseded by the founder-approved Orbit Nexus mark series." },
+    "favicon_png_fallback_legacy": { "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/16aaf935a_Orbitan3dlogotransparentcopy.png", "status": "superseded", "superseded_by": "orbitan-favicon-ico orbitan-favicon-16x16 orbitan-favicon-32x32 orbitan-favicon-48x48", "notes": "Previously used as favicon PNG fallback. Superseded by dedicated favicon set." }
+  },
+  "social_assets": {
+    "_note": "No approved social banner exists. og:image and twitter:image are intentionally omitted from index.html. A 1200x630 banner is pending founder design and approval."
+  }
 }

@@ -7,6 +7,47 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Brand Identity v1.0 LOCKED (2026-08-04)
+
+### Added — Founder-Approved Brand Asset Pack (52 assets)
+- **Orbitan (26 assets):** Full mark series at 16/24/32/48/64/72/96/128/144/152/167/180/192/256/384/512/1024/2048/4096px (transparent background, square). Dedicated PWA icons (192×192 and 512×512 android-chrome compositions). Apple touch icon (180×180). Favicon set (16px, 32px, 48px PNG + .ico multi-size).
+- **Orbit Nexus (26 assets):** Full mark series at same sizes. Dedicated PWA icons. Apple touch icon. Favicon set.
+- All 52 assets founder-approved and registered in `public/brand/asset-manifest.json`.
+
+### Updated — Identity Configuration (`src/lib/orbitan-identity.js`)
+- Expanded `LOGO_ASSETS` with canonical keys: `mark`, `mark3D`, `loaderMark`, `markSm`, `markXs`, `appIcon192`, `appIcon512`, `appleTouchIcon`, `favicon16`, `favicon32`, `favicon48`, `nexusLogo`, `nexusMarkSm`, `nexusAppIcon192`, `nexusAppIcon512`.
+- All keys now resolve through the new `ORBITAN` and `ORBIT_NEXUS` internal constant maps — no CDN URL duplication.
+- `loaderMark` now points to `orbitan-mark-192` (founder-approved mark series), replacing the legacy blue-circular CDN asset.
+- `mark` and `mark3D` now point to `orbitan-mark-512` (founder-approved mark series), replacing the legacy transparent-copy CDN asset.
+
+### Updated — PWA Manifest (`public/manifest.json`)
+- PWA icon 192×192 (any): `orbitan-android-chrome-192x192.png`
+- PWA icon 512×512 (any): `orbitan-android-chrome-512x512.png`
+- PWA maskable icon 192×192: `orbitan-android-chrome-192x192.png` (founder-approved, purpose-built composition)
+- PWA maskable icon 512×512: `orbitan-android-chrome-512x512.png` (founder-approved, purpose-built composition)
+- SVG favicon retained as primary `any` icon.
+
+### Updated — index.html
+- Full favicon set wired: SVG (Orbit Ring) + .ico + 16×16 PNG + 32×32 PNG + 48×48 PNG.
+- Apple touch icon: `orbitan-apple-touch-icon.png` (180×180, founder-approved).
+- Social metadata: `og:image` and `twitter:image` intentionally omitted — no approved social banner exists.
+
+### Updated — Components (CDN hardcodes removed)
+- `WelcomeGateway.jsx`: removed `LOGO_URL` constant. All 3 `<img>` instances now use `LOGO_ASSETS.mark`.
+- `Landing.jsx`: replaced 1 hardcoded CDN `src="..."` with `LOGO_ASSETS.mark`.
+- `OrbitanLoader.jsx`, `OrbitanWordmark.jsx`: already used `LOGO_ASSETS` — no change needed.
+- `AuthLayout.jsx`: uses `OrbitanWordmark` (which uses `LOGO_ASSETS`) — no direct CDN reference.
+
+### Created — Frozen Foundations: Brand Identity v1.0
+- `src/docs/knowledge-hub/foundations/BrandIdentityV1.md` — lock declaration for Orbitan logo, Orbit Nexus logo, favicons, PWA icons, Apple Touch Icon, brand colours, identity architecture. Canonical references, modification process, brand separation rules.
+
+### Updated — Brand Asset Registry
+- `public/brand/README.md` — complete rewrite with full 52-asset inventory, lock status, maskable declaration rationale, PWA favicon table, social banner status.
+- `public/brand/asset-manifest.json` — complete rewrite with all 52 approved assets, legacy CDN asset supersession tracking, social asset note.
+
+### Removed Defects
+- Legacy CDN references superseded: `7b205f7ab` (mark), `10527badf` (loader), `86d84f31e` (PWA icon), `16aaf935a` (favicon fallback), `563ef4f42` (Nexus logo). All superseded by founder-approved asset pack. Legacy entries retained in `asset-manifest.json` under `legacy_cdn_assets` for traceability.
+
 ## [Unreleased] — Production-Repair Build: Experience Architecture Corrections (2026-08-04)
 
 ### Fixed — PWA Manifest (Task 1)

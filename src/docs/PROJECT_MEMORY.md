@@ -180,6 +180,17 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
   migration to orbitan.net complete. Repository consolidation complete.
   Authentication hardening in progress.
 
+## Brand Identity v1.0 LOCKED (2026-08-04)
+- **52 founder-approved assets registered:** 26 Orbitan (mark series 16–4096px, PWA icons 192/512, apple-touch-icon 180, favicon set 16/32/48/ico) + 26 Orbit Nexus (same structure). All assets on Base44 CDN, registered in `asset-manifest.json` and `LOGO_ASSETS` in `orbitan-identity.js`.
+- **Identity config expanded:** `LOGO_ASSETS` keys: `mark`, `mark3D`, `loaderMark`, `markSm`, `markXs`, `appIcon192`, `appIcon512`, `appleTouchIcon`, `favicon16`, `favicon32`, `favicon48`, `nexusLogo`, `nexusMarkSm`, `nexusAppIcon192`, `nexusAppIcon512`. Internal `ORBITAN` and `ORBIT_NEXUS` constant maps eliminate CDN URL duplication.
+- **PWA manifest complete:** 5 icons (SVG any + android-chrome-192 any + android-chrome-512 any + android-chrome-192 maskable + android-chrome-512 maskable). Both maskable icons are founder-approved purpose-built compositions.
+- **Favicon set complete:** SVG (Orbit Ring) + .ico + 16×16 PNG + 32×32 PNG + 48×48 PNG in `index.html`.
+- **Apple touch icon correct:** 180×180 founder-approved composition.
+- **CDN hardcodes eliminated:** `WelcomeGateway.jsx` (3 instances), `Landing.jsx` (1 instance). Zero remaining hardcoded CDN URLs in component code.
+- **Brand Identity frozen:** `src/docs/knowledge-hub/foundations/BrandIdentityV1.md` — lock declaration alongside RA-0000/RA-0004/RA-0005.
+- **Social banner:** No approved banner exists. `og:image` and `twitter:image` intentionally omitted.
+- **Orbit Nexus brand isolation:** Nexus assets registered and isolated. Nexus favicon set available for Nexus standalone product when it ships.
+
 ## Production-Repair Build: Experience Architecture Corrections (2026-08-04)
 - **Experience Architecture retained:** `src/docs/knowledge-hub/design/Orbitan-Experience-Architecture.md` — canonical 24-section design document. Claims corrected: WCAG 2.2 criteria reclassified as "target standard, partially implemented, requiring full platform audit" (not "verified"). Component 50-line rule qualified as target. Hardcoded colour and Lucide-only claims qualified.
 - **Brand asset registry corrected:** `public/brand/README.md` + `public/brand/asset-manifest.json` — all assets classified as `approved`, `approved_interim`, or `pending_source`. AI social banner reclassified as "removed from production metadata." OrbitanLoader hardcoding documented as resolved.
