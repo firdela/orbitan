@@ -21,24 +21,60 @@ export default function Login() {
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
-      window.location.href = "/workspace";
+      // Build #28.2G.1 — Return to the originally requested page after login.
+      // Checks URL params, then sessionStorage fallback from AuthContext.
+      const urlParams = new URLSearchParams(window.location.search);
+      const returnUrl = urlParams.get("next") || urlParams.get("returnUrl");
+      let destination = "/workspace";
+      if (returnUrl && returnUrl.startsWith("/") && !returnUrl.startsWith("//")) {
+        destination = returnUrl;
+      } else {
+        try {
+          const stored = sessionStorage.getItem("orbitan_auth_return_url");
+          if (stored && stored.startsWith("/") && !stored.startsWith("//") && !stored.startsWith("/login")) {
+            destination = stored;
+          }
+        } catch {
+          // sessionStorage unavailable — use default
+        }
+      }
+      // Clear the stored return URL
+      try { sessionStorage.removeItem("orbitan_auth_return_url"); } catch {}
+      window.location.href = destination;
     } catch (err) {
-      setError(err.message || "Invalid email or password");
+      // Build #28.2G.1 — Never expose sensitive auth details. Show user-friendly messages.
+      const msg = err?.message || "";
+      if (msg.includes("rate") || msg.includes("too many") || msg.includes("429")) {
+        setError("Too many login attempts. Please wait a moment and try again.");
+      } else if (msg.includes("disabled") || msg.includes("banned") || msg.includes("suspended")) {
+        setError("Your account has been suspended. Please contact your administrator.");
+      } else if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
+        setError("Unable to connect. Please check your internet connection and try again.");
+      } else {
+        setError("Invalid email or password. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/workspace");
+    // Build #28.2G.1 — Preserve return path for OAuth redirects
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnUrl = urlParams.get("next") || "/workspace";
+    base44.auth.loginWithProvider("google", returnUrl);
   };
 
   const handleMicrosoft = () => {
-    base44.auth.loginWithProvider("microsoft", "/workspace");
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnUrl = urlParams.get("next") || "/workspace";
+    base44.auth.loginWithProvider("microsoft", returnUrl);
   };
 
   const handleApple = () => {
-    base44.auth.loginWithProvider("apple", "/workspace");
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnUrl = urlParams.get("next") || "/workspace";
+    base44.auth.loginWithProvider("apple", returnUrl);
   };
 
   return (
@@ -92,7 +128,7 @@ export default function Login() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
         </div>
       )}

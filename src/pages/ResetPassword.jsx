@@ -32,9 +32,22 @@ export default function ResetPassword() {
       // reset link cannot be reused via the back button or history navigation.
       // The platform auth backend invalidates the token server-side; this
       // client-side measure prevents the token URL from lingering in history.
+      try { sessionStorage.removeItem("orbitan_auth_return_url"); } catch {}
       setTimeout(() => window.location.replace("/login"), 1500);
     } catch (err) {
-      setError(err.message || "Failed to reset password");
+      // Build #28.2G.1 — Reset-specific error messages without sensitive details
+      const msg = err?.message || "";
+      if (msg.includes("expired") || msg.includes("invalid") || msg.includes("token")) {
+        setError("This password reset link has expired or is no longer valid. Please request a new one.");
+      } else if (msg.includes("rate") || msg.includes("too many") || msg.includes("429")) {
+        setError("Too many attempts. Please wait a moment before trying again.");
+      } else if (msg.includes("weak") || msg.includes("password")) {
+        setError("Password is too weak. Please use at least 8 characters with a mix of letters and numbers.");
+      } else if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
+        setError("Unable to connect. Please check your internet connection and try again.");
+      } else {
+        setError("Unable to reset your password. Please try again or request a new reset link.");
+      }
     } finally {
       setLoading(false);
     }
@@ -52,9 +65,16 @@ export default function ResetPassword() {
           </Link>
         }
       >
-        <p className="text-sm text-slate-200 text-center">
-          The link you used appears to be incomplete. Please request a new password reset email.
-        </p>
+        <div className="space-y-4">
+          <p className="text-sm text-slate-200 text-center">
+            The link you used appears to be incomplete. Please request a new password reset email.
+          </p>
+          <Link to="/forgot-password">
+            <Button variant="outline" className="w-full h-11 border-white/15 bg-white/[0.04] text-white hover:bg-white/[0.08] rounded-xl gap-2">
+              Request New Link
+            </Button>
+          </Link>
+        </div>
       </AuthLayout>
     );
   }
@@ -88,7 +108,7 @@ export default function ResetPassword() {
       subtitle="Enter your new password below"
     >
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
         </div>
       )}

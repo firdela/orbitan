@@ -17,5 +17,13 @@
     "types": []
   },
   "include": ["src/components/**/*.js", "src/pages/**/*.jsx", "src/Layout.jsx"],
-  "exclude": ["node_modules", "dist", "src/vite-plugins", "src/components/ui", "src/api", "src/lib"]
-} 
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/vite-plugins",
+    "src/components/ui",
+    "src/api",
+    "src/lib"
+  ],
+  "//": "src/lib is excluded from type checking because it contains Base44 SDK client code (base44Client.js) and access engine modules that use dynamic patterns not compatible with strict type checking. src/components/ui is excluded as shadcn/ui generated code. src/api is excluded as SDK initialization code."
+}

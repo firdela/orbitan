@@ -1,25 +1,35 @@
-# Project Memory — Orbitan Ecosystem
+# Project Memory: OrbitanOS
 
-> **Purpose:** Institutional memory for the Orbitan platform. All architectural decisions,
-> naming standards, and constraints are recorded here. Do not contradict decisions recorded
-> in this document unless explicitly directed by the Product Owner.
+> **North Star:** Within two months from 30 May 2026, deliver an MVP that allows pilot
+> tenants to genuinely run parts of their daily operations through OrbitanOS, gather
+> feedback, validate assumptions, and establish the foundation for future growth of the
+> Orbitan ecosystem.
+>
+> **Build Philosophy:** Build less. Validate more.
+>
+> **Last updated:** 2026-08-04 (Build #28.2G.1 — Repository Consolidation & Auth Hardening)
+
+---
 
 ## App Name
-Orbitan (Product) / OrbitanOS (Platform)
+- **Product (customer-facing):** Orbitan
+- **Platform (underlying OS):** OrbitanOS — "The Workforce Operating System for Modern Organisations"
+- **Future ecosystem:** Orbit (holding) → OrbitanOS, Orbit Nexus (AI), AquaOrbit, ChefOrbit, future products
 
 ## App Purpose
-A commercial, scalable, multi-tenant SaaS Workforce Operating System. Pilot tenants
-(Taqueria, Renewed Resources, Renewed Fashion, HBBs) are validation environments only.
-Future customers are the primary market.
+Build a commercial, scalable, multi-tenant SaaS platform where any organisation — from a single-person HBB to a multi-brand enterprise — can discover Orbitan, create an account, select a plan, configure their org, activate Industry Packs + Modules, and run daily operations through OrbitanOS.
+
+**Pilot tenants are validation environments, not the product's purpose.** Future paying customers are the primary market.
 
 ## Target Users
-- Home-Based Businesses
-- Startups & SMEs
-- Multi-Brand Organisations
-- Holding Companies
-- Enterprise & Regional/Global Operations
+Home-Based Businesses · Startups · SMEs · Multi-Outlet Businesses · Multi-Brand
+Organisations · Holding Companies · Enterprise · Regional & Global Operations.
 
-## User Roles
+Supported industries: F&B, Retail, Recycling & Sustainability, Education, Logistics,
+Construction, Healthcare, Manufacturing, Facilities Management, Events & Activations,
+Professional Services, Technology, and future industries.
+
+## User Roles (confirmed)
 | Role | Scope |
 |------|-------|
 | `admin` | Platform owner (Orbitan staff). Full access across all tenants. |
@@ -29,95 +39,87 @@ Future customers are the primary market.
 | `supervisor` | Shift supervisor. Read/write within assigned outlet. |
 | `worker` | Frontline employee. Own data + outlet-scoped reads. |
 
-## Core Pages
-- `/` — Public Landing (marketing + onboarding gateway)
-- `/auth/gateway` — Intelligent auth entry
-- `/join` — Invitation-based worker onboarding
-- `/onboarding` — Self-serve org creation wizard
-- `/workspace/:tenantId/*` — Dynamic tenant workspace (manifest-driven)
-- `/outlet/*` — Legacy outlet routes (being phased out in favour of /workspace)
-- `/platform/*` — Platform owner console (wallet, marketplace, shield, audit)
-- `/leader-org` — Founder/pilot command center
+## Core Pages (production paths)
+- **Public:** `/` (Landing), `/login`, `/register`, `/forgot-password`, `/reset-password`
+- **Auth gateway:** `/auth/gateway`, `/join`, `/welcome`, `/request-access`
+- **Onboarding:** `/onboarding` (self-serve org creation wizard)
+- **Workspace (generic, scalable):** `/workspace/:tenantId/*` — WorkspaceLayout + WorkspaceDashboard, Inventory, Procurement, HBB, Sales, Tasks, Workforce, Scheduling, Compliance, Reports
+- **Platform console:** `/leader-org`
+- **Tenant/outlet:** `/company`, `/outlet/*`
+- **Platform revenue engine:** `/platform/wallet`, `/platform/marketplace`, `/platform/shield`, `/platform/integrations`
+- **Worker portal:** `/worker`
 
 ## Core Entities
 **Orbit Core (Foundation):** Tenant, Company, Client, Outlet, Employee, Invitation, AccessRequest
 **Workforce:** Shift, ClockRecord, PayrollSnapshot, Task
 **Operations:** InventoryItem, Supplier, PurchaseOrder, GoodsReceipt, ProductCatalog, Recipe, ReplenishmentAlert
 **Finance:** SalesInvoice, DailyReconciliation, FinanceSyncQueue, FinanceMapping, AccountMapping
-**Governance:** GovernancePolicy, GovernanceOverride, AuditLog, ComplianceRecord, FoodSafetyLog, ComplianceSnapshot
-**Platform:** ActivationRegistry, SubscriptionPolicy, PlatformManifest, OrbitanWallet, WalletTransaction, MarketplaceModule, IntegrationCredential, SystemSettings
-**Intelligence:** AIDocument, IssueLog, WorkerFeedback, DeploymentLog, DashboardLayout, Announcement
+**Wallet-Native Ledger:** OrbitanWallet, WalletTransaction (immutable), OrbitUsageTracker
+**Governance:** GovernancePolicy, GovernanceOverride, AuditLog, ComplianceRecord, FoodSafetyLog, ComplianceSnapshot, ActivationRegistry, SubscriptionPolicy, PlatformManifest
+**Platform:** IntegrationCredential, SystemSettings, DashboardLayout, Announcement, IssueLog, AIDocument, DeploymentLog, MarketplaceModule, EvolutionProposal
+**Communication:** OrbitInbox, NotificationTemplate, NotificationPreference, SemanticRelationship
+**Pilot Ops:** OnboardingChecklist, NexusInsight, NexusCapabilityRegistry, ImportHistory, ArtifactRecord, OperationalMetric, MetricDefinition, AccessRequest, ShiftTradeRequest, StockCount, MaterialCollection, WorkReview, TaskAssignment, DailyReconciliation, ExpenseRecord, Client
 
 ## Important Workflows
-1. **Onboarding:** Register → Select Industry → Select Plan → Configure Structure → Activate Packs → Workspace
-2. **Procurement:** Create PO → Upload Supplier Doc → AI Extract → Manager Verify → Receive Goods → Sync to Xero
-3. **Sales:** Create Invoice / Upload Receipt → AI Extract → Daily Reconciliation → Xero Sync
-4. **Governance:** Action → Shield Interceptor → Threshold Check → Auto-approve or Override Request → Manager Review → Audit Log
-5. **Worker Onboarding:** Invite Code → AccessRequest → Manager Approve → Employee Record → Workspace
+1. **Manifest-driven provisioning:** `PlatformManifest` → `ManifestHydrator` → `ManifestNav`. Navigation is registry-driven, not hardcoded. `ManifestHydrator` fetches `PlatformManifest` + `SubscriptionPolicy` in parallel, intersects via `allowedModules`, marks locked modules as `isLocked` (Graceful Lockout).
+2. **Org provisioning:** Onboarding wizard → `onboardingService` → `ActivationRegistry` blueprint → seeds compliance/tasks/AI docs + creates Tenant/Company/Outlet/Wallet
+3. **Worker onboarding:** Invitation/AccessRequest → manager approval → Employee record
+4. **Clock-in/out:** `clockController` → ClockRecord → (compliance gate via Shield) → TimesheetManager validation → PayrollSnapshot lock
+5. **Procurement (Wallet-Native):** PO create → submit → approve → **Receive** → `walletEngine.debit_procurement_sgd` → WalletTransaction (immutable) + FinanceSyncQueue entry. Governance threshold check → auto-approve or GovernanceOverride request.
+6. **Sales & reconciliation:** SalesInvoice → AIReceipts (nexus OCR) → verify → `financeController` → Xero sync
+7. **Shield governance:** `shieldInterceptor` evaluates `GovernancePolicy` before sensitive writes → block (Guardian) / notify (Auditor) / GovernanceOverride release valve. Every outcome captured in `AuditLog`.
+8. **Replenishment:** `replenishmentEngine` analyses sales × recipe BOM → ReplenishmentAlert → drafts POs
+9. **Orbit Nexus routing:** `nexus` gateway routes intelligence requests; `OrbitUsageTracker` meters credits and debits `OrbitanWallet`.
+10. **Orbit Inbox (ADR-0053):** Event → `notificationDispatcher` → OrbitInbox (in-app) + SendEmail (email) per recipient preferences.
 
 ## Security Rules
-- **Tenant isolation:** Every entity carries `tenant_id`. RLS enforces `data.tenant_id === {{user.data.tenant_id}}` for all non-admin roles.
-- **Outlet scoping:** `outlet_manager` and below are restricted to `data.outlet_id === {{user.data.outlet_id}}`.
-- **`tenant_admin` cross-outlet:** Must see ALL outlets within their tenant. RLS must NOT apply `outlet_id` filter for this role.
-- **`$in` operator:** The Base44 RLS engine does NOT support `$in` in user_condition role checks. Use explicit `$or` blocks instead.
-- **Admin-only entities:** SubscriptionPolicy, ActivationRegistry, PlatformManifest, OrbitanWallet (write), WalletTransaction (write) are admin-only for create/update/delete.
-- **Public reads:** ActivationRegistry and PlatformManifest have empty `read` RLS (publicly readable) so the onboarding wizard works pre-auth.
+- All operational entities use `tenant_id` + role-conditioned RLS
+- `admin` bypasses tenant scoping (platform-level)
+- `tenant_admin` scoped to `data.tenant_id == user.data.tenant_id`
+- `outlet_manager` / `supervisor` further scoped to `data.outlet_id`
+- Workers see their own records (`data.employee_id == user.id` or `data.reported_by_id == user.id`)
+- SubscriptionPolicy, ActivationRegistry writes are admin-only (commercial sensitivity)
+- AccessRequest.create is intentionally open (pre-auth onboarding pipeline)
+- AuditLog is immutable after create (update/delete admin-only)
+- WalletTransaction: create/update/delete admin-only; reads scoped to tenant role hierarchy
+- URL `tenantId` must match the session's `tenant_id` (platform admins excepted). `WorkspaceLayout` enforces this.
+- Admin-only actions are protected by server-side role validation (`base44.auth.me()` → `user.role === 'admin'`).
+- Public pages must not pull private entity data.
+- **RLS `$in` operator:** The Base44 RLS engine does NOT support `$in` in user_condition role checks. Use explicit `$or` blocks instead.
 
 ## Design Rules
-- **Fonts:** Sora (headings/display), Inter (body)
-- **Primary:** Orbit Blue #2563EB
-- **Plan colours:** Starter=Blue, Growth=Emerald, Business=Violet, Enterprise=Titanium+Gold
-- **Industry pack colours:** F&B=Orange, Retail=Green, Recycling=DarkGreen, etc.
-- **Sidebar:** Deep Titanium dark rail
-- **Design system:** shadcn/ui + Tailwind tokens in src/index.css → tailwind.config.js
-- **Accessibility:** WCAG 2.1 compliance mandatory (see Golden UI/UX Standard)
+- **6-R Principles:** Regulate · Refine · Respond · Renew · Relate · Reach.
+- **Aesthetic:** "Titanium White" OS surfaces + "Deep Titanium" dark sidebar rail.
+- **Typography:** Sora (heading/display) · Inter (body).
+- **Tokens-based design system:** `src/index.css` owns HSL tokens; `tailwind.config.js` maps to classes. No hardcoded hex in JSX.
+- **Colours:** Orbit Blue #2563EB primary; industry pack colours (F&B orange, Retail green, Recycling green, etc.); subscription plan colours (Starter blue, Growth emerald, Business violet, Enterprise titanium).
+- **Components:** shadcn/ui at `@/components/ui`; lucide-react icons only.
+- **Imports:** use `@/` alias, never relative `src/` paths.
+- **Responsiveness:** mobile-first; AppShell has collapsible sidebar + mobile overlay.
+- **Platform-first:** No hardcoding of pilot tenant names, IDs, or industry logic into platform code. Industry behaviour is registry-driven via `ActivationRegistry`.
+- **Configuration over hardcoding:** New industry = add `ActivationRegistry` + `PlatformManifest` records, not new code.
+- **Accessibility:** WCAG 2.1 AA compliance mandatory (see Golden UI/UX Standard).
 
 ## Decisions Already Made
-1. **Naming Hierarchy:** Orbitan = company/brand. OrbitanOS = flagship product. Orbit = shared services prefix. Orbit Nexus = AI platform (standalone).
-2. **Orbit Core:** Foundational services (Auth, Tenancy, Permissions, Audit) reserved as "Orbit Core".
-3. **MVP Deadline:** 30 July 2026 (2 months from 30 May 2026 start).
-4. **Sprint 5 Priority:** 50% Stability/Security, 30% Onboarding Integrity, 20% Orbit Nexus hooks.
-5. **No fictional data:** Never create fake companies, brands, outlets, or employees. Use "Pending Setup" / "Coming Soon" placeholders.
-6. **Registry-driven:** Industry logic lives in ActivationRegistry, not hardcoded.
-7. **Manifest-driven navigation:** PlatformManifest + ManifestHydrator render the sidebar. SubscriptionPolicy gates entitlement.
-8. **Wallet-native ledger:** OrbitanWallet is the master ledger. FinanceSyncQueue bridges to ERP (Xero).
-9. **Dynamic Trust thresholds:** Governance thresholds per industry (HBB=S$50, F&B=S$200, Retail=S$300).
-10. **Decision Records:** All significant architecture decisions recorded in src/docs/knowledge-hub/decision-records/.
-11. **Orbit Evolution:** Continuous improvement loop (Observe → Understand → Recommend → Approve → Implement → Measure → Learn). EvolutionProposal entity + evolutionEngine function. Privacy-first, human-in-control. (ODR-0019)
-12. **Orbit ID expanded scope:** Identity governance for human + machine + AI agent identities. Business Access Intelligence as differentiator. AI Agent Governance via ActivationRegistry.ai_governance. (ODR-0020)
-13. **Orbit Nexus standalone subscription:** Separate product with Free/Pro/Team/Enterprise plans. Customers can subscribe without OrbitanOS. MVP bundles AI within OrbitanOS plans; standalone is post-MVP. (ODR-0021)
-14. **Enterprise compliance readiness:** SOC 2, ISO 27001, Vanta-ready from day one. RBAC, RLS, audit logs, encryption, shield governance, AI kill switch all built in. Formal certification post-MVP. (ODR-0022)
-15. **Orbit Core Adapter Pattern:** Platform-agnostic data access layer at `src/lib/orbit-core.js`. All new modules import `OrbitCore` instead of `base44` directly. Existing code unchanged (additive). Single migration point when switching platforms. (ODR-0023)
-
-## Things Not To Change
-- Entity schemas for Tenant, Employee, Outlet, Company, Client (foundational structure)
-- Authentication flow (Login → OTP → Register → ResetPassword) — use platform SDK
-- Stripe product IDs and pricing (live mode, confirmed)
-- The `@/api/base44Client` SDK import pattern
-- Design tokens in src/index.css (colour system)
-- The 6-R principles: Renew, Relate, Respond, Refine, Regulate, Reach
-
-## Known Bugs / Risks
-- **RLS `$in` operator:** Multiple entities use `$in` in RLS role checks. The Base44 engine does not support this. Must refactor to explicit `$or` blocks. Affected: InventoryItem, PurchaseOrder, Employee, Company, Client, Invitation, FinanceSyncQueue, OrbitanWallet.
-- **Duplicate routes:** Both `/outlet/*` and `/workspace/:tenantId/*` serve the same pages. Need migration plan.
-- **Manifest fallback:** If PlatformManifest lookup fails, ManifestHydrator falls back to hardcoded nav. This is intentional but must be monitored.
-
-## Future Features (Post-MVP)
-- Orbit Marketplace (apps & extensions)
-- Advanced AI Agents (scheduling, procurement, financial)
-- White-labelling
-- Multi-currency / multi-region
-- AquaOrbit, ChefOrbit products
-- MCP Server and Connector SDK
-- Vanta/SOC2 compliance certification
-
-## Client Preferences
-- **Founder:** Muhammad Firdaus Bin Ismail (Product Owner)
-- **Co-founder:** Hamka Ariffin
-- **Currency:** SGD default
-- **Timezone:** Asia/Singapore
-- **Language:** English (with multi-language readiness)
-- **Communication:** Direct, practical, no over-explanation. Build when enough info exists.
+1. **Orbitan = Product, OrbitanOS = Platform.** Pilots are validation only.
+2. **Registry-driven architecture:** `ActivationRegistry` + `PlatformManifest` replace hardcoded industry logic.
+3. **Wallet-Native ledger:** `OrbitanWallet` + `WalletTransaction` is the master ledger. `ledger_sync_mode: internal` for MVP pilots; `erp_integrated` for future Xero/QuickBooks.
+4. **Dynamic Trust governance:** `governance_threshold_sgd` on `ActivationRegistry` (HBB=50, F&B=200, Retail=300, Enterprise=configurable).
+5. **Shield modes:** Auditor (notify) for Starter/Growth plans; Guardian (block) for Enterprise only.
+6. **One-component-many-industries UI:** ActivationRegistry toggles column visibility / interaction logic — no per-industry UI forks.
+7. **Xero integration** via OAuth secrets + backend functions. Per-tenant OAuth.
+8. **MVP build philosophy:** Build less, validate more. Marketplace, advanced automations, complex AI agents, white-labelling, enterprise features are POST-MVP.
+9. **Dynamic `/workspace/:tenantId/*` routing** — scales to thousands of orgs without route changes.
+10. **`WorkspaceLayout` already implements tenant-session access control** — a separate `TenantAuthGuard` component is unnecessary.
+11. **Naming Hierarchy:** Orbitan = company/brand. OrbitanOS = flagship product. Orbit = shared services prefix. Orbit Nexus = AI platform (standalone).
+12. **Orbit Core:** Foundational services (Auth, Tenancy, Permissions, Audit) reserved as "Orbit Core". Core entities are immutable; product modules use side-car entities.
+13. **Independent Deployability:** Interface-First Constraint — all cross-module communication via `base44.functions.invoke()`, no direct imports.
+14. **Orbit Core Adapter Pattern:** Platform-agnostic data access layer at `src/lib/orbit-core.js`.
+15. **Enterprise compliance readiness:** SOC 2, ISO 27001, Vanta-ready from day one. Formal certification post-MVP.
+16. **Orbit Evolution:** Continuous improvement loop (Observe → Understand → Recommend → Approve → Implement → Measure → Learn).
+17. **Orbit ID expanded scope:** Identity governance for human + machine + AI agent identities.
+18. **Orbit Nexus standalone subscription:** Separate product with Free/Pro/Team/Enterprise plans. MVP bundles AI within OrbitanOS plans; standalone is post-MVP.
+19. **No fictional data:** Never create fake companies, brands, outlets, or employees.
 
 ## Frozen Foundations v1.0 (2026-07-23)
 - **RA-0000** Architecture Governance Framework — FROZEN
@@ -127,10 +129,137 @@ Future customers are the primary market.
 - **Git tag:** `v1.0-foundation-freeze`
 - **Discussion Mode:** OFF. **Build Mode:** ON.
 - Build rules: no silent redesign; implementation-first; AFR compliance per merge; docs with code; new architecture via governed ADRs only.
-- See: `src/docs/knowledge-hub/foundations/` and `src/docs/knowledge-hub/decision-records/RA-0000|0004|0005.md`
 
-## Prompt History
-- Sprint 5 planning: Approved 50/30/20 weighting (Stability/Onboarding/Intelligence)
-- Naming architecture: Approved "Orbit" prefix for shared services, "Orbitan" for brand
-- Knowledge Hub: Approved Decision Records system and Markdown-based knowledge store
-- Foundation Freeze: RA-0000, RA-0004, RA-0005 accepted and frozen; Build Mode authorised
+## Things Not To Change
+- The Orbitan vs OrbitanOS separation.
+- The `PlatformManifest`-driven navigation architecture.
+- The wallet-native ledgering model (`OrbitanWallet` → `WalletTransaction`).
+- Dynamic `/workspace/:tenantId/` routing.
+- Existing RLS policies on operational entities.
+- The 6-role model (admin, tenant_admin, client_manager, outlet_manager, supervisor, worker).
+- Shield's Auditor/Guardian mode distinction.
+- Token-based theming in `src/index.css` + `tailwind.config.js`.
+- Auth page flows (Login → OTP → verify → token → redirect; never shortcut).
+- Entity schemas for Tenant, Employee, Outlet, Company, Client (foundational structure).
+- The `@/api/base44Client` SDK import pattern.
+- Stripe product IDs and pricing (live mode, confirmed).
+
+## MVP Scope (Phase 1)
+**Pilot tenants:** Taqueria Pte Ltd (F&B) · Renewed Resources Pte Ltd (Recycling) ·
+Renewed Fashion (Retail — planning) · Home-Based Businesses (Izaliqa Bakes).
+
+**Required MVP modules:**
+1. Employee Management (directory, roles, invitations, org/brand/outlet assignment)
+2. Attendance & Shifts (clock in/out, breaks, shifts, timesheets)
+3. Inventory Management (stock, replenishment, counts, low-stock alerts, adjustments)
+4. Procurement (suppliers, POs, receiving, cost calculations)
+5. Sales & Invoicing (invoice creation, receipt upload, daily reconciliation, payment tracking)
+6. Finance Integration (Xero, export, reconciliation support)
+7. Home-Based Business Pack (customer orders, inventory, procurement, production planning, expense tracking, sales invoicing, delivery tracking)
+8. AIReceipts MVP (upload, OCR extraction, auto-categorisation, supplier detection, daily reconciliation support, Xero preparation)
+
+**Explicitly OUT of MVP scope:** Marketplace · Advanced Automations · Complex AI
+Agents · White Labelling · Enterprise Features · Excessive Customisation.
+
+## MVP Roadmap
+- Sprint 1 — Foundation (auth, multi-tenancy, roles, org structure) ✅
+- Sprint 2 — Workforce (employees, attendance, clock, shifts) ✅
+- Sprint 3 — Operations (inventory, procurement, suppliers, POs) ✅
+- Sprint 4 — Financial Workflows (sales, AIReceipts, reconciliation, Xero) ✅
+- Sprint 5 — Pilot Preparation (dashboards, reports, bug fixes, permissions
+  validation, mobile optimisation, test data, export functions) ✅
+- **Post-MVP:** Financial Reconciliation & Audit Readiness, Enterprise Hardening,
+  Orbit Nexus standalone, Marketplace, white-labelling.
+
+## MVP Timeline Status
+- **Start:** 30 May 2026
+- **MVP Target end:** ~30 July 2026 (Day 60)
+- **Current:** August 2026 — Post-MVP hardening phase (Build #28.2G.1)
+- **Status:** Architecture frozen. Core operational modules complete. Ecosystem
+  architecture formalised (ADRs 0001–0066). Stripe billing aligned. Domain
+  migration to orbitan.net complete. Repository consolidation complete.
+  Authentication hardening in progress.
+
+## Build #28.2G.1 — Repository Consolidation & Auth Hardening (2026-08-04)
+- **Documentation Consolidation:** Migrated 63 unique documents from the legacy
+  `src/docs/knowledge/` directory into the canonical `src/docs/knowledge-hub/`
+  with subdirectories: `product/`, `architecture/`, `design/`, `development/`,
+  `knowledge/`, `research/`, `legal/`. Deleted the obsolete `knowledge/` directory.
+- **Project Memory Merge:** Merged `ProjectMemory.md` into `PROJECT_MEMORY.md`
+  (canonical). Deleted duplicate.
+- **Pre-foundation Docs Removed:** Deleted `api-contracts.md`, `architecture-manifest.md`,
+  `entity-migration.md` — all superseded by Knowledge Hub ADRs and frozen foundations.
+- **Dead Code Cleanup:** Verified all 6 dead code files (`tenant-nav.js`,
+  `orbitan-plans.js`, `AIOrchestrator.js`, `ModuleDataAdapter.js`,
+  `subscription-registry.js`, `orbitan-nav.js`) were already deleted in prior sessions.
+- **Configuration Fixes:** `package.json` name updated from `base44-app` to `orbitan`.
+  `base44/config.jsonc` name updated from `New App` to `OrbitanOS`.
+- **Authentication Hardening:**
+  - `AuthContext.jsx`: Session expiry now captures return URL in sessionStorage
+    before redirecting to login, preventing loss of intended destination.
+  - `Login.jsx`: Parses `next`/`returnUrl` params and sessionStorage for
+    post-login return. Added user-friendly error messages for rate-limiting,
+    disabled accounts, network failures. OAuth providers preserve return URL.
+  - `Register.jsx`: Added user-friendly error messages for duplicate accounts,
+    rate-limiting, weak passwords, network failures. OTP verification now
+    preserves return URL. Added specific OTP error messages (expired, invalid,
+    rate-limited).
+  - `ResetPassword.jsx`: Added specific error messages for expired/invalid
+    tokens, rate-limiting, weak passwords, network failures. Added recovery
+    action button on missing-token state.
+  - Accessibility: Added `role="alert"` and `aria-live="assertive"` to all
+    auth error message containers for screen reader compatibility.
+
+## Xero Integration Bridge
+- **xeroOAuth backend function** — full OAuth 2.0 authorization code flow with
+  AES-GCM token encryption (Build #28.2B). Stores tokens in `IntegrationCredential`
+  entity. OAuthTransaction entity prevents replay attacks.
+- **integrationSync backend function** — FinanceSyncQueue consumer. Processes
+  pending entries, auto-refreshes expired tokens, POSTs to live Xero API.
+- **financeController** — creates FinanceSyncQueue entries (async broker).
+- **Integration Hub UI** at `/platform/integrations` — Xero connection card,
+  Sync Queue dashboard, Stripe status card.
+- **Per-tenant OAuth:** Each organisation connects their own Xero org.
+- **Canonical URLs:** All Xero redirect URIs use `orbitan.net` (Build #28.2F.2).
+
+## Orbitan Free Tier
+- `orbitan_free` plan per Master Vision — "Remove barriers to entry."
+- S$0, 3 employees, basic attendance/tasks/training, 1 outlet, no AI/integrations/packs.
+- No Stripe product (not checkoutable). Routes to `/onboarding`.
+
+## Client Preferences
+- **Founder & Product Owner:** Muhammad Firdaus Bin Ismail
+- **Co-founder:** Hamka Ariffin (pilot tenant association)
+- **Strategic preference:** Scalability-first, platform-thinking, configuration over hardcoding.
+- **Communication:** Product terms only for non-technical contexts. Direct and practical.
+- **Build style:** Minimal changes, preserve working features, don't overbuild.
+- **Debugging:** Diagnose root cause first, fix only the confirmed issue.
+- **Planning:** Separate must-have from later. Simplest reliable Base44 structure.
+- **Verification:** Every button, form, route tested before claiming done.
+- **Language:** English
+- **Timezone:** Asia/Singapore (UTC+8)
+- **Currency:** SGD default
+
+## Known Risks
+- **R-001 (Medium):** RLS `$in` operator not supported by Base44 engine. Must use `$or` blocks.
+- **R-002 (Medium):** Task self-reference uses `full_name` instead of `user.id`. Must fix before enterprise.
+- **R-003 (Low):** Duplicate routes (`/outlet/*` and `/workspace/:tenantId/*`). Deprecate `/outlet/*`.
+- **R-004 (Low):** Manifest fallback not monitored. Add logging when triggered.
+- **R-005 (Low→Medium):** Platform dependency on Base44. Mitigated by OrbitCore adapter pattern.
+- **R-006 (Medium):** AI cost overrun. Mitigated by kill switch + OrbitUsageTracker + wallet gating.
+- **R-007 (High for enterprise):** Compliance certification not yet achieved. Architecture is ready.
+- **R-008 (Low):** Pilot tenant data leakage. Mitigated by dynamic routing and registry-driven architecture.
+- **Token encryption at rest:** Pending KMS integration.
+- **Idempotency for invoice generation:** Pending implementation.
+
+## Future Features (Post-MVP)
+- Orbit Marketplace (apps & extensions)
+- Advanced AI Agents (scheduling, procurement, financial)
+- White-labelling and enterprise customisation
+- AquaOrbit (Aquarist OS) · ChefOrbit (Kitchen OS) — ecosystem products
+- Multi-country / multi-currency expansion beyond SGD default
+- Advanced automations marketplace
+- Orbit Nexus as standalone subscription product (RAG, agentic AI, AI services)
+- MCP Server for external AI tool integration
+- Vanta/SOC2 compliance certification
+- Cross-tenant pattern recognition (anonymised)

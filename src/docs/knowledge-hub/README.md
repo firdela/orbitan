@@ -1,4 +1,4 @@
-# Orbit Nexus — Knowledge Hub
+# Orbitan Knowledge Hub
 
 > **The single source of truth for the Orbit ecosystem.**
 > This directory is the "brain" behind Orbitan's evolution.
@@ -30,49 +30,105 @@ Git baseline tag: `v1.0-foundation-freeze`.
 ## Purpose
 
 The Knowledge Hub stores architecture decisions, master vision, product principles,
-roadmap, industry packs, modules, standards, and improvement logs in AI-friendly
-Markdown format. Future Orbit Nexus RAG ingestion will index these documents so
-AI conversations can retrieve historical context, explain design decisions, and
-recommend improvements.
+roadmap, industry packs, modules, standards, research, legal frameworks, and
+improvement logs in AI-friendly Markdown format. Orbit Nexus RAG ingestion indexes
+these documents so AI conversations can retrieve historical context, explain design
+decisions, and recommend improvements.
 
 ## Directory Structure
 
 ```
 knowledge-hub/
 ├── README.md                    ← you are here (index)
+├── CHANGELOG.md                 ← build changelog
 ├── master-vision.md             ← ecosystem vision, product distinction, org architecture
-├── golden-ui-ux-standard.md    ← non-negotiable design & accessibility standards
+├── golden-ui-ux-standard.md     ← non-negotiable design & accessibility standards
 ├── mvp-roadmap.md               ← sprint plan, scope, build philosophy
 ├── pilot-tenants.md             ← pilot tenant registry (validation only, not the product)
+├── defect-register.md           ← classified defect registry
+├── known-limitations.md         ← platform limitations
+├── security-audit-2026-07-11.md ← security audit report
 ├── foundations/                 ← 🧊 Frozen Foundations v1.0
 │   ├── Orbitan-Frozen-Foundations-v1.md
 │   ├── MVP-Charter.md
 │   └── Build-Manifest.md
-├── decision-records/            ← Architecture Decision Records (ADRs) + Reference Architectures
+├── decision-records/            ← ADRs + Reference Architectures (RA-0000/0004/0005)
 │   ├── RA-0000.md               ← Architecture Governance Framework (FROZEN)
 │   ├── RA-0004.md               ← Platform Services Architecture (FROZEN)
 │   ├── RA-0005.md               ← Identity Architecture (FROZEN)
-│   ├── 0001-registry-driven-architecture.md
-│   ├── 0002-wallet-native-ledger.md
-│   ├── 0003-shield-governance-interceptor.md
-│   ├── 0004-dynamic-workspace-routing.md
-│   ├── 0005-manifest-driven-navigation.md
-│   ├── 0006-orbit-nexus-intelligence-platform.md
-│   ├── 0007-delegated-integration-hub.md
-│   ├── 0008-orbit-naming-standards.md
-│   ├── 0009-orbit-core-boundary.md
-│   ├── 0010-independent-deployability.md
-│   └── ... (0011–0034 in directory)
-│   ├── 0035-github-two-way-code-sync.md
-│   ├── 0036-github-first-platform-independence-strategy.md
-│   ├── 0037-registry-driven-onboarding-blueprint-preview.md
-│   ├── 0038-github-first-platform-independence-engineering-standards.md
-│   ├── 0039-customer-communications-governance-policy.md
-│   ├── 0040-registry-driven-dashboard-drill-down.md
-│   ├── 0041-shield-forensic-artifact-linkage.md
-│   ├── 0042-public-access-security-ip-protection.md
-│   ├── 0043-pilot-shield-governance-seeding.md
-│   └── 0044-platform-intelligence-self-optimization.md
+│   └── 0001–0066 ADRs
+├── implementation-notes/         ← Build package implementation reports
+├── product/                     ← Product strategy, branding, subscriptions, marketing
+│   ├── NorthStar.md
+│   ├── MasterVision.md
+│   ├── BrandGuidelines.md
+│   ├── SubscriptionFramework.md
+│   ├── NamingConventions.md
+│   ├── BusinessModel.md
+│   ├── GoToMarket.md
+│   ├── Marketing.md
+│   ├── CompetitorResearch.md
+│   ├── ProductRoadmap.md
+│   └── ProductStrategy.md
+├── architecture/                ← Technical architecture, security, data, API standards
+│   ├── PlatformArchitecture.md
+│   ├── OrbitCore.md
+│   ├── OrbitNexus.md
+│   ├── OrbitServices.md
+│   ├── DataArchitecture.md
+│   ├── DatabaseStandards.md
+│   ├── APIStandards.md
+│   ├── EngineeringPrinciples.md
+│   ├── SecurityCompliance.md
+│   ├── PerformanceStandards.md
+│   ├── AIPrinciples.md
+│   └── OrbitEvolution.md
+├── design/                      ← Design standards, accessibility, responsive
+│   ├── Accessibility.md
+│   ├── DesignPrinciples.md
+│   └── ResponsiveStandards.md
+├── development/                 ← Engineering rules, testing, release, mobile, MVP roadmap
+│   ├── DevelopmentRules.md
+│   ├── TestingStandards.md
+│   ├── ReleaseProcess.md
+│   ├── MobileStrategy.md
+│   ├── MVPRoadmap.md
+│   ├── PilotProgramme.md
+│   └── BuildChecklist.md
+├── knowledge/                   ← Product intelligence, glossary, risk register, improvement log
+│   ├── RiskRegister.md
+│   ├── ProductGlossary.md
+│   ├── ImprovementLog.md
+│   ├── LessonsLearned.md
+│   ├── FutureIdeas.md
+│   ├── FounderNotes.md
+│   ├── ProductIntelligence.md
+│   ├── KnowledgeHub.md
+│   └── DecisionRecords.md
+├── research/                    ← Competitor analysis
+│   ├── ServiceNow.md
+│   ├── Workday.md
+│   ├── WorkOS.md
+│   ├── Rippling.md
+│   ├── Odoo.md
+│   ├── Monday.md
+│   ├── Shopify.md
+│   ├── Apple.md
+│   ├── Google.md
+│   ├── Microsoft.md
+│   └── FutureResearch.md
+├── legal/                       ← Legal frameworks (drafts — require legal counsel review)
+│   ├── PrivacyPolicy.md
+│   ├── TermsOfService.md
+│   ├── DataProcessing.md
+│   ├── SecurityPolicy.md
+│   ├── IncidentResponse.md
+│   ├── BusinessContinuity.md
+│   ├── DisasterRecovery.md
+│   ├── AcceptableUse.md
+│   ├── CookiePolicy.md
+│   └── ComplianceChecklist.md
+└── *.md                         ← Operational runbooks and checklists
 ```
 
 ## How to Use
@@ -86,6 +142,22 @@ knowledge-hub/
 
 3. **When discovering improvements:** Add to the relevant document or create a
    new one. Cross-link related documents.
+
+## Canonical Documents
+
+| Topic | Location |
+| :--- | :--- |
+| Master Vision | [master-vision.md](./master-vision.md) |
+| Golden UI/UX Standard | [golden-ui-ux-standard.md](./golden-ui-ux-standard.md) |
+| MVP Roadmap | [mvp-roadmap.md](./mvp-roadmap.md) |
+| Pilot Tenants | [pilot-tenants.md](./pilot-tenants.md) |
+| Naming Conventions | [product/NamingConventions.md](./product/NamingConventions.md) |
+| Subscription Framework | [product/SubscriptionFramework.md](./product/SubscriptionFramework.md) |
+| Brand Guidelines | [product/BrandGuidelines.md](./product/BrandGuidelines.md) |
+| Security & Compliance | [architecture/SecurityCompliance.md](./architecture/SecurityCompliance.md) |
+| Risk Register | [knowledge/RiskRegister.md](./knowledge/RiskRegister.md) |
+| Product Glossary | [knowledge/ProductGlossary.md](./knowledge/ProductGlossary.md) |
+| Improvement Log | [knowledge/ImprovementLog.md](./knowledge/ImprovementLog.md) |
 
 ## ADR Template
 
@@ -125,4 +197,4 @@ Until then, these documents serve as human-readable institutional memory.
 ---
 
 **Product Owner:** Muhammad Firdaus Bin Ismail
-**Last Updated:** 2026-07-23 (Frozen Foundations v1.0 — Build Mode ON)
+**Last Updated:** 2026-08-04 (Build #28.2G.1 — Repository Consolidation)

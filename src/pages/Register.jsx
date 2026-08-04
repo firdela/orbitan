@@ -32,7 +32,19 @@ export default function Register() {
       await base44.auth.register({ email, password });
       setShowOtp(true);
     } catch (err) {
-      setError(err.message || "Registration failed");
+      // Build #28.2G.1 — User-friendly error messages without sensitive details
+      const msg = err?.message || "";
+      if (msg.includes("already") || msg.includes("exists") || msg.includes("409")) {
+        setError("An account with this email already exists. Please log in instead.");
+      } else if (msg.includes("rate") || msg.includes("too many") || msg.includes("429")) {
+        setError("Too many registration attempts. Please wait a moment and try again.");
+      } else if (msg.includes("network") || msg.includes("fetch") || msg.includes("connection")) {
+        setError("Unable to connect. Please check your internet connection and try again.");
+      } else if (msg.includes("weak") || msg.includes("password")) {
+        setError("Password is too weak. Please use at least 8 characters with a mix of letters and numbers.");
+      } else {
+        setError("Unable to create your account. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -46,9 +58,28 @@ export default function Register() {
       if (result?.access_token) {
         base44.auth.setToken(result.access_token);
       }
-      window.location.href = "/workspace";
+      // Build #28.2G.1 — Check for stored return URL after verification
+      let destination = "/workspace";
+      try {
+        const stored = sessionStorage.getItem("orbitan_auth_return_url");
+        if (stored && stored.startsWith("/") && !stored.startsWith("//") && !stored.startsWith("/login") && !stored.startsWith("/register")) {
+          destination = stored;
+        }
+        sessionStorage.removeItem("orbitan_auth_return_url");
+      } catch {}
+      window.location.href = destination;
     } catch (err) {
-      setError(err.message || "Invalid verification code");
+      // Build #28.2G.1 — OTP-specific error messages
+      const msg = err?.message || "";
+      if (msg.includes("expired")) {
+        setError("This verification code has expired. Please request a new one.");
+      } else if (msg.includes("rate") || msg.includes("too many") || msg.includes("429")) {
+        setError("Too many attempts. Please wait a moment before trying again.");
+      } else if (msg.includes("invalid") || msg.includes("wrong") || msg.includes("mismatch")) {
+        setError("The verification code is incorrect. Please check and try again.");
+      } else {
+        setError("Unable to verify your code. Please try again or request a new code.");
+      }
     } finally {
       setLoading(false);
     }
@@ -87,7 +118,7 @@ export default function Register() {
         subtitle={`We sent a code to ${email}`}
       >
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+          <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
             {error}
           </div>
         )}
@@ -184,7 +215,7 @@ export default function Register() {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
         </div>
       )}

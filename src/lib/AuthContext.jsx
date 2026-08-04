@@ -108,9 +108,20 @@ export const AuthProvider = ({ children }) => {
       
       // If user auth fails, it might be an expired token
       if (error.status === 401 || error.status === 403) {
+        // Build #28.2G.1 — Capture return URL before auth error state clears it.
+        const currentPath = window.location.pathname + window.location.search;
+        const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/gateway'];
+        const isAuthRoute = authRoutes.some(r => window.location.pathname.startsWith(r));
+        if (!isAuthRoute) {
+          try {
+            sessionStorage.setItem('orbitan_auth_return_url', currentPath);
+          } catch {
+            // sessionStorage unavailable — best-effort
+          }
+        }
         setAuthError({
           type: 'auth_required',
-          message: 'Authentication required'
+          message: 'Your session has expired. Please sign in again to continue.'
         });
       }
     }
@@ -130,8 +141,21 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    base44.auth.redirectToLogin(window.location.href);
+    // Build #28.2G.1 — Preserve the current path for post-login return.
+    // Capture pathname + search so the user returns to their intended page,
+    // not just the default workspace. Strip auth-related query params.
+    const currentPath = window.location.pathname + window.location.search;
+    const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/gateway'];
+    const isAuthRoute = authRoutes.some(r => window.location.pathname.startsWith(r));
+    const returnUrl = isAuthRoute ? '/' : currentPath;
+    // Store in sessionStorage as fallback for cross-tab/multi-mount scenarios
+    try {
+      sessionStorage.setItem('orbitan_auth_return_url', returnUrl);
+    } catch {
+      // sessionStorage may be unavailable in private browsing — best-effort
+    }
+    // Use the SDK's redirectToLogin method with the return URL
+    base44.auth.redirectToLogin(returnUrl);
   };
 
   return (
