@@ -180,16 +180,29 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
   migration to orbitan.net complete. Repository consolidation complete.
   Authentication hardening in progress.
 
-## Brand Identity v1.0 LOCKED (2026-08-04)
-- **52 founder-approved assets registered:** 26 Orbitan (mark series 16–4096px, PWA icons 192/512, apple-touch-icon 180, favicon set 16/32/48/ico) + 26 Orbit Nexus (same structure). All assets on Base44 CDN, registered in `asset-manifest.json` and `LOGO_ASSETS` in `orbitan-identity.js`.
-- **Identity config expanded:** `LOGO_ASSETS` keys: `mark`, `mark3D`, `loaderMark`, `markSm`, `markXs`, `appIcon192`, `appIcon512`, `appleTouchIcon`, `favicon16`, `favicon32`, `favicon48`, `nexusLogo`, `nexusMarkSm`, `nexusAppIcon192`, `nexusAppIcon512`. Internal `ORBITAN` and `ORBIT_NEXUS` constant maps eliminate CDN URL duplication.
-- **PWA manifest complete:** 5 icons (SVG any + android-chrome-192 any + android-chrome-512 any + android-chrome-192 maskable + android-chrome-512 maskable). Both maskable icons are founder-approved purpose-built compositions.
-- **Favicon set complete:** SVG (Orbit Ring) + .ico + 16×16 PNG + 32×32 PNG + 48×48 PNG in `index.html`.
-- **Apple touch icon correct:** 180×180 founder-approved composition.
-- **CDN hardcodes eliminated:** `WelcomeGateway.jsx` (3 instances), `Landing.jsx` (1 instance). Zero remaining hardcoded CDN URLs in component code.
+## Brand Identity v1.0 rev.2 LOCKED (2026-08-04)
+- **59 founder-approved assets registered:** 27 Orbitan (verified master + mark series 16–4096px, PWA icons 192/512, apple-touch-icon 180, favicon set 16/32/48/ico) + 27 Orbit Nexus (same structure) + 1 social banner. All on Base44 CDN, registered in `asset-manifest.json` v2.0.0 and `LOGO_ASSETS` in `orbitan-identity.js`.
+- **Corrected transparent pack (rev.2):** Both packs rebuilt from source with genuine alpha transparency. Original v1 pack had embedded checkerboard pixels (flat grey/white in alpha region). Transparency verified: Orbitan master 1,064,826 transparent px / 20,327 anti-aliased px; Orbit Nexus master 970,605 transparent px / 37,447 anti-aliased px. Alpha channel 0–255 range confirmed.
+- **Identity config expanded:** `LOGO_ASSETS` keys: `mark`, `mark3D`, `loaderMark`, `markSm`, `markXs`, `master`, `appIcon192`, `appIcon512`, `appleTouchIcon`, `favicon16`, `favicon32`, `favicon48`, `nexusLogo`, `nexusMarkSm`, `nexusMaster`, `nexusAppIcon192`, `nexusAppIcon512`, `socialBanner`. Internal `ORBITAN` and `ORBIT_NEXUS` constant maps eliminate CDN URL duplication.
+- **PWA manifest complete:** 2 icons (android-chrome-192 any + android-chrome-512 any). Only `purpose: "any"` declared — transparent PNGs are NOT maskable-certified. Maskable-safe compositions are a pending manual requirement.
+- **Favicon set complete:** SVG (Orbit Ring) + .ico + 16×16 PNG + 32×32 PNG + 48×48 PNG in `index.html`. All updated to corrected v2 URLs.
+- **Apple touch icon correct:** 180×180 corrected transparent composition.
+- **CDN hardcodes eliminated:** Zero remaining hardcoded CDN URLs in active component code. All components resolve through `LOGO_ASSETS`. v1 URLs archived in `asset-manifest.json` superseded section only.
 - **Brand Identity frozen:** `src/docs/knowledge-hub/foundations/BrandIdentityV1.md` — lock declaration alongside RA-0000/RA-0004/RA-0005.
-- **Social banner:** Founder-approved 1200×630 banner registered (`orbitan-social-banner`). Wired as `og:image` / `twitter:image` in `index.html` with descriptive alt text. `LOGO_ASSETS.socialBanner` key added to identity config.
+- **Social banner:** Founder-approved 1200×630 banner registered (`orbitan-social-banner`). Wired as `og:image` / `twitter:image` in `index.html` with descriptive alt text. `LOGO_ASSETS.socialBanner` key in identity config.
 - **Orbit Nexus brand isolation:** Nexus assets registered and isolated. Nexus favicon set available for Nexus standalone product when it ships.
+- **BrandGuidelines.md corrected:** Legacy `7b205f7ab_Orbitan_3d_logo_transparent.png` reference removed. Now points to canonical `LOGO_ASSETS` keys.
+
+## Brand Identity v1.0 rev.2 — Corrected Transparent Pack (2026-08-04)
+- **Root cause resolved:** Original asset packs had embedded checkerboard pixels (flat grey/white in the alpha region) — not genuinely transparent PNGs. Founder rebuilt both packs from source.
+- **All 19 Orbitan mark sizes replaced** (16→4096px) with corrected transparent URLs in `orbitan-identity.js`. Verified master added (`5b691cc7e`).
+- **All 19 Orbit Nexus mark sizes replaced** (16→4096px) with corrected transparent URLs. Verified master added (`63aa1eb45`).
+- **App icons (both packs):** New corrected transparent URLs. `manifest.json` updated — `purpose: "maskable"` declarations removed. Only `purpose: "any"` declared.
+- **Favicons (both packs):** All 4 files per pack (16, 32, 48, .ico) updated to corrected URLs in `index.html`, `orbitan-identity.js`.
+- **Apple touch icons (both packs):** Updated to corrected transparent URLs.
+- **`asset-manifest.json` rebuilt as v2.0.0:** Structured by product → master/marks/app_icons/favicons. Alpha verification data embedded. Superseded v1 URLs archived in `superseded` section.
+- **`BrandIdentityV1.md` updated:** Master assets documented, PWA maskable status corrected, pending maskable-safe icons added to pending table.
+- **`BrandGuidelines.md` corrected:** Legacy 3D logo URL removed. Now references canonical `LOGO_ASSETS` keys.
 
 ## Production-Repair Build: Experience Architecture Corrections (2026-08-04)
 - **Experience Architecture retained:** `src/docs/knowledge-hub/design/Orbitan-Experience-Architecture.md` — canonical 24-section design document. Claims corrected: WCAG 2.2 criteria reclassified as "target standard, partially implemented, requiring full platform audit" (not "verified"). Component 50-line rule qualified as target. Hardcoded colour and Lucide-only claims qualified.

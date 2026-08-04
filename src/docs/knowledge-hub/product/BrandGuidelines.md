@@ -35,9 +35,13 @@ Defines the visual and verbal identity for the Orbitan ecosystem — logo, colou
 
 ## Logo
 
-- **3D Logo:** `https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png`
-- **Mark only:** Use `LOGO_ASSETS.mark3D` from `src/lib/orbitan-identity.js`
-- **Wordmark:** `OrbitanWordmark` component with size variants (xs, sm, md, lg, xl)
+All logo assets resolve through `LOGO_ASSETS` in `src/lib/orbitan-identity.js` (Brand Identity v1.0 rev.2 — corrected transparent pack, 2026-08-04). Never hardcode CDN URLs.
+
+- **Primary mark:** `LOGO_ASSETS.mark` (512×512, genuine alpha transparency)
+- **Verified master:** `LOGO_ASSETS.master` (1254×1254, alpha_min=0, alpha_max=255)
+- **Loader mark:** `LOGO_ASSETS.loaderMark` (192×192, used by `OrbitanLoader`)
+- **Small marks:** `LOGO_ASSETS.markSm` (48), `LOGO_ASSETS.markXs` (32)
+- **Wordmark:** `OrbitanWordmark` component (mark image + Sora Bold typography)
 - **Variant:** `light` (dark backgrounds) or `dark` (light backgrounds)
 
 ## Colours

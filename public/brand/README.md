@@ -1,9 +1,15 @@
 # Orbitan Brand Asset Repository
 
-> **Brand Identity v1.0 — LOCKED (2026-08-04)**
+> **Brand Identity v1.0 rev.2 — LOCKED (2026-08-04)**
 > This document and `asset-manifest.json` are the single source of truth for all
 > Orbitan and Orbit Nexus brand assets — what exists, where it is registered,
 > and its canonical status.
+>
+> **Revision note (2026-08-04 rev.2):** Both packs rebuilt from source with genuine
+> alpha transparency. The original v1 pack had embedded checkerboard pixels (flat
+> grey/white in the alpha region) and was not genuinely transparent. All v1 URLs
+> are archived in the `superseded` section of `asset-manifest.json` for
+> traceability only — they are NOT active.
 
 ## LOCK STATUS
 
@@ -12,8 +18,9 @@
 | Orbitan logo (mark) | **LOCKED** |
 | Orbit Nexus logo (mark) | **LOCKED** |
 | Favicons | **LOCKED** |
-| PWA icons | **LOCKED** |
+| PWA icons (any purpose) | **LOCKED** |
 | Apple Touch Icon | **LOCKED** |
+| Social banner (1200×630) | **LOCKED** |
 | Brand colours | **LOCKED** |
 | Identity architecture | **LOCKED** |
 
@@ -33,80 +40,134 @@ registered in `orbitan-identity.js` as the single canonical source.
 **Identity config:** `src/lib/orbitan-identity.js` (all components must resolve
 assets through `LOGO_ASSETS` — never hardcode CDN URLs in components).
 
-## Founder-Approved Asset Pack (2026-08-04)
+## Transparency Verification (rev.2)
 
-52 assets imported in this build: 26 Orbitan + 26 Orbit Nexus.
+Both master PNGs were verified for genuine alpha transparency after the rebuild:
 
-### Orbitan Assets
+| Master | Dimensions | Transparent px | Anti-aliased px | Opaque px |
+|--------|-----------|----------------|-----------------|-----------|
+| Orbitan master | 1254×1254 | 1,064,826 | 20,327 | 487,363 |
+| Orbit Nexus master | 1254×1254 | 970,605 | 37,447 | 564,464 |
+
+No checkerboard pixels remain. Alpha channel ranges from 0 (fully transparent)
+to 255 (fully opaque) as expected for a genuine transparent PNG.
+
+## Orbitan Assets (rev.2 — 27 assets)
+
+### Verified Master
+
+| Asset ID | File | Dimensions | Status |
+|----------|------|-----------|--------|
+| `orbitan-master` | `5b691cc7e_orbitan-master-transparent.png` | 1254×1254 | approved |
+
+### Mark Series (19 sizes)
+
+| Asset ID | File | Dimensions | Status |
+|----------|------|-----------|--------|
+| `orbitan-mark-16` | `3a3a41088_orbitan-mark-16.png` | 16×16 | approved |
+| `orbitan-mark-24` | `cbb4e5d8f_orbitan-mark-24.png` | 24×24 | approved |
+| `orbitan-mark-32` | `388a276e0_orbitan-mark-32.png` | 32×32 | approved |
+| `orbitan-mark-48` | `07e20034a_orbitan-mark-48.png` | 48×48 | approved |
+| `orbitan-mark-64` | `3f8bb5549_orbitan-mark-64.png` | 64×64 | approved |
+| `orbitan-mark-72` | `8b9bc48d2_orbitan-mark-72.png` | 72×72 | approved |
+| `orbitan-mark-96` | `f3f966a35_orbitan-mark-96.png` | 96×96 | approved |
+| `orbitan-mark-128` | `695a587ca_orbitan-mark-128.png` | 128×128 | approved |
+| `orbitan-mark-144` | `0fe847dd0_orbitan-mark-144.png` | 144×144 | approved |
+| `orbitan-mark-152` | `362507a64_orbitan-mark-152.png` | 152×152 | approved |
+| `orbitan-mark-167` | `1cfccded9_orbitan-mark-167.png` | 167×167 | approved |
+| `orbitan-mark-180` | `07eb467e7_orbitan-mark-180.png` | 180×180 | approved |
+| `orbitan-mark-192` | `8aa45682c_orbitan-mark-192.png` | 192×192 | approved |
+| `orbitan-mark-256` | `ab30dda12_orbitan-mark-256.png` | 256×256 | approved |
+| `orbitan-mark-384` | `9651c783b_orbitan-mark-384.png` | 384×384 | approved |
+| `orbitan-mark-512` | `3f8478f3b_orbitan-mark-512.png` | 512×512 | approved |
+| `orbitan-mark-1024` | `cf12f0b98_orbitan-mark-1024.png` | 1024×1024 | approved |
+| `orbitan-mark-2048` | `488b4be03_orbitan-mark-2048.png` | 2048×2048 | approved |
+| `orbitan-mark-4096` | `534d5632a_orbitan-mark-4096.png` | 4096×4096 | approved |
+
+### App Icons (purpose: any — NOT maskable-certified)
 
 | Asset ID | File | Dimensions | Purpose | Status |
 |----------|------|-----------|---------|--------|
-| `orbitan-mark-16` | `7b3567715_orbitan-mark-16.png` | 16×16 | Mark (tiny) | approved |
-| `orbitan-mark-24` | `749caab5a_orbitan-mark-24.png` | 24×24 | Mark (xs) | approved |
-| `orbitan-mark-32` | `9b29cd972_orbitan-mark-32.png` | 32×32 | Mark (sm) | approved |
-| `orbitan-mark-48` | `26072f988_orbitan-mark-48.png` | 48×48 | Mark (md) | approved |
-| `orbitan-mark-64` | `c409a041b_orbitan-mark-64.png` | 64×64 | Mark (lg) | approved |
-| `orbitan-mark-72` | `f64e3e0ff_orbitan-mark-72.png` | 72×72 | Mark | approved |
-| `orbitan-mark-96` | `18b794d67_orbitan-mark-96.png` | 96×96 | Mark | approved |
-| `orbitan-mark-128` | `e2627a2e9_orbitan-mark-128.png` | 128×128 | Mark | approved |
-| `orbitan-mark-144` | `e660f6b59_orbitan-mark-144.png` | 144×144 | Mark | approved |
-| `orbitan-mark-152` | `2d2df8364_orbitan-mark-152.png` | 152×152 | Mark | approved |
-| `orbitan-mark-167` | `58d3a248a_orbitan-mark-167.png` | 167×167 | Mark | approved |
-| `orbitan-mark-180` | `5514bbeb2_orbitan-mark-180.png` | 180×180 | Mark | approved |
-| `orbitan-mark-192` | `5d8c3405b_orbitan-mark-192.png` | 192×192 | Mark / loaderMark | approved |
-| `orbitan-mark-256` | `dace21675_orbitan-mark-256.png` | 256×256 | Mark | approved |
-| `orbitan-mark-384` | `9bb554b7e_orbitan-mark-384.png` | 384×384 | Mark | approved |
-| `orbitan-mark-512` | `98099aa9f_orbitan-mark-512.png` | 512×512 | Primary mark (LOGO_ASSETS.mark) | approved |
-| `orbitan-mark-1024` | `cf84c9c19_orbitan-mark-1024.png` | 1024×1024 | Master (high-res) | approved |
-| `orbitan-mark-2048` | `95e1d638f_orbitan-mark-2048.png` | 2048×2048 | Master (ultra-high-res) | approved |
-| `orbitan-mark-4096` | `388bce822_orbitan-mark-4096.png` | 4096×4096 | Master (print/source) | approved |
-| `orbitan-android-chrome-192x192` | `015a99453_orbitan-android-chrome-192x192.png` | 192×192 | PWA icon any + maskable | approved |
-| `orbitan-android-chrome-512x512` | `354dae876_orbitan-android-chrome-512x512.png` | 512×512 | PWA icon any + maskable | approved |
-| `orbitan-apple-touch-icon` | `42c8f6db0_orbitan-apple-touch-icon.png` | 180×180 | iOS apple-touch-icon | approved |
-| `orbitan-favicon-16x16` | `ac0d857d8_orbitan-favicon-16x16.png` | 16×16 | Favicon PNG | approved |
-| `orbitan-favicon-32x32` | `1f68c12af_orbitan-favicon-32x32.png` | 32×32 | Favicon PNG | approved |
-| `orbitan-favicon-48x48` | `19697a43a_orbitan-favicon-48x48.png` | 48×48 | Favicon PNG | approved |
-| `orbitan-favicon-ico` | `3ecafbc42_orbitan-favicon.ico` | multi-size | Favicon .ico | approved |
-| `orbitan-social-banner` | `348a29f76_Orbitanbanner.png` | 1200×630 | Social banner (og:image, twitter:image) | approved |
+| `orbitan-android-chrome-192` | `a5427bd5a_orbitan-android-chrome-192x192.png` | 192×192 | any | approved |
+| `orbitan-android-chrome-512` | `6ae468ddc_orbitan-android-chrome-512x512.png` | 512×512 | any | approved |
+| `orbitan-apple-touch-icon` | `6d567efff_orbitan-apple-touch-icon.png` | 180×180 | apple-touch-icon | approved |
 
-### Orbit Nexus Assets
+### Favicons
+
+| Asset ID | File | Dimensions | Status |
+|----------|------|-----------|--------|
+| `orbitan-favicon-16` | `5d0083b5f_orbitan-favicon-16x16.png` | 16×16 | approved |
+| `orbitan-favicon-32` | `bc8ac0b61_orbitan-favicon-32x32.png` | 32×32 | approved |
+| `orbitan-favicon-48` | `ce1e8dc82_orbitan-favicon-48x48.png` | 48×48 | approved |
+| `orbitan-favicon-ico` | `c4450dc86_orbitan-favicon.ico` | multi-size | approved |
+
+## Orbit Nexus Assets (rev.2 — 27 assets)
+
+### Verified Master
+
+| Asset ID | File | Dimensions | Status |
+|----------|------|-----------|--------|
+| `orbit-nexus-master` | `63aa1eb45_orbit-nexus-mark-master-transparent.png` | 1254×1254 | approved |
+
+### Mark Series (19 sizes)
+
+| Asset ID | File | Dimensions | Status |
+|----------|------|-----------|--------|
+| `orbit-nexus-mark-16` | `d7ac31a63_orbit-nexus-mark-16.png` | 16×16 | approved |
+| `orbit-nexus-mark-24` | `489295e6d_orbit-nexus-mark-24.png` | 24×24 | approved |
+| `orbit-nexus-mark-32` | `9b4b24815_orbit-nexus-mark-32.png` | 32×32 | approved |
+| `orbit-nexus-mark-48` | `f68d615be_orbit-nexus-mark-48.png` | 48×48 | approved |
+| `orbit-nexus-mark-64` | `65bda1c7b_orbit-nexus-mark-64.png` | 64×64 | approved |
+| `orbit-nexus-mark-72` | `2109c2e6a_orbit-nexus-mark-72.png` | 72×72 | approved |
+| `orbit-nexus-mark-96` | `8d5f40e9f_orbit-nexus-mark-96.png` | 96×96 | approved |
+| `orbit-nexus-mark-128` | `0825fe36b_orbit-nexus-mark-128.png` | 128×128 | approved |
+| `orbit-nexus-mark-144` | `96076e0bb_orbit-nexus-mark-144.png` | 144×144 | approved |
+| `orbit-nexus-mark-152` | `d4ef7af75_orbit-nexus-mark-152.png` | 152×152 | approved |
+| `orbit-nexus-mark-167` | `5e2b4db58_orbit-nexus-mark-167.png` | 167×167 | approved |
+| `orbit-nexus-mark-180` | `1704ceb9f_orbit-nexus-mark-180.png` | 180×180 | approved |
+| `orbit-nexus-mark-192` | `5f7cb74c1_orbit-nexus-mark-192.png` | 192×192 | approved |
+| `orbit-nexus-mark-256` | `4d3027f67_orbit-nexus-mark-256.png` | 256×256 | approved |
+| `orbit-nexus-mark-384` | `0bedbb6ab_orbit-nexus-mark-384.png` | 384×384 | approved |
+| `orbit-nexus-mark-512` | `66cefa242_orbit-nexus-mark-512.png` | 512×512 | approved |
+| `orbit-nexus-mark-1024` | `e43172987_orbit-nexus-mark-1024.png` | 1024×1024 | approved |
+| `orbit-nexus-mark-2048` | `92dba4696_orbit-nexus-mark-2048.png` | 2048×2048 | approved |
+| `orbit-nexus-mark-4096` | `0b4ce01b1_orbit-nexus-mark-4096.png` | 4096×4096 | approved |
+
+### App Icons (purpose: any — NOT maskable-certified)
 
 | Asset ID | File | Dimensions | Purpose | Status |
 |----------|------|-----------|---------|--------|
-| `orbit-nexus-mark-16` | `22cf4d1ca_orbit-nexus-mark-16.png` | 16×16 | Nexus mark (tiny) | approved |
-| `orbit-nexus-mark-24` | `409be8571_orbit-nexus-mark-24.png` | 24×24 | Nexus mark (xs) | approved |
-| `orbit-nexus-mark-32` | `555127992_orbit-nexus-mark-32.png` | 32×32 | Nexus mark (sm) | approved |
-| `orbit-nexus-mark-48` | `69aa09c2a_orbit-nexus-mark-48.png` | 48×48 | Nexus mark (md) | approved |
-| `orbit-nexus-mark-64` | `d2d9fabc4_orbit-nexus-mark-64.png` | 64×64 | Nexus mark (lg) | approved |
-| `orbit-nexus-mark-72` | `7bf161c99_orbit-nexus-mark-72.png` | 72×72 | Nexus mark | approved |
-| `orbit-nexus-mark-96` | `5501f5075_orbit-nexus-mark-96.png` | 96×96 | Nexus mark | approved |
-| `orbit-nexus-mark-128` | `f7c33cc8a_orbit-nexus-mark-128.png` | 128×128 | Nexus mark | approved |
-| `orbit-nexus-mark-144` | `98ec7b674_orbit-nexus-mark-144.png` | 144×144 | Nexus mark | approved |
-| `orbit-nexus-mark-152` | `c5e7436ed_orbit-nexus-mark-152.png` | 152×152 | Nexus mark | approved |
-| `orbit-nexus-mark-167` | `2ccdd75ec_orbit-nexus-mark-167.png` | 167×167 | Nexus mark | approved |
-| `orbit-nexus-mark-180` | `6ab7c6733_orbit-nexus-mark-180.png` | 180×180 | Nexus mark | approved |
-| `orbit-nexus-mark-192` | `c75b637ad_orbit-nexus-mark-192.png` | 192×192 | Nexus mark | approved |
-| `orbit-nexus-mark-256` | `e24ff8876_orbit-nexus-mark-256.png` | 256×256 | Nexus mark | approved |
-| `orbit-nexus-mark-384` | `3d92feba2_orbit-nexus-mark-384.png` | 384×384 | Nexus mark | approved |
-| `orbit-nexus-mark-512` | `e7027b0eb_orbit-nexus-mark-512.png` | 512×512 | Nexus primary mark | approved |
-| `orbit-nexus-mark-1024` | `72724b3ed_orbit-nexus-mark-1024.png` | 1024×1024 | Nexus master | approved |
-| `orbit-nexus-mark-2048` | `c846687c6_orbit-nexus-mark-2048.png` | 2048×2048 | Nexus master | approved |
-| `orbit-nexus-mark-4096` | `e51a64794_orbit-nexus-mark-4096.png` | 4096×4096 | Nexus master (print) | approved |
-| `orbit-nexus-android-chrome-192x192` | `baceae7f8_orbit-nexus-android-chrome-192x192.png` | 192×192 | Nexus PWA icon | approved |
-| `orbit-nexus-android-chrome-512x512` | `12c3857db_orbit-nexus-android-chrome-512x512.png` | 512×512 | Nexus PWA icon | approved |
-| `orbit-nexus-apple-touch-icon` | `2b2f5cdb5_orbit-nexus-apple-touch-icon.png` | 180×180 | Nexus iOS icon | approved |
-| `orbit-nexus-favicon-16x16` | `40f56492d_orbit-nexus-favicon-16x16.png` | 16×16 | Nexus favicon | approved |
-| `orbit-nexus-favicon-32x32` | `020b2b639_orbit-nexus-favicon-32x32.png` | 32×32 | Nexus favicon | approved |
-| `orbit-nexus-favicon-48x48` | `f44c715a9_orbit-nexus-favicon-48x48.png` | 48×48 | Nexus favicon | approved |
-| `orbit-nexus-favicon-ico` | `4b06e0a19_orbit-nexus-favicon.ico` | multi-size | Nexus favicon .ico | approved |
+| `orbit-nexus-android-chrome-192` | `1d9f64267_orbit-nexus-android-chrome-192x192.png` | 192×192 | any | approved |
+| `orbit-nexus-android-chrome-512` | `dbe17a146_orbit-nexus-android-chrome-512x512.png` | 512×512 | any | approved |
+| `orbit-nexus-apple-touch-icon` | `6966d2e45_orbit-nexus-apple-touch-icon.png` | 180×180 | apple-touch-icon | approved |
 
-## Maskable Icon Declaration
+### Favicons
+
+| Asset ID | File | Dimensions | Status |
+|----------|------|-----------|--------|
+| `orbit-nexus-favicon-16` | `42ec9ac89_orbit-nexus-favicon-16x16.png` | 16×16 | approved |
+| `orbit-nexus-favicon-32` | `7ee6e306f_orbit-nexus-favicon-32x32.png` | 32×32 | approved |
+| `orbit-nexus-favicon-48` | `a41c02143_orbit-nexus-favicon-48x48.png` | 48×48 | approved |
+| `orbit-nexus-favicon-ico` | `69fb1d6f4_orbit-nexus-favicon.ico` | multi-size | approved |
+
+## Social Assets
+
+| Asset ID | File | Dimensions | Status |
+|----------|------|-----------|--------|
+| `orbitan-social-banner` | `348a29f76_Orbitanbanner.png` | 1200×630 | approved |
+
+Wired into `index.html` as `og:image` and `twitter:image` with descriptive alt text.
+
+## PWA Icon Declaration
 
 The `orbitan-android-chrome-192x192` and `orbitan-android-chrome-512x512` assets
-are declared as `purpose: "maskable"` in `public/manifest.json`. These are
-founder-approved purpose-built Android app icon compositions — they are the
-correct assets for maskable usage, distinct from the standard transparency-background
-`orbitan-mark-*` series which are **not** maskable-safe.
+are declared as `purpose: "any"` only in `public/manifest.json`. They are
+transparent PNGs — NOT maskable-certified compositions. Declaring them as
+maskable would cause Android adaptive icon shells to clip the artwork outside
+the safe zone.
+
+**Maskable icons are a pending manual requirement** — they require separate
+purpose-built compositions with safe-zone-compliant artwork.
 
 ## PWA Favicon Set (index.html)
 
@@ -119,32 +180,41 @@ correct assets for maskable usage, distinct from the standard transparency-backg
 | `<link rel="icon" sizes="48x48">` | `orbitan-favicon-48x48.png` | 48×48 |
 | `<link rel="apple-touch-icon">` | `orbitan-apple-touch-icon.png` | 180×180 |
 
-## Social Banner
-
-**✅ APPROVED (2026-08-04).** Founder-supplied 1200×630 social banner registered
-as `orbitan-social-banner` in `asset-manifest.json` and `LOGO_ASSETS.socialBanner`
-in `orbitan-identity.js`.
-
-Wired into `index.html` as `og:image` and `twitter:image` with descriptive alt text.
-The banner features a blueprint-style drafting-paper background with the Orbitan
-"O" mark, brand wordmark, tagline, and four engineering-callout boxes.
-
 ## Identity Configuration
 
 All assets resolve through `src/lib/orbitan-identity.js → LOGO_ASSETS`.
-Components must never hardcode CDN URLs. See `LOGO_ASSETS` for canonical keys.
+Components must never hardcode CDN URLs. Canonical keys:
 
-## Orbit Brand Separation
+- `LOGO_ASSETS.mark` — primary mark (512)
+- `LOGO_ASSETS.mark3D` — backward-compat alias (512)
+- `LOGO_ASSETS.loaderMark` — loader centre (192)
+- `LOGO_ASSETS.markSm` — small mark (48)
+- `LOGO_ASSETS.markXs` — extra-small mark (32)
+- `LOGO_ASSETS.master` — verified master (1254)
+- `LOGO_ASSETS.socialBanner` — social banner (1200×630)
+- `LOGO_ASSETS.nexusLogo` — Nexus primary mark (512)
+- `LOGO_ASSETS.nexusMarkSm` — Nexus small mark (48)
+- `LOGO_ASSETS.nexusMaster` — Nexus verified master (1254)
+
+## Orbit Brand Separation (Hard Constraints)
 
 - **Orbitan assets** (`orbitan-mark-*`, `orbitan-android-*`, `orbitan-favicon-*`,
   `orbitan-apple-touch-icon`) must only be used for OrbitanOS product surfaces.
 - **Orbit Nexus assets** (`orbit-nexus-mark-*`, etc.) must only be used for Orbit
   Nexus product surfaces.
-- Cross-product brand contamination is a hard constraint — never use Orbitan assets
-  where Orbit Nexus branding is required, and vice versa.
+- Cross-product brand contamination is a hard defect — not a style preference.
+
+## Pending (Requires New Assets)
+
+| Asset | Status |
+|-------|--------|
+| Maskable-safe PWA icons (both products) | Requires separate safe-zone-compliant compositions — do not declare existing icons as maskable |
+| Orbit Nexus favicon integration in Nexus pages | Deferred to Nexus standalone product launch |
 
 ## Remaining Limitations
 
+- No vector (SVG) master of the Orbitan 3D mark exists. All approved masters are
+  raster PNGs on the Base44 CDN. No fake SVG masters created from raster images.
 - No standalone wordmark SVG file (wordmark is composed in `OrbitanWordmark.jsx`
   using Sora Bold typography + mark image).
 - Orbit Nexus product pages do not yet use the dedicated Nexus favicon set —

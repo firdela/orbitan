@@ -198,4 +198,4 @@ Until then, these documents serve as human-readable institutional memory.
 ---
 
 **Product Owner:** Muhammad Firdaus Bin Ismail
-**Last Updated:** 2026-08-04 (Brand Identity v1.0 LOCKED — 52 founder-approved assets registered, PWA manifest complete, full favicon set, apple-touch-icon, maskable icons, identity config expanded, all CDN hardcodes removed, Brand Identity v1.0 frozen foundations doc created)
+**Last Updated:** 2026-08-04 (Brand Identity v1.0 rev.2 LOCKED — 59 founder-approved assets with genuine alpha transparency, corrected transparent pack replaces v1 checkerboard artifacts, PWA manifest `purpose: "any"` only, full favicon set, apple-touch-icon, identity config expanded with master+nexusMaster keys, all CDN hardcodes removed from active code, v1 URLs archived in superseded section)

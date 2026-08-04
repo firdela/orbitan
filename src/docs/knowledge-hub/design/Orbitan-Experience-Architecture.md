@@ -125,13 +125,18 @@ All products in the Orbit ecosystem inherit the Orbitan visual DNA:
 
 ### 6.1 Approved Masters
 
-| Asset | URL | Usage |
-|-------|-----|-------|
-| **Orbitan 3D Mark (transparent)** | `https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png` | Primary mark — `LOGO_ASSETS.mark` / `mark3D` in `orbitan-identity.js` |
-| **Blue Circular Mark (on black)** | `https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png` | Loader centre — `OrbitanLoader.jsx` |
-| **3D Logo (opaque)** | `https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/86d84f31e_Orbitan3dlogo.png` | Favicon, apple-touch-icon, PWA icon |
-| **3D Logo transparent (copy)** | `https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/16aaf935a_Orbitan3dlogotransparentcopy.png` | Alternate favicon |
+All marks resolve through `LOGO_ASSETS` in `src/lib/orbitan-identity.js` (Brand Identity v1.0 rev.2 — corrected transparent pack, 2026-08-04). The master PNGs below are the verified genuine-alpha sources; all 19 mark sizes per product are derived from them.
 
+| Asset | Canonical Key | Usage |
+|-------|---------------|-------|
+| **Orbitan verified master** | `LOGO_ASSETS.master` | 1254×1254, alpha_min=0, alpha_max=255, 1,064,826 transparent px |
+| **Orbitan primary mark** | `LOGO_ASSETS.mark` / `mark3D` | 512×512 — navigation, headers, lockups |
+| **Orbitan loader mark** | `LOGO_ASSETS.loaderMark` | 192×192 — `OrbitanLoader.jsx` centre |
+| **Orbit Nexus verified master** | `LOGO_ASSETS.nexusMaster` | 1254×1254, 970,605 transparent px |
+| **Orbit Nexus primary mark** | `LOGO_ASSETS.nexusLogo` | 512×512 — Nexus product surfaces |
+
+> **Transparency verified (rev.2):** Original v1 pack had embedded checkerboard pixels (flat grey/white in the alpha region). Founder rebuilt both packs from source. Alpha channel now ranges 0–255 as expected for genuine transparent PNGs.
+>
 > **Limitation:** No vector (SVG) master of the Orbitan 3D mark exists. All approved masters are raster PNGs hosted on the Base44 CDN. Vector reconstruction is pending. Do not create SVG approximations of the 3D mark.
 
 ### 6.2 Logo Variants
@@ -186,7 +191,7 @@ All products in the Orbit ecosystem inherit the Orbitan visual DNA:
 
 ### 7.2 Orbit Nexus
 
-- **Approved master:** `https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/563ef4f42_OrbitNexusLogo.png` (referenced as `LOGO_ASSETS.nexusLogo`).
+- **Approved master:** `LOGO_ASSETS.nexusMaster` (1254×1254, corrected transparent pack rev.2, genuine alpha). Primary mark: `LOGO_ASSETS.nexusLogo` (512×512).
 - **Design requirement:** The central brain/network must feel designed with the Orbitan symbol, not pasted on top. No unattractive physical joints connecting the brain to the surrounding R elements. Use visual alignment, negative space, weight, rhythm, and geometry to create unity.
 - **Limitation:** The approved Orbit Nexus master is a raster PNG. No SVG vector master exists. Do not silently redesign it.
 
@@ -202,21 +207,23 @@ All products in the Orbit ecosystem inherit the Orbitan visual DNA:
 
 ### 8.1 Current State
 
+All app icons are from the corrected transparent pack rev.2 (2026-08-04). Only `purpose: "any"` is declared — the transparent PNGs are NOT maskable-certified compositions.
+
 | Size | Source | Status |
 |------|--------|--------|
-| 192×192 (any) | CDN raster (`86d84f31e_Orbitan3dlogo.png`) | ⚠️ Interim — wired in manifest.json as `purpose: "any"` |
-| 512×512 (any) | CDN raster (same URL) | ⚠️ Interim — wired in manifest.json as `purpose: "any"` |
-| Maskable 192 | — | ❌ Missing — previous incorrect declarations removed |
-| Maskable 512 | — | ❌ Missing — previous incorrect declarations removed |
-| Apple Touch (180×180) | CDN raster (same URL, not sized) | ⚠️ Interim fallback — not specifically composed for iOS |
-| iOS Master (1024×1024) | — | ❌ Missing |
+| 192×192 (any) | `LOGO_ASSETS.appIcon192` — corrected transparent PNG | ✅ Approved — wired in `manifest.json` as `purpose: "any"` |
+| 512×512 (any) | `LOGO_ASSETS.appIcon512` — corrected transparent PNG | ✅ Approved — wired in `manifest.json` as `purpose: "any"` |
+| Maskable 192 | — | ❌ Pending — requires separate safe-zone-compliant composition |
+| Maskable 512 | — | ❌ Pending — requires separate safe-zone-compliant composition |
+| Apple Touch (180×180) | `LOGO_ASSETS.appleTouchIcon` — corrected transparent 180×180 | ✅ Approved |
+| iOS Master (1024×1024) | — | ❌ Missing — pending vector master |
 
 ### 8.2 Requirements (Pending Vector Master)
 
 - **Maskable icons** require a safe-zone design (80% inner circle) that cannot be derived from the 3D mark without a vector source.
 - **iOS 1024×1024** requires a square-optimized composition.
 - **Android adaptive icons** require foreground/background separation.
-- **Status:** All derivative app icons are pending the availability of a vector master. The existing CDN raster is used as-is for PWA installability. This is a documented limitation, not a defect.
+- **Status:** The corrected transparent pack provides approved `purpose: "any"` icons and a properly-sized Apple touch icon. Maskable-safe compositions remain pending a vector master. This is a documented limitation, not a defect.
 
 ---
 
@@ -224,14 +231,15 @@ All products in the Orbit ecosystem inherit the Orbitan visual DNA:
 
 ### 9.1 Current Implementation
 
+All favicons are from the corrected transparent pack rev.2 (2026-08-04) and wired in `index.html`.
+
 | Asset | Location | Status |
 |-------|----------|--------|
 | `favicon.svg` | `public/favicon.svg` | ✅ Orbit Ring brand element (original vector, not a logo redraw) |
-| `favicon.ico` | — | ❌ Pending (requires multi-size raster export from vector master) |
-| `favicon-16x16.png` | — | ❌ Pending |
-| `favicon-32x32.png` | — | ❌ Pending |
-| `favicon-48x48.png` | — | ❌ Pending |
-| CDN fallback | `16aaf935a_Orbitan3dlogotransparentcopy.png` | ✅ Wired as PNG fallback in index.html |
+| `favicon.ico` | `LOGO_ASSETS` → `orbitan-favicon.ico` | ✅ Approved — corrected transparent pack |
+| `favicon-16x16.png` | `LOGO_ASSETS.favicon16` | ✅ Approved — corrected transparent pack |
+| `favicon-32x32.png` | `LOGO_ASSETS.favicon32` | ✅ Approved — corrected transparent pack |
+| `favicon-48x48.png` | `LOGO_ASSETS.favicon48` | ✅ Approved — corrected transparent pack |
 
 ### 9.2 SVG Favicon Design
 
