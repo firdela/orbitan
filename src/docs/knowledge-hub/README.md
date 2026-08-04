@@ -197,4 +197,4 @@ Until then, these documents serve as human-readable institutional memory.
 ---
 
 **Product Owner:** Muhammad Firdaus Bin Ismail
-**Last Updated:** 2026-08-04 (Build #28.2G.1 — Repository Consolidation)
+**Last Updated:** 2026-08-04 (Build #28.2G.1 — Post-Validation Cleanup: jsconfig fix + legacy ADR migration)

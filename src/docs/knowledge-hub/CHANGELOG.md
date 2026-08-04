@@ -7,6 +7,24 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2G.1 (Post-Validation Cleanup: jsconfig Fix & Legacy ADR Migration)
+
+### Fixed — VAL-01: jsconfig.json Metadata Property
+- **Root cause:** `jsconfig.json` used `"//"` as a property key to store explanatory metadata about the `src/lib` exclusion. While VS Code's JSONC parser tolerated this, strict JSON parsers reject arbitrary non-standard keys, posing a compatibility risk for CI/CD pipelines and other tooling.
+- **Fix:** Replaced the `"//"` property with a formal `"_metadata"` object containing `srcLibExclusionReason`. Standard JSON parsers ignore unknown properties with leading underscores by convention. `compilerOptions`, `include`, and `exclude` arrays are unchanged. `src/lib` remains excluded from type checking.
+- **Validation:** JSON parse verified successful; no Vite, editor, or build tooling impact.
+
+### Completed — Legacy ADR Migration
+- Migrated `0011-orbit-naming-migration.md` and `0012-knowledge-hub-init.md` from the legacy `src/docs/decision-records/` directory into the canonical `src/docs/knowledge-hub/decision-records/`.
+- Both files preserved with historical status headers, cross-references to superseding ADRs (0008, 0013, 0014), and updated structural diagrams reflecting the current canonical Knowledge Hub layout.
+- Legacy `src/docs/decision-records/` directory files deleted. Directory is now empty.
+- **Canonical decision-record location confirmed:** `src/docs/knowledge-hub/decision-records/` is the single source of truth for all ADRs and Reference Architectures (RA-0000, RA-0004, RA-0005, and ADRs 0001–0066).
+
+### Documentation
+- `PROJECT_MEMORY.md` updated with post-validation cleanup record.
+- `README.md` updated with latest build tag.
+- `CHANGELOG.md` (this file) updated.
+
 ## [Unreleased] — Build #28.2F.2 (Orbitan.NET Domain Migration & Integration Hub Navigation Fix)
 
 ### Changed — Canonical Domain Migration (orbitan.io → orbitan.net)

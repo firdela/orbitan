@@ -180,6 +180,11 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
   migration to orbitan.net complete. Repository consolidation complete.
   Authentication hardening in progress.
 
+## Build #28.2G.1 — Post-Validation Cleanup (2026-08-04)
+- **VAL-01 Resolved:** `jsconfig.json` metadata property changed from unsupported `"//"` key to formal `"_metadata"` object. JSON parser compatibility confirmed.
+- **Legacy ADR Migration:** Migrated `0011-orbit-naming-migration.md` and `0012-knowledge-hub-init.md` from the legacy `src/docs/decision-records/` directory into the canonical `src/docs/knowledge-hub/decision-records/`. Both files preserved with historical status notes and cross-references to superseding ADRs (0008, 0013, 0014). Legacy directory deleted.
+- **Canonical decision-record location confirmed:** `src/docs/knowledge-hub/decision-records/` is the single source of truth for all ADRs and Reference Architectures.
+
 ## Build #28.2G.1 — Repository Consolidation & Auth Hardening (2026-08-04)
 - **Documentation Consolidation:** Migrated 63 unique documents from the legacy
   `src/docs/knowledge/` directory into the canonical `src/docs/knowledge-hub/`

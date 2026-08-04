@@ -22,7 +22,7 @@ tags:
 
 Index of all Architecture Decision Records (ADRs) and Orbit Decision Records (ODRs) with summaries. Each decision is documented with: Decision ID, Title, Context, Problem Statement, Alternatives Considered, Decision Made, Rationale, Trade-offs, Impacted Components, Date, Status, and Future Review Date.
 
-Full ADR/ODR content is preserved in the legacy directory `src/docs/knowledge-hub/decision-records/` and `src/docs/decision-records/`. This index provides a searchable summary for RAG retrieval.
+Full ADR/ODR content is preserved in the canonical directory `src/docs/knowledge-hub/decision-records/`. This index provides a searchable summary for RAG retrieval.
 
 ## Decision Records
 
@@ -110,13 +110,13 @@ Full ADR/ODR content is preserved in the legacy directory `src/docs/knowledge-hu
 - **Date:** 2026-07-09
 - **Status:** Confirmed
 - **Summary:** Rename shared platform services from "Orbitan [Service]" to "Orbit [Service]". Internal code identifiers (entity keys, CSS tokens) remain unchanged. Only user-facing labels updated.
-- **Legacy Path:** `src/docs/decision-records/0011-orbit-naming-migration.md`
+- **Path:** `src/docs/knowledge-hub/decision-records/0011-orbit-naming-migration.md`
 
 ### ADR-0012: Knowledge Hub & Decision Records
 - **Date:** 2026-07-09
 - **Status:** Confirmed
 - **Summary:** Initialize structured Knowledge Hub for institutional memory. Markdown documents serve as RAG source for Orbit Nexus. Decision Records document every significant architectural decision.
-- **Legacy Path:** `src/docs/decision-records/0012-knowledge-hub-init.md`
+- **Path:** `src/docs/knowledge-hub/decision-records/0012-knowledge-hub-init.md`
 
 ### ADR-0013: Orbit Naming Architecture Lock-In & Stripe Product Alignment
 - **Date:** 2026-07-09

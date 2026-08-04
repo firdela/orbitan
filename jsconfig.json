@@ -25,5 +25,7 @@
     "src/api",
     "src/lib"
   ],
-  "//": "src/lib is excluded from type checking because it contains Base44 SDK client code (base44Client.js) and access engine modules that use dynamic patterns not compatible with strict type checking. src/components/ui is excluded as shadcn/ui generated code. src/api is excluded as SDK initialization code."
+  "_metadata": {
+    "srcLibExclusionReason": "src/lib is excluded from type checking because it contains Base44 SDK client code and access engine modules that use dynamic patterns not compatible with strict type checking. src/components/ui is excluded as generated shadcn/ui code. src/api is excluded as SDK initialisation code."
+  }
 }
