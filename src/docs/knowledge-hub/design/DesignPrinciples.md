@@ -20,6 +20,8 @@ tags:
 
 # Orbitan Design Principles
 
+> **Supplement to:** [Orbitan-Experience-Architecture.md](./Orbitan-Experience-Architecture.md) — the canonical experience document. This document provides focused detail on token usage rules and component standards.
+
 ## Purpose
 
 Defines the design philosophy, unified design language, tokens, navigation principles, and component standards.

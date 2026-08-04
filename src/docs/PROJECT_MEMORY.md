@@ -180,6 +180,17 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
   migration to orbitan.net complete. Repository consolidation complete.
   Authentication hardening in progress.
 
+## Build: Experience Architecture & Brand Asset Repository v1.0 (2026-08-04)
+- **Experience Architecture created:** `src/docs/knowledge-hub/design/Orbitan-Experience-Architecture.md` — consolidated canonical document covering 24 sections: experience purpose, Engineered Simplicity philosophy, visual DNA, interaction principles, product-family inheritance, logo system, product logo system, app-icon system, favicon system, iconography, typography, colour system, blueprint language, illustration, motion, photography, responsive behaviour, WCAG 2.2 AA, AI experience, feedback/loading/empty/error states, asset naming, quality gates, misuse rules, and governance/ADR requirements.
+- **Brand asset registry created:** `public/brand/README.md` + `public/brand/asset-manifest.json` — canonical inventory of all approved brand assets (5 CDN-hosted PNG masters + 1 original SVG favicon). Documents pending assets that require vector masters.
+- **SVG favicon created:** `public/favicon.svg` — original Orbit Ring brand element (6-R principle colours as arcs). NOT a redraw of the Orbitan 3D logo — it is an independent brand symbol already established in OrbitanLoader.jsx.
+- **Social banner generated:** AI-generated 1200x630 social banner with Orbitan brand aesthetic (dark navy, orbit ring, drafting grid). Documented as a generated placeholder, not an approved master.
+- **index.html updated:** Added SVG favicon link, og:image, twitter:image, twitter:title/description, dual theme-color (dark/light), updated build tag to #28.2H.
+- **manifest.json updated:** Added SVG favicon as primary icon, added maskable icon entries (purpose: "maskable") for Android adaptive icons.
+- **Cross-references added:** DesignPrinciples.md, Accessibility.md, ResponsiveStandards.md, BrandGuidelines.md now link to the canonical Experience Architecture.
+- **WCAG upgraded:** Target standard updated from WCAG 2.1 AA to WCAG 2.2 AA. Seven new 2.2 criteria documented and verified as implemented.
+- **Limitation documented:** No vector (SVG) master of the Orbitan 3D mark exists. All approved masters are raster PNGs on the Base44 CDN. Vector reconstruction is pending. No fake SVG masters created from raster images.
+
 ## Build #28.2G.1 — Post-Validation Cleanup (2026-08-04)
 - **VAL-01 Resolved:** `jsconfig.json` metadata property changed from unsupported `"//"` key to formal `"_metadata"` object. JSON parser compatibility confirmed.
 - **Legacy ADR Migration:** Migrated `0011-orbit-naming-migration.md` and `0012-knowledge-hub-init.md` from the legacy `src/docs/decision-records/` directory into the canonical `src/docs/knowledge-hub/decision-records/`. Both files preserved with historical status notes and cross-references to superseding ADRs (0008, 0013, 0014). Legacy directory deleted.

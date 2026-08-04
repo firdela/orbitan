@@ -19,6 +19,8 @@ tags:
 
 # Orbitan Brand Guidelines
 
+> **Supplement to:** [Orbitan-Experience-Architecture.md](../design/Orbitan-Experience-Architecture.md) — the canonical experience document. This document provides focused detail on logo, colours, typography, and tone of voice.
+
 ## Purpose
 
 Defines the visual and verbal identity for the Orbitan ecosystem — logo, colours, typography, icons, tone of voice, and marketing principles.

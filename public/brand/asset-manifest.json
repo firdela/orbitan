@@ -1,0 +1,170 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-08-04",
+  "description": "Orbitan Brand Asset Registry — canonical inventory of all approved brand assets and their storage locations",
+  "canonical_sources": {
+    "note": "All approved brand assets are currently hosted on the Base44 CDN. Local vector masters are pending.",
+    "base44_cdn_prefix": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39"
+  },
+  "assets": {
+    "orbitan_symbol_3d_transparent": {
+      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/7b205f7ab_Orbitan_3d_logo_transparent.png",
+      "type": "png",
+      "status": "approved",
+      "usage": "Primary mark — LOGO_ASSETS.mark / mark3D",
+      "referenced_in": ["src/lib/orbitan-identity.js", "src/components/layout/OrbitanLogo.jsx", "src/components/brand/OrbitanWordmark.jsx"]
+    },
+    "orbitan_symbol_blue_circular_on_black": {
+      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/10527badf_bluecircularlogoonblac.png",
+      "type": "png",
+      "status": "approved",
+      "usage": "Loader centre — OrbitanLoader.jsx",
+      "referenced_in": ["src/components/brand/OrbitanLoader.jsx"]
+    },
+    "orbitan_3d_logo_opaque": {
+      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/86d84f31e_Orbitan3dlogo.png",
+      "type": "png",
+      "status": "approved",
+      "usage": "Favicon fallback, apple-touch-icon, PWA icon (192/512)",
+      "referenced_in": ["index.html", "public/manifest.json"]
+    },
+    "orbitan_3d_logo_transparent_copy": {
+      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/16aaf935a_Orbitan3dlogotransparentcopy.png",
+      "type": "png",
+      "status": "approved",
+      "usage": "Alternate favicon (PNG fallback)",
+      "referenced_in": ["index.html"]
+    },
+    "orbit_nexus_logo": {
+      "url": "https://media.base44.com/images/public/6a2153efb1a18d0ca28c3a39/563ef4f42_OrbitNexusLogo.png",
+      "type": "png",
+      "status": "approved",
+      "usage": "Orbit Nexus product mark — LOGO_ASSETS.nexusLogo",
+      "referenced_in": ["src/lib/orbitan-identity.js"]
+    },
+    "orbit_ring_favicon": {
+      "url": "/favicon.svg",
+      "type": "svg",
+      "status": "approved",
+      "usage": "SVG favicon — original Orbit Ring brand element (6-R cycle), not a logo redraw",
+      "referenced_in": ["index.html"],
+      "note": "Original vector. The Orbit Ring is an independent brand element used in OrbitanLoader.jsx. It is NOT a redraw of the Orbitan 3D logo."
+    }
+  },
+  "pending_assets": {
+    "orbitan_symbol_svg": {
+      "status": "pending",
+      "reason": "No vector master available. The approved Orbitan mark is a 3D raster PNG. Vector reconstruction is pending.",
+      "target_path": "public/brand/orbitan/orbitan-symbol.svg"
+    },
+    "orbitan_wordmark_svg": {
+      "status": "pending",
+      "reason": "Wordmark is currently typographic (Sora Bold). An SVG wordmark would require font outline export.",
+      "target_path": "public/brand/orbitan/orbitan-wordmark.svg"
+    },
+    "orbitan_lockup_horizontal_svg": {
+      "status": "pending",
+      "reason": "Depends on orbitan_symbol_svg",
+      "target_path": "public/brand/orbitan/orbitan-lockup-horizontal.svg"
+    },
+    "orbitan_symbol_monochrome_dark": {
+      "status": "pending",
+      "reason": "Requires vector master for monochrome conversion",
+      "target_path": "public/brand/orbitan/orbitan-symbol-black.svg"
+    },
+    "orbitan_symbol_monochrome_light": {
+      "status": "pending",
+      "reason": "Requires vector master for monochrome conversion",
+      "target_path": "public/brand/orbitan/orbitan-symbol-white.svg"
+    },
+    "favicon_ico": {
+      "status": "pending",
+      "reason": "Requires multi-size raster export (16/32/48) from vector master",
+      "target_path": "public/brand/favicons/favicon.ico"
+    },
+    "favicon_16x16_png": {
+      "status": "pending",
+      "reason": "Requires raster export from vector master",
+      "target_path": "public/brand/favicons/favicon-16x16.png"
+    },
+    "favicon_32x32_png": {
+      "status": "pending",
+      "reason": "Requires raster export from vector master",
+      "target_path": "public/brand/favicons/favicon-32x32.png"
+    },
+    "favicon_48x48_png": {
+      "status": "pending",
+      "reason": "Requires raster export from vector master",
+      "target_path": "public/brand/favicons/favicon-48x48.png"
+    },
+    "app_icon_192_png": {
+      "status": "approved_cdn",
+      "reason": "Using CDN raster master. Local derivative pending vector master for proper safe-zone composition.",
+      "target_path": "public/brand/app-icons/orbitan-app-icon-192.png"
+    },
+    "app_icon_512_png": {
+      "status": "approved_cdn",
+      "reason": "Using CDN raster master. Local derivative pending vector master for proper safe-zone composition.",
+      "target_path": "public/brand/app-icons/orbitan-app-icon-512.png"
+    },
+    "maskable_icon_192_png": {
+      "status": "missing",
+      "reason": "Requires vector master with safe-zone (80% inner circle) design. Cannot be derived from 3D raster mark.",
+      "target_path": "public/brand/app-icons/maskable-icon-192.png"
+    },
+    "maskable_icon_512_png": {
+      "status": "missing",
+      "reason": "Requires vector master with safe-zone (80% inner circle) design. Cannot be derived from 3D raster mark.",
+      "target_path": "public/brand/app-icons/maskable-icon-512.png"
+    },
+    "apple_touch_icon_180": {
+      "status": "approved_cdn",
+      "reason": "Using CDN raster master (not sized to 180x180). Local 180x180 derivative pending.",
+      "target_path": "public/brand/app-icons/apple-touch-icon.png"
+    },
+    "ios_app_icon_1024": {
+      "status": "missing",
+      "reason": "Requires square-optimized vector composition",
+      "target_path": "public/brand/app-icons/orbitan-app-icon-1024.png"
+    },
+    "social_banner_1200x630": {
+      "status": "generated_placeholder",
+      "reason": "AI-generated social banner. Not an approved master. A properly designed banner with the exact Orbitan wordmark and logo geometry is pending.",
+      "target_path": "public/brand/social/orbitan-social-1200x630.png"
+    },
+    "orbit_nexus_symbol_svg": {
+      "status": "pending",
+      "reason": "No vector master available. The approved Orbit Nexus mark is a raster PNG.",
+      "target_path": "public/brand/orbit-nexus/orbit-nexus-symbol.svg"
+    },
+    "orbit_nexus_app_icon_512": {
+      "status": "missing",
+      "reason": "Requires vector master",
+      "target_path": "public/brand/orbit-nexus/orbit-nexus-app-icon-512.png"
+    },
+    "email_avatar": {
+      "status": "missing",
+      "reason": "Pending brand asset creation",
+      "target_path": "public/brand/email/orbitan-email-avatar.png"
+    },
+    "notification_icon": {
+      "status": "missing",
+      "reason": "Pending brand asset creation",
+      "target_path": "public/brand/email/notification-icon.png"
+    }
+  },
+  "directory_structure": {
+    "public/brand/orbitan/": "Orbitan brand assets (SVG masters, lockups, monochrome variants)",
+    "public/brand/orbit-nexus/": "Orbit Nexus brand assets",
+    "public/brand/favicons/": "Favicon set (ico, png sizes)",
+    "public/brand/app-icons/": "PWA and native app icons (192, 512, maskable, apple-touch, iOS 1024)",
+    "public/brand/social/": "Social share banners (1200x630)",
+    "public/brand/email/": "Email template assets (avatar, notification icon)",
+    "public/brand/product-icons/": "Product-specific icons (Shield, Connect, Wallet, etc.)"
+  },
+  "identity_config": {
+    "file": "src/lib/orbitan-identity.js",
+    "exports": ["LOGO_ASSETS", "SIX_R_PRINCIPLES", "PLAN_BRAND", "PACK_BRAND", "TENANT_CONTEXT", "SHIELD_BRAND", "TAGLINES"],
+    "note": "This file is the single authority for all Orbitan brand rules. Every UI component MUST resolve brand values through this file."
+  }
+}

@@ -20,6 +20,8 @@ tags:
 
 # Orbitan Responsive Standards
 
+> **Supplement to:** [Orbitan-Experience-Architecture.md](./Orbitan-Experience-Architecture.md) — the canonical experience document. This document provides focused detail on breakpoints, PWA, and device-specific standards.
+
 ## Purpose
 
 Defines responsive breakpoints, mobile-first principles, PWA strategy, and device-specific standards.

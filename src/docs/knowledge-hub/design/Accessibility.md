@@ -20,13 +20,26 @@ tags:
 
 # Orbitan Accessibility Standard
 
+> **Supplement to:** [Orbitan-Experience-Architecture.md](./Orbitan-Experience-Architecture.md) — the canonical experience document. This document provides focused detail on WCAG compliance, keyboard, and screen reader standards.
+
 ## Purpose
 
 Defines WCAG compliance requirements, keyboard navigation, screen reader support, colour contrast, typography, and the accessibility checklist.
 
 ## WCAG Compliance
 
-Orbitan targets **WCAG 2.1 AA** compliance as a minimum. Accessibility is mandatory — never optional.
+Orbitan targets **WCAG 2.2 AA** compliance as a minimum (upgraded from 2.1 AA in Build: Experience Architecture v1.0). Accessibility is mandatory — never optional.
+
+### WCAG 2.2 Additional Criteria (Implemented)
+
+| Criterion | Description | Status |
+|-----------|-------------|--------|
+| 2.4.11 Focus Not Obscured (Minimum) | Focused elements are not hidden by sticky content | ✅ |
+| 2.5.7 Dragging Movements | All drag operations have keyboard/tap alternatives | ✅ |
+| 2.5.8 Target Size (Minimum) | Non-essential targets ≥ 24×24px; primary actions ≥ 44×44px | ✅ |
+| 3.2.6 Consistent Help | Help mechanisms in consistent locations | ✅ |
+| 3.3.7 Redundant Entry | Previously entered info auto-populated or selectable | ✅ |
+| 3.3.8 Accessible Authentication | No cognitive function test for login | ✅ |
 
 ## Keyboard Navigation
 
