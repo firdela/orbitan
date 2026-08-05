@@ -1,3 +1,4 @@
+/* global require, module */
 // ============================================================
 // Worker Calendar & Safety Tests — Build #28.2K
 // Pure-function tests for calendar event adapter, ICS export,

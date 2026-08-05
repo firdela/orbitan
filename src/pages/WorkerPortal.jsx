@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import WorkerFeedbackModal from '@/components/worker/WorkerFeedbackModal';
 import AccessRequestView from '@/components/worker/AccessRequestView';
 import ReportIssueModal from '@/components/shared/ReportIssueModal';
-import NotificationsInbox from '@/components/shared/NotificationsInbox';
+import WorkerNotificationBell from '@/components/worker/WorkerNotificationBell';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import WorkerHomeScreen from '@/components/worker/WorkerHomeScreen';
 import WorkerScheduleHub from '@/components/worker/WorkerScheduleHub';
@@ -575,7 +575,7 @@ export default function WorkerPortal() {
                 <span className="text-[10px] font-bold text-destructive">{urgentTasks} urgent</span>
               </div>
             )}
-            <NotificationsInbox tenantSlug={tenantId} />
+            <WorkerNotificationBell onNavigate={setActiveSection} />
             <WorkerProfileMenu
               workerName={workerName}
               workerInitials={workerInitials}
@@ -583,6 +583,7 @@ export default function WorkerPortal() {
               position={employee?.position || 'Team Member'}
               organisationName={tenant?.name || ''}
               outletName={employee?.outlet_id || ''}
+              onNavigate={setActiveSection}
               onSignOut={() => base44.auth.logout()}
             />
           </div>

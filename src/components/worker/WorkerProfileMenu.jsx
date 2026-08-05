@@ -5,11 +5,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { useUnreadInbox } from '@/hooks/useUnreadInbox';
 import {
   ChevronRight, LogOut, Bell, Settings, LifeBuoy,
   User as UserIcon, Building2
 } from 'lucide-react';
-import { getRoutingEmail } from '@/lib/orbitan-config';
 
 export default function WorkerProfileMenu({
   workerName = 'Worker',
@@ -18,11 +18,13 @@ export default function WorkerProfileMenu({
   position = 'Team Member',
   organisationName = '',
   outletName = '',
+  onNavigate,
   onSignOut,
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const buttonRef = useRef(null);
+  const { unreadCount } = useUnreadInbox();
 
   // Close on outside click
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function WorkerProfileMenu({
     workerRole === 'outlet_manager' ? 'Manager' :
     workerRole === 'supervisor' ? 'Supervisor' : 'Team Member';
 
-  const supportEmail = getRoutingEmail('customer_support');
+  const badgeText = unreadCount > 99 ? '99+' : unreadCount > 0 ? String(unreadCount) : '';
 
   return (
     <>
@@ -105,10 +107,18 @@ export default function WorkerProfileMenu({
 
           {/* Menu items */}
           <div className="p-2">
-            <MenuItem to="/notifications" icon={Bell} label="Notifications" />
+            <MenuItem to="/notifications" icon={Bell} label="Notifications" badge={badgeText} />
             <MenuItem to="/settings" icon={Settings} label="Preferences" />
             <MenuItem to="/support" icon={LifeBuoy} label="Help & Support" />
-            <MenuItem to="/settings" icon={UserIcon} label="My Profile" />
+            <button
+              onClick={() => { setOpen(false); onNavigate?.('profile'); }}
+              role="menuitem"
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-muted/50 transition-colors text-sm font-medium text-foreground min-h-[44px]"
+            >
+              <UserIcon className="w-4 h-4 text-muted-foreground" />
+              <span className="flex-1 text-left">My Profile</span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
           </div>
 
           {/* Sign Out */}
@@ -128,7 +138,7 @@ export default function WorkerProfileMenu({
   );
 }
 
-function MenuItem({ to, icon: Icon, label }) {
+function MenuItem({ to, icon: Icon, label, badge }) {
   return (
     <Link
       to={to}
@@ -137,6 +147,11 @@ function MenuItem({ to, icon: Icon, label }) {
     >
       <Icon className="w-4 h-4 text-muted-foreground" />
       <span className="flex-1">{label}</span>
+      {badge && (
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-orbitan-red text-white tabular-nums">
+          {badge}
+        </span>
+      )}
       <ChevronRight className="w-4 h-4 text-muted-foreground" />
     </Link>
   );

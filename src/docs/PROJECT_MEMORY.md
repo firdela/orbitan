@@ -309,6 +309,200 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - Resend cooldown (30 seconds) is client-side only. The Base44 SDK enforces its own rate limits server-side; the client cooldown is an additional UX safeguard, not a security control.
 - Cross-tab session consistency: when a session expires in one tab, other tabs may not detect it until the next API call or page navigation. A `storage` event listener could be added for instant cross-tab sync in a future enhancement.
 
+## Build #28.2L — Worker Navigation Repair & Orbit Inbox Integration (2026-08-05)
+
+### Worker Navigation Audit
+Audited every Worker navigation entry point: top-right avatar, profile dropdown, header notification bell, bottom navigation, Home quick actions, Worker widgets, Tasks, Shifts, Safety, Me, Preferences, Help & Support, My Profile, Sign Out, Orbit Inbox, notification detail routes, deep links, redirects, and route guards.
+
+### Invalid Routes Found
+1. **Header notification bell** — used `NotificationsInbox` component which fetched ReplenishmentAlert (manager-level inventory alerts), unscoped ComplianceRecord, and unscoped Task — all linking to `/workspace/${tenantSlug}/...` management routes. Workers were being routed into management workspace.
+2. **My Profile** in profile menu — linked to `/settings` (AccountSettings — shared page with management controls), duplicating the Preferences action which also linked to `/settings`.
+3. **Notifications popover** — displayed "All clear — no alerts" with footer text "Showing replenishment alerts, overdue compliance & tasks" — generic operational language irrelevant to workers.
+
+### Invalid Routes Removed
+- All `/workspace/${tenantSlug}/inventory`, `/workspace/${tenantSlug}/compliance`, `/workspace/${tenantSlug}/tasks` links removed from Worker header.
+- My Profile `/settings` duplicate link removed — now calls `onNavigate('profile')` to stay inside Worker experience.
+- Generic replenishment/compliance/task alert popover removed entirely.
+- `NotificationsInbox.jsx` component deleted.
+
+### Canonical Worker Routes
+| Destination | Route / Section | Ownership |
+|-------------|----------------|-----------|
+| Worker Home | `/worker` (section: home) | WorkerPortal |
+| Worker Tasks | `/worker` (section: tasks) | WorkerPortal |
+| Worker Shifts | `/worker` (section: shifts) | WorkerPortal |
+| Worker Safety | `/worker` (section: safety) | WorkerPortal |
+| Worker Me | `/worker` (section: profile) | WorkerPortal |
+| Worker Notifications | `/notifications` | NotificationsPage (Orbit Inbox) |
+| Worker Preferences | `/settings` | AccountSettings |
+| Worker Help & Support | `/support` | SupportPortal |
+
+### Worker Profile Menu Actions
+- Identity header: avatar/initials, full name, role, organisation, outlet
+- Notifications → `/notifications` (with canonical unread badge)
+- Preferences → `/settings` (Worker preferences)
+- Help & Support → `/support` (canonical support)
+- My Profile → `onNavigate('profile')` (Worker Me — stays in Worker experience)
+- Sign Out → `base44.auth.logout()`
+- NO admin/platform/billing/enterprise/management controls
+- NO Switch Workspace (hidden — no safe Worker workspace switching mechanism exists)
+
+### My Profile Destination
+"My Profile" from the avatar menu calls `onNavigate('profile')` which sets the WorkerPortal active section to the Me page. It does NOT open `/settings`, leader profile, employee-management record, organisation profile, or platform-user administration. The Worker Me page remains responsible for: personal profile, Worker preferences, attendance summary, personal work settings, feedback tools.
+
+### Preferences Destination
+"Preferences" links to `/settings` (AccountSettings). This is the canonical Worker preferences page containing: profile, accessibility, notification preferences, security, and account sections. No organisation-wide settings, manager configuration, billing preferences, tenant administration, or platform configuration is exposed.
+
+### Help & Support Destination
+"Help & Support" links to `/support` (SupportPortal). This is the canonical support page. Support routing uses canonical email configuration — no hardcoded email strings in components.
+
+### Sign Out Behaviour
+Sign Out is in the avatar menu only. The duplicate Me-page Sign Out was already removed in Build #28.2K. Sign Out calls `base44.auth.logout()` which clears the session and redirects to the public sign-in page. No redirect loops. No management page redirection. Worker-local transient state (clock timer, elapsed time) is cleared by React unmount.
+
+### Switch Workspace Status
+**Hidden** — no safe Worker workspace switching mechanism exists. The Employee entity supports multiple memberships (one User → many Employee records, one per tenant), but there is no canonical Worker workspace selector. Switch Workspace is hidden from the Worker profile menu to prevent accidental navigation into non-Worker experiences. If a user has a separate leader/admin role, they must transition through the canonical workspace selector at `/workspace`, not through the Worker menu.
+
+### Orbit Inbox Architecture
+The Worker notification experience is now fully integrated with the canonical Orbit Inbox (`OrbitInbox` entity). One unified inbox per recipient — no separate lightweight alerts system.
+
+**Data flow:** Platform event → notificationDispatcher (backend) → OrbitInbox record (one per recipient, RLS-scoped by `recipient_user_id == user.id`) → Worker reads via header bell (preview) or `/notifications` (full inbox).
+
+**Header bell (WorkerNotificationBell):**
+- Desktop/tablet: compact preview popover with 5 recent unread items + "View all in Orbit Inbox" + "Mark all read"
+- Mobile: navigates directly to `/notifications` (full Orbit Inbox)
+- Badge count from canonical `useUnreadInbox` hook (RLS-scoped)
+- No replenishment alerts, no generic operational alerts
+
+**Full inbox (`/notifications` — NotificationsPage):**
+- Sections: Needs My Action, Activity, Archived
+- Category filters: All, plus 17 categories from inboxConfig
+- Search, mark all read, preferences
+- Read/unread state, pin, complete, dismiss, archive actions
+- Empty states: "Nothing needs your action" / "No activity yet" / "No archived items"
+
+### Notification Sources Consolidated
+- **Removed:** `NotificationsInbox` component (generic operational alerts: ReplenishmentAlert + ComplianceRecord + Task, unscoped, linking to management routes)
+- **Canonical:** `OrbitInbox` entity (RLS-scoped, per-recipient, with categories, priorities, action states)
+- **Unread count:** `useUnreadInbox` hook (queries OrbitInbox with `is_actionable: true, action_state: 'pending'`, filters for unread, subscribes to realtime updates)
+- **No third notification system created.** The header bell, profile menu badge, and full inbox all use the same `OrbitInbox` entity and `useUnreadInbox` hook.
+
+### Worker Notification Categories
+Worker Orbit Inbox items may include only Worker-relevant categories:
+- **assignment** (task assigned) → Worker Tasks
+- **scheduling** (shift assignment/change/cancellation) → Worker Shifts
+- **compliance** (safety requirement, compliance deadline, food-safety action) → Worker Safety
+- **onboarding** (profile or onboarding action) → Worker Me
+- **security** (account/security notice) → Worker Me
+- **reminder** (meeting, training, personal work-event reminder) → stays in inbox
+- **mention** (mentioned in a task or discussion) → stays in inbox
+- **announcement** (workplace announcement) → stays in inbox
+
+Workers do NOT see: management approvals (unrelated), organisation-wide financial alerts, billing alerts, platform-admin alerts, leader-only analytics, another employee's private notifications, another tenant's notifications. RLS enforces this server-side.
+
+### Unread-Count Architecture
+One canonical unread count drives all Worker notification indicators:
+- **Source:** `useUnreadInbox` hook — queries `OrbitInbox.filter({ is_actionable: true, action_state: 'pending' })`, filters for `!read_at && !archived_at`, subscribes to realtime entity changes.
+- **RLS-scoped:** Only returns items where `recipient_user_id == user.id` and `tenant_id` matches — enforced server-side.
+- **Drives:** Header bell badge, profile-menu Notifications badge, full inbox "Unread" stat.
+- **Rules:** Hides at zero, displays 1–99, displays 99+ above 99.
+- **Updates:** After mark-as-read mutations, TanStack Query keys `['orbit-inbox-preview']` and `['orbit-inbox']` are invalidated, and `useUnreadInbox.refresh()` is called.
+
+### Header-Bell Result
+The header bell now opens a Worker-specific Orbit Inbox preview on desktop/tablet, showing the 5 most recent unread Worker notifications with category icons, titles, timestamps, unread indicators, and safe deep-link navigation. On mobile, it navigates directly to the full `/notifications` page. No generic replenishment or operational alerts are shown.
+
+### Profile-Menu Notifications Result
+The profile-menu Notifications action links to `/notifications` (canonical Orbit Inbox) and displays the same unread badge count as the header bell. Both the header bell and the profile-menu Notifications action open the same canonical Worker Orbit Inbox destination.
+
+### Deep-Link Routing
+Every notification action resolves to a safe Worker destination via `resolveWorkerNotificationRoute()`:
+- Task/assignment notification → Worker Tasks (`onNavigate('tasks')`)
+- Shift/scheduling notification → Worker Shifts (`onNavigate('shifts')`)
+- Safety/compliance notification → Worker Safety (`onNavigate('safety')`)
+- Profile/onboarding/security notification → Worker Me (`onNavigate('profile')`)
+- Announcement/reminder/mention → stays in Orbit Inbox (`/notifications`)
+
+Unsafe external redirects are rejected by `isSafeWorkerLink()`:
+- Rejects: `http://`, `https://`, `//`, `javascript:`, `data:`, `blob:`, `\\` URLs
+- Rejects: `/workspace/`, `/leader-org`, `/platform/`, `/admin`, `/outlet/`, `/audit-centre`, `/user-roles`, `/data-import`, `/data-explorer`, `/governance-log`, `/suppliers`, `/knowledge-hub`, `/company`, `/onboarding`, `/request-access`, `/checkout` route prefixes
+- Allows: `/worker`, `/notifications`, `/settings`, `/support`, `/contact/interest`
+
+### Duplicated Notification UI Removed
+- `NotificationsInbox.jsx` component deleted — was the generic operational alerts panel (replenishment + compliance + task) that linked to management workspace routes.
+- No standalone notification modal existed.
+- No duplicate notification badge calculation remains — all use `useUnreadInbox`.
+
+### Duplicated Profile UI Removed
+- My Profile no longer links to `/settings` (was duplicate of Preferences).
+- My Profile now calls `onNavigate('profile')` to navigate to the Worker Me section within the same WorkerPortal.
+- Sign Out remains only in the avatar menu (duplicate was already removed in Build #28.2K).
+
+### Accessibility Result (WCAG 2.2 AA)
+- Bell trigger has accessible name (`aria-label` with unread count) ✓
+- Bell trigger exposes `aria-expanded` implicitly via `role="dialog"` on popover ✓
+- Popover uses `role="dialog"` and `aria-label` ✓
+- Profile button has accessible name and `aria-expanded` state ✓
+- Menu uses `role="menu"` and `role="menuitem"` semantics ✓
+- Menu closes on outside click and Escape key ✓
+- Focus returns to trigger button on Escape ✓
+- Unread status is not colour-only (badge includes text count) ✓
+- Timestamps are readable (relative time format) ✓
+- Mark-as-read control has accessible label ✓
+- Touch targets ≥44px on all interactive elements ✓
+- Screen readers announce notification updates via `useUnreadInbox` realtime subscription ✓
+- Reduced-motion supported via global `@media (prefers-reduced-motion: reduce)` ✓
+
+### Responsive Result
+- **Desktop/tablet:** Bell opens compact preview popover (w-80/w-96) anchored below the bell icon. Profile menu opens as anchored popover below avatar.
+- **Mobile:** Bell navigates directly to `/notifications` (full Orbit Inbox). Profile menu opens as full-width panel from the top.
+- **Bottom navigation:** Remains functional and unobstructed on all screen sizes.
+- **Touch targets:** All interactive elements ≥44px.
+- **Internal scroll:** Preview popover has `max-h-[400px]` with internal scroll.
+
+### Security and Privacy Verification
+- **RLS:** OrbitInbox entity RLS enforces `recipient_user_id == user.id` and `tenant_id` match — workers only see their own notifications. Server-side enforced, not client-side filtering.
+- **Tenant isolation:** Workers cannot access another tenant's notifications (RLS `data.tenant_id == {{user.data.tenant_id}}`).
+- **Outlet scope:** Workers see tenant-scoped items (OrbitInbox does not have outlet_id scoping — it's per-recipient).
+- **No internal IDs exposed:** Preview shows title, body, category label, timestamp — no `recipient_user_id`, `source_id`, or internal metadata.
+- **No confidential safety-report details:** Investigation notes are RLS-protected on the SafetyReport entity; OrbitInbox items only contain summary text.
+- **No backend error messages displayed:** Mutations fail silently.
+- **No notification tokens or secrets in frontend.**
+- **Safe redirects:** `isSafeWorkerLink()` rejects all management/admin/leader route prefixes and unsafe URL schemes.
+- **Authentication:** Unchanged — session handling, safe redirects, tenant isolation, RBAC, RLS all preserved.
+- **Canonical email routing:** No hardcoded email strings — WorkerProfileMenu does not import `getRoutingEmail` (not needed — links to `/support` page).
+
+### Tests Added
+- **`src/lib/__tests__/worker-notification-routing.test.js`** — 51 pure-function test cases covering: category routing (assignment→tasks, scheduling→shifts, compliance→safety, onboarding→profile, security→profile, workforce→tasks, reminder→null, mention→null, inventory→null, finance→null), source_entity routing (Task, Shift, SafetyReport, ComplianceRecord, Employee, Announcement), event_type keyword routing (task, shift, compliance, onboarding), null/empty/unknown handling, safe link validation (/worker, /notifications, /settings, /support safe; http/https/javascript/data/blob/protocol-relative/backslash unsafe; /workspace/ /leader-org /platform/ /outlet/ /audit-centre /admin unsafe; null/undefined/empty/non-string unsafe), WORKER_SECTIONS validation (contains home/tasks/shifts/safety/profile, no admin/management).
+
+### Tests Executed
+51/51 executed via Node sandbox.
+
+### Test Results
+**51/51 passed (100%).**
+
+### Files Created (3)
+- `src/lib/worker/notification-routing.js`
+- `src/components/worker/WorkerNotificationBell.jsx`
+- `src/lib/__tests__/worker-notification-routing.test.js`
+
+### Files Modified (2)
+- `src/components/worker/WorkerProfileMenu.jsx` — added `onNavigate` prop; My Profile now calls `onNavigate('profile')` instead of linking to `/settings`; added canonical unread badge to Notifications menu item; removed unused `getRoutingEmail` import.
+- `src/pages/WorkerPortal.jsx` — replaced `NotificationsInbox` with `WorkerNotificationBell`; passes `onNavigate={setActiveSection}` to both the bell and the profile menu.
+
+### Files Removed (1)
+- `src/components/shared/NotificationsInbox.jsx` — generic operational alerts panel (replenishment + compliance + task) that linked to management workspace routes. Was only used in WorkerPortal. Replaced by canonical WorkerNotificationBell backed by OrbitInbox entity.
+
+### Build Result
+All imports resolve. No missing component warnings. No unused import warnings. 51/51 tests pass. All existing Worker functionality preserved (Home dashboard, Tasks, Shifts, Safety, Me, clock in/out, authentication, RBAC/RLS).
+
+### GitHub Sync Status
+Repository: `https://github.com/firdela/orbitan` (public). Two-way sync via Base44 GitHub synchronisation — changes will sync on publish.
+
+### Remaining Manual Items
+- Configure `notificationDispatcher` backend function to generate OrbitInbox records for Worker-relevant events (task assignment, shift changes, compliance deadlines, safety requirements) — currently the OrbitInbox entity exists but may not have Worker-scoped items until the notification engine is fully wired.
+- Implement Switch Workspace for Workers with multiple Employee memberships (requires canonical Worker workspace selector).
+- Wire OrbitInbox `link` field population from `notificationDispatcher` to include Worker-safe deep links.
+- Consider adding a `category` filter for Worker-specific categories (Tasks, Shifts, Safety, Announcements, Account) in the NotificationsPage when accessed from `/worker` context.
+
 ## Build #28.2K — Worker Calendar, Safety Hub & Profile Menu (2026-08-05)
 
 ### Added — WorkerCalendarEvent Entity

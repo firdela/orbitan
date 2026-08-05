@@ -7,6 +7,36 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2L (Worker Navigation Repair & Orbit Inbox Integration) (2026-08-05)
+
+### Fixed — Worker Header Notification Bell
+- Replaced generic `NotificationsInbox` (operational alerts: ReplenishmentAlert + ComplianceRecord + Task, linking to management workspace routes) with canonical `WorkerNotificationBell` backed by `OrbitInbox` entity (RLS-scoped to `recipient_user_id == user.id`).
+- Desktop/tablet: compact preview popover with 5 recent unread Worker notifications, category icons, timestamps, "View all in Orbit Inbox", "Mark all read".
+- Mobile: navigates directly to `/notifications` (full Orbit Inbox).
+- Empty state: "You're all caught up." / "No unread Worker notifications."
+- No replenishment alerts, no generic operational language.
+
+### Fixed — Worker Profile Menu My Profile Duplicate
+- "My Profile" was linking to `/settings` (same as "Preferences") — duplicate. Now calls `onNavigate('profile')` to navigate to the Worker Me section within the same WorkerPortal, staying inside the Worker experience.
+
+### Added — Worker Notification Badge on Profile Menu
+- Profile menu "Notifications" action now displays the canonical unread count badge (from `useUnreadInbox` hook), consistent with the header bell.
+
+### Added — Worker Notification Deep-Link Routing
+- `src/lib/worker/notification-routing.js` — maps OrbitInbox categories and source entities to safe Worker destinations. Task→tasks, Shift→shifts, Compliance/Safety→safety, Profile/Onboarding/Security→profile. Rejects all management/admin/leader route prefixes and unsafe URL schemes (http, javascript, data, blob, protocol-relative, backslash). Pure JS — safe for tests.
+
+### Added — WorkerNotificationBell Component
+- `src/components/worker/WorkerNotificationBell.jsx` — canonical Worker notification bell. Desktop popover preview, mobile full-page navigation. Uses `useUnreadInbox` for badge count (RLS-scoped). Lazy preview query (only fetches when popover is open). Mark all read, safe deep-link navigation, "View all in Orbit Inbox" action.
+
+### Removed — NotificationsInbox Component
+- `src/components/shared/NotificationsInbox.jsx` deleted. Was a generic operational alerts panel (replenishment + compliance + task) that linked to management workspace routes (`/workspace/${tenantSlug}/...`). Was only used in WorkerPortal. Replaced by canonical `WorkerNotificationBell`.
+
+### Added — Tests
+- `src/lib/__tests__/worker-notification-routing.test.js` — 51 pure-function test cases. **Result: 51/51 passed (100%).** Covers category routing, source_entity routing, event_type keyword routing, null/empty/unknown handling, safe link validation, WORKER_SECTIONS validation.
+
+### Documentation
+- `src/docs/PROJECT_MEMORY.md` — Build #28.2L section added with full audit results, route ownership, menu actions, Orbit Inbox architecture, unread-count architecture, deep-link routing, accessibility, security, and remaining limitations.
+
 ## [Unreleased] — Build #28.2K (Worker Calendar, Safety Hub & Profile Menu) (2026-08-05)
 
 ### Added — WorkerCalendarEvent Entity
