@@ -2,6 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import { DECISIONS, PROVENANCE_STATES } from '../../shared/ai-governance.ts';
 import {
   isWorkerRole, sha256, validateTenantMembership,
+  validateApprovalScope, isValidTransition, isTerminalStatus,
   WORKER_SAFE_LINK, ADMIN_GOVERNANCE_LINK,
 } from '../../shared/nexus-gateway-utils.ts';
 
@@ -160,6 +161,9 @@ async function notifyRequesterOfDecision(
 }
 
 // ── AUDIT EVENT FOR APPROVAL DECISION ─────────────────────────
+// Section 8: Approval and rejection are governance decisions and require
+// durable evidence. This function does NOT swallow errors — it throws on
+// failure so the caller can fail-closed (prevent the transition without evidence).
 async function createApprovalDecisionAudit(
   base44: any,
   params: {
@@ -174,57 +178,59 @@ async function createApprovalDecisionAudit(
     data_classification: string;
     policy_key: string | null;
   },
-): Promise<string | null> {
-  try {
-    const auditRecord = await base44.asServiceRole.entities.AIAuditEvent.create({
-      tenant_id: params.tenant_id,
-      outlet_id: params.outlet_id,
-      request_id: `approval_decision_${params.request_id}`,
-      idempotency_key: null,
-      idempotency_fingerprint: await sha256(`approval_decision:${params.approval_id}:${params.decision}`),
-      execution_state: params.decision === 'approved' ? 'succeeded' : 'denied',
-      service_key: params.service_key,
-      capability_tier: params.capability_tier,
-      requesting_user_id: params.approver_user_id, // The approver is the actor for this audit event
-      requesting_user_name: params.approver_name,
-      requesting_user_role: params.approver_role,
-      executing_agent_id: null,
-      provider: params.provider,
-      model_key: params.model_key,
-      model_version: null,
-      routing_decision: 'approval_decision',
-      policy_decision: params.decision === 'approved' ? DECISIONS.ALLOW : DECISIONS.DENY,
-      policy_reason: `Approval ${params.decision}: ${params.decision_reason}`,
-      policy_keys_evaluated: params.policy_key ? [params.policy_key] : [],
-      autonomy_level: params.autonomy_level,
-      data_classification: params.data_classification,
-      tools_invoked: [],
-      integrations_invoked: [],
-      approval_reference_id: params.approval_id,
-      runtime_ms: 0,
-      credits_consumed: 0,
-      estimated_cost_sgd: null,
-      data_classification_field: params.data_classification,
-      validation_result: 'passed',
-      provenance_state: params.decision === 'approved' ? PROVENANCE_STATES.executed_after_approval : PROVENANCE_STATES.ai_generated,
-      outcome: params.decision === 'approved' ? 'success' : 'denied',
-      error_message: params.decision === 'approved' ? null : `Request rejected: ${params.decision_reason}`,
-      error_classification: params.decision === 'approved' ? null : 'policy_denied',
-      fallback_used: false,
-      metadata: {
-        approval_key: params.approval_key,
-        approval_decision: params.decision,
-        original_requester: params.requester_user_id,
-        original_requester_name: params.requester_name,
-        decision_reason: params.decision_reason,
-        is_approval_decision_audit: true,
-      },
-    });
-    return auditRecord?.id || null;
-  } catch (err) {
-    console.log(`[aiApprovalActions] Approval decision audit failed: ${err.message}`);
-    return null;
-  }
+): Promise<string> {
+  // Section 9: Decision actor fields — accurately distinguish original requester
+  // from approving actor. The approver is the actor for this audit event, but
+  // the original requester is preserved in canonical metadata fields.
+  const auditRecord = await base44.asServiceRole.entities.AIAuditEvent.create({
+    tenant_id: params.tenant_id,
+    outlet_id: params.outlet_id,
+    request_id: `approval_decision_${params.request_id}`,
+    idempotency_key: null,
+    idempotency_fingerprint: await sha256(`approval_decision:${params.approval_id}:${params.decision}`),
+    execution_state: params.decision === 'approved' ? 'succeeded' : 'denied',
+    service_key: params.service_key,
+    capability_tier: params.capability_tier,
+    requesting_user_id: params.approver_user_id,
+    requesting_user_name: params.approver_name,
+    requesting_user_role: params.approver_role,
+    executing_agent_id: null,
+    provider: params.provider,
+    model_key: params.model_key,
+    model_version: null,
+    routing_decision: 'approval_decision',
+    policy_decision: params.decision === 'approved' ? DECISIONS.ALLOW : DECISIONS.DENY,
+    policy_reason: `Approval ${params.decision}: ${params.decision_reason}`,
+    policy_keys_evaluated: params.policy_key ? [params.policy_key] : [],
+    autonomy_level: params.autonomy_level,
+    data_classification: params.data_classification,
+    tools_invoked: [],
+    integrations_invoked: [],
+    approval_reference_id: params.approval_id,
+    runtime_ms: 0,
+    credits_consumed: 0,
+    estimated_cost_sgd: null,
+    validation_result: 'passed',
+    provenance_state: params.decision === 'approved' ? PROVENANCE_STATES.executed_after_approval : PROVENANCE_STATES.ai_generated,
+    outcome: params.decision === 'approved' ? 'success' : 'denied',
+    error_message: params.decision === 'approved' ? null : `Request rejected: ${params.decision_reason}`,
+    error_classification: params.decision === 'approved' ? null : 'policy_denied',
+    fallback_used: false,
+    metadata: {
+      approval_key: params.approval_key,
+      approval_decision: params.decision,
+      // Section 9: Canonical decision actor fields
+      decision_actor_user_id: params.approver_user_id,
+      decision_actor_name: params.approver_name,
+      decision_actor_role: params.approver_role,
+      original_requester_user_id: params.requester_user_id,
+      original_requester_name: params.requester_name,
+      original_requester_role: params.requester_role,
+      decision_reason: params.decision_reason,
+      is_approval_decision_audit: true,
+    },
+  });
+  return auditRecord?.id || '';
 }
 
 // ============================================================
@@ -242,15 +248,16 @@ export default async function(req: Request): Promise<Response> {
     const { action, approval_id, decision_reason, tenant_id } = body;
 
     // Validate action
-    if (!['approve', 'reject', 'cancel'].includes(action)) {
-      return safeJson('invalid_request', 400, 'Invalid action. Must be: approve, reject, or cancel.');
+    if (!['approve', 'reject', 'cancel', 'execute'].includes(action)) {
+      return safeJson('invalid_request', 400, 'Invalid action. Must be: approve, reject, cancel, or execute.');
     }
     if (!approval_id) {
       return safeJson('invalid_request', 400, 'approval_id is required.');
     }
 
-    // Validate tenant membership
-    const tenantCheck = validateTenantMembership(user.role, user.data?.tenant_id, tenant_id || null);
+    // Validate tenant membership (with explicit cross-tenant permission check)
+    const userPermissions = (user.data?.permissions || []) as string[];
+    const tenantCheck = validateTenantMembership(user.role, user.data?.tenant_id, tenant_id || null, userPermissions);
     if (!tenantCheck.valid) {
       return safeJson('forbidden', 403, 'Tenant context validation failed.');
     }
@@ -279,11 +286,13 @@ export default async function(req: Request): Promise<Response> {
       });
     }
 
-    // Verify not expired
+    // Verify not expired (atomic conditional transition)
     if (approval.expires_at && new Date(approval.expires_at) < new Date()) {
-      // Auto-expire the record
       try {
-        await base44.asServiceRole.entities.AIApproval.update(approval_id, { status: 'expired' });
+        await base44.asServiceRole.entities.AIApproval.updateMany(
+          { id: approval_id, tenant_id: resolvedTenantId, status: 'pending' },
+          { $set: { status: 'expired' } }
+        );
       } catch { /* best-effort */ }
       return safeJson('forbidden', 403, 'This approval has expired and can no longer be decided.', {
         expired_at: approval.expires_at,
@@ -297,21 +306,15 @@ export default async function(req: Request): Promise<Response> {
       if (!isRequester && !isAdmin) {
         return safeJson('forbidden', 403, 'Only the requester or a platform administrator can cancel an approval.');
       }
-      // Transition to cancelled
-      try {
-        await base44.asServiceRole.entities.AIApproval.update(approval_id, {
-          status: 'cancelled',
-          approver_user_id: user.id,
-          approver_name: user.full_name,
-          decision_reason: decision_reason || 'Cancelled by user.',
-          decided_at: new Date().toISOString(),
+
+      if (!isValidTransition(approval.status, 'cancelled')) {
+        return safeJson('invalid_request', 409, `Cannot cancel approval with status '${approval.status}'.`, {
+          current_status: approval.status,
         });
-      } catch (err) {
-        return safeJson('internal_error', 500, 'Failed to cancel approval.');
       }
 
-      // Audit + inbox update + notify
-      await createApprovalDecisionAudit(base44, {
+      // Mandatory audit (fail-closed)
+      const cancelAuditId = await createApprovalDecisionAudit(base44, {
         tenant_id: resolvedTenantId, outlet_id: approval.outlet_id,
         approval_id: approval.id, approval_key: approval.approval_key, request_id: approval.request_id,
         service_key: approval.service_key, capability_tier: approval.capability_tier,
@@ -320,7 +323,29 @@ export default async function(req: Request): Promise<Response> {
         decision: 'cancelled', decision_reason: decision_reason || 'Cancelled by user.',
         model_key: approval.model_key, provider: approval.provider, autonomy_level: approval.autonomy_level,
         data_classification: approval.data_classification, policy_key: approval.policy_key,
-      }).catch(() => {});
+      }).catch(() => '');
+
+      if (!cancelAuditId) {
+        return safeJson('audit_failure', 500, 'Cannot cancel approval — audit evidence creation failed. The approval has not been changed.', {
+          approval_id: approval.id,
+        });
+      }
+
+      // Atomic transition using updateMany with status condition
+      try {
+        await base44.asServiceRole.entities.AIApproval.updateMany(
+          { id: approval_id, tenant_id: resolvedTenantId, status: 'pending' },
+          { $set: {
+            status: 'cancelled',
+            approver_user_id: user.id,
+            approver_name: user.full_name,
+            decision_reason: decision_reason || 'Cancelled by user.',
+            decided_at: new Date().toISOString(),
+          }}
+        );
+      } catch (err) {
+        return safeJson('internal_error', 500, 'Failed to cancel approval.');
+      }
 
       await updateInboxForApprovalDecision(base44, approval.id, resolvedTenantId, 'cancelled', decision_reason || 'Cancelled by user.').catch(() => {});
 
@@ -335,8 +360,121 @@ export default async function(req: Request): Promise<Response> {
         success: true,
         approval_id: approval.id,
         status: 'cancelled',
+        audit_event_id: cancelAuditId,
         message: 'Approval has been cancelled.',
       });
+    }
+
+    // ── EXECUTE: dispatch approved request through canonical gateway ─
+    if (action === 'execute') {
+      // Only the requester or an admin can execute an approved request
+      const isRequester = approval.requester_user_id === user.id;
+      const isAdmin = user.role === 'admin';
+      if (!isRequester && !isAdmin) {
+        return safeJson('forbidden', 403, 'Only the requester or a platform administrator can execute an approved request.');
+      }
+
+      // Verify status is approved (not pending, not already executed, etc.)
+      if (!isValidTransition(approval.status, 'executing')) {
+        return safeJson('invalid_request', 409, `Cannot execute approval with status '${approval.status}'. Only 'approved' approvals can be executed.`, {
+          current_status: approval.status,
+        });
+      }
+
+      // Verify not expired
+      if (approval.expires_at && new Date(approval.expires_at) < new Date()) {
+        try {
+          await base44.asServiceRole.entities.AIApproval.updateMany(
+            { id: approval_id, tenant_id: resolvedTenantId, status: 'approved' },
+            { $set: { status: 'expired' } }
+          );
+        } catch { /* best-effort */ }
+        return safeJson('forbidden', 403, 'This approval has expired and can no longer be executed.', {
+          expired_at: approval.expires_at,
+        });
+      }
+
+      // ── ATOMIC TRANSITION: approved → executing ──────────
+      // Uses updateMany with status condition — only one concurrent execution can succeed.
+      const transitionResult = await base44.asServiceRole.entities.AIApproval.updateMany(
+        { id: approval_id, tenant_id: resolvedTenantId, status: 'approved' },
+        { $set: {
+          status: 'executing',
+          approver_user_id: user.id,
+          approver_name: user.full_name,
+          decided_at: new Date().toISOString(),
+        }}
+      ).catch(() => null);
+
+      // Re-read to verify the transition succeeded
+      let executingApproval: any = null;
+      try {
+        executingApproval = await base44.asServiceRole.entities.AIApproval.get(approval_id);
+      } catch { /* */ }
+
+      if (!executingApproval || executingApproval.status !== 'executing' || executingApproval.approver_user_id !== user.id) {
+        return safeJson('invalid_request', 409, `Approval transition to 'executing' failed — it may have been executed by another caller or expired.`, {
+          current_status: executingApproval?.status || 'unknown',
+        });
+      }
+
+      // Dispatch through the canonical Nexus gateway with approval_key
+      try {
+        const nexusResponse = await base44.functions.invoke('nexus', {
+          service_key: approval.service_key,
+          payload: body.payload || {},
+          tenant_id: resolvedTenantId,
+          outlet_id: approval.outlet_id,
+          agent_id: approval.executing_agent_id || null,
+          data_classification: approval.data_classification,
+          requested_autonomy: approval.autonomy_level,
+          approval_key: approval.approval_key,
+        });
+
+        const nexusData = nexusResponse.data || nexusResponse;
+
+        // The nexus gateway already transitions executing → executed/execution_failed
+        // But as a fallback, ensure the transition happened
+        let finalApproval: any = null;
+        try {
+          finalApproval = await base44.asServiceRole.entities.AIApproval.get(approval_id);
+        } catch { /* */ }
+
+        if (finalApproval && finalApproval.status === 'executing') {
+          // Gateway didn't transition — do it ourselves as fallback
+          const execStatus = nexusData?.success ? 'executed' : 'execution_failed';
+          await base44.asServiceRole.entities.AIApproval.updateMany(
+            { id: approval_id, status: 'executing' },
+            { $set: {
+              status: execStatus,
+              execution_audit_event_id: nexusData?.audit_event_id || null,
+              executed_at: new Date().toISOString(),
+            }}
+          ).catch(() => {});
+        }
+
+        return Response.json({
+          success: nexusData?.success !== false,
+          approval_id: approval.id,
+          status: nexusData?.success !== false ? 'executed' : 'execution_failed',
+          audit_event_id: nexusData?.audit_event_id || null,
+          execution_result: nexusData,
+          message: nexusData?.success !== false
+            ? 'Approved AI request executed successfully.'
+            : 'Approved AI request execution failed.',
+        });
+      } catch (execErr) {
+        // Transition to execution_failed
+        await base44.asServiceRole.entities.AIApproval.updateMany(
+          { id: approval_id, status: 'executing' },
+          { $set: { status: 'execution_failed' } }
+        ).catch(() => {});
+
+        return safeJson('internal_error', 500, 'Execution of approved AI request failed.', {
+          approval_id: approval.id,
+          error: execErr.message,
+        });
+      }
     }
 
     // ── APPROVE / REJECT: approver authority checks ──────────
@@ -353,24 +491,53 @@ export default async function(req: Request): Promise<Response> {
 
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
-    // ── ATOMIC TRANSITION (read-validate-write-verify) ──────
-    // Base44 entities do not support native compare-and-set.
-    // We use a read-validate-write pattern with a post-write verification.
-    // Limitation: if two approvers submit simultaneously, the last write wins.
-    // Both approvers are validated independently before the write.
-    try {
-      await base44.asServiceRole.entities.AIApproval.update(approval_id, {
-        status: newStatus,
-        approver_user_id: user.id,
-        approver_name: user.full_name,
-        decision_reason: decision_reason || (action === 'approve' ? 'Approved.' : 'Rejected.'),
-        decided_at: new Date().toISOString(),
+    if (!isValidTransition(approval.status, newStatus)) {
+      return safeJson('invalid_request', 409, `Invalid transition from '${approval.status}' to '${newStatus}'.`, {
+        current_status: approval.status,
       });
+    }
+
+    // ── MANDATORY AUDIT (fail-closed for approval decisions) ──
+    // Section 8: Approval and rejection are governance decisions and require
+    // durable evidence. If audit creation fails, the decision MUST NOT proceed.
+    const auditId = await createApprovalDecisionAudit(base44, {
+      tenant_id: resolvedTenantId, outlet_id: approval.outlet_id,
+      approval_id: approval.id, approval_key: approval.approval_key, request_id: approval.request_id,
+      service_key: approval.service_key, capability_tier: approval.capability_tier,
+      requester_user_id: approval.requester_user_id, requester_name: approval.requester_name, requester_role: approval.requester_role,
+      approver_user_id: user.id, approver_name: user.full_name, approver_role: user.role,
+      decision: newStatus, decision_reason: decision_reason || (action === 'approve' ? 'Approved.' : 'Rejected.'),
+      model_key: approval.model_key, provider: approval.provider, autonomy_level: approval.autonomy_level,
+      data_classification: approval.data_classification, policy_key: approval.policy_key,
+    });
+
+    if (!auditId) {
+      // FAIL-CLOSED: cannot make a governance decision without audit evidence
+      return safeJson('audit_failure', 500, 'Cannot complete approval decision — audit evidence creation failed. The approval has not been changed.', {
+        approval_id: approval.id,
+      });
+    }
+
+    // ── ATOMIC TRANSITION (conditional update) ──────────────
+    // Uses updateMany with status condition — only one concurrent decision
+    // can succeed. The query includes id + tenant + status='pending' so
+    // if another approver already decided, this update matches 0 records.
+    try {
+      await base44.asServiceRole.entities.AIApproval.updateMany(
+        { id: approval_id, tenant_id: resolvedTenantId, status: 'pending' },
+        { $set: {
+          status: newStatus,
+          approver_user_id: user.id,
+          approver_name: user.full_name,
+          decision_reason: decision_reason || (action === 'approve' ? 'Approved.' : 'Rejected.'),
+          decided_at: new Date().toISOString(),
+        }}
+      );
     } catch (err) {
       return safeJson('internal_error', 500, 'Failed to update approval status.');
     }
 
-    // Post-write verification: re-read to confirm the status matches
+    // Post-write verification: re-read to confirm the transition
     let updatedApproval: any = null;
     try {
       updatedApproval = await base44.asServiceRole.entities.AIApproval.get(approval_id);
@@ -382,18 +549,6 @@ export default async function(req: Request): Promise<Response> {
         current_status: updatedApproval.status,
       });
     }
-
-    // ── AUDIT EVENT ──────────────────────────────────────────
-    const auditId = await createApprovalDecisionAudit(base44, {
-      tenant_id: resolvedTenantId, outlet_id: approval.outlet_id,
-      approval_id: approval.id, approval_key: approval.approval_key, request_id: approval.request_id,
-      service_key: approval.service_key, capability_tier: approval.capability_tier,
-      requester_user_id: approval.requester_user_id, requester_name: approval.requester_name, requester_role: approval.requester_role,
-      approver_user_id: user.id, approver_name: user.full_name, approver_role: user.role,
-      decision: newStatus, decision_reason: decision_reason || (action === 'approve' ? 'Approved.' : 'Rejected.'),
-      model_key: approval.model_key, provider: approval.provider, autonomy_level: approval.autonomy_level,
-      data_classification: approval.data_classification, policy_key: approval.policy_key,
-    }).catch(() => null);
 
     // ── UPDATE ORBIT INBOX ───────────────────────────────────
     await updateInboxForApprovalDecision(base44, approval.id, resolvedTenantId, newStatus, decision_reason || (action === 'approve' ? 'Approved.' : 'Rejected.')).catch(() => {});

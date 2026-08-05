@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, XCircle, Clock, AlertTriangle, Loader2, Shield, Ban } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, AlertTriangle, Loader2, Shield, Ban, Play, RotateCcw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,9 +28,11 @@ export default function AIApprovalQueue() {
   const [confirmDialog, setConfirmDialog] = useState(null);
 
   const { data: approvals, isLoading, isError } = useQuery({
-    queryKey: ['ai-approvals-pending'],
+    queryKey: ['ai-approvals-active'],
     queryFn: async () => {
-      const result = await base44.entities.AIApproval.filter({ status: 'pending' }, '-created_date', 50);
+      const result = await base44.entities.AIApproval.filter(
+        { status: { $in: ['pending', 'approved'] } }, '-created_date', 50
+      );
       return result || [];
     },
     refetchInterval: 30000,
@@ -50,7 +52,7 @@ export default function AIApprovalQueue() {
     const reason = decisionReason[approval.id]?.trim() || (action === 'approve' ? 'Approved.' : 'Rejected.');
     try {
       const result = await callApprovalAction(action, approval.id, reason);
-      queryClient.invalidateQueries({ queryKey: ['ai-approvals-pending'] });
+      queryClient.invalidateQueries({ queryKey: ['ai-approvals-active'] });
       toast({
         title: action === 'approve' ? '✓ Approval Granted' : '✓ Approval Rejected',
         description: action === 'approve'
@@ -74,6 +76,10 @@ export default function AIApprovalQueue() {
 
   const requestReject = (approval) => {
     setConfirmDialog({ action: 'reject', approval });
+  };
+
+  const requestExecute = (approval) => {
+    setConfirmDialog({ action: 'execute', approval });
   };
 
   const confirmDecision = async () => {

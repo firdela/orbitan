@@ -488,8 +488,12 @@ function safeErrorResponse(errorCode: string, status: number, serviceKey: string
   }, { status });
 }
 
-// ── APPROVAL VALIDATION ───────────────────────────────────────
-async function validateApprovalForExecution(base44: any, approvalKey: string, currentPayloadHash: string, tenantId: string): Promise<{
+// ── APPROVAL VALIDATION (with full scope verification) ─────────
+// Section 3: Verifies all scope fields to ensure the execution request
+// exactly matches the approved scope.
+async function validateApprovalForExecution(base44: any, approvalKey: string, currentPayloadHash: string, tenantId: string, requestContext: {
+  serviceKey: string; modelKey: string; autonomyLevel: string; dataClassification: string; tools?: string[];
+}): Promise<{
   valid: boolean; approval?: any; reason?: string;
 }> {
   try {
@@ -499,23 +503,64 @@ async function validateApprovalForExecution(base44: any, approvalKey: string, cu
     }
     const approval = approvals[0];
 
-    // Verify tenant scope
+    // 5. Verify tenant scope
     if (approval.tenant_id !== tenantId) {
       return { valid: false, reason: 'Approval tenant scope mismatch' };
     }
-    // Verify status
-    if (approval.status !== 'approved') {
-      return { valid: false, reason: `Approval status is '${approval.status}', expected 'approved'` };
+    // 6. Verify status is approved (or executing if already transitioned by aiApprovalActions.execute)
+    if (approval.status !== 'approved' && approval.status !== 'executing') {
+      return { valid: false, reason: `Approval status is '${approval.status}', expected 'approved' or 'executing'` };
     }
-    // Verify not expired
+    // 7. Verify not expired
     if (approval.expires_at && new Date(approval.expires_at) < new Date()) {
-      await base44.asServiceRole.entities.AIApproval.update(approval.id, { status: 'expired' }).catch(() => {});
+      await base44.asServiceRole.entities.AIApproval.updateMany(
+        { id: approval.id, status: { $in: ['approved', 'executing'] } },
+        { $set: { status: 'expired' } }
+      ).catch(() => {});
       return { valid: false, reason: 'Approval has expired' };
     }
-    // Verify payload scope matches
+    // 8. Verify single-use: executed/execution_failed/rejected/cancelled cannot execute
+    if (['executed', 'execution_failed', 'rejected', 'cancelled'].includes(approval.status)) {
+      return { valid: false, reason: `Approval has terminal status '${approval.status}' and cannot be reused` };
+    }
+    // 10-11. Verify payload hash matches
     if (approval.payload_hash && approval.payload_hash !== currentPayloadHash) {
       return { valid: false, reason: 'Payload has changed since approval — a new approval is required' };
     }
+    // 12. Verify service key matches
+    if (approval.service_key !== requestContext.serviceKey) {
+      return { valid: false, reason: `Service key mismatch: approved='${approval.service_key}', requested='${requestContext.serviceKey}'` };
+    }
+    // 13. Verify model key matches
+    if (approval.model_key && approval.model_key !== requestContext.modelKey) {
+      return { valid: false, reason: `Model key mismatch: approved='${approval.model_key}', requested='${requestContext.modelKey}'` };
+    }
+    // 14. Verify tools match
+    if (approval.tools && approval.tools.length > 0 && requestContext.tools) {
+      const approvedTools = new Set(approval.tools);
+      for (const tool of requestContext.tools) {
+        if (!approvedTools.has(tool)) {
+          return { valid: false, reason: `Tool '${tool}' was not in the approved scope` };
+        }
+      }
+    }
+    // 15. Verify autonomy scope matches
+    if (approval.autonomy_level && approval.autonomy_level !== requestContext.autonomyLevel) {
+      return { valid: false, reason: `Autonomy level mismatch: approved='${approval.autonomy_level}', requested='${requestContext.autonomyLevel}'` };
+    }
+    // 16. Verify data classification matches
+    if (approval.data_classification && approval.data_classification !== requestContext.dataClassification) {
+      return { valid: false, reason: `Data classification mismatch: approved='${approval.data_classification}', requested='${requestContext.dataClassification}'` };
+    }
+
+    // 25. Transition approved → executing (atomic, conditional on status='approved')
+    if (approval.status === 'approved') {
+      await base44.asServiceRole.entities.AIApproval.updateMany(
+        { id: approval.id, tenant_id: tenantId, status: 'approved' },
+        { $set: { status: 'executing' } }
+      ).catch(() => {});
+    }
+
     return { valid: true, approval };
   } catch (err) {
     return { valid: false, reason: `Approval validation failed: ${err.message}` };
@@ -567,7 +612,9 @@ export default async function(req: Request): Promise<Response> {
     }
 
     // ── STEP 3: VALIDATE TENANT MEMBERSHIP ─────────────────
-    const tenantCheck = validateTenantMembership(user.role, user.data?.tenant_id, tenant_id || null);
+    // Section 12: Cross-tenant operation requires explicit platform permission
+    const nexusUserPermissions = (user.data?.permissions || []) as string[];
+    const tenantCheck = validateTenantMembership(user.role, user.data?.tenant_id, tenant_id || null, nexusUserPermissions);
     if (!tenantCheck.valid) {
       // Audit the attempted cross-tenant request
       console.log(`[nexusGateway] TENANT VALIDATION FAILED: ${tenantCheck.reason} (user=${actorId}, role=${user.role})`);
@@ -641,9 +688,20 @@ export default async function(req: Request): Promise<Response> {
     }
 
     // ── STEP 6: POST-APPROVAL EXECUTION VALIDATION ─────────
+    // Section 3: Verifies all scope fields (service_key, model_key, tools,
+    // autonomy, data_classification) and transitions approved → executing.
     let approvalContext: any = null;
     if (approval_key) {
-      const approvalCheck = await validateApprovalForExecution(base44, approval_key, payloadHash, tenantId);
+      // Pre-resolve model and capability for scope verification
+      const preCapability = await resolveCapability(base44, service_key, tenantId);
+      const preModelKey = preCapability?.model_override || payload?.model || 'automatic';
+      const approvalCheck = await validateApprovalForExecution(base44, approval_key, payloadHash, tenantId, {
+        serviceKey: service_key,
+        modelKey: preModelKey,
+        autonomyLevel: requested_autonomy || L0_ANSWER,
+        dataClassification: data_classification || 'internal',
+        tools: ['InvokeLLM'],
+      });
       if (!approvalCheck.valid) {
         return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
           detail: approvalCheck.reason,
@@ -1398,20 +1456,19 @@ export default async function(req: Request): Promise<Response> {
     // If post-approval execution, update the AIApproval record
     if (approvalContext && executionStatus === 'success') {
       try {
-        await base44.asServiceRole.entities.AIApproval.update(approvalContext.id, {
-          status: 'executed',
-          execution_audit_event_id: auditId,
-          executed_at: new Date().toISOString(),
-        });
+        await base44.asServiceRole.entities.AIApproval.updateMany(
+          { id: approvalContext.id, tenant_id: tenantId, status: 'executing' },
+          { $set: { status: 'executed', execution_audit_event_id: auditId, executed_at: new Date().toISOString() } }
+        );
       } catch (err) {
         console.log(`[nexusGateway] AIApproval update to executed failed: ${err.message}`);
       }
     } else if (approvalContext && executionStatus !== 'success') {
       try {
-        await base44.asServiceRole.entities.AIApproval.update(approvalContext.id, {
-          status: 'execution_failed',
-          execution_audit_event_id: auditId,
-        });
+        await base44.asServiceRole.entities.AIApproval.updateMany(
+          { id: approvalContext.id, tenant_id: tenantId, status: 'executing' },
+          { $set: { status: 'execution_failed', execution_audit_event_id: auditId } }
+        );
       } catch (err) {
         console.log(`[nexusGateway] AIApproval update to execution_failed: ${err.message}`);
       }
