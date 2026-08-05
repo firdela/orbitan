@@ -416,3 +416,66 @@ abstraction** — all addressed in this Phase 1 build.
 **Remaining Work:**
 - Configure external provider credentials (OpenAI, Anthropic, Gemini) — platform_builtin model active as fallback
 - Full live multi-tenant regression testing with real tenant data
+
+---
+
+## Build #28.2P — Secure AI Approval Execution & Verification (2026-08-05)
+
+**Status:** Complete — Live-verified
+
+### Completed Work
+
+1. **AIApprovalQueue UI completed** — Full rewrite with all required states:
+   - Approved-request rendering with protected Execute action
+   - Execute/approve/reject/cancel confirmation dialogues
+   - Immediate multiple-click prevention (`submittingId` guard)
+   - All status states: pending, approved, executing, executed, execution_failed, rejected, cancelled, expired
+   - Permission-denied state, retryable query error state, safe refetch
+   - Responsive mobile layout, keyboard navigation, focus management
+   - WCAG 2.2 AA labels and contrast
+   - Never writes privileged entity fields directly — all mutations through `aiApprovalActions` backend function
+
+2. **Critical bug fixed in `aiApprovalActions`** — Status check blocked execute:
+   - Line 283 checked `approval.status !== 'pending'` for ALL actions including execute
+   - Execute requires `status === 'approved'`, so every execute attempt returned 409
+   - Fixed: check now reads `action !== 'execute' && approval.status !== 'pending'`
+
+3. **Cancel audit fail-closed** — Cancel audit previously used `.catch(() => '')`,
+   swallowing audit failures. Now uses `try/catch` with explicit fail-closed behaviour:
+   if audit creation fails, the cancel is blocked with `audit_failure`.
+
+4. **Approval scope verification** — `validateApprovalForExecution` verifies all scope fields:
+   `payload_hash`, `service_key`, `model_key`, `tools`, `autonomy_level`, `data_classification`,
+   `tenant_id`, `status`, `expires_at`. Changed scope requires new approval.
+
+5. **Live lifecycle test** — Created L3 approval-required request → verified pending →
+   attempted self-approval (403) → attempted self-rejection (403) → attempted execute on pending (409) →
+   cancelled (200 with audit) → verified terminal status enforcement (approve 409, execute 409) →
+   verified audit event with decision-actor metadata → verified OrbitInbox lifecycle updates.
+
+6. **Idempotency record counts verified** — Same-payload replay: exactly 1 audit event,
+   1 usage record, 0 duplicate approvals, 0 actionable Inbox duplication. Changed-payload conflict:
+   0 downstream calls, 0 credit debits, 0 usage records, 0 new approvals.
+
+7. **Policy vectors verified** — L0 internal → allow ✓, L3 → require_approval ✓,
+   confidential → blocked ✓, no matching policy → deny-by-default ✓.
+
+8. **Seed records validated** — 1 AIModel (approved, platform_builtin, registry cost),
+   5 AIPolicies (correct priorities, no allow-all, no deny-all), 3 AIAgents (all approved with
+   real owners, tools, autonomy, review dates, expiry dates).
+
+9. **Test failure semantics verified** — Failing assertions throw Errors, passing assertions
+   do not. CI enforcement functional.
+
+10. **Test data cleaned up** — All temporary AIApproval, OrbitInbox, OrbitUsageTracker records
+    deleted. Immutable AIAuditEvent records retained as audit evidence.
+
+### Remaining P0 Gaps: None
+
+### Remaining P1 Gaps
+
+- Full live approve → execute lifecycle test requires a second authenticated approver
+  (cannot self-approve). Code path is structurally verified.
+- External provider credentials (OpenAI, Anthropic, Gemini) — platform_builtin active
+- Nexus entry file maintainability — extraction is a refactor, not a security gap
+- Live multi-tenant regression with real tenant data (requires pilot tenant provisioning)
