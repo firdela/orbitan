@@ -7,7 +7,7 @@
 >
 > **Build Philosophy:** Build less. Validate more.
 >
-> **Last updated:** 2026-08-05 (Build #28.2I — Sidebar Badges, Public Inquiry Workflows & Canonical Email Routing)
+> **Last updated:** 2026-08-05 (Build #28.2J — Configurable Worker Overview Dashboard)
 
 ---
 
@@ -308,6 +308,109 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - Session expiry during ongoing API activity relies on the SDK's error propagation to AuthContext. The Base44 SDK does not provide a global 401 interceptor; mid-session 401s surface as errors in the calling component, which may or may not propagate to AuthContext depending on the component's error handling. A future enhancement could add a global fetch interceptor.
 - Resend cooldown (30 seconds) is client-side only. The Base44 SDK enforces its own rate limits server-side; the client cooldown is an additional UX safeguard, not a security control.
 - Cross-tab session consistency: when a session expires in one tab, other tabs may not detect it until the next API call or page navigation. A `storage` event listener could be added for instant cross-tab sync in a future enhancement.
+
+## Build #28.2J — Configurable Worker Overview Dashboard (2026-08-05)
+
+### Added — Worker Dashboard Widget Registry
+- **`src/lib/worker/widget-registry.js`** — canonical registry of 10 worker dashboard widgets. Each widget defines: id, title, size (full/half), defaultOrder, defaultVisible, allowWorkerToggle, emptyBehavior (hide/empty_state), roles, description. Exports: WIDGET_REGISTRY, WIDGET_SIZES, EMPTY_BEHAVIORS, getDefaultLayout, getEffectiveLayout, getWidgetById. Pure data — no React imports — so it can be imported by tests.
+
+### Added — Canonical Priority Resolver
+- **`src/lib/worker/priority-resolver.js`** — single canonical resolver for the "Next Priority" widget. Priority order: 1) Critical safety/compliance, 2) Overdue assigned task, 3) Shift action (late for shift), 4) Urgent unread announcement, 5) Next scheduled task. Returns "You're all caught up." when nothing requires attention. Bug fix: `||` → `??` for priority lookup (urgent=0 was being treated as falsy).
+
+### Added — Worker Overview Data Hook
+- **`src/lib/hooks/useWorkerOverview.js`** — fetches compliance records scoped to worker's outlet. Only new query — all other data (tasks, shifts, clock records, announcements) is passed from WorkerPortal via shared TanStack Query cache keys, avoiding duplicate network requests.
+
+### Added — Worker Attention Counts Hook
+- **`src/lib/hooks/useWorkerAttentionCounts.js`** — worker-scoped badge resolver for bottom navigation. Differs from useAttentionCounts (sidebar) in that counts are scoped to the individual worker's assignments, not the entire tenant. Badge sources: tasks (overdue + pending assigned to worker), safety (pending/overdue compliance in worker's outlet), home (combined critical count). Shifts and Me badges deferred (no reliable source yet).
+
+### Added — 10 Worker Dashboard Widget Components
+Each in `src/components/worker/widgets/`:
+- **`TodayShiftWidget.jsx`** — current shift + clock-in/out/break actions. Empty state: "No shift scheduled for today."
+- **`TodayTasksWidget.jsx`** — task counts, progress bar, next actionable task. Empty state: "No tasks assigned today." (distinct from "All tasks complete!" when all done).
+- **`NextPriorityWidget.jsx`** — renders canonical priority resolver result with severity-styled card.
+- **`UpcomingShiftsWidget.jsx`** — next 2-3 shifts with date, time. Empty state: "No upcoming shifts scheduled."
+- **`SafetyComplianceWidget.jsx`** — pending + overdue compliance counts. Hides at zero (emptyBehavior: hide).
+- **`AnnouncementsWidget.jsx`** — reuses existing AnnouncementFeed component with its own query.
+- **`WeeklyAttendanceWidget.jsx`** — current-week summary: completed hours, days, punctuality. Empty state: "No attendance data yet."
+- **`MyProgressWidget.jsx`** — today's task completion percentage. Empty state: "No tasks assigned today."
+- **`QuickActionsWidget.jsx`** — 4-action grid: My Tasks, My Shifts, Safety, Report Issue.
+- **`VoiceMattersWidget.jsx`** — feedback CTA linking to Me page.
+
+### Added — WorkerHomeScreen
+- **`src/components/worker/WorkerHomeScreen.jsx`** — renders the configurable widget grid. Uses `getEffectiveLayout` from the widget registry to determine which widgets to show and in what order. Maps widget IDs to components via WIDGET_COMPONENTS lookup. Receives all data from WorkerPortal as props (no duplicate fetching). Only compliance data is fetched via useWorkerOverview. Responsive grid: 1-column on mobile, 2-column on tablet/desktop (full-width widgets span both columns).
+
+### Updated — WorkerPortal Bottom Nav Badges
+- Bottom navigation now uses `useWorkerAttentionCounts` hook for canonical badge counts.
+- Badge rendering uses `formatBadgeCount` (hides at zero, shows 1-99, 99+ above 99) and `getBadgeAriaLabel` for accessible labels.
+- Badge sources: Home (combined critical count), Tasks (overdue + pending), Safety (pending + overdue compliance). Shifts and Me badges deferred.
+- All touch targets ≥44px.
+
+### Empty State Corrections
+- Tasks: "No tasks assigned today." (zero assigned) vs "All tasks complete!" (all completed) — distinct states.
+- Shifts: "No shift scheduled for today." (calm, no supervisor contact suggestion).
+- Attendance: "No attendance data yet." (no misleading percentages).
+- Safety: hidden at zero (emptyBehavior: hide).
+- Announcements: "You're up to date." (no unread items).
+
+### Performance Approach
+- Zero duplicate network requests between Home, Tasks, Shifts, and Safety screens.
+- All shared queries use the same TanStack Query cache keys.
+- Only one new query added (compliance records for worker's outlet).
+- useWorkerOverview uses 60s staleTime for compliance data.
+- useWorkerAttentionCounts uses 60s staleTime for badge counts.
+- WorkerHomeScreen receives data as props — no widget fetches its own data (except AnnouncementFeed which has its own existing query with 30s refetch).
+
+### Accessibility (WCAG 2.2 AA)
+- Semantic headings and sections.
+- Accessible badge labels with aria-label on nav buttons.
+- 44px minimum touch targets on all interactive elements.
+- No colour-only status meaning (badges include text count).
+- Loading states via OrbitanLoader.
+- Error states use safe messages.
+- Reduced-motion support via global @media (prefers-reduced-motion: reduce).
+
+### Worker Personalisation Status
+- Widget registry supports `allowWorkerToggle` (hide/show) and `widgetOrder` (rearrange) via `getEffectiveLayout`.
+- Non-toggleable widgets (today_shift, next_priority) cannot be hidden by workers.
+- Preference persistence via existing preferences architecture is designed but NOT yet implemented in this build. Workers see the default layout. Worker rearrangement is documented as a later phase.
+
+### Administrator Configuration Status
+- The widget registry defines the canonical layout. Administrator-controlled configuration (by organisation, outlet, role, industry pack) is designed but NOT yet implemented. The registry is the foundation — admin configuration will be built on top of it in a future build.
+
+### Files Created (16)
+- `src/lib/worker/widget-registry.js`
+- `src/lib/worker/priority-resolver.js`
+- `src/lib/hooks/useWorkerOverview.js`
+- `src/lib/hooks/useWorkerAttentionCounts.js`
+- `src/components/worker/widgets/TodayShiftWidget.jsx`
+- `src/components/worker/widgets/TodayTasksWidget.jsx`
+- `src/components/worker/widgets/NextPriorityWidget.jsx`
+- `src/components/worker/widgets/UpcomingShiftsWidget.jsx`
+- `src/components/worker/widgets/SafetyComplianceWidget.jsx`
+- `src/components/worker/widgets/AnnouncementsWidget.jsx`
+- `src/components/worker/widgets/WeeklyAttendanceWidget.jsx`
+- `src/components/worker/widgets/MyProgressWidget.jsx`
+- `src/components/worker/widgets/QuickActionsWidget.jsx`
+- `src/components/worker/widgets/VoiceMattersWidget.jsx`
+- `src/components/worker/WorkerHomeScreen.jsx`
+- `src/lib/__tests__/worker-dashboard.test.js`
+
+### Files Modified (1)
+- `src/pages/WorkerPortal.jsx` — replaced inline Home section with WorkerHomeScreen component; added canonical attention count hook for bottom-nav badges; updated badge rendering to use formatBadgeCount + getBadgeAriaLabel.
+
+### Tests
+- **`src/lib/__tests__/worker-dashboard.test.js`** — 27 pure-function test cases. **Result: 27/27 passed (100%).**
+- Tests cover: widget registry (10 widgets, unique IDs, metadata, layout resolution, role filtering, hidden preferences, custom ordering), priority resolver (caught-up state, compliance, overdue tasks, shift actions, announcements, acknowledged announcements, next tasks, priority ordering, null handling), badge formatting (zero/null/1-99/99+), accessible labels.
+- Bug found and fixed during testing: `||` vs `??` in priority lookup caused urgent tasks (priority=0) to be treated as medium (priority=2).
+
+### Remaining Limitations
+- **Worker personalisation:** Widget hide/show and rearrangement is designed in the registry but not yet wired to preference persistence. Workers see the default layout.
+- **Administrator configuration:** Admin-controlled widget visibility by org/outlet/role/industry is designed but not yet implemented.
+- **Shifts badge:** Deferred — no reliable shift-change/confirmation source exists yet.
+- **Me badge:** Deferred — no profile-completion or onboarding-action flag exists yet.
+- **Dashboard combined badge:** Home badge shows combined critical count (overdue tasks + overdue compliance). May be too noisy for some roles — needs tuning after pilot feedback.
+- **My Progress widget:** Currently shows only today's task completion. Training completion and onboarding checklist progress are designed but not yet wired (no reliable data source for worker-scoped training progress).
+- **Weekly Attendance widget:** Shows raw hours and punctuality. Does not show scheduled hours (would require querying Shift records for the week, which is available but not yet wired to avoid overcomplicating the widget).
 
 ## Build #28.2I — Sidebar Badges, Public Inquiry Workflows & Canonical Email Routing (2026-08-05)
 

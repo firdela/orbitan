@@ -7,6 +7,42 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2J (Configurable Worker Overview Dashboard) (2026-08-05)
+
+### Added — Worker Dashboard Widget Registry
+- `src/lib/worker/widget-registry.js` — canonical registry of 10 worker widgets with metadata (id, title, size, order, visibility, roles, empty behavior). Pure data, no React imports. Exports getDefaultLayout, getEffectiveLayout for configurable rendering.
+
+### Added — Canonical Priority Resolver
+- `src/lib/worker/priority-resolver.js` — single resolver for "Next Priority" widget. Priority order: compliance → overdue task → shift action → urgent announcement → next task. Returns "You're all caught up." when nothing requires attention. Bug fix: `||` → `??` for priority lookup.
+
+### Added — Worker Data Hooks
+- `src/lib/hooks/useWorkerOverview.js` — fetches compliance records for worker's outlet (only new query; all other data shared from WorkerPortal cache).
+- `src/lib/hooks/useWorkerAttentionCounts.js` — worker-scoped badge resolver for bottom nav. Sources: tasks (overdue + pending assigned to worker), safety (pending/overdue compliance in outlet), home (combined critical count).
+
+### Added — 10 Widget Components + WorkerHomeScreen
+- `src/components/worker/widgets/` — 10 focused widget components (TodayShift, TodayTasks, NextPriority, UpcomingShifts, SafetyCompliance, Announcements, WeeklyAttendance, MyProgress, QuickActions, VoiceMatters).
+- `src/components/worker/WorkerHomeScreen.jsx` — configurable grid rendering widgets based on registry + preferences. Responsive: 1-column mobile, 2-column tablet/desktop.
+
+### Updated — WorkerPortal
+- Replaced inline Home section with WorkerHomeScreen component.
+- Bottom-nav badges now use canonical useWorkerAttentionCounts + formatBadgeCount + getBadgeAriaLabel.
+- 44px touch targets on all nav buttons.
+
+### Empty State Corrections
+- Tasks: "No tasks assigned today." (zero) vs "All tasks complete!" (all done) — distinct.
+- Shifts: "No shift scheduled for today." (calm, no supervisor nag).
+- Attendance: "No attendance data yet." (no misleading percentages).
+- Safety: hidden at zero.
+
+### Tests
+- 27 pure-function tests in `src/lib/__tests__/worker-dashboard.test.js`. **27/27 passed.**
+
+### Deferred
+- Worker personalisation (hide/show/rearrange) — designed in registry, not yet wired to preferences.
+- Administrator configuration (org/outlet/role/industry overrides) — designed, not yet implemented.
+- Shifts and Me badges — no reliable source yet.
+- My Progress: training/onboarding progress — no worker-scoped data source yet.
+
 ## [Unreleased] — Build #28.2I (Sidebar Badges, Public Inquiry Workflows & Canonical Email Routing) (2026-08-05)
 
 ### Added — PublicInquiry Entity

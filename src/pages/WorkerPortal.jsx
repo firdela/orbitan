@@ -12,11 +12,13 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import WorkerFeedbackModal from '@/components/worker/WorkerFeedbackModal';
 import AccessRequestView from '@/components/worker/AccessRequestView';
-import AnnouncementFeed from '@/components/announcements/AnnouncementFeed';
 import ReportIssueModal from '@/components/shared/ReportIssueModal';
 import FoodSafetyLogWidget from '@/components/worker/FoodSafetyLogWidget';
 import NotificationsInbox from '@/components/shared/NotificationsInbox';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
+import WorkerHomeScreen from '@/components/worker/WorkerHomeScreen';
+import { useWorkerAttentionCounts } from '@/lib/hooks/useWorkerAttentionCounts';
+import { formatBadgeCount, getBadgeAriaLabel } from '@/lib/hooks/useAttentionCounts';
 import {
   Clock, CheckSquare, Calendar, LogIn, LogOut,
   ChevronRight, MapPin, CheckCircle2, Flame, Trophy, Shield,
@@ -590,6 +592,11 @@ export default function WorkerPortal() {
   const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   const urgentTasks = liveTasks.filter(t => t.priority === 'urgent' && t.status !== 'completed').length;
 
+  // ── Canonical attention counts for bottom-nav badges ──
+  const { counts: attentionCounts } = useWorkerAttentionCounts({
+    tenantId, outletId, userId,
+  });
+
   // ── Loading state ─────────────────────────────────────────────────────────
 
   if (empLoading) {
@@ -610,11 +617,11 @@ export default function WorkerPortal() {
   };
 
   const NAV_TABS = [
-    { id: 'home', icon: Home, label: 'Home' },
-    { id: 'tasks', icon: ListChecks, label: 'Tasks', badge: urgentTasks },
-    { id: 'shifts', icon: Calendar, label: 'Shifts' },
-    { id: 'safety', icon: Shield, label: 'Safety' },
-    { id: 'profile', icon: User, label: 'Me' },
+    { id: 'home', icon: Home, label: 'Home', badge: attentionCounts.home },
+    { id: 'tasks', icon: ListChecks, label: 'Tasks', badge: attentionCounts.tasks },
+    { id: 'shifts', icon: Calendar, label: 'Shifts', badge: attentionCounts.shifts },
+    { id: 'safety', icon: Shield, label: 'Safety', badge: attentionCounts.safety },
+    { id: 'profile', icon: User, label: 'Me', badge: attentionCounts.me },
   ];
 
   return (
@@ -640,156 +647,29 @@ export default function WorkerPortal() {
 
       <main className="max-w-lg mx-auto px-4 py-5 space-y-4 pb-28">
 
-        {/* HOME */}
+        {/* HOME — Configurable Worker Overview Dashboard */}
         {activeSection === 'home' && (
-          <>
-            {/* Greeting */}
-            <div className="animate-fade-in">
-              <p className="text-xs text-muted-foreground">{format(currentTime, 'EEEE, d MMMM yyyy')}</p>
-              <h1 className="text-2xl font-display font-bold text-foreground mt-0.5">
-                {greeting}, <span className="text-orbitan-blue">{workerFirstName}</span> 👋
-              </h1>
-              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                <MapPin className="w-3 h-3" />{employee?.position || 'Team Member'}
-              </p>
-            </div>
-
-            {/* Compliance Gate Alert */}
-            {pendingVerification.length > 0 && (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3 animate-fade-in">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                  <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">Attendance Verification Required</p>
-                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
-                    {pendingVerification.length} clock record{pendingVerification.length > 1 ? 's are' : ' is'} pending
-                    manager verification — likely due to a missing Food Safety Log. Please contact your supervisor.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Progress */}
-            {totalTasks > 0 && (
-              <div className="bg-card border border-border rounded-2xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-amber-500" />
-                    <span className="text-sm font-semibold">Today's Progress</span>
-                  </div>
-                  <span className="text-sm font-bold">{progressPct}%</span>
-                </div>
-                <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                  <div className="h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-700" style={{ width: `${progressPct}%` }} />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1.5">{completedTasks} of {totalTasks} tasks completed</p>
-              </div>
-            )}
-
-            {/* Clock In/Out Hero */}
-            <div className={`rounded-2xl p-5 text-white relative overflow-hidden ${clockedIn ? 'bg-gradient-to-br from-emerald-600 to-teal-700' : 'bg-gradient-to-br from-blue-600 to-indigo-700'}`}>
-              <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 60%)' }} />
-              <div className="relative flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Work Status</p>
-                  <p className="text-xl font-display font-bold mt-0.5">
-                    {clockStatus?.status === 'on_break' ? 'On Break ☕' : clockedIn ? 'Clocked In ✓' : 'Not Clocked In'}
-                  </p>
-                  {clockedIn
-                    ? <p className="text-white/80 text-xs mt-1">Duration: <span className="font-mono font-bold">{elapsed}</span></p>
-                    : <p className="text-white/60 text-xs mt-1">Tap below to start your shift</p>
-                  }
-                </div>
-                <div className="text-right">
-                  <p className="text-3xl font-mono font-bold">{format(currentTime, 'HH:mm')}</p>
-                  <p className="text-white/50 text-xs font-mono">{format(currentTime, ':ss')}</p>
-                </div>
-              </div>
-              {todayShift && (
-                <div className="bg-white/15 rounded-xl px-3 py-2.5 mb-3 flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-white/70 flex-shrink-0" />
-                  <span className="text-xs text-white/90 font-medium">Today: {todayShift.start_time} – {todayShift.end_time}</span>
-                </div>
-              )}
-              <button
-                onClick={clockedIn ? handleClockOut : handleClockIn}
-                disabled={clocking}
-                className="w-full bg-white/20 hover:bg-white/30 active:scale-[0.98] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all border border-white/20 disabled:opacity-50">
-                {clocking ? <Loader2 className="w-4 h-4 animate-spin" /> : clockedIn ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
-                {clocking ? 'Please wait...' : clockedIn ? 'Clock Out' : 'Clock In Now'}
-              </button>
-              {clockStatus?.status === 'clocked_in' && (
-                <button
-                  onClick={handleStartBreak}
-                  disabled={clocking}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white font-medium py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all border border-white/15 disabled:opacity-50 mt-2">
-                  <Utensils className="w-3.5 h-3.5" /> Start Break
-                </button>
-              )}
-              {clockStatus?.status === 'on_break' && (
-                <button
-                  onClick={handleEndBreak}
-                  disabled={clocking}
-                  className="w-full bg-white/20 hover:bg-white/30 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all border border-white/20 disabled:opacity-50 mt-2">
-                  <RotateCcw className="w-3.5 h-3.5" /> End Break & Resume
-                </button>
-              )}
-            </div>
-
-            {/* My Attendance Exceptions — employee justification */}
-            <MyAttendanceExceptions tenantId={tenantId} employeeId={workerId} employeeName={workerName} />
-
-            {/* Top urgent tasks */}
-            {liveTasks.filter(t => t.status !== 'completed').slice(0, 3).length > 0 && (
-              <div className="bg-card border border-border rounded-2xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckSquare className="w-4 h-4 text-orbitan-blue" />
-                    <span className="text-sm font-semibold">Pending Tasks</span>
-                    {urgentTasks > 0 && <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full">{urgentTasks} urgent</span>}
-                  </div>
-                  <button onClick={() => setActiveSection('tasks')} className="text-xs text-primary font-medium">See all →</button>
-                </div>
-                <div className="divide-y divide-border">
-                  {liveTasks.filter(t => t.status !== 'completed').slice(0, 3).map(task => {
-                    const pConf = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
-                    return (
-                      <div key={task.id}
-                        onClick={() => updateTask.mutate({ id: task.id, status: 'completed' })}
-                        className="px-5 py-3.5 flex items-center gap-3 cursor-pointer hover:bg-muted/40 active:bg-muted transition-colors">
-                        <div className="w-5 h-5 rounded-full border-2 border-muted-foreground flex items-center justify-center flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{task.title}</p>
-                        </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${pConf.color}`}>{pConf.label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Announcements Feed */}
-            <AnnouncementFeed
-              tenantId={tenantId}
-              workerId={workerId}
-              maxItems={5}
-            />
-
-            {/* Feedback CTA */}
-            <button onClick={() => setActiveSection('profile')}
-              className="w-full bg-gradient-to-r from-orbitan-blue/10 to-purple-500/10 border border-primary/20 rounded-2xl p-4 flex items-center gap-3 hover:shadow-sm active:scale-[0.99] transition-all text-left">
-              <div className="w-10 h-10 rounded-xl orbitan-gradient flex items-center justify-center flex-shrink-0">
-                <MessageSquarePlus className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-foreground">Your Voice Matters</p>
-                <p className="text-xs text-muted-foreground">Send feedback to your manager, leaders, or Orbitan</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </>
+          <WorkerHomeScreen
+            workerFirstName={workerFirstName}
+            employee={employee}
+            tenantId={tenantId}
+            outletId={outletId}
+            workerId={workerId}
+            userId={userId}
+            currentTime={currentTime}
+            tasks={liveTasks}
+            shifts={liveShifts}
+            clockRecords={clockRecords}
+            clockStatus={clockStatus}
+            clocking={clocking}
+            onClockIn={handleClockIn}
+            onClockOut={handleClockOut}
+            onStartBreak={handleStartBreak}
+            onEndBreak={handleEndBreak}
+            onNavigate={setActiveSection}
+            onReportIssue={() => setReportIssueOpen(true)}
+            pendingVerification={pendingVerification}
+          />
         )}
 
         {/* TASKS */}
@@ -858,18 +738,25 @@ export default function WorkerPortal() {
       {/* Bottom Nav */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-lg mx-auto px-2 pt-2 pb-3 flex items-center justify-around">
-          {NAV_TABS.map(({ id, icon: Icon, label, badge }) => (
-            <button key={id} onClick={() => setActiveSection(id)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all relative ${activeSection === id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
-              <div className={`p-1.5 rounded-xl transition-colors ${activeSection === id ? 'bg-primary/10' : ''}`}>
-                <Icon className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] font-semibold">{label}</span>
-              {badge > 0 && (
-                <span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background" />
-              )}
-            </button>
-          ))}
+          {NAV_TABS.map(({ id, icon: Icon, label, badge }) => {
+            const badgeText = formatBadgeCount(badge);
+            const badgeLabel = getBadgeAriaLabel(id === 'safety' ? 'compliance' : id, badge);
+            return (
+              <button key={id} onClick={() => setActiveSection(id)}
+                aria-label={badgeLabel ? `${label} — ${badgeLabel}` : label}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all relative ${activeSection === id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+                <div className={`p-1.5 rounded-xl transition-colors ${activeSection === id ? 'bg-primary/10' : ''}`}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-semibold">{label}</span>
+                {badgeText && (
+                  <span className="absolute -top-0.5 right-0 min-w-[18px] h-[18px] px-1 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-background">
+                    {badgeText}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
