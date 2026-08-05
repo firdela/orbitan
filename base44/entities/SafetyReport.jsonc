@@ -1,0 +1,303 @@
+{
+  "name": "SafetyReport",
+  "type": "object",
+  "description": "OrbitanOS Worker Safety Hub \u2014 unified safety report model for hazard, incident, near-miss, injury, equipment issue, food-safety issue, and other safety concerns. Workers can create reports and view their own submission status. Workers cannot view other workers' restricted reports. Confidential investigation notes are admin/manager-only. Tenant-isolated and outlet-scoped. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string"
+    },
+    "report_type": {
+      "type": "string",
+      "enum": [
+        "hazard",
+        "incident",
+        "near_miss",
+        "injury",
+        "equipment_issue",
+        "food_safety_issue",
+        "other"
+      ],
+      "description": "Type of safety report"
+    },
+    "reference_code": {
+      "type": "string",
+      "description": "Human-readable unique reference e.g. SAF-2026-0001. Generated on creation."
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of what happened"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "medium"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the incident/hazard occurred"
+    },
+    "location_detail": {
+      "type": "string",
+      "description": "Specific location within the outlet where it occurred"
+    },
+    "immediate_action_taken": {
+      "type": "string",
+      "description": "What immediate action was taken at the time"
+    },
+    "witness_info": {
+      "type": "string",
+      "description": "Witness name(s) and contact if available. Optional."
+    },
+    "attachment_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Photos or documents attached as evidence"
+    },
+    "is_anonymous": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, the reporter's identity is hidden from non-admin viewers."
+    },
+    "is_confidential": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, investigation notes are restricted to admin/manager only."
+    },
+    "reported_by_id": {
+      "type": "string",
+      "description": "User ID of the reporter. Null if anonymous submission."
+    },
+    "reported_by_name": {
+      "type": "string"
+    },
+    "reported_by_role": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "submitted",
+        "acknowledged",
+        "under_investigation",
+        "action_taken",
+        "resolved",
+        "closed"
+      ],
+      "default": "submitted"
+    },
+    "acknowledged_by_id": {
+      "type": "string"
+    },
+    "acknowledged_by_name": {
+      "type": "string"
+    },
+    "acknowledged_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "investigation_notes": {
+      "type": "string",
+      "description": "Confidential investigation notes. Worker cannot view these."
+    },
+    "resolution_summary": {
+      "type": "string",
+      "description": "Public resolution summary visible to the reporter."
+    },
+    "resolved_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "linked_compliance_id": {
+      "type": "string",
+      "description": "Optional link to a ComplianceRecord if this report triggered a compliance action."
+    }
+  },
+  "required": [
+    "tenant_id",
+    "report_type",
+    "title",
+    "description",
+    "severity"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "worker"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "data.outlet_id": "{{user.data.outlet_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "data.reported_by_id": "{{user.id}}"
+            },
+            {
+              "data.is_anonymous": false
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "data.reported_by_id": "{{user.id}}"
+            },
+            {
+              "data.is_anonymous": false
+            },
+            {
+              "data.status": "submitted"
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "data.reported_by_id": "{{user.id}}"
+            },
+            {
+              "data.is_anonymous": false
+            },
+            {
+              "data.status": "submitted"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

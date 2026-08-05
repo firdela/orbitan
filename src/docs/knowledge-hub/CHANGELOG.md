@@ -7,6 +7,75 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2K (Worker Calendar, Safety Hub & Profile Menu) (2026-08-05)
+
+### Added — WorkerCalendarEvent Entity
+- `base44/entities/WorkerCalendarEvent.jsonc` — personal work-related calendar events. Worker-private by default. Never becomes attendance or payroll. RLS-locked to owner.
+
+### Added — SafetyReport Entity
+- `base44/entities/SafetyReport.jsonc` — unified safety report model (hazard, incident, near-miss, injury, equipment, food safety, other). Anonymous and confidential reporting supported. Investigation notes RLS-protected.
+
+### Added — Calendar Event Adapter
+- `src/lib/worker/calendar-event-adapter.js` — canonical unified calendar event model. Normalises Shift, WorkerCalendarEvent, ComplianceRecord, Announcement, Employee milestones. 6 event types with icon/colour/label metadata. Pure JS.
+
+### Added — iCalendar (.ics) Export
+- `src/lib/worker/ics-export.js` — RFC 5545 iCalendar generator. Single event + range export. Authorised data only — no internal IDs, tenant secrets, or other employee's information. Stable UIDs, correct timezone.
+
+### Added — Safety Hub Configuration
+- `src/lib/worker/safety-config.js` — industry-aware safety module visibility. F&B gets food_safety_log; all industries get incident reporting, compliance, emergency info, training.
+
+### Added — Worker Schedule & Calendar Hub
+- `src/components/worker/WorkerScheduleHub.jsx` — replaces ShiftsScreen. Calendar primary view. Compact clock status (dedup from Home hero). Personal events, .ics export, employment milestones.
+
+### Added — Calendar View
+- `src/components/worker/WorkerCalendarView.jsx` — Agenda (mobile default), Week, Month views. Navigation, .ics export per event and range. Event type by icon+colour+label (WCAG).
+
+### Added — Personal Event Dialog
+- `src/components/worker/PersonalEventDialog.jsx` — create/edit personal work events. Privacy notice: does not count as paid shift, does not affect payroll, does not create manager obligations.
+
+### Added — Safety Hub
+- `src/components/worker/SafetyHub.jsx` — expanded Safety screen. Safety Overview, quick report actions, Food Safety Log (F&B), My Safety Reports, Training & Certifications, Compliance Centre.
+
+### Added — Safety Report Dialog
+- `src/components/worker/SafetyReportDialog.jsx` — 7 report types, severity, anonymous toggle, confidential investigation notes.
+
+### Added — Worker Profile Menu
+- `src/components/worker/WorkerProfileMenu.jsx` — avatar popover. Worker-appropriate actions only: Notifications, Preferences, Help & Support, My Profile, Sign Out. No admin controls. Closes on outside click + Escape. Canonical support routing.
+
+### Duplication Removed
+1. Clock Hero removed from Shifts (Home's TodayShiftWidget is canonical)
+2. Compliance Centre shortcut removed from Me (now in Safety Hub only)
+3. Sign Out removed from Me page (now in avatar menu only)
+4. FoodSafetyLogWidget moved to SafetyHub (removed from WorkerPortal imports)
+5. ShiftsScreen inline function replaced by WorkerScheduleHub component
+
+### Navigation Ownership
+- Home → overview and priority only
+- Tasks → full assigned-task management
+- Shifts → schedule, calendar, work-event tools
+- Safety → all worker safety and compliance actions
+- Me → complete profile, preferences, feedback, personal tools
+- Avatar menu → quick navigation only
+
+### Employment Milestones
+- Implemented from `Employee.hire_date` (1/2/3/5/10/15/20/25-year anniversaries)
+- Birthdays DEFERRED (no birth_date field on frozen Employee schema)
+
+### External Calendar Sync
+- Implemented: .ics export and download
+- Deferred: Google Calendar OAuth, Microsoft 365 sync, subscription feed, bidirectional conflict handling
+
+### Tests
+- 36 pure-function tests in `src/lib/__tests__/worker-calendar-safety.test.js`. **36/36 passed.**
+
+### Deferred
+- Birthday display (frozen Employee schema has no birth_date)
+- External calendar OAuth sync (Google/Microsoft)
+- Calendar subscription feed with revocation
+- Shifts badge (no reliable actionable source)
+- Emergency information (requires outlet configuration entity)
+- Me badge (no profile-completion flag)
+
 ## [Unreleased] — Build #28.2J (Configurable Worker Overview Dashboard) (2026-08-05)
 
 ### Added — Worker Dashboard Widget Registry

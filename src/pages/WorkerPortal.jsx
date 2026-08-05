@@ -1,29 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, isToday } from 'date-fns';
 import { useAuth } from '@/lib/AuthContext';
 import { auditFrontend, ACTION_TYPES } from '@/lib/audit';
-import MyAttendanceExceptions from '@/components/worker/MyAttendanceExceptions';
 import { useToast } from '@/components/ui/use-toast';
 import OrbitanLogo from '@/components/layout/OrbitanLogo';
-import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import WorkerFeedbackModal from '@/components/worker/WorkerFeedbackModal';
 import AccessRequestView from '@/components/worker/AccessRequestView';
 import ReportIssueModal from '@/components/shared/ReportIssueModal';
-import FoodSafetyLogWidget from '@/components/worker/FoodSafetyLogWidget';
 import NotificationsInbox from '@/components/shared/NotificationsInbox';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import WorkerHomeScreen from '@/components/worker/WorkerHomeScreen';
+import WorkerScheduleHub from '@/components/worker/WorkerScheduleHub';
+import SafetyHub from '@/components/worker/SafetyHub';
+import WorkerProfileMenu from '@/components/worker/WorkerProfileMenu';
 import { useWorkerAttentionCounts } from '@/lib/hooks/useWorkerAttentionCounts';
 import { formatBadgeCount, getBadgeAriaLabel } from '@/lib/hooks/useAttentionCounts';
 import {
-  Clock, CheckSquare, Calendar, LogIn, LogOut,
+  Clock, Calendar,
   ChevronRight, MapPin, CheckCircle2, Flame, Trophy, Shield,
   MessageSquarePlus, Home, ListChecks, User,
-  RotateCcw, Utensils, Zap, X, Loader2
+  RotateCcw, Utensils, X
 } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -182,88 +181,12 @@ function TasksScreen({ tasks, updateTask }) {
   );
 }
 
-function ShiftsScreen({ shifts, clockedIn, clockInTime, elapsed, onClockIn, onClockOut }) {
-  const currentTime = new Date();
-  const todayShift = shifts.find(s => isToday(new Date(s.date)));
+// ShiftsScreen is now WorkerScheduleHub — see src/components/worker/
 
-  return (
-    <div className="space-y-4">
-      {/* Clock Hero */}
-      <div className={`rounded-2xl p-5 text-white relative overflow-hidden ${clockedIn ? 'bg-gradient-to-br from-emerald-600 to-teal-700' : 'bg-gradient-to-br from-blue-600 to-indigo-700'}`}>
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 20%, white 0%, transparent 60%)' }} />
-        <div className="relative flex items-start justify-between mb-4">
-          <div>
-            <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest">Work Status</p>
-            <p className="text-xl font-display font-bold mt-0.5">{clockedIn ? 'Clocked In ✓' : 'Not Started'}</p>
-            {clockedIn
-              ? <p className="text-white/80 text-xs mt-1">Duration: <span className="font-mono font-bold">{elapsed}</span></p>
-              : <p className="text-white/60 text-xs mt-1">Tap to begin your shift</p>
-            }
-          </div>
-          <div className="text-right">
-            <p className="text-3xl font-mono font-bold">{format(currentTime, 'HH:mm')}</p>
-            <p className="text-white/50 text-xs font-mono">{format(currentTime, ':ss')}</p>
-          </div>
-        </div>
-        {todayShift && (
-          <div className="bg-white/15 rounded-xl px-3 py-2.5 mb-3 flex items-center gap-2">
-            <Calendar className="w-3.5 h-3.5 text-white/70 flex-shrink-0" />
-            <span className="text-xs text-white/90 font-medium">Today: {todayShift.start_time} – {todayShift.end_time}</span>
-          </div>
-        )}
-        <button
-          onClick={clockedIn ? onClockOut : onClockIn}
-          className="w-full bg-white/20 hover:bg-white/30 active:scale-[0.98] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all border border-white/20">
-          {clockedIn ? <LogOut className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
-          {clockedIn ? 'Clock Out' : 'Clock In Now'}
-        </button>
-      </div>
-
-      {/* Full schedule */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-orbitan-purple" />
-          <h3 className="font-heading font-semibold text-sm">My Schedule</h3>
-        </div>
-        <div className="divide-y divide-border">
-          {shifts.length === 0 && (
-            <div className="px-5 py-12 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3">
-                <Calendar className="w-7 h-7 text-muted-foreground" />
-              </div>
-              <p className="text-sm font-semibold text-foreground">No shifts scheduled</p>
-              <p className="text-xs text-muted-foreground mt-1 max-w-[16rem] mx-auto">
-                Your manager hasn't assigned any shifts yet. Contact your supervisor if you
-                believe this is an error.
-              </p>
-            </div>
-          )}
-          {shifts.map(shift => {
-            const isShiftToday = isToday(new Date(shift.date));
-            return (
-              <div key={shift.id} className={`px-5 py-4 flex items-center gap-3 ${isShiftToday ? 'bg-primary/5' : ''}`}>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isShiftToday ? 'orbitan-gradient' : 'bg-muted'}`}>
-                  <Clock className={`w-4 h-4 ${isShiftToday ? 'text-white' : 'text-muted-foreground'}`} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">{format(new Date(shift.date), 'EEE, d MMM')}</p>
-                    {isShiftToday && <span className="text-[10px] font-bold bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">Today</span>}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{shift.start_time} – {shift.end_time}</p>
-                </div>
-                <StatusBadge status={isShiftToday && clockedIn ? 'in_progress' : shift.status} />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-    </div>
-  );
-}
-
-function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onReportIssue, onSignOut, onNavigate }) {
+// ProfileScreen: Sign Out moved to avatar menu (dedup).
+// Compliance Centre shortcut removed (now in Safety Hub — dedup).
+// Report Issue kept here as the canonical single entry point.
+function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onReportIssue, onNavigate }) {
   return (
     <div className="space-y-4">
       {/* Profile card */}
@@ -290,7 +213,7 @@ function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onR
         </div>
       </div>
 
-      {/* Feedback channels */}
+      {/* Feedback channels — canonical single location */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h3 className="font-heading font-semibold text-sm flex items-center gap-2">
@@ -306,7 +229,7 @@ function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onR
             { emoji: '🚀', label: 'Improve Orbitan', desc: 'Tell the product team', type: 'orbitan_product_feedback' },
           ].map(item => (
             <button key={item.type} onClick={() => onFeedback(item.type)}
-              className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 active:bg-muted transition-colors text-left">
+              className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 active:bg-muted transition-colors text-left min-h-[44px]">
               <span className="text-lg flex-shrink-0">{item.emoji}</span>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-foreground">{item.label}</p>
@@ -316,7 +239,7 @@ function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onR
             </button>
           ))}
           <button onClick={onReportIssue}
-            className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 active:bg-muted transition-colors text-left">
+            className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 active:bg-muted transition-colors text-left min-h-[44px]">
             <span className="text-lg flex-shrink-0">🐛</span>
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">Report an Issue</p>
@@ -327,31 +250,19 @@ function ProfileScreen({ worker, attendancePct, productivityPct, onFeedback, onR
         </div>
       </div>
 
-      {/* Sign Out */}
-      <button onClick={onSignOut}
-        className="w-full flex items-center justify-center gap-2 bg-card border border-border rounded-2xl px-5 py-4 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-sm font-semibold text-muted-foreground">
-        <LogOut className="w-4 h-4" />
-        Sign Out
-      </button>
-
-      {/* Quick access links */}
+      {/* Quick access — Home only (Compliance Centre is in Safety Hub) */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
           <h3 className="font-heading font-semibold text-sm">Quick Access</h3>
         </div>
         <div className="divide-y divide-border">
-          {[
-            { section: 'home', icon: Utensils, label: 'F&B Dashboard', color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400' },
-            { section: 'safety', icon: Shield, label: 'Compliance Centre', color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400' },
-          ].map(({ section, icon: Icon, label, color }) => (
-            <button key={section} onClick={() => onNavigate?.(section)} className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 transition-colors group text-left">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
-                <Icon className="w-4 h-4" />
-              </div>
-              <p className="text-sm font-medium text-foreground flex-1">{label}</p>
-              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          ))}
+          <button onClick={() => onNavigate?.('home')} className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/50 transition-colors group text-left min-h-[44px]">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-orange-500/10 text-orange-600 dark:text-orange-400">
+              <Utensils className="w-4 h-4" />
+            </div>
+            <p className="text-sm font-medium text-foreground flex-1">Home Dashboard</p>
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+          </button>
         </div>
       </div>
     </div>
@@ -434,6 +345,33 @@ export default function WorkerPortal() {
     queryKey: ['worker-clockrecords', tenantId, userId],
     queryFn: () => base44.entities.ClockRecord.filter({ tenant_id: tenantId, employee_id: userId }),
     enabled: !!tenantId && !!userId,
+  });
+
+  // ── Tenant query for industry-aware safety modules ──────────────────────
+  const { data: tenant } = useQuery({
+    queryKey: ['worker-tenant', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return null;
+      return await base44.entities.Tenant.get(tenantId);
+    },
+    enabled: !!tenantId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // ── Compliance records for calendar + safety overview ───────────────────
+  const { data: complianceRecords = [] } = useQuery({
+    queryKey: ['worker-compliance', tenantId, outletId],
+    queryFn: async () => {
+      if (!tenantId || !outletId) return [];
+      const records = await base44.entities.ComplianceRecord.filter(
+        { tenant_id: tenantId, outlet_id: outletId },
+        '-due_date',
+        50
+      );
+      return records || [];
+    },
+    enabled: !!tenantId && !!outletId,
+    staleTime: 60 * 1000,
   });
 
   // ── Real clock status from clockController backend function ──────────────
@@ -638,9 +576,15 @@ export default function WorkerPortal() {
               </div>
             )}
             <NotificationsInbox tenantSlug={tenantId} />
-            <div className="w-9 h-9 rounded-full orbitan-gradient flex items-center justify-center text-white text-xs font-bold shadow-md">
-              {workerInitials}
-            </div>
+            <WorkerProfileMenu
+              workerName={workerName}
+              workerInitials={workerInitials}
+              workerRole={employee?.role || 'worker'}
+              position={employee?.position || 'Team Member'}
+              organisationName={tenant?.name || ''}
+              outletName={employee?.outlet_id || ''}
+              onSignOut={() => base44.auth.logout()}
+            />
           </div>
         </div>
       </header>
@@ -677,46 +621,38 @@ export default function WorkerPortal() {
           <TasksScreen tasks={liveTasks} updateTask={updateTask} />
         )}
 
-        {/* SHIFTS */}
+        {/* SHIFTS — Worker Schedule & Calendar Hub */}
         {activeSection === 'shifts' && (
-          <ShiftsScreen
+          <WorkerScheduleHub
+            employee={employee}
+            tenantId={tenantId}
+            outletId={outletId}
+            workerId={workerId}
+            userId={userId}
             shifts={liveShifts}
-            clockedIn={clockedIn}
-            clockInTime={clockInTime}
-            elapsed={elapsed}
+            clockStatus={clockStatus?.status}
+            clocking={clocking}
             onClockIn={handleClockIn}
             onClockOut={handleClockOut}
+            onStartBreak={handleStartBreak}
+            onEndBreak={handleEndBreak}
+            complianceRecords={complianceRecords}
           />
         )}
 
-        {/* SAFETY */}
+        {/* SAFETY — Industry-aware Safety Hub */}
         {activeSection === 'safety' && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="font-display font-bold text-lg text-foreground">Food Safety</h2>
-              <p className="text-xs text-muted-foreground">Orbitan Shield™ · Regulate Principle</p>
-            </div>
-            <FoodSafetyLogWidget
-              employeeId={workerId}
-              employeeName={workerFirstName}
-              tenantId={tenantId}
-              outletId={outletId}
-            />
-            <Link to={tenantId ? `/workspace/${tenantId}/compliance` : '/workspace'}
-              className="flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3.5 hover:border-primary/30 transition-all group">
-              <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0">
-                <Shield className="w-4 h-4 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">Compliance Centre</p>
-                <p className="text-xs text-muted-foreground">View all audits & requirements</p>
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </div>
+          <SafetyHub
+            employee={employee}
+            tenantId={tenantId}
+            outletId={outletId}
+            workerId={userId}
+            workerName={workerName}
+            industry={tenant?.industry || 'food_beverage'}
+          />
         )}
 
-        {/* PROFILE / ME */}
+        {/* PROFILE / ME — Sign Out moved to avatar menu */}
         {activeSection === 'profile' && (
           <ProfileScreen
             worker={{
@@ -728,7 +664,6 @@ export default function WorkerPortal() {
             productivityPct={productivityPct}
             onFeedback={openFeedback}
             onReportIssue={() => setReportIssueOpen(true)}
-            onSignOut={() => base44.auth.logout()}
             onNavigate={setActiveSection}
           />
         )}

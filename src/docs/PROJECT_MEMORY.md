@@ -7,7 +7,7 @@
 >
 > **Build Philosophy:** Build less. Validate more.
 >
-> **Last updated:** 2026-08-05 (Build #28.2J — Configurable Worker Overview Dashboard)
+> **Last updated:** 2026-08-05 (Build #28.2K — Worker Calendar, Safety Hub & Profile Menu)
 
 ---
 
@@ -308,6 +308,207 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - Session expiry during ongoing API activity relies on the SDK's error propagation to AuthContext. The Base44 SDK does not provide a global 401 interceptor; mid-session 401s surface as errors in the calling component, which may or may not propagate to AuthContext depending on the component's error handling. A future enhancement could add a global fetch interceptor.
 - Resend cooldown (30 seconds) is client-side only. The Base44 SDK enforces its own rate limits server-side; the client cooldown is an additional UX safeguard, not a security control.
 - Cross-tab session consistency: when a session expires in one tab, other tabs may not detect it until the next API call or page navigation. A `storage` event listener could be added for instant cross-tab sync in a future enhancement.
+
+## Build #28.2K — Worker Calendar, Safety Hub & Profile Menu (2026-08-05)
+
+### Added — WorkerCalendarEvent Entity
+- **`base44/entities/WorkerCalendarEvent.jsonc`** — personal work-related calendar events created by workers. Private to the worker by default (visibility: private | managers_only). Never becomes attendance, never counts as paid shift, never affects payroll, never creates manager obligations. RLS: worker can create/read/update/delete only their own events. Managers can only see events explicitly marked managers_only and scoped to their outlet.
+
+### Added — SafetyReport Entity
+- **`base44/entities/SafetyReport.jsonc`** — unified safety report model for hazard, incident, near-miss, injury, equipment issue, food-safety issue, and other safety concerns. Fields: report_type, reference_code, title, description, severity, occurred_at, location_detail, immediate_action_taken, witness_info, attachment_urls, is_anonymous, is_confidential, reported_by_id, status (submitted → acknowledged → under_investigation → action_taken → resolved → closed), investigation_notes (confidential — worker cannot view), resolution_summary (public), linked_compliance_id. RLS: workers create and read their own non-anonymous reports; managers read all in tenant/outlet; anonymous reports hide reporter identity from non-admin; confidential investigation notes restricted to admin/manager.
+
+### Added — Calendar Event Adapter
+- **`src/lib/worker/calendar-event-adapter.js`** — canonical unified calendar event model. Normalises Shift, WorkerCalendarEvent, ComplianceRecord, Announcement, and Employee milestones into a single event shape. 6 event types: assigned_shift, personal_work_event, compliance_deadline, workplace_event, reminder, employment_milestone. Pure JS — zero React imports — safe for tests. Exports: CALENDAR_EVENT_TYPES, EVENT_TYPE_META, shiftToEvent, personalEventToEvent, complianceToEvent, announcementToEvent, employeeMilestonesToEvents, buildCalendarEvents, filterEventsByDate, filterEventsByRange.
+
+### Added — iCalendar (.ics) Export Utility
+- **`src/lib/worker/ics-export.js`** — pure JS RFC 5545 iCalendar generator. Generates valid .ics files for single events and date-range exports. Contains only authorised information — no internal IDs (except stable UIDs), no tenant secrets, no other employee's information, no sensitive operational data. Stable unique event identifiers (source-source_id-random@orbitan.net). Correct timezone handling (Asia/Singapore). Exports: generateICSFile, generateSingleEventICS, downloadICSFile, exportEventsAsICS, exportSingleEventAsICS.
+
+### Added — Safety Hub Configuration
+- **`src/lib/worker/safety-config.js`** — industry-aware and role-aware safety module visibility. 6 safety modules: food_safety_log (F&B only), compliance_centre, incident_report, my_safety_reports, emergency_info, training_certifications. Exports: SAFETY_MODULES, getSafetyModulesForIndustry, getVisibleSafetyModules, isSafetyModuleVisible. Pure JS — safe for tests.
+
+### Added — Worker Schedule & Calendar Hub
+- **`src/components/worker/WorkerScheduleHub.jsx`** — replaces the old ShiftsScreen. Calendar is the primary view. Compact clock status indicator (not a full hero — dedup from Home). Integrates WorkerCalendarView, PersonalEventDialog, and EventDetailModal. Receives shifts, complianceRecords, and employee as props (shared TanStack Query cache keys — zero duplicate fetches). Personal events fetched via own query (worker-scoped).
+
+### Added — Worker Calendar View
+- **`src/components/worker/WorkerCalendarView.jsx`** — calendar UI with Agenda (mobile default), Week, and Month views. Navigation (prev/next/today). .ics export per event and per range. Event type distinguished by icon + colour + label (not colour alone — WCAG 2.2 AA). 44px minimum touch targets. Responsive grid.
+
+### Added — Personal Event Dialog
+- **`src/components/worker/PersonalEventDialog.jsx`** — create/edit personal work calendar events. Fields: title, date, all-day toggle, start/end time, location, work note, reminder toggle, category (personal_work_event | reminder). Privacy notice clearly states: "This is a personal work event. Only you can see it. It does not count as a paid shift, does not affect attendance or payroll, and does not create obligations for your manager."
+
+### Added — Safety Hub
+- **`src/components/worker/SafetyHub.jsx`** — expanded Safety screen replacing the minimal Food Safety Log + Compliance Centre link. Industry-aware module visibility via safety-config. Safety Overview: required actions, overdue, completed, upcoming expiries. Quick report actions: Hazard, Incident, Near Miss, Other Concern. Food Safety Log (F&B only). My Safety Reports (worker's own submissions with status tracking). Training & Certifications (from Employee.certifications with expiry tracking). Compliance Centre link.
+
+### Added — Safety Report Dialog
+- **`src/components/worker/SafetyReportDialog.jsx`** — canonical incident/hazard/near-miss form. 7 report types: hazard, incident, near_miss, injury, equipment_issue, food_safety_issue, other. Fields: report type, title, description, severity (low/medium/high/critical), occurred_at, location detail, immediate action taken, witness info, anonymous toggle. Privacy notice about confidential investigation notes.
+
+### Added — Worker Profile Menu
+- **`src/components/worker/WorkerProfileMenu.jsx`** — replaces the non-interactive avatar. Popover menu with worker-appropriate actions only: identity header (name, role, organisation, outlet), Notifications, Preferences, Help & Support, My Profile, Sign Out. NO admin/platform/billing/enterprise controls. Closes on outside click, Escape key. Keyboard navigable. 44px touch targets. Support routing uses canonical `getRoutingEmail('customer_support')` — no hardcoded email strings.
+
+### Duplication Removed
+1. **Clock Hero removed from Shifts** — Home's TodayShiftWidget is the canonical clock hero. Shifts now has a compact clock status indicator (not a full hero). Dedup complete.
+2. **Compliance Centre shortcut removed from Me** — now lives only in Safety Hub. Dedup complete.
+3. **Sign Out removed from Me page** — now lives only in the avatar profile menu. Dedup complete.
+4. **FoodSafetyLogWidget import removed from WorkerPortal** — now rendered by SafetyHub internally. Dedup complete.
+5. **ShiftsScreen inline function removed** — replaced by WorkerScheduleHub component. Dedup complete.
+6. **Report Issue** — kept in Me only as canonical entry point. Home's QuickActions navigates to Safety Hub for incident reporting (different function — product bug vs safety incident).
+
+### Navigation Ownership Established
+- **Home**: overview and priority only (WorkerHomeScreen)
+- **Tasks**: full assigned-task management (TasksScreen)
+- **Shifts**: schedule, calendar, and work-event tools (WorkerScheduleHub)
+- **Safety**: all worker safety and compliance actions (SafetyHub)
+- **Me**: complete profile, preferences, feedback history, and personal tools (ProfileScreen)
+- **Avatar menu**: quick navigation only (WorkerProfileMenu)
+
+### Calendar Event Types
+1. `assigned_shift` — from Shift entity, not editable
+2. `personal_work_event` — from WorkerCalendarEvent, worker-private, editable
+3. `compliance_deadline` — from ComplianceRecord due_date, all-day, not editable
+4. `workplace_event` — from Announcement creation date, all-day, not editable
+5. `reminder` — from WorkerCalendarEvent (category=reminder), worker-private, editable
+6. `employment_milestone` — computed from Employee.hire_date (1/2/3/5/10/15/20/25-year anniversaries), all-day, not editable
+
+### Personal Work Events
+- Workers can create personal work-related calendar entries
+- Private to the worker by default (RLS-enforced)
+- Never become attendance records
+- Never count as paid shifts
+- Never affect payroll
+- Never create manager obligations
+- Clearly labelled as personal work events
+- Managers may only view when visibility is explicitly set to managers_only
+
+### .ics Export
+- Standards-based iCalendar (RFC 5545) export
+- Single event export ("Add to Calendar" button)
+- Range export (export upcoming shifts/events as .ics)
+- Stable unique event identifiers (source-source_id-random@orbitan.net)
+- Correct timezone handling (Asia/Singapore)
+- Contains only authorised information — no internal IDs, no tenant secrets, no other employee's information
+- Special character escaping per RFC 5545
+
+### External Calendar Sync
+- **Implemented**: .ics export and download
+- **Deferred**: Google Calendar OAuth sync (requires connector configuration)
+- **Deferred**: Microsoft Outlook/Microsoft 365 sync (requires connector configuration)
+- **Deferred**: Bidirectional conflict handling (requires external sync)
+- **Deferred**: Secure read-only calendar subscription feed (requires backend endpoint with unguessable token)
+- No OAuth integrations existed in the repository prior to this build
+
+### Birthday and Employment Milestone Status
+- **Employment milestones**: IMPLEMENTED — computed from existing `Employee.hire_date` field. 1/2/3/5/10/15/20/25-year anniversaries displayed in the calendar.
+- **Birthdays**: DEFERRED — `Employee` entity (frozen foundation) does not contain a `birth_date` field. Adding it requires founder approval to modify the frozen Employee schema. Per the spec's own instruction: "If the existing Employee entity does not contain reliable authorised fields, document the feature as deferred rather than inventing data."
+- **Privacy**: Never displays birth year or age. Employment milestones use only the authorised `hire_date` field.
+
+### Shifts Badge Status
+- **Deferred** — no reliable actionable source exists. The Shift entity has no "acknowledgement required" or "confirmation required" field. Status enum (scheduled, confirmed, in_progress, completed, absent, cancelled) doesn't distinguish "action required" from "informational." Badging merely because shifts exist violates the spec. Badge remains null (hidden) until a shift-change-acknowledgement field is added to the Shift entity.
+
+### Safety Hub Modules Implemented
+1. Safety Overview (required actions, overdue, completed, expiring certifications)
+2. Quick Report Actions (Hazard, Incident, Near Miss, Other Concern)
+3. Food Safety Log (F&B only — existing component reused)
+4. My Safety Reports (worker's own submissions with status tracking)
+5. Training & Certifications (from Employee.certifications with expiry tracking)
+6. Compliance Centre (link to existing compliance page)
+
+### Safety Modules Deferred
+1. Emergency Information — requires tenant/outlet emergency configuration entity. Shows admin setup requirement rather than fabricating data.
+2. Hazard Report (as separate from incident) — merged into the unified SafetyReport entity with report_type field.
+3. Safety Acknowledgements — no existing acknowledgement-tracking entity for safety-specific acknowledgements.
+4. Safety Contacts — no existing safety-officer configuration entity.
+
+### Industry-Aware Safety Visibility
+- F&B: food_safety_log + all general modules
+- Retail, Recycling, Healthcare, Education, Logistics, Technology, Facilities, Other: general modules only (no food_safety_log)
+- Configured via `src/lib/worker/safety-config.js` — adding a new industry = adding one entry to `INDUSTRY_SAFETY_MAP`
+
+### Incident/Hazard Workflow
+1. Worker opens Safety Hub → taps quick report action (Hazard/Incident/Near Miss/Other)
+2. SafetyReportDialog opens with the selected report type pre-selected
+3. Worker fills: title, description, severity, when/where, immediate action, witness (optional), anonymous toggle
+4. On submit: SafetyReport entity created with status "submitted"
+5. Worker can track status in "My Safety Reports" (submitted → acknowledged → under_investigation → action_taken → resolved → closed)
+6. Confidential investigation notes (investigation_notes field) are RLS-protected — workers cannot read them
+7. Resolution summary is visible to the reporter
+8. Workers cannot view other workers' reports (RLS enforced)
+
+### Worker Profile Menu Actions
+- Identity header: avatar/initials, full name, role, organisation, outlet
+- Notifications (links to /notifications — canonical inbox)
+- Preferences (links to /settings)
+- Help & Support (links to /support — canonical Orbitan support)
+- My Profile (links to /settings)
+- Sign Out (base44.auth.logout())
+- NO admin/platform/billing/enterprise/management-only actions
+
+### Notification Consolidation
+- Notification bell in header and Notifications link in profile menu both open the same canonical `/notifications` page (NotificationsInbox component)
+- No duplicate notification interfaces created
+
+### Support Routing
+- WorkerProfileMenu uses `getRoutingEmail('customer_support')` from canonical orbitan-config.js
+- No hardcoded email strings in components
+- Routes to `/support` page (canonical SupportPortal)
+
+### Accessibility (WCAG 2.2 AA)
+- Profile button has accessible name and aria-expanded state ✓
+- Menu uses role="menu" and role="menuitem" semantics ✓
+- Menu closes on outside click and Escape key ✓
+- Focus returns to trigger button on Escape ✓
+- Calendar controls have aria-labels ✓
+- Event type distinguished by icon + colour + text label (not colour alone) ✓
+- Safety forms have proper Label associations ✓
+- 44px minimum touch targets on all interactive elements ✓
+- Reduced-motion supported via global @media (prefers-reduced-motion: reduce) ✓
+
+### Privacy Protections
+- Workers cannot view another worker's private calendar events (RLS on WorkerCalendarEvent.worker_id) ✓
+- Workers cannot view another worker's private notes (WorkerCalendarEvent RLS) ✓
+- .ics exports contain only authorised information (no tenant secrets, no other employee's data) ✓
+- No birth year or age exposed (birthdays deferred entirely) ✓
+- Confidential incident investigation notes RLS-protected ✓
+- Anonymous safety reports hide reporter identity from non-admin viewers ✓
+- Support configuration uses canonical routing — no frontend secrets ✓
+- Personal events never become attendance or payroll records ✓
+
+### Performance
+- Zero duplicate network requests between Home, Shifts, and Safety
+- All shared queries (shifts, tasks, clockRecords, complianceRecords) use same TanStack Query cache keys
+- Personal events use own query with 60s staleTime
+- Safety reports use own query with 60s staleTime
+- Tenant query uses 5min staleTime (industry rarely changes)
+- WorkerScheduleHub receives data as props — no duplicate fetching
+- SafetyHub fetches its own safety reports and compliance records (not passed from parent)
+
+### Files Created (11)
+- `base44/entities/WorkerCalendarEvent.jsonc`
+- `base44/entities/SafetyReport.jsonc`
+- `src/lib/worker/calendar-event-adapter.js`
+- `src/lib/worker/ics-export.js`
+- `src/lib/worker/safety-config.js`
+- `src/components/worker/WorkerCalendarView.jsx`
+- `src/components/worker/PersonalEventDialog.jsx`
+- `src/components/worker/SafetyReportDialog.jsx`
+- `src/components/worker/SafetyHub.jsx`
+- `src/components/worker/WorkerScheduleHub.jsx`
+- `src/components/worker/WorkerProfileMenu.jsx`
+
+### Files Modified (1)
+- `src/pages/WorkerPortal.jsx` — replaced ShiftsScreen with WorkerScheduleHub; replaced Safety section with SafetyHub; replaced non-interactive avatar with WorkerProfileMenu; removed duplicate Sign Out from ProfileScreen; removed duplicate Compliance Centre from ProfileScreen Quick Access; added tenant and compliance queries; cleaned up unused imports (Link, StatusBadge, FoodSafetyLogWidget, LogIn, LogOut, Loader2, CheckSquare, Zap).
+
+### Tests
+- **`src/lib/__tests__/worker-calendar-safety.test.js`** — 36 pure-function test cases. **Result: 36/36 passed (100%).**
+- Tests cover: calendar event adapter (shift, personal event, compliance, announcement, milestones, merge, sort, filter, null handling, visibility), ICS export (VCALENDAR structure, DTSTART, all-day, privacy, UID pattern, empty events, special char escaping, no internal IDs), safety config (industry visibility, role filtering, module definitions, F&B food safety, all-industry incident reporting).
+
+### Remaining Limitations
+- **Birthday display**: Deferred — Employee entity (frozen foundation) has no birth_date field.
+- **External calendar sync**: Google Calendar and Microsoft 365 OAuth sync deferred. .ics export is the MVP.
+- **Calendar subscription feed**: Secure read-only subscription feed deferred — requires backend endpoint with unguessable token and revocation.
+- **Shifts badge**: Deferred — no reliable shift-action source (no acknowledgement/confirmation field on Shift entity).
+- **Emergency information**: Deferred — requires tenant/outlet emergency configuration entity. Shows admin setup requirement.
+- **Me badge**: Deferred — no profile-completion or onboarding-action flag exists yet.
+- **Personal event reminders**: Reminder toggle is stored but push notification delivery is not yet implemented.
+- **Calendar subscription revocation**: Not implemented (no subscription feed to revoke yet).
 
 ## Build #28.2J — Configurable Worker Overview Dashboard (2026-08-05)
 

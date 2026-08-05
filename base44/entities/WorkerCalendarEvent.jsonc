@@ -1,0 +1,167 @@
+{
+  "name": "WorkerCalendarEvent",
+  "type": "object",
+  "description": "OrbitanOS Worker Experience \u2014 personal work-related calendar events created by workers. Private to the worker by default; respects tenant isolation. These are NOT attendance records, do NOT count as paid shifts, do NOT affect payroll, and do NOT create manager obligations. Clearly labelled as personal work events. Managers may only view when explicit policy and permission allow. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "Outlet scope where applicable. Null = tenant-wide personal event."
+    },
+    "worker_id": {
+      "type": "string",
+      "description": "Global User ID of the worker who owns this personal event. Used for RLS scoping."
+    },
+    "worker_name": {
+      "type": "string",
+      "description": "Display name of the worker at creation time (for audit)."
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional longer description or work note"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "HH:mm format. Null if all_day is true."
+    },
+    "end_time": {
+      "type": "string",
+      "description": "HH:mm format. Null if all_day is true."
+    },
+    "all_day": {
+      "type": "boolean",
+      "default": false
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "personal_work_event",
+        "reminder",
+        "personal_note"
+      ],
+      "default": "personal_work_event"
+    },
+    "location": {
+      "type": "string"
+    },
+    "related_task_id": {
+      "type": "string",
+      "description": "Optional link to a Task record this event relates to."
+    },
+    "reminder_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "visibility": {
+      "type": "string",
+      "enum": [
+        "private",
+        "managers_only"
+      ],
+      "default": "private",
+      "description": "private = only the worker can see it. managers_only = worker + outlet managers can see (requires explicit policy)."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "cancelled"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "worker_id",
+    "title",
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "data.worker_id": "{{user.id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "data.worker_id": "{{user.id}}"
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "data.visibility": "managers_only"
+            },
+            {
+              "data.outlet_id": "{{user.data.outlet_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "data.worker_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "data.worker_id": "{{user.id}}"
+        }
+      ]
+    }
+  }
+}
