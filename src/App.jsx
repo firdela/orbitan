@@ -16,6 +16,8 @@ import RoleGateway from '@/components/auth/RoleGateway';
 import AuthGateway from '@/components/auth/AuthGateway';
 import AuthPageGuard from '@/components/auth/AuthPageGuard';
 
+import PublicInquiry from '@/pages/PublicInquiry';
+
 // Page imports
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -94,6 +96,7 @@ import DataMigrationPage from '@/pages/workspace/DataMigrationPage';
 import CustomerSuccessPage from '@/pages/platform/CustomerSuccessPage';
 import GoLiveReadinessCentre from '@/pages/platform/GoLiveReadinessCentre';
 import PilotDeploymentCentre from '@/pages/platform/PilotDeploymentCentre';
+import InquiryQueue from '@/pages/platform/InquiryQueue';
 
 // Foundation — Public & Admin Pages
 import AboutOrbitan from '@/pages/foundation/AboutOrbitan';
@@ -147,6 +150,9 @@ const AuthenticatedApp = () => {
     <Routes>
       {/* Orbitan Public Landing — Brand & Marketing Hub */}
       <Route path="/" element={<Landing />} />
+
+      {/* Public Commercial Inquiry — no authentication required */}
+      <Route path="/contact/interest" element={<PublicInquiry />} />
 
       {/* Foundation — Public Pages */}
       <Route path="/about-orbitan" element={<AboutOrbitan />} />
@@ -288,6 +294,7 @@ const AuthenticatedApp = () => {
       <Route path="/platform/customer-success" element={<CustomerSuccessPage />} />
       <Route path="/platform/go-live-readiness" element={<GoLiveReadinessCentre />} />
       <Route path="/platform/pilot-deployment" element={<PilotDeploymentCentre />} />
+      <Route path="/platform/inquiries" element={<InquiryQueue />} />
 
       {/* Foundation — Platform Admin Pages */}
       <Route path="/platform/system-logs" element={<SystemLogs />} />

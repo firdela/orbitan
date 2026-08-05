@@ -16,7 +16,7 @@ const SUPPORT_CHANNELS = [
   { icon: BookOpen, title: 'Knowledge Hub', desc: 'Browse our complete documentation, guides, and tutorials.', to: '/knowledge-hub', cta: 'Browse Docs' },
   { icon: FileQuestion, title: 'FAQ', desc: 'Find answers to the most commonly asked questions.', to: '/knowledge-hub', cta: 'View FAQ' },
   { icon: Ticket, title: 'Submit a Ticket', desc: 'Report an issue or request a feature directly from your workspace.', to: '/workspace', cta: 'Open Workspace' },
-  { icon: Mail, title: 'Contact Support', desc: 'Reach our support team for urgent or complex issues.', to: '/request-access', cta: 'Contact Us' },
+  { icon: Mail, title: 'Contact Support', desc: 'Reach our support team for urgent or complex issues.', to: '/contact/interest?type=orbitanos_pilot', cta: 'Contact Us' },
   { icon: Compass, title: 'System Guides', desc: 'Step-by-step guides for administrators, managers, and workers.', to: '/knowledge-hub', cta: 'View Guides' },
   { icon: HelpCircle, title: 'Help Centre', desc: 'Searchable help articles across all modules.', to: '/knowledge-hub', cta: 'Search Help' },
 ];

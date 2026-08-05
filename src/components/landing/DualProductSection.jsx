@@ -38,7 +38,7 @@ const PRODUCTS = [
     ],
     pricing: 'From S$49/mo',
     cta: 'Request Pilot Access',
-    ctaHref: '/request-access',
+    ctaHref: '/contact/interest?type=orbitanos_pilot',
     href: '#plans',
   },
   {
@@ -66,7 +66,7 @@ const PRODUCTS = [
     ],
     pricing: 'From S$39/mo',
     cta: 'Register Interest',
-    ctaHref: '/request-access',
+    ctaHref: '/contact/interest?type=orbit_nexus_interest',
     href: '#nexus',
   },
 ];

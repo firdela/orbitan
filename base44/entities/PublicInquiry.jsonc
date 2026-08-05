@@ -1,0 +1,206 @@
+{
+  "name": "PublicInquiry",
+  "type": "object",
+  "description": "OrbitanOS Public Inquiry Registry (Build #28.2I) \u2014 canonical commercial inquiry model for all public CTA journeys: OrbitanOS Pilot, Orbit Nexus Interest, Orbit Nexus Waitlist, Enterprise Pilot. Public submitters may create a submission but cannot list, read, update, or delete other submissions. Admin-only review queue. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "reference_code": {
+      "type": "string",
+      "description": "Human-readable unique reference e.g. INQ-2026-0001. Generated server-side on submission."
+    },
+    "inquiry_type": {
+      "type": "string",
+      "enum": [
+        "orbitanos_pilot",
+        "orbit_nexus_interest",
+        "orbit_nexus_waitlist",
+        "enterprise_pilot"
+      ],
+      "description": "Type of commercial inquiry \u2014 determines routing and follow-up workflow."
+    },
+    "product": {
+      "type": "string",
+      "enum": [
+        "orbitanos",
+        "orbit_nexus",
+        "enterprise"
+      ],
+      "description": "Product the inquiry relates to."
+    },
+    "plan": {
+      "type": "string",
+      "description": "Selected plan or tier if applicable (e.g. orbitan_starter, orbitan_enterprise, nexus_pro). Null for waitlist."
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "work_email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "organisation_name": {
+      "type": "string"
+    },
+    "organisation_size": {
+      "type": "string",
+      "enum": [
+        "solo",
+        "2_10",
+        "11_50",
+        "51_200",
+        "201_500",
+        "500_plus"
+      ]
+    },
+    "industry": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string",
+      "default": "Singapore"
+    },
+    "estimated_users": {
+      "type": "number",
+      "description": "Estimated number of platform users if known"
+    },
+    "locations_count": {
+      "type": "number",
+      "description": "Number of outlets or locations (OrbitanOS Pilot / Enterprise)"
+    },
+    "use_case": {
+      "type": "string",
+      "description": "Short message or intended use case"
+    },
+    "preferred_contact_method": {
+      "type": "string",
+      "enum": [
+        "email",
+        "phone"
+      ],
+      "default": "email"
+    },
+    "desired_timeframe": {
+      "type": "string",
+      "description": "Desired pilot or deployment timeframe"
+    },
+    "modules_of_interest": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "OrbitanOS modules of interest (OrbitanOS Pilot / Enterprise)"
+    },
+    "integration_requirements": {
+      "type": "string",
+      "description": "Integration requirements (Orbit Nexus / Enterprise)"
+    },
+    "security_requirements": {
+      "type": "string",
+      "description": "Security requirements (Enterprise Pilot)"
+    },
+    "deployment_preference": {
+      "type": "string",
+      "description": "Deployment preference (Enterprise Pilot)"
+    },
+    "source_path": {
+      "type": "string",
+      "description": "Frontend path where the inquiry was submitted"
+    },
+    "source_cta": {
+      "type": "string",
+      "description": "CTA label that triggered the inquiry e.g. 'Request Pilot Access'"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "acknowledged",
+        "reviewing",
+        "contacted",
+        "qualified",
+        "pilot_candidate",
+        "waitlisted",
+        "declined",
+        "converted",
+        "closed"
+      ],
+      "default": "new"
+    },
+    "assigned_queue": {
+      "type": "string",
+      "enum": [
+        "sales",
+        "support",
+        "finance"
+      ],
+      "default": "sales",
+      "description": "Internal routing queue. Commercial inquiries default to sales."
+    },
+    "consent_accepted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the submitter accepted the privacy consent"
+    },
+    "consent_metadata": {
+      "type": "object",
+      "description": "Consent recording metadata (timestamp, consent text version)",
+      "properties": {
+        "accepted_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "consent_version": {
+          "type": "string"
+        }
+      }
+    },
+    "submitted_by_user_id": {
+      "type": "string",
+      "description": "User ID only when the submitter is authenticated. Null for anonymous public submissions."
+    },
+    "internal_notes": {
+      "type": "string",
+      "description": "Internal notes for Orbitan staff reviewing the inquiry"
+    },
+    "contacted_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "qualified_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "closed_date": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "reference_code",
+    "inquiry_type",
+    "full_name",
+    "work_email",
+    "organisation_name",
+    "country",
+    "consent_accepted"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

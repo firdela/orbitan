@@ -158,7 +158,7 @@ export default function Checkout() {
 
         <div className="max-w-2xl mx-auto mb-8 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm text-center">
           <strong>Pilot Phase:</strong> We're currently onboarding select pilot tenants.
-          If you'd like early access, please <Link to="/request-access" className="underline font-semibold">request access</Link>.
+          If you'd like early access, please <Link to="/contact/interest?type=orbitanos_pilot" className="underline font-semibold">request access</Link>.
         </div>
 
         {error && (

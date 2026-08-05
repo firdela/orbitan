@@ -12,10 +12,13 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Lock, Crown } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import NavBadge from '@/components/shared/NavBadge';
+import { useAttentionCounts, formatBadgeCount, getBadgeAriaLabel, getBadgeVariant } from '@/lib/hooks/useAttentionCounts';
 
-export default function ManifestNav({ navigation }) {
+export default function ManifestNav({ navigation, tenantId, outletId, userRole }) {
   const location = useLocation();
   const { toast } = useToast();
+  const { counts } = useAttentionCounts({ tenantId, outletId, userRole });
 
   if (!navigation || navigation.length === 0) return null;
 
@@ -70,7 +73,21 @@ export default function ManifestNav({ navigation }) {
         // Skip items with no route (would render dead links)
         if (!item.route) return null;
 
-        // Active nav item
+        // Active nav item — resolve badge count from the canonical attention resolver.
+        // Maps manifest module_key values to the count keys in useAttentionCounts.
+        const MODULE_BADGE_MAP = {
+          inventory: 'inventory',
+          procurement: 'procurement',
+          production: 'production',
+          sales_invoice: 'sales',
+          expenses: 'expenses',
+          workforce: 'workforce',
+          access_requests: 'workforce',
+          task: 'tasks',
+          compliance: 'compliance',
+        };
+        const badgeKey = MODULE_BADGE_MAP[item.module_key] || null;
+        const badgeCount = badgeKey ? counts[badgeKey] : null;
         return (
           <Link
             key={`nav-${idx}`}
@@ -84,6 +101,13 @@ export default function ManifestNav({ navigation }) {
             {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-sidebar-primary rounded-r" />}
             <Icon className="w-4 h-4 flex-shrink-0" />
             <span className="flex-1">{item.label}</span>
+            {badgeCount != null && badgeCount > 0 && (
+              <NavBadge
+                count={badgeCount}
+                ariaLabel={getBadgeAriaLabel(badgeKey, badgeCount)}
+                variant={getBadgeVariant(badgeKey, badgeCount)}
+              />
+            )}
           </Link>
         );
       })}

@@ -290,7 +290,7 @@ export default function Landing() {
                       </li>
                     ))}
                   </ul>
-                  <Link to="/request-access">
+                  <Link to={isEnterprise ? '/contact/interest?type=enterprise_pilot' : '/contact/interest?type=orbitanos_pilot'}>
                     <Button className={`w-full h-10 rounded-xl text-xs font-bold ${isEnterprise ? 'bg-marketing-gold hover:bg-marketing-gold/90 text-marketing-bg' : 'bg-white/[0.08] hover:bg-white/[0.12] text-white'}`}>
                       {isEnterprise ? 'Enterprise Pilot Access' : 'Request Pilot Access'}
                     </Button>

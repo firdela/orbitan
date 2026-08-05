@@ -7,7 +7,7 @@
 >
 > **Build Philosophy:** Build less. Validate more.
 >
-> **Last updated:** 2026-08-04 (Build #28.2G.1 — Repository Consolidation & Auth Hardening)
+> **Last updated:** 2026-08-05 (Build #28.2I — Sidebar Badges, Public Inquiry Workflows & Canonical Email Routing)
 
 ---
 
@@ -308,6 +308,94 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - Session expiry during ongoing API activity relies on the SDK's error propagation to AuthContext. The Base44 SDK does not provide a global 401 interceptor; mid-session 401s surface as errors in the calling component, which may or may not propagate to AuthContext depending on the component's error handling. A future enhancement could add a global fetch interceptor.
 - Resend cooldown (30 seconds) is client-side only. The Base44 SDK enforces its own rate limits server-side; the client cooldown is an additional UX safeguard, not a security control.
 - Cross-tab session consistency: when a session expires in one tab, other tabs may not detect it until the next API call or page navigation. A `storage` event listener could be added for instant cross-tab sync in a future enhancement.
+
+## Build #28.2I — Sidebar Badges, Public Inquiry Workflows & Canonical Email Routing (2026-08-05)
+
+### Added — PublicInquiry Entity
+- **`base44/entities/PublicInquiry.jsonc`** — canonical commercial inquiry model for all public CTA journeys (OrbitanOS Pilot, Orbit Nexus Interest, Orbit Nexus Waitlist, Enterprise Pilot). Fields: reference_code, inquiry_type, product, plan, full_name, work_email, phone, organisation_name, organisation_size, industry, country, estimated_users, locations_count, use_case, preferred_contact_method, desired_timeframe, modules_of_interest, integration_requirements, security_requirements, deployment_preference, source_path, source_cta, status, assigned_queue, consent_accepted, consent_metadata, submitted_by_user_id, internal_notes, contacted_date, qualified_date, closed_date. Statuses: new → acknowledged → reviewing → contacted → qualified → pilot_candidate / waitlisted / declined / converted / closed.
+
+### Added — Public Inquiry Page
+- **`src/pages/PublicInquiry.jsx`** — canonical public inquiry form at route `/contact/interest?type=<inquiry_type>`. Accessible without authentication. Conditional fields based on inquiry type. Form fields: full name, work email, organisation, country, org size, inquiry type, use case/message, consent (required); phone, industry, preferred contact method, estimated users, desired timeframe (optional); modules of interest + locations count (OrbitanOS/Enterprise); integration requirements (Nexus/Enterprise); security requirements + deployment preference (Enterprise). Honeypot anti-spam field. Success state with reference ID. Error states with safe messages.
+
+### Added — submitInquiry Backend Function
+- **`base44/functions/submitInquiry/entry.ts`** — validates, sanitises (HTML stripping, length limits), generates reference code (INQ-YYYY-TTTTXXXX), persists using asServiceRole, sends internal notification email to first registered admin user. Honeypot field detection (silent success without persisting). Email limitation documented: Base44 SendEmail only reaches registered app users; external routing to sales@orbitan.net requires external email configuration (Cloudflare/Resend).
+
+### Added — Canonical Inquiry Type Configuration
+- **`src/lib/inquiry-types.js`** — single source of truth for inquiry types, CTA-to-route mapping, organisation size options, OrbitanOS modules list, contact methods, consent text (versioned). Exports: INQUIRY_TYPES, CTA_LABEL_MAP, getInquiryRoute, getInquiryType, ORGANISATION_SIZES, ORBITANOS_MODULES, CONTACT_METHODS, CONSENT_TEXT, CONSENT_VERSION.
+
+### Added — Canonical Email Routing Configuration
+- **`src/lib/orbitan-config.js`** — extended with EMAIL_ROUTING responsibility map and getRoutingEmail() helper. Canonical routing: general_contact → hello@orbitan.net, commercial_inquiries → sales@orbitan.net, customer_support → support@orbitan.net, product_announcements → news@orbitan.net, automated_notifications → notifications@orbitan.net, billing → billing@orbitan.net, finance_operations → finance@orbitan.net.
+
+### Added — Sidebar Action Badge System
+- **`src/lib/hooks/useAttentionCounts.js`** — canonical attention-count resolver hook. Returns real pending-work counts for sidebar badges. Sources: Task (overdue + pending), InventoryItem (low_stock + out_of_stock), PurchaseOrder (draft + submitted + pending_approval), ProductionBatch (planned + in_progress), SalesInvoice (unreconciled), ExpenseRecord (submitted + rejected), AccessRequest (pending), ComplianceRecord (pending + overdue). Respects tenant scope. Uses cached React Query with 60s stale time. Exports: useAttentionCounts, formatBadgeCount, getBadgeAriaLabel, getBadgeVariant.
+- **`src/components/shared/NavBadge.jsx`** — reusable badge component. Hides at zero, shows 1–99, shows 99+ above 99. Accessible aria-label. Severity variants: default, warning, error.
+- **`src/components/workspace/ManifestNav.jsx`** — updated to render NavBadge on active nav items. Maps manifest module_key values to attention count keys. Passes tenant context (tenantId, outletId, userRole) from WorkspaceLayout.
+
+### Added — Admin Inquiry Queue
+- **`src/pages/platform/InquiryQueue.jsx`** — admin-only view at `/platform/inquiries`. Filter by inquiry type, status, search by name/email/organisation/reference. Detail panel with full submission data. Status update workflow. Admin-only access enforced by RLS.
+
+### Added — Tests
+- **`src/lib/__tests__/inquiry-badge.test.js`** — 25 pure-function test cases covering: CTA→inquiry type mapping, no CTA routes to /request-access, all inquiry routes start with /contact/interest, inquiry type resolution, form field configuration, badge count formatting (zero/null/1-99/99+), badge accessible labels, badge severity variants, CTA label uniqueness.
+
+### CTA Routes Repaired
+The following commercial CTAs previously redirected incorrectly to `/request-access` (the authenticated "Find Your Workplace" page). All now route to the canonical public inquiry page with the correct inquiry type:
+- **"Request Pilot Access"** → `/contact/interest?type=orbitanos_pilot` (Landing pricing, DualProductSection)
+- **"Register Interest"** → `/contact/interest?type=orbit_nexus_interest` (DualProductSection)
+- **"Join the Waitlist"** → `/contact/interest?type=orbit_nexus_waitlist` (NexusSection pricing)
+- **"Enterprise Pilot Access"** → `/contact/interest?type=enterprise_pilot` (Landing pricing, NexusSection pricing)
+- **Checkout page** "request access" → `/contact/interest?type=orbitanos_pilot`
+- **SupportPortal** "Contact Support" → `/contact/interest?type=orbitanos_pilot` (was incorrectly routing to workplace discovery)
+
+### Badge Sources Implemented
+| Module | Count Key | Source Entity | Status Filter |
+|--------|-----------|---------------|---------------|
+| Tasks | `tasks` | Task | overdue + pending + in_progress |
+| Inventory | `inventory` | InventoryItem | low_stock + out_of_stock |
+| Procurement | `procurement` | PurchaseOrder | draft + submitted + pending_approval |
+| Production | `production` | ProductionBatch | planned + in_progress |
+| Sales | `sales` | SalesInvoice | unreconciled |
+| Expenses | `expenses` | ExpenseRecord | submitted + rejected |
+| Workforce | `workforce` | AccessRequest | pending |
+| Compliance | `compliance` | ComplianceRecord | pending + overdue |
+
+### Badge Sources Deferred
+- **Dashboard** (combined critical attention) — deferred; requires aggregation across all modules.
+- **Clients** (follow-up / incomplete onboarding) — deferred; no reliable status field on CustomerProfile for "requires follow-up."
+- **Finance Integration** (failed/disconnected integrations) — deferred; IntegrationCredential status is available but badge count requires a separate query per service type.
+
+### RLS / Security
+- PublicInquiry entity RLS: create is public (empty `{}`), read/update/delete are admin-only (`role: admin`). Public submitters can create but cannot list, read, update, or delete other submissions.
+- submitInquiry backend function uses asServiceRole for persistence (public submission, no user auth required). Authenticated user ID captured optionally.
+- No email credentials or secrets in frontend code.
+- Honeypot anti-spam field (company_website) — bots fill it, humans don't.
+- Input sanitisation: HTML tags stripped, length limits enforced, javascript: protocol blocked.
+
+### Files Created
+- `base44/entities/PublicInquiry.jsonc`
+- `base44/functions/submitInquiry/entry.ts`
+- `src/lib/inquiry-types.js`
+- `src/lib/hooks/useAttentionCounts.js`
+- `src/components/shared/NavBadge.jsx`
+- `src/pages/PublicInquiry.jsx`
+- `src/pages/platform/InquiryQueue.jsx`
+- `src/lib/__tests__/inquiry-badge.test.js`
+
+### Files Modified
+- `src/App.jsx` — added routes `/contact/interest` (public) and `/platform/inquiries` (admin)
+- `src/pages/Landing.jsx` — fixed pricing CTAs
+- `src/components/landing/DualProductSection.jsx` — fixed product CTAs
+- `src/components/landing/NexusSection.jsx` — fixed Nexus pricing CTAs
+- `src/pages/Checkout.jsx` — fixed pilot phase CTA
+- `src/pages/foundation/SupportPortal.jsx` — fixed Contact Support CTA
+- `src/components/workspace/ManifestNav.jsx` — added badge rendering with attention count resolver
+- `src/components/workspace/WorkspaceLayout.jsx` — passes tenant context to ManifestNav
+- `src/lib/orbitan-config.js` — added EMAIL_ROUTING map and getRoutingEmail helper
+
+### Remaining Limitations
+- **Email delivery:** Base44 SendEmail only reaches registered app users. External routing to sales@orbitan.net and notifications@orbitan.net requires external email configuration (Cloudflare/Resend). The internal notification is sent to the first registered admin user. The applicant acknowledgement is shown on-screen with the reference code — no external email is sent to unregistered applicants.
+- **Badge data sources:** Dashboard combined count, Clients follow-up, and Finance Integration health are deferred — documented above.
+- **Admin inquiry queue:** Internal notes field exists on the entity but the admin UI does not yet expose a notes editor. Status update is implemented.
+- **Rate limiting:** Server-side rate limiting is not implemented in the current Base44 environment. Honeypot and duplicate-submission protection (submitting state) are implemented client-side.
 
 ## Build #28.2G.1 — Repository Consolidation & Auth Hardening (2026-08-04)
 - **Documentation Consolidation:** Migrated 63 unique documents from the legacy

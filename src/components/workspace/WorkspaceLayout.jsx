@@ -170,7 +170,14 @@ export default function WorkspaceLayout() {
       navigation={[]}
       title={title}
       tenant={effectiveTenant}
-      manifestNav={<ManifestNav navigation={isPlatformAdmin ? navigation : navigation.filter(i => i.module_key !== 'leader_org')} />}
+      manifestNav={
+        <ManifestNav
+          navigation={isPlatformAdmin ? navigation : navigation.filter(i => i.module_key !== 'leader_org')}
+          tenantId={tenantId}
+          outletId={user?.data?.outlet_id || null}
+          userRole={user?.role}
+        />
+      }
       manifestSource={source}
     >
       <Outlet context={{ tenant: effectiveTenant, tenantId }} />

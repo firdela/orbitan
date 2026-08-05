@@ -53,6 +53,33 @@ export const EMAIL_IDENTITIES = {
 };
 
 // ============================================================
+// CANONICAL EMAIL ROUTING RESPONSIBILITIES — Build #28.2I
+// Single source of truth for which mailbox handles which
+// category of correspondence. Components and backend functions
+// must reference this map — never scatter email-address strings.
+//
+// NOTE: The Base44 SendEmail integration only reaches registered
+// app users. External routing to these canonical mailboxes
+// requires external email configuration (Cloudflare/Resend).
+// The identities below define the authoritative routing target
+// for when external email is configured.
+// ============================================================
+export const EMAIL_ROUTING = {
+  general_contact: 'hello@orbitan.net',
+  commercial_inquiries: 'sales@orbitan.net',
+  customer_support: 'support@orbitan.net',
+  product_announcements: 'news@orbitan.net',
+  automated_notifications: 'notifications@orbitan.net',
+  billing: 'billing@orbitan.net',
+  finance_operations: 'finance@orbitan.net',
+};
+
+// Returns the canonical routing email for a given category.
+export function getRoutingEmail(category) {
+  return EMAIL_ROUTING[category] || EMAIL_ROUTING.general_contact;
+}
+
+// ============================================================
 // OPERATING CYCLE — The 6 Principles of OrbitanOS
 // ============================================================
 export const OPERATING_CYCLE = {

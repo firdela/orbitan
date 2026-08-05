@@ -237,7 +237,7 @@ export default function NexusSection() {
                   </li>
                 ))}
               </ul>
-              <Link to="/request-access">
+              <Link to={plan.name === 'Enterprise' ? '/contact/interest?type=enterprise_pilot' : '/contact/interest?type=orbit_nexus_waitlist'}>
                 <Button
                   className={`w-full h-9 rounded-lg text-xs font-bold ${
                     plan.highlight

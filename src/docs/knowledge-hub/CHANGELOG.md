@@ -7,6 +7,58 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2I (Sidebar Badges, Public Inquiry Workflows & Canonical Email Routing) (2026-08-05)
+
+### Added — PublicInquiry Entity
+- `base44/entities/PublicInquiry.jsonc` — canonical commercial inquiry model. Public create, admin-only read/update/delete. 10 statuses (new → acknowledged → reviewing → contacted → qualified → pilot_candidate / waitlisted / declined / converted / closed). Supports all 4 inquiry types.
+
+### Added — Public Inquiry Page
+- `src/pages/PublicInquiry.jsx` at route `/contact/interest?type=<inquiry_type>`. Accessible without authentication. Conditional fields per inquiry type. Honeypot anti-spam. Success state with reference ID. Safe error states.
+
+### Added — submitInquiry Backend Function
+- `base44/functions/submitInquiry/entry.ts` — validates, sanitises (HTML stripping, length limits), generates reference code, persists via asServiceRole, sends internal notification to admin. Honeypot detection. Email limitation documented.
+
+### Added — Canonical Inquiry Type Configuration
+- `src/lib/inquiry-types.js` — 4 inquiry types, CTA-to-route mapping, form field options, versioned consent text.
+
+### Added — Canonical Email Routing
+- `src/lib/orbitan-config.js` — EMAIL_ROUTING responsibility map + getRoutingEmail() helper. Routing: commercial → sales@orbitan.net, support → support@orbitan.net, general → hello@orbitan.net, notifications → notifications@orbitan.net, billing → billing@orbitan.net, finance → finance@orbitan.net.
+
+### Added — Sidebar Action Badge System
+- `src/lib/hooks/useAttentionCounts.js` — canonical attention-count resolver. 8 module badge sources: tasks, inventory, procurement, production, sales, expenses, workforce, compliance.
+- `src/components/shared/NavBadge.jsx` — reusable badge. Hides at zero, 1–99, 99+ above 99. Accessible aria-label. Severity variants.
+- `src/components/workspace/ManifestNav.jsx` — renders NavBadge on nav items. Maps module_key to count keys.
+
+### Added — Admin Inquiry Queue
+- `src/pages/platform/InquiryQueue.jsx` at `/platform/inquiries`. Admin-only. Filter, search, detail panel, status update.
+
+### Added — Tests
+- `src/lib/__tests__/inquiry-badge.test.js` — 25 pure-function tests: CTA mapping, route correctness, inquiry type resolution, badge formatting, accessible labels, severity variants.
+
+### CTA Routes Repaired
+- "Request Pilot Access" → `/contact/interest?type=orbitanos_pilot`
+- "Register Interest" → `/contact/interest?type=orbit_nexus_interest`
+- "Join the Waitlist" → `/contact/interest?type=orbit_nexus_waitlist`
+- "Enterprise Pilot Access" → `/contact/interest?type=enterprise_pilot`
+- Checkout "request access" → `/contact/interest?type=orbitanos_pilot`
+- SupportPortal "Contact Support" → `/contact/interest?type=orbitanos_pilot`
+
+### Modified
+- `src/App.jsx` — routes for `/contact/interest` and `/platform/inquiries`
+- `src/pages/Landing.jsx` — pricing CTAs fixed
+- `src/components/landing/DualProductSection.jsx` — product CTAs fixed
+- `src/components/landing/NexusSection.jsx` — Nexus pricing CTAs fixed
+- `src/pages/Checkout.jsx` — pilot phase CTA fixed
+- `src/pages/foundation/SupportPortal.jsx` — Contact Support CTA fixed
+- `src/components/workspace/ManifestNav.jsx` — badge rendering
+- `src/components/workspace/WorkspaceLayout.jsx` — passes tenant context to ManifestNav
+- `src/lib/orbitan-config.js` — EMAIL_ROUTING + getRoutingEmail
+
+### Known Limitations
+- External email routing (sales@orbitan.net, notifications@orbitan.net) requires Cloudflare/Resend configuration. Internal notification goes to first registered admin. Applicant acknowledgement is on-screen only.
+- Dashboard combined badge, Clients follow-up badge, Finance Integration health badge deferred.
+- Server-side rate limiting not available in current Base44 environment.
+
 ## [Unreleased] — Build #28.2H (Authentication Experience Repair & Completion) (2026-08-04)
 
 ### Added — Canonical Authentication Error Mapping Layer
