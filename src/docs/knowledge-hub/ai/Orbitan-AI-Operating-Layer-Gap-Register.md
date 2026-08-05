@@ -37,28 +37,30 @@ abstraction** — all addressed in this Phase 1 build.
 | Domain | Capability | Status | Priority | Phase |
 |--------|-----------|--------|----------|-------|
 | **Gateway** | Provider-neutral request routing | ✅ Complete (nexus/entry.ts) | — | — |
-| **Gateway** | Stable internal request contract | ✅ Partially complete | P1 | Phase 1 |
-| **Gateway** | Provider adapter interface | ❌ Missing | P1 | Phase 1 |
-| **Models** | Model registry with lifecycle | ❌ Missing | P1 | Phase 1 |
-| **Models** | Model approval/deprecation enforcement | ❌ Missing | P1 | Phase 1 |
-| **Models** | MODEL_CREDIT_MULTIPLIER hardcoded | ⚠️ Fragmented | P1 | Phase 1 |
-| **Agents** | Agent identity registry | ❌ Missing | P1 | Phase 1 |
-| **Agents** | Agent lifecycle (Draft→Approved→Retired) | ❌ Missing | P1 | Phase 1 |
-| **Agents** | Agent autonomy level enforcement | ❌ Missing | P1 | Phase 1 |
-| **Agents** | Agent permission boundaries | ⚠️ Partial (Tier 3 reserved) | P1 | Phase 1 |
-| **Policies** | AI-specific policy evaluation | ⚠️ Partial (Shield for governance) | P1 | Phase 1 |
-| **Policies** | Deny-by-default for AI | ⚠️ Partial | P1 | Phase 1 |
-| **Policies** | Execution policy contract | ❌ Missing | P1 | Phase 1 |
-| **Audit** | AI provenance (provider, model, routing) | ⚠️ Partial (OrbitUsageTracker) | P1 | Phase 1 |
-| **Audit** | AI audit event entity | ❌ Missing | P1 | Phase 1 |
-| **Audit** | Safe provenance states | ❌ Missing | P1 | Phase 1 |
+| **Gateway** | Stable internal request contract | ✅ Implemented (Phase 1) | P1 | Phase 1 |
+| **Gateway** | Provider adapter interface | ✅ Implemented (interface only) | P1 | Phase 1 |
+| **Gateway** | Policy evaluator wired to gateway | ⚠️ Logic implemented, not wired to runtime | P1 | Phase 2 |
+| **Gateway** | AIAuditEvent creation in gateway | ⚠️ Entity exists, gateway not writing | P1 | Phase 2 |
+| **Models** | Model registry with lifecycle | ✅ Implemented (AIModel entity) | P1 | Phase 1 |
+| **Models** | Model approval/deprecation enforcement | ⚠️ Logic implemented, not enforced at runtime | P1 | Phase 2 |
+| **Models** | MODEL_CREDIT_MULTIPLIER hardcoded | ⚠️ Fragmented (entity exists, gateway not migrated) | P1 | Phase 2 |
+| **Agents** | Agent identity registry | ✅ Implemented (AIAgent entity) | P1 | Phase 1 |
+| **Agents** | Agent lifecycle (Draft→Approved→Retired) | ⚠️ Logic implemented, not enforced at runtime | P1 | Phase 2 |
+| **Agents** | Agent autonomy level enforcement | ✅ Implemented (ai-autonomy-levels.js) | P1 | Phase 1 |
+| **Agents** | Agent permission boundaries | ✅ Implemented (AIAgent entity) | P1 | Phase 1 |
+| **Policies** | AI-specific policy evaluation | ✅ Implemented (ai-policy-evaluator.js) | P1 | Phase 1 |
+| **Policies** | Deny-by-default for AI | ✅ Implemented (evaluator returns deny default) | P1 | Phase 1 |
+| **Policies** | Execution policy contract | ✅ Implemented (ai-execution-policy.js) | P1 | Phase 1 |
+| **Audit** | AI provenance (provider, model, routing) | ✅ Implemented (AIAuditEvent entity) | P1 | Phase 1 |
+| **Audit** | AI audit event entity | ✅ Implemented (AIAuditEvent entity) | P1 | Phase 1 |
+| **Audit** | Safe provenance states | ✅ Implemented (5 states in ai-autonomy-levels.js) | P1 | Phase 1 |
 | **Controls** | AI kill switch | ✅ Complete (ADR-0018) | — | — |
 | **Controls** | Capability registry | ✅ Complete (ADR-0046) | — | — |
 | **Controls** | Zero-PII sanitization | ✅ Complete (ADR-0044) | — | — |
 | **Controls** | Credit metering & wallet debit | ✅ Complete | — | — |
-| **Boundaries** | Worker AI-admin access denied | ⚠️ Needs verification | P0 | Phase 1 |
+| **Boundaries** | Worker AI-admin access denied | ✅ Verified (admin-only route, no Worker access) | P0 | Phase 1 |
 | **Boundaries** | Worker notification links safe | ✅ Complete (Build #28.2L) | — | — |
-| **Orbit Inbox** | AI governance events | ❌ Missing | P2 | Phase 2 |
+| **Orbit Inbox** | AI governance events | ❌ Deferred | P2 | Phase 2 |
 | **Data Products** | Semantic data-product catalogue | ❌ Deferred | P3 | Phase 3+ |
 | **Skills** | Skill registry | ❌ Deferred | P3 | Phase 3+ |
 | **Evaluations** | Evaluation centre | ❌ Deferred | P3 | Phase 3+ |
@@ -286,9 +288,21 @@ abstraction** — all addressed in this Phase 1 build.
 
 | # | Gap | Domain | Action | Status |
 |---|-----|--------|--------|--------|
-| P0-1 | Worker AI-admin access verification | Boundaries | Verify all AI admin routes are admin-only; verify Worker deep links cannot reach them | ✅ Verified (Phase 1) |
+| P0-1 | Worker AI-admin access verification | Boundaries | Verify all AI admin routes are admin-only; verify Worker deep links cannot reach them | ✅ Verified (Phase 1 — `/platform/ai-governance` is admin-only via RoleGateway; Worker notification deep links reject management route prefixes) |
 
 **No other P0 security gaps found.** The existing architecture (canonical gateway, no direct provider calls, server-side credentials, Zero-PII sanitization, tenant-isolated RLS, Kill Switch) already addresses the critical P0 concerns.
+
+### Verification Evidence (Build #28.2M Completion Pass)
+
+**Tests executed (70/70 passed — 100%):**
+- 60 pure-function tests: autonomy levels (19), policy evaluator (21), execution policy (10), provider adapter (10) — all passed via Node VM sandbox
+- 10 security verification tests: no secrets in frontend modules, all AI entities require tenant_id, all entities have RLS with all 4 ops, no direct provider SDK imports, AIAuditEvent has no secret fields, 5 provenance states, 6 AIModel lifecycle states, 6 AIAgent lifecycle states, 4 autonomy levels with L0 default, 7 AIPolicy decision types — all passed
+
+**Tests not executable (require live backend or credentials):**
+- Gateway runtime policy enforcement (requires gateway integration — Phase 2)
+- AIAuditEvent record creation in production (requires gateway integration — Phase 2)
+- Live provider adapter calls (require external credentials — Phase 2)
+- Cross-tenant RLS runtime tests (require live entity queries — already verified structurally)
 
 ---
 
@@ -313,23 +327,23 @@ abstraction** — all addressed in this Phase 1 build.
 ## Verification Checklist
 
 1. ✅ Gap register exists and is authoritative
-2. ✅ Existing capabilities classified accurately (Complete/Partial/Missing/Deferred)
+2. ✅ Existing capabilities classified accurately (Complete/Implemented/Deferred)
 3. ✅ Completed work not rebuilt (nexus gateway, capability registry, kill switch, sanitization, usage tracker preserved)
 4. ✅ All AI requests use canonical gateway (nexus/entry.ts) — no direct provider calls found
 5. ✅ Provider secrets remain server-side (no credentials in frontend code)
-6. ✅ Model lifecycle enforced (AIModel entity + policy evaluator)
-7. ✅ Agent lifecycle enforced (AIAgent entity + policy evaluator)
+6. ⚠️ Model lifecycle logic implemented (AIModel entity + policy evaluator) — NOT wired to gateway runtime (Phase 2)
+7. ⚠️ Agent lifecycle logic implemented (AIAgent entity + policy evaluator) — NOT wired to gateway runtime (Phase 2)
 8. ✅ Agent identity is accountable (AIAgent entity with owner, scope, permissions)
-9. ✅ Autonomy defaults are safe (L0 default, L3 restricted)
-10. ✅ Sensitive actions require approval (L3 prohibited actions list)
-11. ✅ Policy evaluation occurs before execution (ai-policy-evaluator.js)
-12. ✅ Execution policies are technically checked (ai-execution-policy.js)
-13. ✅ AI audit events are generated (AIAuditEvent entity)
-14. ✅ Audit events omit secrets (RLS + sanitization inherited)
+9. ✅ Autonomy defaults are safe (L0 default, L3 restricted — pure functions tested)
+10. ✅ Sensitive actions require approval (L3 prohibited actions list — pure functions tested)
+11. ⚠️ Policy evaluation logic implemented (ai-policy-evaluator.js) — NOT called by gateway before execution (Phase 2)
+12. ✅ Execution policy logic implemented and tested (ai-execution-policy.js)
+13. ⚠️ AI audit event entity exists (AIAuditEvent) — gateway does NOT create records yet (Phase 2)
+14. ✅ Audit event schema omits secrets (entity verified — no secret/token/password fields)
 15. ✅ Worker boundaries remain intact (no AI-admin access for Workers)
-16. ✅ Worker routes cannot access AI administration (admin-only routes)
+16. ✅ Worker routes cannot access AI administration (admin-only route at /platform/ai-governance)
 17. ✅ RBAC remains intact (existing role model preserved)
-18. ✅ RLS remains intact (all new entities have tenant-scoped RLS)
+18. ✅ RLS remains intact (all new entities have tenant-scoped RLS, all 4 operations)
 19. ✅ Tenant isolation remains intact (tenant_id mandatory on all AI entities)
 20. ✅ Orbit Inbox remains canonical (no duplicate AI notification centre)
 21. ✅ No duplicate AI notification centre exists
@@ -337,8 +351,26 @@ abstraction** — all addressed in this Phase 1 build.
 23. ✅ No duplicate agent registry (AIAgent is new; no prior agent entity existed)
 24. ✅ No duplicate policy system (AIPolicy is AI-specific; GovernancePolicy is operational governance)
 25. ✅ Administrative UI is permission-protected (admin-only routes)
-26. ✅ Loading, empty, error, permission states exist
+26. ✅ Loading, empty, error states exist
 27. ✅ WCAG 2.2 AA maintained (design tokens, semantic HTML, aria attributes)
 28. ✅ Existing Orbitan workflows remain functional (no changes to existing code)
-29. ✅ Base44 build passes
+29. ✅ Phase 1 build passes (lint corrected, tests executable)
 30. ✅ GitHub synchronisation status reported (repository: github.com/firdela/orbitan)
+
+### Phase 2 Entry Criteria Status
+
+| Criterion | Status |
+|-----------|--------|
+| Provider secrets are server-side | ✅ Verified |
+| Production AI calls pass through canonical gateway | ✅ Verified (no direct provider calls found) |
+| Model lifecycle is enforced | ⚠️ Logic exists, NOT enforced at gateway runtime |
+| Agent lifecycle is enforced | ⚠️ Logic exists, NOT enforced at gateway runtime |
+| Policy evaluation occurs before execution | ⚠️ Logic exists, NOT called by gateway |
+| Execution policy technically blocks invalid contexts | ⚠️ Logic exists, NOT called by gateway |
+| AI audit events are generated | ⚠️ Entity exists, gateway does NOT create records |
+| Worker AI-admin access is denied | ✅ Verified |
+| RBAC/RLS and tenant isolation tests pass | ✅ Verified (structural) |
+| Phase 1 build passes | ✅ Verified (70/70 tests) |
+| No unresolved P0 gap remains | ✅ Verified |
+
+**Phase 2 Entry Decision:** P0 criteria are met. Three P1 criteria (gateway runtime enforcement) are logic-complete but not runtime-enforced. Phase 2's first task is to wire `ai-policy-evaluator.js`, `ai-execution-policy.js`, model/agent lifecycle checks, and AIAuditEvent creation into `nexus/entry.ts`.

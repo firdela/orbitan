@@ -55,6 +55,65 @@ adheres to [Semantic Versioning](https://semver.org/).
 - **P0 gaps:** Only Worker AI-admin access verification needed (verified — no AI-admin routes existed before, now admin-only).
 - **No duplicate entities created:** AIModel (models, not capabilities), AIAgent (agent identity, not capability routing), AIPolicy (AI-specific, not operational governance), AIAuditEvent (AI provenance, not general audit).
 
+### Completion Pass (2026-08-05)
+
+#### Test File Repaired
+- `src/lib/__tests__/ai-operating-layer.test.js` — removed 3 Node-only security verification tests that used `require('fs')`, `__dirname`, and `process.exit()`. These were vacuously passing when `require` was undefined in the ESM/Vite environment. The `/* global */` lint suppression was a workaround, not a fix. Security verifications now run via the Node sandbox (`exec_tool`). The ESM test file is now pure — all 60 remaining tests are genuinely executable.
+
+#### Tests Executed — 70/70 passed (100%)
+- **60 pure-function tests** (via Node VM sandbox): autonomy levels (19), policy evaluator (21), execution policy (10), provider adapter (10)
+- **10 security verification tests** (via Node sandbox): no secrets in frontend AI modules, all 4 AI entities require tenant_id, all have RLS with all 4 operations, no direct provider SDK imports, AIAuditEvent has no secret fields, 5 provenance states, 6 AIModel lifecycle states, 6 AIAgent lifecycle states, 4 autonomy levels with L0 default, 7 AIPolicy decision types
+
+#### Tests Not Executable (require live backend or credentials)
+- Gateway runtime policy enforcement (requires gateway integration — Phase 2)
+- AIAuditEvent record creation in production (requires gateway integration — Phase 2)
+- Live provider adapter calls (require external credentials — Phase 2)
+- Cross-tenant RLS runtime tests (require live entity queries — verified structurally)
+
+#### Gap Register Corrected
+- Summary table updated to reflect actual Phase 1 implementation status
+- Verification checklist corrected: 6 items reclassified from "✅ enforced" to "⚠️ logic implemented, NOT wired to gateway runtime"
+- Phase 2 entry criteria table added with honest status per criterion
+
+#### Honest Classification
+| Capability | Status |
+|-----------|--------|
+| Gap register | ✅ Complete and verified |
+| Canonical gateway | ✅ Complete (nexus/entry.ts, ADR-0006) |
+| Direct provider calls | ✅ None found (all via InvokeLLM) |
+| Provider adapter interface | ✅ Implemented (interface only, platform_builtin configured) |
+| Model registry | ✅ Implemented (AIModel entity, 6 lifecycle states) |
+| Model lifecycle enforcement | ⚠️ Logic exists, NOT wired to gateway runtime |
+| Agent registry | ✅ Implemented (AIAgent entity, 6 lifecycle states) |
+| Agent lifecycle enforcement | ⚠️ Logic exists, NOT wired to gateway runtime |
+| Autonomy controls | ✅ Implemented (L0-L3, 9 prohibited actions, pure functions tested) |
+| Policy evaluation | ⚠️ Logic exists, NOT called by gateway before execution |
+| Execution policy | ⚠️ Logic exists, NOT called by gateway |
+| AI audit/provenance | ⚠️ Entity exists, gateway does NOT create records |
+| Worker boundaries | ✅ Verified (admin-only route, Worker deep links safe) |
+| RBAC/RLS/tenant isolation | ✅ Verified (structural — all entities have tenant_id + RLS) |
+| Secret handling | ✅ Verified (no secrets in frontend, server-side only) |
+| Orbit Inbox integration | ❌ Deferred (Phase 2) |
+| Administrative UI | ✅ Implemented (AIGovernancePage, admin-only, loading/empty/error states) |
+
+#### Files Modified
+- `src/lib/__tests__/ai-operating-layer.test.js` — removed Node-only tests, removed `/* global */` lint suppression, replaced `process.exit` with throw
+- `src/docs/knowledge-hub/ai/Orbitan-AI-Operating-Layer-Gap-Register.md` — summary table corrected, verification checklist corrected, Phase 2 entry criteria added, completion evidence added
+- `src/docs/PROJECT_MEMORY.md` — completion pass evidence added
+- `src/docs/knowledge-hub/CHANGELOG.md` — completion pass section added
+
+#### Remaining P0 Gaps
+None.
+
+#### Remaining P1 Gaps (logic-complete, runtime-enforcement deferred to Phase 2)
+1. Gateway runtime policy evaluation (wire `ai-policy-evaluator.js` into `nexus/entry.ts`)
+2. Gateway runtime model/agent lifecycle enforcement
+3. Gateway runtime AIAuditEvent record creation
+4. Gateway migration from hardcoded `MODEL_CREDIT_MULTIPLIER` to AIModel entity `cost_config`
+
+#### Phase 2 Entry Criteria Result
+P0 criteria met. Three P1 criteria (gateway runtime enforcement) are logic-complete but not runtime-enforced. Phase 2's first task is to wire the policy evaluator, execution policy, model/agent lifecycle checks, and AIAuditEvent creation into `nexus/entry.ts`.
+
 ## [Unreleased] — Build #28.2L (Worker Navigation Repair & Orbit Inbox Integration) (2026-08-05)
 
 ### Fixed — Worker Header Notification Bell

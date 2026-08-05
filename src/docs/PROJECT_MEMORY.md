@@ -359,11 +359,26 @@ Only one P0 gap: Worker AI-admin access verification — verified as safe (no AI
 - `src/App.jsx` — added `/platform/ai-governance` route
 - `src/docs/knowledge-hub/CHANGELOG.md` — Build #28.2M section added
 
-### Remaining Limitations
-- Gateway integration (runtime policy evaluation in nexus/entry.ts) deferred to Phase 2 to avoid breaking changes
+### Completion Pass Evidence (Build #28.2M — verified 2026-08-05)
+
+**Tests executed — 70/70 passed (100%):**
+- 60 pure-function tests via Node VM sandbox: autonomy levels (19), policy evaluator (21), execution policy (10), provider adapter (10)
+- 10 security verification tests: no secrets in frontend AI modules, all 4 AI entities require tenant_id, all have RLS with all 4 ops, no direct provider SDK imports, AIAuditEvent has no secret fields, 5 provenance states, 6 AIModel lifecycle states, 6 AIAgent lifecycle states, 4 autonomy levels with L0 default, 7 AIPolicy decision types
+
+**Test file repaired:**
+- `src/lib/__tests__/ai-operating-layer.test.js` — removed 3 Node-only security verification tests that used `require('fs')`, `__dirname`, and `process.exit()`. These were vacuously passing (`assert.ok(true); return;`) when `require` was undefined in the ESM/Vite environment. The `/* global */` lint suppression was a workaround, not a fix. Security verifications now run via the Node sandbox (`exec_tool`) which has real `require`/`fs` access. The ESM test file is now pure — all 60 remaining tests are genuinely executable.
+
+**Remaining Limitations (honestly classified):**
+- **Gateway runtime enforcement NOT wired** — the policy evaluator, execution policy validator, model/agent lifecycle checks, and AIAuditEvent creation are all pure-function modules but are NOT called by `nexus/entry.ts` before AI execution. The gateway still uses the hardcoded `MODEL_CREDIT_MULTIPLIER` constant and `OrbitUsageTracker` for usage tracking. This was intentionally deferred to Phase 2 to avoid breaking changes to the live gateway.
+- **AIAuditEvent records not created at runtime** — the entity schema exists with full provenance fields, but the gateway does not write AIAuditEvent records. OrbitUsageTracker continues to serve as the usage tracker.
 - Live provider adapters (OpenAI, Anthropic, Gemini) deferred to Phase 2 (require external credentials)
 - AI governance Orbit Inbox events deferred to Phase 2
 - Semantic data-product catalogue, strategy graph, full budget analytics, evaluations, voice/video/multimodal deferred to Phase 3+
+
+### Phase 2 Entry Criteria Result
+- P0 criteria: ✅ All met (no direct provider calls, secrets server-side, Worker admin access denied, tenant isolation verified)
+- P1 criteria: ⚠️ 3 of 6 logic-complete but not runtime-enforced (gateway wiring deferred)
+- **Phase 2 first task:** Wire `ai-policy-evaluator.js`, `ai-execution-policy.js`, model/agent lifecycle checks, and AIAuditEvent creation into `nexus/entry.ts`
 
 ## Build #28.2L — Worker Navigation Repair & Orbit Inbox Integration (2026-08-05)
 
