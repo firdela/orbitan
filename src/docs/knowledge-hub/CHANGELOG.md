@@ -7,6 +7,44 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2O (Nexus Gateway Hardening — Idempotency, Fail-Closed Audit, Baseline Registry, Migration Exit) (2026-08-05)
+
+### Added — Baseline Registry Seeding
+- **AIModel** record seeded: `automatic` (platform_builtin, approved, credit_multiplier: 1.0, approved_data_classifications: public+internal). Replaces the hardcoded `MODEL_CREDIT_MULTIPLIER` constant. Gateway now returns `cost_source: "registry"` — legacy cost fallback eliminated.
+- **AIPolicy** records seeded (5 system-default policies): `allow_l0_readonly_approved_model`, `allow_l1_recommendations_approved_use_cases`, `allow_l2_drafts_require_review`, `require_approval_l3_execution`, `deny_confidential_restricted_external_provider`. Deny-by-default enforced when no policy matches.
+- **AIAgent** records seeded (3 production agents): `nexus_copilot` (L1), `nexus_intelligence` (L1), `nexus_feedback_analyst` (L0). All approved, platform_builtin credential model.
+
+### Changed — Migration Mode Exit
+- Migration mode bypass removed from `evaluateAIRequest()`. When no AIPolicy matches a request, the decision is now `DENY` ("No matching policy found — deny by default"). Previously, non-sensitive actions with no policies were allowed with a warning. This change ensures fail-safe governance — only explicitly allowed requests proceed.
+
+### Changed — Autonomy Gate Refinement
+- The autonomy approval gate in `evaluateAIRequest()` now only requires approval for **agent-initiated** requests or **sensitive actions**. Human-originated L0/L1 requests (no agent involved) are governed by policy evaluation only. This prevents read-only Worker queries from being blocked by the L0 "cannot perform actions autonomously" rule while still blocking agent-initiated L0/L1 and all L3 sensitive actions. Applied to both `src/lib/ai/ai-policy-evaluator.js` (frontend) and `base44/shared/ai-governance.ts` (backend).
+
+### Added — Idempotency Hardening
+- Caller-provided `idempotency_key` validated against format pattern (`/^[a-zA-Z0-9_-]{8,128}$/`). Deterministic SHA-256 `idempotency_fingerprint` computed from (tenant_id, requester_id, service_key, payload_hash, idempotency_key). Terminal-state audit events return cached safe response summary. Non-terminal (executing) returns processing state. Scoped by tenant, requester, and operation — cross-tenant fingerprint collision impossible.
+
+### Added — Fail-Closed Audit
+- **Consequential actions** (sensitive actions or L3 autonomy): audit failure throws — execution cannot proceed without audit provenance. No silent failures.
+- **Non-consequential (L0 read-only)**: audit failure enters degraded mode — operational error logged, execution allowed, `execution_state: "audit_degraded"` recorded.
+- Prevents audit-writing failures from creating duplicate provider executions or wallet debits.
+
+### Added — AIApproval Lifecycle
+- **AIApproval** entity created (Build #28.2O). Tracks approval lifecycle: pending → approved/rejected/expired/cancelled → executed/execution_failed. Single-use (executed approvals cannot be reused). Requester cannot self-approve. Workers cannot approve management-level actions. Expired approvals cannot execute. Post-approval execution scope must match approved scope (fingerprint + payload_hash verification).
+
+### Added — Worker-Safe Orbit Inbox Routing
+- AI governance events routed to Orbit Inbox respect role boundaries: Workers receive `/worker` deep links (never `/platform/ai-governance` or other admin routes). Admin/tenant_admin receive governance centre links. Notification body for Workers is safe (no internal reason/policy details); admin body includes full governance context.
+
+### Added — UI Components
+- **`AIApprovalQueue`** component (`src/components/platform/AIApprovalQueue.jsx`): Displays pending AIApproval records with approve/reject actions, decision reason input, and expiry detection. Integrated into AIGovernancePage.
+- **AIGovernancePage** updated with hardened controls summary (Idempotency, Fail-Closed Audit, Migration Mode Exited, Worker-Safe Links) and Pending Approvals section.
+
+### Added — Test Suites
+- **`ai-governance-parity.test.js`**: 42 tests verifying frontend/backend governance logic alignment (constants, model lifecycle, agent lifecycle, data classification, autonomy, policy resolution, sensitive actions, execution policy, full AI request evaluation).
+- **`nexus-gateway-hardening.test.js`**: 21 tests verifying idempotency key format, tenant membership validation, Worker-safe link resolution, migration mode exit (deny-by-default), audit fail-closed logic, approval expiry, idempotency fingerprint determinism.
+- All 63 tests passed. Live gateway verified via `test_backend_function`: `policy_decision: "allow"`, `cost_source: "registry"`, `model_lifecycle_status: "approved"`.
+
+---
+
 ## [Unreleased] — Build #28.2N (Nexus Gateway Runtime Governance Enforcement — Phase 2 Task 1) (2026-08-05)
 
 ### Added — Runtime Governance Module

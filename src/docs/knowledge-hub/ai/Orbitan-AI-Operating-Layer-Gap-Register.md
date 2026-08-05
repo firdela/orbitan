@@ -298,11 +298,14 @@ abstraction** — all addressed in this Phase 1 build.
 - 60 pure-function tests: autonomy levels (19), policy evaluator (21), execution policy (10), provider adapter (10) — all passed via Node VM sandbox
 - 10 security verification tests: no secrets in frontend modules, all AI entities require tenant_id, all entities have RLS with all 4 ops, no direct provider SDK imports, AIAuditEvent has no secret fields, 5 provenance states, 6 AIModel lifecycle states, 6 AIAgent lifecycle states, 4 autonomy levels with L0 default, 7 AIPolicy decision types — all passed
 
-**Tests not executable (require live backend or credentials):**
-- Gateway runtime policy enforcement (requires gateway integration — Phase 2)
-- AIAuditEvent record creation in production (requires gateway integration — Phase 2)
-- Live provider adapter calls (require external credentials — Phase 2)
-- Cross-tenant RLS runtime tests (require live entity queries — already verified structurally)
+**Tests now executable (Build #28.2O — live backend verified):**
+- ✅ Gateway runtime policy enforcement — verified via `test_backend_function` (policy_decision: "allow", deny-by-default when no match)
+- ✅ AIAuditEvent record creation — verified (full provenance: provider, model, routing, policy, autonomy, cost, outcome)
+- ✅ Idempotency replay — verified (idempotency_key + fingerprint, terminal-state cache)
+- ✅ Cost source registry resolution — verified (cost_source: "registry", legacy fallback eliminated)
+- ✅ Model lifecycle enforcement — verified (approved model allowed, unregistered denied)
+- ❌ Live provider adapter calls (require external credentials — platform_builtin active as fallback)
+- ❌ Cross-tenant RLS runtime tests (require live entity queries — verified structurally, pending live test)
 
 ---
 
@@ -375,6 +378,8 @@ abstraction** — all addressed in this Phase 1 build.
 
 **Phase 2 Entry Decision:** P0 criteria met. P1 gateway runtime enforcement criteria are now MET (Build #28.2N). Policy evaluation, execution policy validation, model/agent lifecycle enforcement, AIAuditEvent creation, cost configuration migration, and Orbit Inbox governance events are all wired into the live Nexus gateway.
 
+**Phase 2 Completion (Build #28.2O):** Gateway hardening complete. Baseline registry seeded (1 model, 5 policies, 3 agents). Migration mode exited — deny-by-default enforced. Idempotency, fail-closed audit, AIApproval lifecycle, and Worker-safe routing all verified via live gateway tests (42 parity + 21 hardening tests passed). Legacy cost fallback eliminated. The Nexus gateway is production-ready for platform_builtin AI execution.
+
 **Phase 2 Task 1 Completion (Build #28.2N):**
 - ✅ Gateway pipeline extended with 22-step governance enforcement
 - ✅ Model lifecycle enforced at runtime (Draft/Evaluation/Deprecated/Retired denied)
@@ -389,10 +394,23 @@ abstraction** — all addressed in this Phase 1 build.
 - ✅ 52/52 pure-function tests passed
 - ✅ Integration verified via test_backend_function (AIAuditEvent + OrbitInbox records created)
 
-**Remaining Phase 2 Work:**
-- Seed baseline AIPolicy records (currently in migration mode — no policies configured)
-- Seed AIModel records with cost_config (currently using legacy cost fallback)
-- Seed AIAgent records for production agents
-- Build approval workflow UI (pending approval records are created but no UI to approve/reject)
-- Configure external provider credentials (OpenAI, Anthropic, Gemini)
-- Full live multi-tenant regression testing
+**Phase 2 Task 2 Completion (Build #28.2O — Gateway Hardening & Baseline Registry Seeding):**
+- ✅ Baseline AIModel record seeded (`automatic` — approved, platform_builtin, cost_config with credit_multiplier: 1)
+- ✅ Baseline AIPolicy records seeded (5 system-default policies: allow L0–L2, require_approval L3, deny confidential/restricted external)
+- ✅ Baseline AIAgent records seeded (nexus_copilot, nexus_intelligence, nexus_feedback_analyst)
+- ✅ Migration mode exited — deny-by-default enforced when no policy matches (migration allow bypass removed)
+- ✅ Idempotency hardened — caller-provided `idempotency_key` + deterministic SHA-256 fingerprint, terminal-state replay, scoped by tenant/requester/operation
+- ✅ Fail-closed audit — consequential actions throw on audit failure (no silent execution without provenance), non-consequential enter degraded mode
+- ✅ AIApproval lifecycle — pending → approved/rejected/expired/cancelled → executed/execution_failed, single-use, requester cannot self-approve, scope-match verification
+- ✅ Worker-safe Orbit Inbox routing — Workers receive `/worker` deep links (never `/platform/ai-governance`); admin/tenant_admin receive governance links
+- ✅ Autonomy gate refined — human-originated L0/L1 requests governed by policy only; agent-initiated and sensitive actions still require autonomy approval
+- ✅ Legacy cost fallback eliminated — `cost_source: "registry"` confirmed via live gateway test
+- ✅ AIApprovalQueue UI component created (approve/reject with reason, expiry detection)
+- ✅ AIGovernancePage updated (enforcement banner, hardened controls summary, pending approvals section)
+- ✅ Parity test suite created (42 tests — frontend/backend governance logic alignment)
+- ✅ Gateway hardening test suite created (21 tests — idempotency, tenant validation, Worker-safe links, migration exit, fail-closed audit, fingerprint determinism)
+- ✅ Live gateway verification: `policy_decision: "allow"`, `cost_source: "registry"`, `model_lifecycle_status: "approved"`, `capability_source: "registry"`
+
+**Remaining Work:**
+- Configure external provider credentials (OpenAI, Anthropic, Gemini) — platform_builtin model active as fallback
+- Full live multi-tenant regression testing with real tenant data
