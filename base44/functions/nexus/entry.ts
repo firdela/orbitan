@@ -9,6 +9,11 @@ import {
   classifyProviderError, isProviderConfigured,
   classifyOutcome, SAFE_ERROR_CODES, SAFE_USER_MESSAGES,
 } from '../../shared/ai-governance.ts';
+import {
+  isWorkerRole, resolveSafeLink, sha256, validateTenantMembership,
+  resolveTenantAdminRecipients,
+  WORKER_SAFE_LINK, ADMIN_GOVERNANCE_LINK,
+} from '../../shared/nexus-gateway-utils.ts';
 
 // ============================================================
 // ORBIT NEXUS GATEWAY — Capability-Tiered Orchestrator (ADR-0046)
@@ -115,45 +120,12 @@ let _policyCache: any[] | null = null;
 let _policyCacheAt = 0;
 const POLICY_CACHE_TTL_MS = 120_000;
 
-// ── CRYPTO HELPERS (Web Crypto API, Deno-native) ──────────────
-async function sha256(data: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(data));
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 function normalisePayloadForHash(payload: any): string {
   if (!payload || typeof payload !== 'object') return String(payload || '');
   try {
     return JSON.stringify(payload, Object.keys(payload).sort());
   } catch {
     return String(payload || '');
-  }
-}
-
-// ── WORKER-SAFE ROUTING HELPERS ────────────────────────────────
-function isWorkerRole(role: string | null | undefined): boolean {
-  return role === 'worker';
-}
-
-function resolveSafeLink(userRole: string | null, adminLink: string, workerSafeLink: string): string {
-  return isWorkerRole(userRole) ? workerSafeLink : adminLink;
-}
-
-const WORKER_SAFE_LINK = '/worker';
-const ADMIN_GOVERNANCE_LINK = '/platform/ai-governance';
-
-// ── TENANT ADMIN RESOLVER ─────────────────────────────────────
-async function resolveTenantAdminRecipients(base44: any, tenantId: string): Promise<Array<{ user_id: string; full_name: string }>> {
-  try {
-    const admins = await base44.asServiceRole.entities.Employee.filter({
-      tenant_id: tenantId, role: 'tenant_admin', status: 'active',
-    });
-    return (admins || [])
-      .filter((a: any) => a.user_id)
-      .map((a: any) => ({ user_id: a.user_id, full_name: a.full_name || 'Administrator' }));
-  } catch {
-    return [];
   }
 }
 
@@ -300,11 +272,15 @@ function sanitizePayload(payload: any, mode: string, permittedFields: string[]):
 }
 
 // ── IDEMPOTENCY FINGERPRINT COMPUTATION ───────────────────────
+// The fingerprint is computed from (tenant, requester, service, idempotency_key)
+// — deliberately EXCLUDING the payload hash. This ensures that a changed payload
+// with the same idempotency key produces the SAME fingerprint, allowing the
+// conflict detection in checkIdempotency() to reject it.
 async function computeIdempotencyFingerprint(params: {
   tenantId: string; requesterId: string; serviceKey: string;
-  payloadHash: string; idempotencyKey: string;
+  idempotencyKey: string;
 }): Promise<string> {
-  const raw = `${params.tenantId}:${params.requesterId}:${params.serviceKey}:${params.payloadHash}:${params.idempotencyKey}`;
+  const raw = `${params.tenantId}:${params.requesterId}:${params.serviceKey}:${params.idempotencyKey}`;
   return await sha256(raw);
 }
 
@@ -512,33 +488,6 @@ function safeErrorResponse(errorCode: string, status: number, serviceKey: string
   }, { status });
 }
 
-// ── TENANT MEMBERSHIP VALIDATION ──────────────────────────────
-// Validates that the requester is authorised for the requested tenant.
-// Platform admins can specify any tenant_id.
-// All other users must use their own tenant_id.
-function validateTenantMembership(userRole: string | null, userTenantId: string | null, requestedTenantId: string | null): {
-  valid: boolean; resolvedTenantId: string | null; reason?: string;
-} {
-  // Platform admins can operate across tenants
-  if (userRole === 'admin') {
-    return { valid: true, resolvedTenantId: requestedTenantId || userTenantId };
-  }
-  // For all other roles, the requested tenant must match their own
-  const effectiveTenantId = requestedTenantId || userTenantId;
-  if (!effectiveTenantId) {
-    return { valid: false, resolvedTenantId: null, reason: 'No tenant context available' };
-  }
-  // If user provided a tenant_id that differs from their own, reject
-  if (requestedTenantId && userTenantId && requestedTenantId !== userTenantId) {
-    return {
-      valid: false,
-      resolvedTenantId: null,
-      reason: `Tenant mismatch: requester tenant='${userTenantId}', requested tenant='${requestedTenantId}'`,
-    };
-  }
-  return { valid: true, resolvedTenantId: effectiveTenantId };
-}
-
 // ── APPROVAL VALIDATION ───────────────────────────────────────
 async function validateApprovalForExecution(base44: any, approvalKey: string, currentPayloadHash: string, tenantId: string): Promise<{
   valid: boolean; approval?: any; reason?: string;
@@ -643,7 +592,7 @@ export default async function(req: Request): Promise<Response> {
     const idempotencyFingerprint = idempotency_key
       ? await computeIdempotencyFingerprint({
           tenantId, requesterId: actorId, serviceKey: service_key,
-          payloadHash, idempotencyKey: idempotency_key,
+          idempotencyKey: idempotency_key,
         })
       : '';
 

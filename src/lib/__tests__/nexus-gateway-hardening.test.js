@@ -191,25 +191,27 @@ assert(isExpired, 'Past-due approval expired');
 // ── 7. IDEMPOTENCY FINGERPRINT DETERMINISM ───────────────────
 console.log('\n=== Idempotency Fingerprint Determinism ===');
 
-// Same inputs → same fingerprint (simulated)
-function computeFingerprintRaw(tenantId, requesterId, serviceKey, payloadHash, idempotencyKey) {
-  return `${tenantId}:${requesterId}:${serviceKey}:${payloadHash}:${idempotencyKey}`;
+// Fingerprint EXCLUDES payload hash — this is intentional.
+// The same idempotency key with a different payload must produce the SAME
+// fingerprint, so the conflict check can detect it and reject the request.
+function computeFingerprintRaw(tenantId, requesterId, serviceKey, idempotencyKey) {
+  return `${tenantId}:${requesterId}:${serviceKey}:${idempotencyKey}`;
 }
 
-const fp1 = computeFingerprintRaw('t1', 'u1', 'sop_gen', 'hash123', 'key-abc');
-const fp2 = computeFingerprintRaw('t1', 'u1', 'sop_gen', 'hash123', 'key-abc');
+const fp1 = computeFingerprintRaw('t1', 'u1', 'sop_gen', 'key-abc');
+const fp2 = computeFingerprintRaw('t1', 'u1', 'sop_gen', 'key-abc');
 assert(fp1 === fp2, 'Same inputs → same fingerprint');
 
 // Different tenant → different fingerprint
-const fp3 = computeFingerprintRaw('t2', 'u1', 'sop_gen', 'hash123', 'key-abc');
+const fp3 = computeFingerprintRaw('t2', 'u1', 'sop_gen', 'key-abc');
 assert(fp1 !== fp3, 'Different tenant → different fingerprint');
 
-// Different payload → different fingerprint
-const fp4 = computeFingerprintRaw('t1', 'u1', 'sop_gen', 'hash456', 'key-abc');
-assert(fp1 !== fp4, 'Different payload → different fingerprint');
+// Different payload with SAME key → SAME fingerprint (conflict detection relies on payload_hash check)
+const fp4 = computeFingerprintRaw('t1', 'u1', 'sop_gen', 'key-abc');
+assert(fp1 === fp4, 'Different payload same key → same fingerprint (enables conflict detection)');
 
 // Different idempotency key → different fingerprint
-const fp5 = computeFingerprintRaw('t1', 'u1', 'sop_gen', 'hash123', 'key-xyz');
+const fp5 = computeFingerprintRaw('t1', 'u1', 'sop_gen', 'key-xyz');
 assert(fp1 !== fp5, 'Different idempotency key → different fingerprint');
 
 // ── RESULTS ───────────────────────────────────────────────────
@@ -220,6 +222,7 @@ console.log(`Total: ${passed + failed}`);
 
 if (failed > 0) {
   console.error('\n❌ GATEWAY HARDENING TESTS FAILED!');
+  throw new Error(`${failed} gateway hardening test(s) failed — CI failure`);
 } else {
   console.log('\n✅ All gateway hardening tests passed.');
 }

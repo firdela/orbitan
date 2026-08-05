@@ -302,6 +302,7 @@ console.log(`Total: ${passed + failed}`);
 
 if (failed > 0) {
   console.error('\n❌ PARITY TEST FAILED — frontend and backend governance logic have drifted!');
+  throw new Error(`${failed} parity test(s) failed — CI failure`);
 } else {
   console.log('\n✅ All parity tests passed — frontend and backend governance logic are aligned.');
 }
