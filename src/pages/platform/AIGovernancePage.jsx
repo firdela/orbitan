@@ -1,13 +1,14 @@
 import React from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Shield, Bot, Cpu, FileCheck, Activity, AlertTriangle, CheckCircle2, XCircle, Zap } from 'lucide-react';
+import { Shield, Bot, Cpu, FileCheck, Activity, AlertTriangle, CheckCircle2, XCircle, Zap, Clock, Lock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import PageHeader from '@/components/shared/PageHeader';
 import BackBar from '@/components/shared/BackBar';
 import EmptyState from '@/components/shared/EmptyState';
+import AIApprovalQueue from '@/components/platform/AIApprovalQueue';
 import { getConfiguredProviders, PROVIDER_REGISTRY } from '@/lib/ai/ai-provider-adapter';
 import { AUTONOMY_LEVELS } from '@/lib/ai/ai-autonomy-levels';
 
@@ -271,11 +272,43 @@ export default function AIGovernancePage() {
           <Zap className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-              Runtime Governance Enforcement Active
+              Runtime Governance Enforcement Active — Hardened (Build #28.2O)
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              The Nexus gateway now enforces model lifecycle, agent lifecycle, autonomy levels, AI policy evaluation, execution policy validation, AIAuditEvent creation, and Orbit Inbox governance events for every AI request. Policy and execution validation occur before provider dispatch.
+              The Nexus gateway enforces model lifecycle, agent lifecycle, autonomy levels, AI policy evaluation (deny-by-default), execution policy validation, pre-execution audit for consequential actions, idempotency via caller-provided keys, tenant membership validation, Worker-safe Orbit Inbox routing, and AIApproval lifecycle. Migration mode is <strong>inactive</strong> — baseline policies seeded, deny-by-default applies when no policy matches.
             </p>
+          </div>
+        </div>
+
+        {/* Hardened Controls Summary */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-card">
+            <Lock className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground">Idempotency</p>
+              <p className="text-sm font-medium text-emerald-600">Active</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-card">
+            <Shield className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground">Fail-Closed Audit</p>
+              <p className="text-sm font-medium text-emerald-600">Enforced</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-card">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground">Migration Mode</p>
+              <p className="text-sm font-medium text-emerald-600">Exited</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-card">
+            <Clock className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground">Worker-Safe Links</p>
+              <p className="text-sm font-medium text-emerald-600">Enforced</p>
+            </div>
           </div>
         </div>
 
@@ -302,6 +335,14 @@ export default function AIGovernancePage() {
               <h2 className="text-lg font-heading font-semibold">AI Policies</h2>
             </div>
             <PoliciesSection />
+          </section>
+
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="w-5 h-5 text-amber-500" />
+              <h2 className="text-lg font-heading font-semibold">Pending Approvals</h2>
+            </div>
+            <AIApprovalQueue />
           </section>
 
           <section>

@@ -272,8 +272,11 @@ function evaluateAIRequest(params) {
     };
   }
 
-  // 8. If autonomy requires approval
-  if (!autonomyCheck.allowed && autonomyCheck.requiresApproval) {
+  // 8. If autonomy requires approval (only for agent-initiated or sensitive actions)
+  // Human-originated requests (no agent) are governed by policy evaluation only.
+  // Agent-initiated requests and sensitive actions still require autonomy approval.
+  const autonomyRequiresApprovalGate = (agentId && agent) || isSensitiveAction(actionType);
+  if (autonomyRequiresApprovalGate && !autonomyCheck.allowed && autonomyCheck.requiresApproval) {
     return {
       decision: DECISIONS.REQUIRE_APPROVAL,
       reason: autonomyCheck.reason,
