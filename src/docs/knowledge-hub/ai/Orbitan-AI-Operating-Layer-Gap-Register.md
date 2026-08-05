@@ -302,6 +302,7 @@ abstraction** — all addressed in this Phase 1 build.
 - ✅ Gateway runtime policy enforcement — verified via `test_backend_function` (policy_decision: "allow", deny-by-default when no match)
 - ✅ AIAuditEvent record creation — verified (full provenance: provider, model, routing, policy, autonomy, cost, outcome)
 - ✅ Idempotency replay — verified (idempotency_key + fingerprint, terminal-state cache)
+- ✅ Idempotency conflict detection — verified (same key + changed payload → 409 idempotency_conflict; fingerprint deliberately excludes payload_hash so conflicts are detected via payload_hash mismatch)
 - ✅ Cost source registry resolution — verified (cost_source: "registry", legacy fallback eliminated)
 - ✅ Model lifecycle enforcement — verified (approved model allowed, unregistered denied)
 - ❌ Live provider adapter calls (require external credentials — platform_builtin active as fallback)
@@ -399,7 +400,7 @@ abstraction** — all addressed in this Phase 1 build.
 - ✅ Baseline AIPolicy records seeded (5 system-default policies: allow L0–L2, require_approval L3, deny confidential/restricted external)
 - ✅ Baseline AIAgent records seeded (nexus_copilot, nexus_intelligence, nexus_feedback_analyst)
 - ✅ Migration mode exited — deny-by-default enforced when no policy matches (migration allow bypass removed)
-- ✅ Idempotency hardened — caller-provided `idempotency_key` + deterministic SHA-256 fingerprint, terminal-state replay, scoped by tenant/requester/operation
+- ✅ Idempotency hardened — caller-provided `idempotency_key` + deterministic SHA-256 fingerprint (excludes payload_hash so changed-payload conflicts are detected), terminal-state replay, scoped by tenant/requester/operation
 - ✅ Fail-closed audit — consequential actions throw on audit failure (no silent execution without provenance), non-consequential enter degraded mode
 - ✅ AIApproval lifecycle — pending → approved/rejected/expired/cancelled → executed/execution_failed, single-use, requester cannot self-approve, scope-match verification
 - ✅ Worker-safe Orbit Inbox routing — Workers receive `/worker` deep links (never `/platform/ai-governance`); admin/tenant_admin receive governance links
@@ -410,6 +411,7 @@ abstraction** — all addressed in this Phase 1 build.
 - ✅ Parity test suite created (42 tests — frontend/backend governance logic alignment)
 - ✅ Gateway hardening test suite created (21 tests — idempotency, tenant validation, Worker-safe links, migration exit, fail-closed audit, fingerprint determinism)
 - ✅ Live gateway verification: `policy_decision: "allow"`, `cost_source: "registry"`, `model_lifecycle_status: "approved"`, `capability_source: "registry"`
+- ✅ Live idempotency verification: same-key replay returns cached result without re-execution; same-key changed-payload returns 409 `idempotency_conflict` (fingerprint excludes payload_hash; conflict detected via payload_hash mismatch in `checkIdempotency`)
 
 **Remaining Work:**
 - Configure external provider credentials (OpenAI, Anthropic, Gemini) — platform_builtin model active as fallback

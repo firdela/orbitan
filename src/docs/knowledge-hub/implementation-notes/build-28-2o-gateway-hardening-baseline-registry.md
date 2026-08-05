@@ -46,7 +46,8 @@ Human-originated L0/L1 requests are governed by policy evaluation only. Applied 
 ### 4. Idempotency Hardening
 
 - **Format validation:** `idempotency_key` must match `/^[a-zA-Z0-9_-]{8,128}$/`
-- **Deterministic fingerprint:** SHA-256 of (tenant_id, requester_id, service_key, normalised payload hash, idempotency_key)
+- **Deterministic fingerprint:** SHA-256 of (tenant_id, requester_id, service_key, idempotency_key) — deliberately EXCLUDES payload hash so that a changed payload with the same key produces the SAME fingerprint, enabling conflict detection
+- **Conflict detection:** When fingerprint matches an existing record but `payload_hash` differs, the gateway returns 409 `idempotency_conflict` — the request does not execute
 - **Terminal-state replay:** `succeeded`, `failed`, `denied`, `timed_out` audit events return cached safe response summary
 - **Non-terminal:** `executing` returns processing state
 - **Scope:** Fingerprint is scoped by tenant, requester, and operation — cross-tenant collision impossible
