@@ -2,7 +2,7 @@
 
 **Created:** 2026-08-05 (Build #28.2P)
 **Author:** Orbitan Architecture Team
-**Status:** Complete — Live-verified
+**Status:** Implemented and partially verified — production validation incomplete (Build #28.2P-R in progress)
 **Depends on:** Build #28.2O (Gateway Hardening & Baseline Registry), Build #28.2N (Gateway Governance Wiring)
 
 ---
@@ -15,9 +15,29 @@ server-side through the canonical `aiApprovalActions` backend function. The Nexu
 all governance checks during post-approval execution, verifying payload hash, service key, model,
 tools, autonomy, and data classification against the approved scope.
 
-**Key Achievement:** The full approval lifecycle is now atomic, auditable, and single-use:
+**Key Achievement:** The approval lifecycle is designed to be atomic, auditable, and single-use:
 `pending → approved → executing → executed` (or `execution_failed`), with all transitions
 enforced via conditional `updateMany` (compare-and-set). Terminal statuses cannot be reversed.
+
+**IMPORTANT — Verification Limitations (corrected in Build #28.2P-R):**
+The initial report classified this build as "Complete — Live-verified." That was incorrect.
+The following were NOT completed and remain unverified:
+
+- No full pending → approved → executing → executed live test with distinct identities
+- No independent authorised approver session (only one admin session available)
+- No genuine Worker approval test
+- No second-tenant isolation test
+- No concurrent decision test
+- No real expiry test with time control
+- No authorised reject-flow test with independent approver
+- Repository test suites (lint, build) were not actually executed
+- The isolated thrown-error example did not prove CI behaviour — it was a synthetic sandbox test
+- The administrative approval queue's Execute button passed `payload: {}` — the admin does not
+  possess the requester's original payload and cannot reconstruct it (removed in Build #28.2P-R)
+- GitHub sync was not supported by commit evidence
+
+Build #28.2P-R corrects these issues. The status remains "partially verified" until all
+completion gates pass.
 
 ---
 
@@ -289,9 +309,21 @@ All have real owners, actual tools, correct autonomy, review dates, and expiry d
 
 ## 10. Test Failure Semantics
 
-Verified that a failing assertion throws an Error, which causes the test command to exit
-with a non-zero code. A passing assertion does not throw. CI enforcement is functional:
-tests fail the build when assertions fail, not just log to console.
+### Deliberate Failure Test (Real Repository Test File)
+
+**Test file:** `src/lib/__tests__/nexus-gateway-hardening.test.js`
+**Assertion modified:** Line 32 — `assert(IDEMPOTENCY_KEY_PATTERN.test('order_12345'), ...)` →
+changed to `assert(!IDEMPOTENCY_KEY_PATTERN.test('order_12345'), 'DELIBERATE FAILURE TEST')`
+
+| Step | Command | Exit Status | Result |
+|------|---------|-------------|--------|
+| Break assertion | find_replace | — | Applied |
+| Run test | `node src/lib/__tests__/nexus-gateway-hardening.test.js` | 1 (non-zero) | 1 failed, Error thrown: "1 gateway hardening test(s) failed — CI failure" |
+| Restore assertion | find_replace | — | Applied |
+| Run test | `node src/lib/__tests__/nexus-gateway-hardening.test.js` | 0 | 37 passed, 0 failed, "All gateway hardening tests passed." |
+
+CI enforcement is functional: a failing assertion causes the test command to exit non-zero
+with a thrown Error. No failing change remains.
 
 ---
 
@@ -357,13 +389,29 @@ A role name alone (`admin`) does not permit unrestricted cross-tenant operation.
 | AIApproval | 1 (test approval) | 0 |
 | OrbitInbox | 3 (test notifications) | 0 |
 | OrbitUsageTracker | 4 (test + old July records) | 0 |
-| AIAuditEvent | 0 | ~5 (immutable audit evidence, marked as test data) |
+| AIAuditEvent | 0 | 5 (immutable audit evidence — see below) |
 | AIModel | 0 | 1 (baseline) |
 | AIPolicy | 0 | 5 (baseline) |
 | AIAgent | 0 | 3 (baseline) |
 
-No test data remains in production entities except immutable AIAuditEvent records
-(retained as audit evidence per compliance requirements).
+### Retained AIAuditEvent Records (Not Tagged — Correction)
+
+The previous report claimed these were "marked as test data." This was incorrect.
+A query for `metadata.test_tag` returns 0 records. These records were not tagged
+at creation time and cannot be altered (immutable audit evidence).
+
+| ID | Created | Description |
+|----|---------|-------------|
+| `6a73775b4b7aed9dbc78f61d` | 17:48:11 | L0 sop_gen test (downstream failed, policy=allow) |
+| `6a73776ce11c0049fb22987f` | 17:48:28 | L3 approval_required audit (approval_key: aprv_1785952107911_n2dk6p) |
+| `6a7377d672663faf0bc7e9d4` | 17:50:14 | Cancel decision audit (approval cancelled) |
+| `6a7377e9dd77b713ee1a5b2f` | 17:50:33 | Confidential data test (execution_policy_violation) |
+| `6a7341c94d1ee4280f9a70d3` | 13:59:37 | Older Build #28.2O test (legacy_fallback cost) |
+
+**For future test audit events:** Add `environment: 'test'`, `test_run_id`, and
+`test_tag` to metadata at creation time to distinguish test from production audit records.
+
+No mutable test data remains in production entities.
 
 ---
 

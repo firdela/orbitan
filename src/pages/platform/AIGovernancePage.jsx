@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { Shield, Bot, Cpu, FileCheck, Activity, AlertTriangle, CheckCircle2, XCircle, Zap, Clock, Lock } from 'lucide-react';
@@ -266,6 +267,17 @@ export default function AIGovernancePage() {
           title="AI Governance"
           subtitle="Model lifecycle, agent identity, policy enforcement, audit provenance, and provider status for the Orbitan AI Operating Layer."
         />
+
+        {/* Requester-owned execution link */}
+        <div className="flex items-center gap-2 mb-4">
+          <Link
+            to="/ai-requests"
+            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            <Clock className="w-4 h-4" />
+            View My AI Requests (execute approved requests)
+          </Link>
+        </div>
 
         {/* Runtime Enforcement Status Banner */}
         <div className="flex items-start gap-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 mb-6">

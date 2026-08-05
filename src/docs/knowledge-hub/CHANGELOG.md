@@ -7,6 +7,41 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2P-R (Secure AI Approval Execution — Correction & Execution Ownership Fix) (2026-08-05)
+
+### Corrected — Unsupported Documentation Claims
+- The initial Build #28.2P report classified the build as "Complete — Live-verified." This was incorrect. The following claims were unsupported and have been corrected:
+  - "P0 gaps: none" → corrected: P0 validation gaps remain for live multi-identity tests
+  - "full lifecycle verified" → corrected: full approve-to-execute lifecycle was NOT live-tested with distinct identities
+  - "live role matrix passed" → corrected: role matrix was structurally verified only, not live-tested with Worker/tenant sessions
+  - "CI enforcement functional" → corrected: repository lint/build commands were not actually executed
+  - "GitHub sync active" → corrected: no commit SHA was provided as evidence
+- Status corrected to: "Implemented and partially verified — production validation incomplete"
+
+### Fixed — Execution Ownership (Critical Architecture Fix)
+- **Problem:** The administrative AIApprovalQueue contained a generic Execute button that called `aiApprovalActions.execute` with `payload: {}`. The admin queue does not possess the requester's original payload and cannot reconstruct it. A payload hash can verify a resubmitted payload but cannot reconstruct one.
+- **Fix:** Removed the generic Execute control from the administrative approval queue entirely. The admin queue now only handles governance decisions (approve, reject, cancel) and displays lifecycle status.
+- **New:** Created `AIRequestStatus` component (`src/components/platform/AIRequestStatus.jsx`) — a requester-owned execution experience where the original requester:
+  - Views their own AI request status (pending, approved, executed, etc.)
+  - Cancels their own pending requests
+  - Resubmits the exact original payload as JSON to execute approved requests
+  - Views safe results and provenance after execution
+- **New route:** `/ai-requests` (`AIRequestStatusPage`) — accessible to all authenticated users; RLS on AIApproval ensures users only see their own requests.
+- **Worker safety:** Worker requesters see only their own request status; no admin governance links are exposed.
+
+### Remaining — Unverified Gates (require manual test accounts)
+The following gates could not be verified within the Base44 development environment because it does not support multi-session testing with distinct authenticated identities:
+- Full approve-to-execute lifecycle with independent requester and approver
+- Worker approval denial (requires Worker session)
+- Live Tenant A / Tenant B isolation (requires second tenant session)
+- Concurrent decision tests (require parallel authenticated sessions)
+- Real expiry test with time control
+- Authorised reject flow with independent approver
+
+These are classified as **manual verification required** and must be completed with controlled test accounts before the build can be classified as production-verified.
+
+---
+
 ## [Unreleased] — Build #28.2O (Nexus Gateway Hardening — Idempotency, Fail-Closed Audit, Baseline Registry, Migration Exit) (2026-08-05)
 
 ### Added — Baseline Registry Seeding

@@ -98,6 +98,7 @@ import GoLiveReadinessCentre from '@/pages/platform/GoLiveReadinessCentre';
 import PilotDeploymentCentre from '@/pages/platform/PilotDeploymentCentre';
 import InquiryQueue from '@/pages/platform/InquiryQueue';
 import AIGovernancePage from '@/pages/platform/AIGovernancePage';
+import AIRequestStatusPage from '@/pages/platform/AIRequestStatusPage';
 
 // Foundation — Public & Admin Pages
 import AboutOrbitan from '@/pages/foundation/AboutOrbitan';
@@ -297,6 +298,7 @@ const AuthenticatedApp = () => {
       <Route path="/platform/pilot-deployment" element={<PilotDeploymentCentre />} />
       <Route path="/platform/inquiries" element={<InquiryQueue />} />
       <Route path="/platform/ai-governance" element={<AIGovernancePage />} />
+      <Route path="/ai-requests" element={<AIRequestStatusPage />} />
 
       {/* Foundation — Platform Admin Pages */}
       <Route path="/platform/system-logs" element={<SystemLogs />} />

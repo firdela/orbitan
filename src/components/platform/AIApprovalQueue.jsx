@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2, XCircle, Clock, AlertTriangle, Loader2, Shield, Ban,
-  Play, RotateCcw, X, UserX,
+  X,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -152,16 +152,13 @@ export default function AIApprovalQueue() {
 
   const dialogTitle = confirmDialog?.action === 'approve' ? 'Approve AI Request?'
     : confirmDialog?.action === 'reject' ? 'Reject AI Request?'
-    : confirmDialog?.action === 'cancel' ? 'Cancel AI Request?'
-    : 'Execute Approved AI Request?';
+    : 'Cancel AI Request?';
 
   const dialogDescription = confirmDialog?.action === 'approve'
-    ? `This will allow the requester to execute the AI action "${confirmDialog?.approval?.service_key}". The approver identity will be recorded server-side.`
+    ? `This will allow the requester to execute the AI action "${confirmDialog?.approval?.service_key}" from their own AI Request Status page. The approver identity will be recorded server-side.`
     : confirmDialog?.action === 'reject'
       ? `This will deny the AI request "${confirmDialog?.approval?.service_key}". The requester will be notified with your reason.`
-      : confirmDialog?.action === 'cancel'
-        ? `This will cancel the pending AI request "${confirmDialog?.approval?.service_key}". This action cannot be undone.`
-        : `This will execute the approved AI request "${confirmDialog?.approval?.service_key}" through the canonical Nexus gateway. All governance checks will be re-run server-side.`;
+      : `This will cancel the pending AI request "${confirmDialog?.approval?.service_key}". This action cannot be undone.`;
 
   return (
     <>
@@ -317,17 +314,11 @@ export default function AIApprovalQueue() {
                 )}
 
                 {isApproved && !isExpired && (
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1 gap-1.5"
-                      onClick={() => requestConfirm('execute', approval)}
-                      disabled={isSubmitting}
-                      aria-label={`Execute ${approval.service_key} approved request`}
-                    >
-                      {isSubmitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-                      Execute
-                    </Button>
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-emerald-500/5 border border-emerald-500/10">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                      Approved — the requester can execute this from their AI Request Status page.
+                    </span>
                   </div>
                 )}
 
@@ -382,8 +373,7 @@ export default function AIApprovalQueue() {
               disabled={!!submittingId}
               className={
                 confirmDialog?.action === 'reject' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' :
-                confirmDialog?.action === 'cancel' ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' :
-                confirmDialog?.action === 'execute' ? 'bg-blue-600 text-white hover:bg-blue-700' : ''
+                confirmDialog?.action === 'cancel' ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : ''
               }
             >
               {submittingId ? (
@@ -401,15 +391,10 @@ export default function AIApprovalQueue() {
                   <Ban className="w-3 h-3" />
                   Confirm Reject
                 </>
-              ) : confirmDialog?.action === 'cancel' ? (
+              ) : (
                 <>
                   <X className="w-3 h-3" />
                   Confirm Cancel
-                </>
-              ) : (
-                <>
-                  <Play className="w-3 h-3" />
-                  Confirm Execute
                 </>
               )}
             </AlertDialogAction>
