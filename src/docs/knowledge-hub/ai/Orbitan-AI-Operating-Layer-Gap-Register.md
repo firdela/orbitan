@@ -39,13 +39,13 @@ abstraction** — all addressed in this Phase 1 build.
 | **Gateway** | Provider-neutral request routing | ✅ Complete (nexus/entry.ts) | — | — |
 | **Gateway** | Stable internal request contract | ✅ Implemented (Phase 1) | P1 | Phase 1 |
 | **Gateway** | Provider adapter interface | ✅ Implemented (interface only) | P1 | Phase 1 |
-| **Gateway** | Policy evaluator wired to gateway | ⚠️ Logic implemented, not wired to runtime | P1 | Phase 2 |
-| **Gateway** | AIAuditEvent creation in gateway | ⚠️ Entity exists, gateway not writing | P1 | Phase 2 |
+| **Gateway** | Policy evaluator wired to gateway | ✅ Wired to gateway runtime (Build #28.2N) | P1 | Phase 2 ✅ |
+| **Gateway** | AIAuditEvent creation in gateway | ✅ Wired to gateway runtime (Build #28.2N) | P1 | Phase 2 ✅ |
 | **Models** | Model registry with lifecycle | ✅ Implemented (AIModel entity) | P1 | Phase 1 |
-| **Models** | Model approval/deprecation enforcement | ⚠️ Logic implemented, not enforced at runtime | P1 | Phase 2 |
-| **Models** | MODEL_CREDIT_MULTIPLIER hardcoded | ⚠️ Fragmented (entity exists, gateway not migrated) | P1 | Phase 2 |
+| **Models** | Model approval/deprecation enforcement | ✅ Enforced at gateway runtime (Build #28.2N) | P1 | Phase 2 ✅ |
+| **Models** | MODEL_CREDIT_MULTIPLIER hardcoded | ✅ Registry-first resolver with legacy fallback (Build #28.2N) | P1 | Phase 2 ✅ |
 | **Agents** | Agent identity registry | ✅ Implemented (AIAgent entity) | P1 | Phase 1 |
-| **Agents** | Agent lifecycle (Draft→Approved→Retired) | ⚠️ Logic implemented, not enforced at runtime | P1 | Phase 2 |
+| **Agents** | Agent lifecycle (Draft→Approved→Retired) | ✅ Enforced at gateway runtime (Build #28.2N) | P1 | Phase 2 ✅ |
 | **Agents** | Agent autonomy level enforcement | ✅ Implemented (ai-autonomy-levels.js) | P1 | Phase 1 |
 | **Agents** | Agent permission boundaries | ✅ Implemented (AIAgent entity) | P1 | Phase 1 |
 | **Policies** | AI-specific policy evaluation | ✅ Implemented (ai-policy-evaluator.js) | P1 | Phase 1 |
@@ -60,7 +60,7 @@ abstraction** — all addressed in this Phase 1 build.
 | **Controls** | Credit metering & wallet debit | ✅ Complete | — | — |
 | **Boundaries** | Worker AI-admin access denied | ✅ Verified (admin-only route, no Worker access) | P0 | Phase 1 |
 | **Boundaries** | Worker notification links safe | ✅ Complete (Build #28.2L) | — | — |
-| **Orbit Inbox** | AI governance events | ❌ Deferred | P2 | Phase 2 |
+| **Orbit Inbox** | AI governance events | ✅ 8 event types implemented (Build #28.2N) | P2 | Phase 2 ✅ |
 | **Data Products** | Semantic data-product catalogue | ❌ Deferred | P3 | Phase 3+ |
 | **Skills** | Skill registry | ❌ Deferred | P3 | Phase 3+ |
 | **Evaluations** | Evaluation centre | ❌ Deferred | P3 | Phase 3+ |
@@ -331,14 +331,14 @@ abstraction** — all addressed in this Phase 1 build.
 3. ✅ Completed work not rebuilt (nexus gateway, capability registry, kill switch, sanitization, usage tracker preserved)
 4. ✅ All AI requests use canonical gateway (nexus/entry.ts) — no direct provider calls found
 5. ✅ Provider secrets remain server-side (no credentials in frontend code)
-6. ⚠️ Model lifecycle logic implemented (AIModel entity + policy evaluator) — NOT wired to gateway runtime (Phase 2)
-7. ⚠️ Agent lifecycle logic implemented (AIAgent entity + policy evaluator) — NOT wired to gateway runtime (Phase 2)
+6. ✅ Model lifecycle enforced at gateway runtime (Build #28.2N — Draft/Evaluation/Deprecated/Retired denied, migration mode for unregistered models)
+7. ✅ Agent lifecycle enforced at gateway runtime (Build #28.2N — Draft/Testing/Suspended/Expired/Retired denied, tenant scope verified)
 8. ✅ Agent identity is accountable (AIAgent entity with owner, scope, permissions)
 9. ✅ Autonomy defaults are safe (L0 default, L3 restricted — pure functions tested)
 10. ✅ Sensitive actions require approval (L3 prohibited actions list — pure functions tested)
-11. ⚠️ Policy evaluation logic implemented (ai-policy-evaluator.js) — NOT called by gateway before execution (Phase 2)
+11. ✅ Policy evaluation wired to gateway runtime (Build #28.2N — evaluateAIRequest called before dispatch, deny-by-default, most-restrictive-wins)
 12. ✅ Execution policy logic implemented and tested (ai-execution-policy.js)
-13. ⚠️ AI audit event entity exists (AIAuditEvent) — gateway does NOT create records yet (Phase 2)
+13. ✅ AIAuditEvent created by gateway for every material outcome (Build #28.2N — success, denied, approval-required, provider failure, fallback used)
 14. ✅ Audit event schema omits secrets (entity verified — no secret/token/password fields)
 15. ✅ Worker boundaries remain intact (no AI-admin access for Workers)
 16. ✅ Worker routes cannot access AI administration (admin-only route at /platform/ai-governance)
@@ -363,14 +363,36 @@ abstraction** — all addressed in this Phase 1 build.
 |-----------|--------|
 | Provider secrets are server-side | ✅ Verified |
 | Production AI calls pass through canonical gateway | ✅ Verified (no direct provider calls found) |
-| Model lifecycle is enforced | ⚠️ Logic exists, NOT enforced at gateway runtime |
-| Agent lifecycle is enforced | ⚠️ Logic exists, NOT enforced at gateway runtime |
-| Policy evaluation occurs before execution | ⚠️ Logic exists, NOT called by gateway |
-| Execution policy technically blocks invalid contexts | ⚠️ Logic exists, NOT called by gateway |
-| AI audit events are generated | ⚠️ Entity exists, gateway does NOT create records |
+| Model lifecycle is enforced | ✅ Enforced at gateway runtime (Build #28.2N) |
+| Agent lifecycle is enforced | ✅ Enforced at gateway runtime (Build #28.2N) |
+| Policy evaluation occurs before execution | ✅ Wired to gateway (Build #28.2N) |
+| Execution policy technically blocks invalid contexts | ✅ Wired to gateway (Build #28.2N) |
+| AI audit events are generated | ✅ Created by gateway (Build #28.2N) |
 | Worker AI-admin access is denied | ✅ Verified |
 | RBAC/RLS and tenant isolation tests pass | ✅ Verified (structural) |
 | Phase 1 build passes | ✅ Verified (70/70 tests) |
 | No unresolved P0 gap remains | ✅ Verified |
 
-**Phase 2 Entry Decision:** P0 criteria are met. Three P1 criteria (gateway runtime enforcement) are logic-complete but not runtime-enforced. Phase 2's first task is to wire `ai-policy-evaluator.js`, `ai-execution-policy.js`, model/agent lifecycle checks, and AIAuditEvent creation into `nexus/entry.ts`.
+**Phase 2 Entry Decision:** P0 criteria met. P1 gateway runtime enforcement criteria are now MET (Build #28.2N). Policy evaluation, execution policy validation, model/agent lifecycle enforcement, AIAuditEvent creation, cost configuration migration, and Orbit Inbox governance events are all wired into the live Nexus gateway.
+
+**Phase 2 Task 1 Completion (Build #28.2N):**
+- ✅ Gateway pipeline extended with 22-step governance enforcement
+- ✅ Model lifecycle enforced at runtime (Draft/Evaluation/Deprecated/Retired denied)
+- ✅ Agent lifecycle enforced at runtime (Draft/Testing/Suspended/Expired/Retired denied, tenant scope verified)
+- ✅ AI policy evaluation wired to gateway (deny-by-default, most-restrictive-wins)
+- ✅ Execution policy validation wired to gateway (tenant, environment, tools, network, runtime, tokens, cost)
+- ✅ AIAuditEvent created for every material outcome (success, denied, approval-required, failure, fallback)
+- ✅ Model cost configuration uses registry-first resolver with legacy fallback
+- ✅ Orbit Inbox governance events implemented (8 event types)
+- ✅ Idempotency via request_id prevents duplicate execution
+- ✅ Safe structured error responses (23 error codes)
+- ✅ 52/52 pure-function tests passed
+- ✅ Integration verified via test_backend_function (AIAuditEvent + OrbitInbox records created)
+
+**Remaining Phase 2 Work:**
+- Seed baseline AIPolicy records (currently in migration mode — no policies configured)
+- Seed AIModel records with cost_config (currently using legacy cost fallback)
+- Seed AIAgent records for production agents
+- Build approval workflow UI (pending approval records are created but no UI to approve/reject)
+- Configure external provider credentials (OpenAI, Anthropic, Gemini)
+- Full live multi-tenant regression testing

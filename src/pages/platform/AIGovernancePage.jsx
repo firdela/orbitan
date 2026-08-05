@@ -1,7 +1,7 @@
 import React from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Shield, Bot, Cpu, FileCheck, Activity, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { Shield, Bot, Cpu, FileCheck, Activity, AlertTriangle, CheckCircle2, XCircle, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
@@ -265,6 +265,19 @@ export default function AIGovernancePage() {
           title="AI Governance"
           subtitle="Model lifecycle, agent identity, policy enforcement, audit provenance, and provider status for the Orbitan AI Operating Layer."
         />
+
+        {/* Runtime Enforcement Status Banner */}
+        <div className="flex items-start gap-3 p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 mb-6">
+          <Zap className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+              Runtime Governance Enforcement Active
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              The Nexus gateway now enforces model lifecycle, agent lifecycle, autonomy levels, AI policy evaluation, execution policy validation, AIAuditEvent creation, and Orbit Inbox governance events for every AI request. Policy and execution validation occur before provider dispatch.
+            </p>
+          </div>
+        </div>
 
         <div className="grid gap-6 mt-6">
           <section>

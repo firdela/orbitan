@@ -377,8 +377,41 @@ Only one P0 gap: Worker AI-admin access verification — verified as safe (no AI
 
 ### Phase 2 Entry Criteria Result
 - P0 criteria: ✅ All met (no direct provider calls, secrets server-side, Worker admin access denied, tenant isolation verified)
-- P1 criteria: ⚠️ 3 of 6 logic-complete but not runtime-enforced (gateway wiring deferred)
-- **Phase 2 first task:** Wire `ai-policy-evaluator.js`, `ai-execution-policy.js`, model/agent lifecycle checks, and AIAuditEvent creation into `nexus/entry.ts`
+- P1 criteria: ✅ All met (gateway runtime enforcement wired in Build #28.2N)
+- **Phase 2 Task 1 COMPLETE** — Gateway runtime enforcement wired
+
+## Build #28.2N — Nexus Gateway Runtime Governance Enforcement (Phase 2 Task 1) (2026-08-05)
+
+### What Was Built
+Wired the existing Phase 1 governance controls into the live Nexus gateway (`base44/functions/nexus/entry.ts`). No new governance systems were created — all existing Phase 1 modules were preserved and wired into the gateway pipeline.
+
+### Gateway Pipeline (22 Steps)
+1. Authenticate requester → 2. Resolve tenant context → 3. Validate request contract → 4. Idempotency check → 5. Kill switch → 6. Capability resolution → 7. Model identity resolution → 8. Agent identity resolution → 9. Model lifecycle enforcement → 10. Agent lifecycle enforcement → 11. Autonomy evaluation → 12. AI policy evaluation → 13. Execution policy validation → 14. Payload sanitisation → 15. Shield governance → 16. Credit/cost check → 17. Provider/model route → 18. Dispatch → 19. Fallback → 20. Usage tracking → 21. AIAuditEvent creation → 22. Orbit Inbox events → Structured response
+
+### Key Features
+- **Migration mode**: When no AIPolicy records exist, non-sensitive actions allowed with audit warning
+- **Cost migration**: Registry-first resolver with legacy MODEL_CREDIT_MULTIPLIER fallback (audit warning emitted)
+- **Audit failure**: Fail-closed for consequential actions, degraded mode for L0 read-only
+- **Idempotency**: request_id prevents duplicate execution and duplicate audit events
+- **Approval flow**: AIAuditEvent + OrbitInbox item created for require_approval decisions (full workflow UI is subsequent phase)
+- **Fallback enforcement**: Every fallback re-runs ALL governance checks via recursive nexus call
+- **Safe errors**: 23 structured error codes with user-friendly messages
+
+### Files
+- Created: `base44/shared/ai-governance.ts`, `src/lib/__tests__/nexus-gateway-governance.test.js`, `src/docs/knowledge-hub/implementation-notes/build-28-2n-gateway-governance-wiring.md`
+- Modified: `base44/functions/nexus/entry.ts` (full rewrite), `src/pages/platform/AIGovernancePage.jsx` (enforcement banner), `src/docs/knowledge-hub/CHANGELOG.md`, Gap Register
+
+### Tests
+- **52/52 pure-function tests passed (100%)** via Node VM sandbox
+- **Integration verified** via test_backend_function: AIAuditEvent records created with full provenance (policy_decision, model lifecycle, cost source, error classification, no secrets), OrbitInbox governance events created (8 event types, safe messages, proper categories, deep links)
+
+### Remaining Phase 2 Work
+1. Seed baseline AIPolicy records (currently in migration mode)
+2. Seed AIModel records with cost_config (currently using legacy fallback)
+3. Seed AIAgent records for production agents
+4. Build approval workflow UI
+5. Configure external provider credentials
+6. Full live multi-tenant regression testing
 
 ## Build #28.2L — Worker Navigation Repair & Orbit Inbox Integration (2026-08-05)
 

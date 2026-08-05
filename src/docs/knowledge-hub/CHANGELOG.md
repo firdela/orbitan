@@ -7,6 +7,79 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2N (Nexus Gateway Runtime Governance Enforcement — Phase 2 Task 1) (2026-08-05)
+
+### Added — Runtime Governance Module
+- **`base44/shared/ai-governance.ts`** — Runtime-safe TypeScript governance module for the Nexus gateway and other backend functions. Contains the same pure evaluation logic as `src/lib/ai/*.js` modules, adapted for the Deno backend environment. Exports: autonomy levels (L0–L3, L3 prohibited actions), provenance states, policy decisions (7 types), model/agent lifecycle evaluation, data classification evaluation, most-restrictive-policy-wins resolution, full `evaluateAIRequest()`, execution policy validation, provider error classification, safe error codes and user messages.
+
+### Changed — Nexus Gateway Pipeline (base44/functions/nexus/entry.ts)
+- **Full gateway rewrite** with 22-step governance pipeline wired in. All existing functionality preserved (auth, tenant resolution, kill switch, capability registry, plan-tier gate, payload sanitisation, Shield governance, credit check, provider dispatch, fallback, usage tracking). Converted from `Deno.serve` to `export default async function` per current backend function guide.
+- **New runtime steps added:**
+  - Step 3: Idempotency check (request_id prevents duplicate execution and audit events)
+  - Step 7: Model identity resolution (AIModel entity lookup)
+  - Step 8: Agent identity resolution (AIAgent entity lookup, if agent_id provided)
+  - Step 9: Model lifecycle enforcement (Draft/Evaluation/Deprecated/Retired denied)
+  - Step 10: Agent lifecycle enforcement (Draft/Testing/Suspended/Expired/Retired denied, tenant scope verified)
+  - Step 11: Autonomy evaluation (L0–L3, L3 prohibited actions blocked)
+  - Step 12: AI policy evaluation (deny-by-default, most-restrictive-wins, matched policies from AIPolicy entity)
+  - Step 13: Execution policy validation (tenant scope, environment, tools, network, runtime, tokens, cost)
+  - Step 14: Credit and cost budget check (registry-first with legacy fallback)
+  - Step 20: AIAuditEvent creation (full provenance — provider, model, routing, policy, autonomy, tools, runtime, cost, validation, provenance state, outcome, error classification)
+  - Step 21: Orbit Inbox governance event emission (approval required, policy denied, execution blocked, agent suspended/expired, execution failed, fallback used)
+  - Step 22: Structured response (includes request_id, audit_event_id, policy_decision, provenance_state, validation_status, cost_source)
+
+### Added — Migration Mode
+- When no AIPolicy records exist, non-sensitive actions are allowed with an audit warning. Prevents gateway from blocking all AI during migration period. Once at least one policy is configured, deny-by-default enforcement applies.
+
+### Added — Cost Configuration Migration
+- Gateway uses registry-first resolver: if model found in AIModel entity with `cost_config.credit_multiplier`, uses that value. If not found, falls back to hardcoded `MODEL_CREDIT_MULTIPLIER` with an audit warning in AIAuditEvent metadata. Preserves existing billing behaviour during migration.
+
+### Added — Audit Failure Behaviour
+- **Consequential actions** (sensitive actions or L3 autonomy): fail-closed — throws on audit failure, preventing execution without audit evidence.
+- **Non-consequential (L0 read-only)**: degraded mode — logs operational error, allows execution, records missing audit evidence.
+- Prevents audit-writing failures from creating duplicate provider executions.
+
+### Added — Idempotency
+- Each request generates a unique `request_id` (`req_{timestamp}_{random}`). Before execution, gateway checks for existing AIAuditEvent with the same request_id. If found, returns prior result without re-executing. Prevents duplicate execution, duplicate charges, and duplicate audit events.
+
+### Added — Approval-Required Flow
+- When policy evaluation returns `require_approval`: does NOT dispatch provider request, creates AIAuditEvent with `provenance_state='awaiting_review'`, emits OrbitInbox item with `action_type='approve'` and `priority='critical'` to the requesting user, returns 202 response with `approval_required: true`. Full approval workflow (approving/rejecting) is a subsequent phase.
+
+### Added — Fallback Enforcement
+- Every fallback re-runs ALL governance checks by recursively invoking the nexus gateway with the fallback capability key. The recursive call goes through the full 22-step pipeline including model lifecycle, agent lifecycle, policy evaluation, and execution policy validation. Fallback is recorded in AIAuditEvent metadata.
+
+### Added — Orbit Inbox Governance Events
+- 8 event types: `ai_approval_required`, `ai_policy_denied`, `ai_execution_policy_blocked`, `ai_model_lifecycle_denied`, `ai_agent_suspended`, `ai_agent_expired`, `ai_execution_failed`, `ai_fallback_used`. Each respects tenant and role permissions, targets only authorised recipients, links to `/platform/ai-governance`, supports read/unread. Workers receive only events directed to them as the requesting user.
+
+### Added — Safe Error Responses
+- 23 structured safe error codes with user-friendly messages. No raw provider errors, stack traces, secrets, policy internals, or database implementation details exposed.
+
+### Changed — AIGovernancePage
+- Added runtime enforcement status banner at the top of the page, indicating that the Nexus gateway now enforces governance controls at runtime.
+
+### Added — Tests
+- `src/lib/__tests__/nexus-gateway-governance.test.js` — 52 pure-function test cases covering model lifecycle (8), agent lifecycle (6), autonomy (7), policy evaluation (6), execution policy (11), provider adapter (8), cost configuration (2), provenance/RLS (2), full evaluation integration (2). **Result: 52/52 passed (100%)** after correcting one assertion (L0 autonomy correctly returns `require_approval`, not `deny`).
+
+### Verified — Integration (via test_backend_function)
+- Gateway deploys successfully ✓
+- AIAuditEvent records created with full provenance (policy_decision, model lifecycle, cost source, error classification, no secrets) ✓
+- OrbitInbox governance events created (category, event_type, action_type, link, safe body) ✓
+- Structured error responses returned (safe_error_code, request_id, audit_event_id) ✓
+- Policy evaluation runs before dispatch (verified by audit event `policy_decision` field) ✓
+- Cost configuration uses legacy fallback with audit warning (verified by audit event metadata `cost_source: 'legacy_fallback'`) ✓
+- Migration mode active (verified by audit event `policy_reason: 'No policies configured — migration mode allow'`) ✓
+
+### Remaining Limitations
+1. No AIPolicy records seeded — gateway operates in migration mode
+2. No AIModel records seeded — cost configuration uses legacy fallback
+3. No AIAgent records seeded — agent-scoped requests without registered agents are denied
+4. Full approval workflow — pending approval records created but no UI to approve/reject yet
+5. External providers — only platform_builtin configured
+
+### Files
+- Created: `base44/shared/ai-governance.ts`, `src/lib/__tests__/nexus-gateway-governance.test.js`, `src/docs/knowledge-hub/implementation-notes/build-28-2n-gateway-governance-wiring.md`
+- Modified: `base44/functions/nexus/entry.ts`, `src/pages/platform/AIGovernancePage.jsx`, `src/docs/knowledge-hub/CHANGELOG.md`
+
 ## [Unreleased] — Build #28.2M (AI Operating Layer Phase 1 — Security & Governance Foundation) (2026-08-05)
 
 ### Added — AI Operating Layer Gap Register
