@@ -279,8 +279,8 @@ export default async function(req: Request): Promise<Response> {
       return safeJson('forbidden', 403, 'Approval tenant scope mismatch.');
     }
 
-    // Verify status is pending
-    if (approval.status !== 'pending') {
+    // Verify status — approve/reject/cancel require 'pending'; execute requires 'approved'
+    if (action !== 'execute' && approval.status !== 'pending') {
       return safeJson('invalid_request', 409, `Approval status is '${approval.status}', expected 'pending'.`, {
         current_status: approval.status,
       });
@@ -313,17 +313,22 @@ export default async function(req: Request): Promise<Response> {
         });
       }
 
-      // Mandatory audit (fail-closed)
-      const cancelAuditId = await createApprovalDecisionAudit(base44, {
-        tenant_id: resolvedTenantId, outlet_id: approval.outlet_id,
-        approval_id: approval.id, approval_key: approval.approval_key, request_id: approval.request_id,
-        service_key: approval.service_key, capability_tier: approval.capability_tier,
-        requester_user_id: approval.requester_user_id, requester_name: approval.requester_name, requester_role: approval.requester_role,
-        approver_user_id: user.id, approver_name: user.full_name, approver_role: user.role,
-        decision: 'cancelled', decision_reason: decision_reason || 'Cancelled by user.',
-        model_key: approval.model_key, provider: approval.provider, autonomy_level: approval.autonomy_level,
-        data_classification: approval.data_classification, policy_key: approval.policy_key,
-      }).catch(() => '');
+      // Mandatory audit (fail-closed) — Section 8: cannot swallow audit failure
+      let cancelAuditId: string = '';
+      try {
+        cancelAuditId = await createApprovalDecisionAudit(base44, {
+          tenant_id: resolvedTenantId, outlet_id: approval.outlet_id,
+          approval_id: approval.id, approval_key: approval.approval_key, request_id: approval.request_id,
+          service_key: approval.service_key, capability_tier: approval.capability_tier,
+          requester_user_id: approval.requester_user_id, requester_name: approval.requester_name, requester_role: approval.requester_role,
+          approver_user_id: user.id, approver_name: user.full_name, approver_role: user.role,
+          decision: 'cancelled', decision_reason: decision_reason || 'Cancelled by user.',
+          model_key: approval.model_key, provider: approval.provider, autonomy_level: approval.autonomy_level,
+          data_classification: approval.data_classification, policy_key: approval.policy_key,
+        });
+      } catch (auditErr) {
+        console.log(`[aiApprovalActions] FAIL-CLOSED: Cancel audit creation failed: ${auditErr.message}`);
+      }
 
       if (!cancelAuditId) {
         return safeJson('audit_failure', 500, 'Cannot cancel approval — audit evidence creation failed. The approval has not been changed.', {
