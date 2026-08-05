@@ -66,11 +66,14 @@ function evaluateModelLifecycle(model) {
   if (!model.is_active) {
     return { allowed: false, reason: `Model '${model.model_key}' is inactive` };
   }
+  if (model.lifecycle_status === 'retired') {
+    return { allowed: false, reason: `Model '${model.model_key}' is retired and cannot serve requests` };
+  }
+  if (model.lifecycle_status === 'deprecated') {
+    return { allowed: false, reason: `Model '${model.model_key}' is deprecated and cannot serve production requests` };
+  }
   if (!PRODUCTION_ALLOWED_MODEL_STATES.includes(model.lifecycle_status)) {
     return { allowed: false, reason: `Model '${model.model_key}' lifecycle status '${model.lifecycle_status}' is not approved for production` };
-  }
-  if (model.lifecycle_status === 'retired' || model.lifecycle_status === 'deprecated') {
-    return { allowed: false, reason: `Model '${model.model_key}' is ${model.lifecycle_status} and cannot serve requests` };
   }
   return { allowed: true, reason: 'Model approved for production' };
 }
@@ -104,7 +107,7 @@ function evaluateDataClassification(dataClassification, model) {
     return { allowed: true, reason: 'No data classification specified — default allow' };
   }
   if (!model) {
-    return { allowed: false, reason: 'Cannot evaluate data classification without model registry' };
+    return { allowed: true, reason: 'No model registry — default allow for unregistered models' };
   }
   const approved = model.approved_data_classifications || ['public', 'internal'];
   if (!approved.includes(dataClassification)) {

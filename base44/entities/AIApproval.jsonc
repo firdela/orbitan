@@ -1,0 +1,227 @@
+{
+  "name": "AIApproval",
+  "type": "object",
+  "description": "Orbitan AI Operating Layer \u2014 AI action approval lifecycle registry (Build #28.2O). Created when an AI request requires human approval (policy_decision=require_approval). Tracks the full approval lifecycle: pending \u2192 approved/rejected/expired/cancelled \u2192 executed/execution_failed. Ensures requester cannot self-approve, Workers cannot approve management-level actions, expired approvals cannot execute, and approval scope must exactly match the later execution. Single-use: once executed, the approval cannot be reused. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant context for this approval"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "Outlet context. Null = tenant-wide."
+    },
+    "approval_key": {
+      "type": "string",
+      "description": "Unique approval identifier e.g. 'aprv_2026_0001'. Generated server-side."
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Server-generated request ID from the original gateway processing attempt."
+    },
+    "idempotency_fingerprint": {
+      "type": "string",
+      "description": "Deterministic fingerprint of the original request. Used to verify that the post-approval execution scope exactly matches the approved scope."
+    },
+    "requester_user_id": {
+      "type": "string",
+      "description": "User who initiated the original AI request."
+    },
+    "requester_name": {
+      "type": "string"
+    },
+    "requester_role": {
+      "type": "string",
+      "description": "Role of the requester at time of request."
+    },
+    "executing_agent_id": {
+      "type": "string",
+      "description": "Agent identity that would execute this request. Null for human-initiated requests."
+    },
+    "service_key": {
+      "type": "string",
+      "description": "Nexus capability key that requires approval."
+    },
+    "capability_tier": {
+      "type": "number",
+      "enum": [
+        1,
+        2,
+        3
+      ],
+      "description": "Capability tier of the requested service."
+    },
+    "autonomy_level": {
+      "type": "string",
+      "enum": [
+        "L0_answer",
+        "L1_recommend",
+        "L2_draft",
+        "L3_execute"
+      ],
+      "description": "Autonomy level of the requested action."
+    },
+    "provider": {
+      "type": "string",
+      "description": "AI provider that would serve this request."
+    },
+    "model_key": {
+      "type": "string",
+      "description": "Model identifier that would be used."
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tools that would be invoked."
+    },
+    "data_classification": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ],
+      "description": "Data classification of the input data."
+    },
+    "estimated_credits": {
+      "type": "number",
+      "description": "Estimated credits that would be consumed."
+    },
+    "approval_reason": {
+      "type": "string",
+      "description": "Why human approval is required for this action."
+    },
+    "policy_key": {
+      "type": "string",
+      "description": "Policy key that triggered the approval requirement."
+    },
+    "payload_hash": {
+      "type": "string",
+      "description": "SHA-256 hash of the normalised request payload. Used to verify that post-approval execution uses the exact same payload \u2014 changed payload requires new approval."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "expired",
+        "cancelled",
+        "executed",
+        "execution_failed"
+      ],
+      "default": "pending",
+      "description": "Approval lifecycle state. pending \u2192 approved/rejected/expired/cancelled. approved \u2192 executed/execution_failed. Single-use: executed approvals cannot be reused."
+    },
+    "approving_role": {
+      "type": "string",
+      "description": "Role required to approve this action e.g. 'tenant_admin', 'admin'. Workers cannot approve management-level actions."
+    },
+    "approver_user_id": {
+      "type": "string",
+      "description": "User who approved or rejected. Null while pending."
+    },
+    "approver_name": {
+      "type": "string"
+    },
+    "decision_reason": {
+      "type": "string",
+      "description": "Reason provided by the approver for their decision."
+    },
+    "decided_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the approval/rejection decision was made."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this approval expires. Expired approvals cannot execute. Default 24 hours from creation."
+    },
+    "execution_audit_event_id": {
+      "type": "string",
+      "description": "Reference to the AIAuditEvent created when the approved action was actually executed. Null until executed."
+    },
+    "executed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the approved action was executed."
+    },
+    "initial_audit_event_id": {
+      "type": "string",
+      "description": "Reference to the AIAuditEvent created when approval was first required."
+    }
+  },
+  "required": [
+    "tenant_id",
+    "approval_key",
+    "request_id",
+    "requester_user_id",
+    "service_key",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "data.requester_user_id": "{{user.id}}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

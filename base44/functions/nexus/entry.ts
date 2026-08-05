@@ -14,33 +14,50 @@ import {
 // ORBIT NEXUS GATEWAY — Capability-Tiered Orchestrator (ADR-0046)
 // The single, governed entry point for all AI intelligence.
 //
-// BUILD #28.2N — Phase 2 Task 1: Governance Controls Wired
+// BUILD #28.2O — Hardened Gateway Governance
 //
-// Pipeline (22 steps):
+// HARDENING CHANGES (Build #28.2O):
+//   1.  Proper idempotency via caller-provided idempotency_key +
+//       deterministic fingerprint (not server-generated request_id)
+//   2.  Server-side tenant membership validation (no forged tenant_id)
+//   3.  Worker-safe Orbit Inbox routing (no admin links to Workers)
+//   4.  True audit fail-closed for consequential actions
+//   5.  Pre-execution audit record for consequential actions
+//   6.  Migration mode EXITED — deny-by-default when no policy matches
+//   7.  AIApproval lifecycle for require_approval decisions
+//   8.  Post-approval execution re-runs all governance checks
+//   9.  Notification audience matrix (Worker vs admin events)
+//
+// Pipeline (24 steps):
 //   1.  Authenticate requester
-//   2.  Resolve tenant context
-//   3.  Validate request contract
-//   4.  Check kill switch (ADR-0018)
-//   5.  Resolve capability (ADR-0046 registry)
-//   6.  Resolve model and agent identities
-//   7.  Enforce model lifecycle
-//   8.  Enforce agent lifecycle
-//   9.  Evaluate autonomy requirements
-//   10. Evaluate AI policies (deny-by-default, most-restrictive-wins)
-//   11. Validate execution policy
-//   12. Apply Zero-PII sanitisation (ADR-0044)
-//   13. Apply Shield governance gate
-//   14. Check credits and cost budget (registry-first with legacy fallback)
-//   15. Resolve approved provider/model route
-//   16. Dispatch provider request
-//   17. Handle timeout/retry/fallback (re-runs all governance checks)
-//   18. Validate and normalise response
-//   19. Record usage (OrbitUsageTracker)
-//   20. Create AIAuditEvent (full provenance)
-//   21. Emit authorised Orbit Inbox governance event where required
-//   22. Return structured response
+//   2.  Parse body (including idempotency_key, approval_key)
+//   3.  Validate tenant membership server-side
+//   4.  Generate server request_id (distinct from idempotency_key)
+//   5.  Compute deterministic idempotency fingerprint
+//   6.  Check idempotency by fingerprint (return cached or processing)
+//   7.  If post-approval execution: validate approval record
+//   8.  Check kill switch (ADR-0018)
+//   9.  Resolve capability (ADR-0046 registry)
+//   10. Resolve model and agent identities
+//   11. Enforce model lifecycle
+//   12. Enforce agent lifecycle
+//   13. Evaluate autonomy requirements
+//   14. Evaluate AI policies (deny-by-default, most-restrictive-wins)
+//   15. If require_approval: create AIApproval + audit + inbox, return 202
+//   16. Validate execution policy
+//   17. Apply Zero-PII sanitisation (ADR-0044)
+//   18. Apply Shield governance gate
+//   19. Check credits and cost budget (registry-first)
+//   20. Create pre-execution audit (consequential actions)
+//   21. Resolve provider/model route + dispatch
+//   22. Handle timeout/retry/fallback (re-runs all governance checks)
+//   23. Update audit with final outcome + emit Orbit Inbox events
+//   24. Return structured response
 //
-// Idempotency: request_id prevents duplicate execution and audit events.
+// Idempotency: caller-provided idempotency_key + deterministic fingerprint.
+//   request_id = unique server-generated identifier for one processing attempt.
+//   idempotency_key = caller-provided retry identity, reused across retries.
+//
 // Audit failure: fail-closed for consequential actions; degraded mode for L0.
 //
 // Created by Muhammad Firdaus Bin Ismail
@@ -57,9 +74,6 @@ const LEGACY_FALLBACK_REGISTRY: Record<string, { function_name: string; default_
 };
 
 // ── LEGACY CREDIT MULTIPLIER (migration fallback) ────────────
-// Used when a model is not found in the AIModel registry or has no
-// cost_config. Emits an audit warning. Will be removed once all
-// models are registered with cost_config in the AIModel entity.
 const MODEL_CREDIT_MULTIPLIER: Record<string, number> = {
   'automatic': 1.0,
   'gemini_3_flash': 1.0,
@@ -70,11 +84,14 @@ const MODEL_CREDIT_MULTIPLIER: Record<string, number> = {
   'claude_opus_4_6': 4.0,
 };
 
-// ── PLAN TIER HIERARCHY ──────────────────────────────────────
-const PLAN_TIER: Record<string, number> = {
-  'orbitan_free': 0, 'orbitan_starter': 1, 'orbitan_growth': 2,
-  'orbitan_business': 3, 'orbitan_enterprise': 4,
-};
+// ── IDEMPOTENCY CONSTANTS ─────────────────────────────────────
+const IDEMPOTENCY_KEY_PATTERN = /^[a-zA-Z0-9_-]{8,128}$/;
+const IDEMPOTENCY_EXPIRY_HOURS = 24;
+const IDEMPOTENCY_TERMINAL_STATES = ['succeeded', 'failed', 'denied', 'timed_out'];
+const IDEMPOTENCY_PROCESSING_STATES = ['received', 'validating', 'executing'];
+
+// ── APPROVAL CONSTANTS ────────────────────────────────────────
+const APPROVAL_EXPIRY_HOURS = 24;
 
 // ── FORBIDDEN FIELDS (ADR-0044 Zero-PII) ─────────────────────
 const FORBIDDEN_FIELDS = [
@@ -85,20 +102,60 @@ const FORBIDDEN_FIELDS = [
   'justification', 'entity_content',
 ];
 
-// ── REGISTRY CACHE (Stale-While-Revalidate, 60s TTL) ─────────
+// ── REGISTRY CACHES (Stale-While-Revalidate) ──────────────────
 let _registryCache: any[] | null = null;
 let _registryCacheAt = 0;
 const REGISTRY_CACHE_TTL_MS = 60_000;
 
-// ── MODEL REGISTRY CACHE (separate, 120s TTL) ────────────────
 let _modelCache: any[] | null = null;
 let _modelCacheAt = 0;
 const MODEL_CACHE_TTL_MS = 120_000;
 
-// ── POLICY REGISTRY CACHE (separate, 120s TTL) ────────────────
 let _policyCache: any[] | null = null;
 let _policyCacheAt = 0;
 const POLICY_CACHE_TTL_MS = 120_000;
+
+// ── CRYPTO HELPERS (Web Crypto API, Deno-native) ──────────────
+async function sha256(data: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(data));
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function normalisePayloadForHash(payload: any): string {
+  if (!payload || typeof payload !== 'object') return String(payload || '');
+  try {
+    return JSON.stringify(payload, Object.keys(payload).sort());
+  } catch {
+    return String(payload || '');
+  }
+}
+
+// ── WORKER-SAFE ROUTING HELPERS ────────────────────────────────
+function isWorkerRole(role: string | null | undefined): boolean {
+  return role === 'worker';
+}
+
+function resolveSafeLink(userRole: string | null, adminLink: string, workerSafeLink: string): string {
+  return isWorkerRole(userRole) ? workerSafeLink : adminLink;
+}
+
+const WORKER_SAFE_LINK = '/worker';
+const ADMIN_GOVERNANCE_LINK = '/platform/ai-governance';
+
+// ── TENANT ADMIN RESOLVER ─────────────────────────────────────
+async function resolveTenantAdminRecipients(base44: any, tenantId: string): Promise<Array<{ user_id: string; full_name: string }>> {
+  try {
+    const admins = await base44.asServiceRole.entities.Employee.filter({
+      tenant_id: tenantId, role: 'tenant_admin', status: 'active',
+    });
+    return (admins || [])
+      .filter((a: any) => a.user_id)
+      .map((a: any) => ({ user_id: a.user_id, full_name: a.full_name || 'Administrator' }));
+  } catch {
+    return [];
+  }
+}
 
 // ── CAPABILITY RESOLVER ───────────────────────────────────────
 async function resolveCapability(base44: any, serviceKey: string, tenantId: string | null): Promise<{
@@ -157,7 +214,6 @@ async function resolveModelForKey(base44: any, modelKey: string, tenantId: strin
       _modelCacheAt = now;
       models = _modelCache;
     }
-    // Prefer tenant-specific model, then system default
     const tenantModel = models.find((m: any) => m.model_key === modelKey && m.tenant_id === tenantId);
     const systemModel = models.find((m: any) => m.model_key === modelKey && m.tenant_id === 'system');
     return tenantModel || systemModel || null;
@@ -184,6 +240,7 @@ async function resolveAgentForId(base44: any, agentId: string, tenantId: string)
 async function resolveMatchingPolicies(base44: any, params: {
   tenantId: string; modelKey: string; agentId: string | null;
   dataClassification: string; autonomyLevel: string; environment: string;
+  serviceKey: string;
 }): Promise<any[]> {
   try {
     let policies = _policyCache;
@@ -197,18 +254,13 @@ async function resolveMatchingPolicies(base44: any, params: {
 
     return policies.filter((p: any) => {
       if (!p.is_active) return false;
-      // Tenant scope: system policies apply to all; tenant-specific only to that tenant
       if (p.tenant_id !== 'system' && p.tenant_id !== params.tenantId) return false;
-      // Environment
       if (p.applies_to_environments && p.applies_to_environments.length > 0 && !p.applies_to_environments.includes(params.environment)) return false;
-      // Model
       if (p.applies_to_models && p.applies_to_models.length > 0 && !p.applies_to_models.includes(params.modelKey)) return false;
-      // Agent
       if (p.applies_to_agents && p.applies_to_agents.length > 0 && params.agentId && !p.applies_to_agents.includes(params.agentId)) return false;
-      // Data classification
       if (p.applies_to_data_classifications && p.applies_to_data_classifications.length > 0 && !p.applies_to_data_classifications.includes(params.dataClassification)) return false;
-      // Autonomy
       if (p.applies_to_autonomy_levels && p.applies_to_autonomy_levels.length > 0 && !p.applies_to_autonomy_levels.includes(params.autonomyLevel)) return false;
+      if (p.applies_to_use_cases && p.applies_to_use_cases.length > 0 && !p.applies_to_use_cases.includes(params.serviceKey)) return false;
       return true;
     });
   } catch (err) {
@@ -222,13 +274,8 @@ function resolveModelCostMultiplier(model: any, modelKey: string): {
   multiplier: number; source: 'registry' | 'legacy_fallback'; warning: string | null;
 } {
   if (model && model.cost_config && model.cost_config.credit_multiplier != null) {
-    return {
-      multiplier: model.cost_config.credit_multiplier,
-      source: 'registry',
-      warning: null,
-    };
+    return { multiplier: model.cost_config.credit_multiplier, source: 'registry', warning: null };
   }
-  // Legacy fallback — emit warning
   const legacyMultiplier = MODEL_CREDIT_MULTIPLIER[modelKey] ?? 1.0;
   return {
     multiplier: legacyMultiplier,
@@ -242,36 +289,65 @@ function sanitizePayload(payload: any, mode: string, permittedFields: string[]):
   if (!payload || typeof payload !== 'object') return payload;
   if (mode === 'disabled') return payload;
   const cleaned: any = { ...payload };
-  for (const field of FORBIDDEN_FIELDS) {
-    delete cleaned[field];
-  }
+  for (const field of FORBIDDEN_FIELDS) { delete cleaned[field]; }
   if (mode === 'permissive' && permittedFields.length > 0) {
     const allowSet = new Set(permittedFields);
     const result: any = {};
-    for (const key of Object.keys(cleaned)) {
-      if (allowSet.has(key)) result[key] = cleaned[key];
-    }
+    for (const key of Object.keys(cleaned)) { if (allowSet.has(key)) result[key] = cleaned[key]; }
     return result;
   }
   return cleaned;
 }
 
-// ── IDEMPOTENCY CHECK ─────────────────────────────────────────
-async function checkIdempotency(base44: any, requestId: string): Promise<any | null> {
-  try {
-    const existing = await base44.asServiceRole.entities.AIAuditEvent.filter({ request_id: requestId });
-    if (existing && existing.length > 0) {
-      return existing[0];
-    }
-  } catch (err) {
-    console.log(`[nexusGateway] Idempotency check failed: ${err.message}`);
-  }
-  return null;
+// ── IDEMPOTENCY FINGERPRINT COMPUTATION ───────────────────────
+async function computeIdempotencyFingerprint(params: {
+  tenantId: string; requesterId: string; serviceKey: string;
+  payloadHash: string; idempotencyKey: string;
+}): Promise<string> {
+  const raw = `${params.tenantId}:${params.requesterId}:${params.serviceKey}:${params.payloadHash}:${params.idempotencyKey}`;
+  return await sha256(raw);
 }
 
-// ── AIAUDITEVENT CREATOR ──────────────────────────────────────
+// ── IDEMPOTENCY CHECK (by fingerprint, not request_id) ────────
+async function checkIdempotency(base44: any, fingerprint: string, payloadHash: string): Promise<{
+  status: 'not_found' | 'terminal' | 'processing' | 'conflict';
+  existingRecord?: any;
+}> {
+  try {
+    const existing = await base44.asServiceRole.entities.AIAuditEvent.filter(
+      { idempotency_fingerprint: fingerprint },
+      '-created_date', 5
+    );
+    if (!existing || existing.length === 0) {
+      return { status: 'not_found' };
+    }
+    const record = existing[0];
+    // Check for payload conflict (same fingerprint but different payload)
+    if (record.metadata?.payload_hash && record.metadata.payload_hash !== payloadHash) {
+      return { status: 'conflict', existingRecord: record };
+    }
+    if (IDEMPOTENCY_TERMINAL_STATES.includes(record.execution_state)) {
+      return { status: 'terminal', existingRecord: record };
+    }
+    if (IDEMPOTENCY_PROCESSING_STATES.includes(record.execution_state)) {
+      return { status: 'processing', existingRecord: record };
+    }
+    // approval_required is treated as terminal for idempotency (return the approval state)
+    if (record.execution_state === 'approval_required') {
+      return { status: 'terminal', existingRecord: record };
+    }
+    return { status: 'not_found' };
+  } catch (err) {
+    console.log(`[nexusGateway] Idempotency check failed: ${err.message}`);
+    return { status: 'not_found' };
+  }
+}
+
+// ── AIAUDITEVENT CREATOR (with fail-closed for consequential) ─
 async function createAIAuditEvent(base44: any, params: {
   tenant_id: string; outlet_id: string | null; request_id: string;
+  idempotency_key: string | null; idempotency_fingerprint: string;
+  execution_state: string;
   service_key: string; capability_tier: number;
   requesting_user_id: string; requesting_user_name: string | null; requesting_user_role: string;
   executing_agent_id: string | null;
@@ -287,14 +363,19 @@ async function createAIAuditEvent(base44: any, params: {
   validation_result: string; provenance_state: string;
   outcome: string; error_message: string | null; error_classification: string | null;
   fallback_used: boolean;
+  approval_reference_id: string | null;
   metadata: Record<string, any>;
   is_consequential: boolean;
+  cached_result?: Record<string, any> | null;
 }): Promise<string | null> {
   try {
     const record = await base44.asServiceRole.entities.AIAuditEvent.create({
       tenant_id: params.tenant_id,
       outlet_id: params.outlet_id,
       request_id: params.request_id,
+      idempotency_key: params.idempotency_key,
+      idempotency_fingerprint: params.idempotency_fingerprint,
+      execution_state: params.execution_state,
       service_key: params.service_key,
       capability_tier: params.capability_tier,
       requesting_user_id: params.requesting_user_id,
@@ -310,6 +391,7 @@ async function createAIAuditEvent(base44: any, params: {
       policy_keys_evaluated: params.policy_keys_evaluated,
       tools_invoked: params.tools_invoked,
       integrations_invoked: params.integrations_invoked,
+      approval_reference_id: params.approval_reference_id,
       autonomy_level: params.autonomy_level,
       runtime_ms: params.runtime_ms,
       credits_consumed: params.credits_consumed,
@@ -320,32 +402,56 @@ async function createAIAuditEvent(base44: any, params: {
       outcome: params.outcome,
       error_message: params.error_message,
       error_classification: params.error_classification,
-      metadata: { ...params.metadata, fallback_used: params.fallback_used, model_lifecycle_status: params.model_lifecycle_status },
+      metadata: {
+        ...params.metadata,
+        fallback_used: params.fallback_used,
+        model_lifecycle_status: params.model_lifecycle_status,
+        payload_hash: params.metadata?.payload_hash,
+      },
+      cached_result: params.cached_result || null,
     });
     return record?.id || null;
   } catch (err) {
     console.log(`[nexusGateway] AIAuditEvent creation failed: ${err.message}`);
-    // Fail-closed for consequential actions; degraded mode for L0 read-only
+    // FAIL-CLOSED for consequential actions — do NOT swallow the error
     if (params.is_consequential) {
       throw new Error(`AUDIT_FAILURE: Cannot execute consequential action without audit evidence — ${err.message}`);
     }
-    // For non-consequential (L0 read-only), emit operational error but don't block
-    console.log(`[nexusGateway] Audit failure in degraded mode (non-consequential) — execution allowed, audit evidence missing`);
+    // For non-consequential (L0 read-only), degraded mode — execution allowed
+    console.log(`[nexusGateway] Audit failure in degraded mode (non-consequential) — execution allowed`);
     return null;
   }
 }
 
-// ── ORBIT INBOX GOVERNANCE EVENT EMITTER ──────────────────────
+// ── AIAUDITEVENT UPDATER (for pre-execution → post-execution) ─
+async function updateAIAuditEvent(base44: any, auditId: string, updates: Record<string, any>): Promise<void> {
+  try {
+    await base44.asServiceRole.entities.AIAuditEvent.update(auditId, updates);
+  } catch (err) {
+    console.log(`[nexusGateway] AIAuditEvent update failed: ${err.message}`);
+  }
+}
+
+// ── WORKER-SAFE ORBIT INBOX EVENT EMITTER ────────────────────
+// Routes notifications to the correct recipient with role-safe links.
+// Workers NEVER receive admin links like /platform/ai-governance.
 async function emitGovernanceInboxEvent(base44: any, params: {
   tenant_id: string; outlet_id: string | null;
   recipient_user_id: string; recipient_name: string | null;
+  recipient_role: string | null;
   category: string; event_type: string;
   title: string; body: string;
   priority: string; is_actionable: boolean; action_type: string;
-  source_entity: string; source_id: string; link: string;
+  source_entity: string; source_id: string;
+  admin_link?: string; worker_safe_link?: string;
   metadata: Record<string, any>;
 }): Promise<void> {
   try {
+    // Resolve role-safe link — Workers get worker_safe_link, admins get admin_link
+    const link = isWorkerRole(params.recipient_role)
+      ? (params.worker_safe_link || WORKER_SAFE_LINK)
+      : (params.admin_link || ADMIN_GOVERNANCE_LINK);
+
     await base44.asServiceRole.entities.OrbitInbox.create({
       tenant_id: params.tenant_id,
       outlet_id: params.outlet_id,
@@ -361,7 +467,7 @@ async function emitGovernanceInboxEvent(base44: any, params: {
       action_state: 'pending',
       source_entity: params.source_entity,
       source_id: params.source_id,
-      link: params.link,
+      link,
       metadata: params.metadata,
       channels_delivered: ['in_app'],
     });
@@ -406,6 +512,74 @@ function safeErrorResponse(errorCode: string, status: number, serviceKey: string
   }, { status });
 }
 
+// ── TENANT MEMBERSHIP VALIDATION ──────────────────────────────
+// Validates that the requester is authorised for the requested tenant.
+// Platform admins can specify any tenant_id.
+// All other users must use their own tenant_id.
+function validateTenantMembership(userRole: string | null, userTenantId: string | null, requestedTenantId: string | null): {
+  valid: boolean; resolvedTenantId: string | null; reason?: string;
+} {
+  // Platform admins can operate across tenants
+  if (userRole === 'admin') {
+    return { valid: true, resolvedTenantId: requestedTenantId || userTenantId };
+  }
+  // For all other roles, the requested tenant must match their own
+  const effectiveTenantId = requestedTenantId || userTenantId;
+  if (!effectiveTenantId) {
+    return { valid: false, resolvedTenantId: null, reason: 'No tenant context available' };
+  }
+  // If user provided a tenant_id that differs from their own, reject
+  if (requestedTenantId && userTenantId && requestedTenantId !== userTenantId) {
+    return {
+      valid: false,
+      resolvedTenantId: null,
+      reason: `Tenant mismatch: requester tenant='${userTenantId}', requested tenant='${requestedTenantId}'`,
+    };
+  }
+  return { valid: true, resolvedTenantId: effectiveTenantId };
+}
+
+// ── APPROVAL VALIDATION ───────────────────────────────────────
+async function validateApprovalForExecution(base44: any, approvalKey: string, currentPayloadHash: string, tenantId: string): Promise<{
+  valid: boolean; approval?: any; reason?: string;
+}> {
+  try {
+    const approvals = await base44.asServiceRole.entities.AIApproval.filter({ approval_key: approvalKey });
+    if (!approvals || approvals.length === 0) {
+      return { valid: false, reason: 'Approval not found' };
+    }
+    const approval = approvals[0];
+
+    // Verify tenant scope
+    if (approval.tenant_id !== tenantId) {
+      return { valid: false, reason: 'Approval tenant scope mismatch' };
+    }
+    // Verify status
+    if (approval.status !== 'approved') {
+      return { valid: false, reason: `Approval status is '${approval.status}', expected 'approved'` };
+    }
+    // Verify not expired
+    if (approval.expires_at && new Date(approval.expires_at) < new Date()) {
+      await base44.asServiceRole.entities.AIApproval.update(approval.id, { status: 'expired' }).catch(() => {});
+      return { valid: false, reason: 'Approval has expired' };
+    }
+    // Verify payload scope matches
+    if (approval.payload_hash && approval.payload_hash !== currentPayloadHash) {
+      return { valid: false, reason: 'Payload has changed since approval — a new approval is required' };
+    }
+    return { valid: true, approval };
+  } catch (err) {
+    return { valid: false, reason: `Approval validation failed: ${err.message}` };
+  }
+}
+
+// ── APPROVAL KEY GENERATOR ────────────────────────────────────
+function generateApprovalKey(): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  return `aprv_${timestamp}_${random}`;
+}
+
 // ── MAIN GATEWAY HANDLER ──────────────────────────────────────
 export default async function(req: Request): Promise<Response> {
   const startTime = Date.now();
@@ -413,6 +587,7 @@ export default async function(req: Request): Promise<Response> {
   let serviceKey: string | null = null;
   let actorId: string | null = null;
   let base44: any = null;
+  // request_id: unique server-generated identifier for one processing attempt
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
   try {
@@ -425,12 +600,35 @@ export default async function(req: Request): Promise<Response> {
     actorId = user.id;
 
     const body = await req.json();
-    const { service_key, payload, tenant_id, outlet_id, agent_id, data_classification, requested_autonomy } = body;
+    const {
+      service_key, payload, tenant_id, outlet_id, agent_id,
+      data_classification, requested_autonomy,
+      idempotency_key,           // caller-provided retry identity
+      approval_key,              // for post-approval execution
+    } = body;
 
     serviceKey = service_key;
-    tenantId = tenant_id || user.data?.tenant_id || null;
 
-    // ── STEP 2: RESOLVE TENANT CONTEXT ────────────────────
+    // ── STEP 2: VALIDATE IDEMPOTENCY KEY FORMAT ────────────
+    // If caller provides an idempotency_key, validate its format
+    if (idempotency_key && !IDEMPOTENCY_KEY_PATTERN.test(idempotency_key)) {
+      return safeErrorResponse(SAFE_ERROR_CODES.INVALID_REQUEST, 400, serviceKey, {
+        detail: 'idempotency_key must be 8-128 alphanumeric characters, dashes, or underscores',
+      });
+    }
+
+    // ── STEP 3: VALIDATE TENANT MEMBERSHIP ─────────────────
+    const tenantCheck = validateTenantMembership(user.role, user.data?.tenant_id, tenant_id || null);
+    if (!tenantCheck.valid) {
+      // Audit the attempted cross-tenant request
+      console.log(`[nexusGateway] TENANT VALIDATION FAILED: ${tenantCheck.reason} (user=${actorId}, role=${user.role})`);
+      return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+        detail: 'Tenant context validation failed',
+        request_id: requestId,
+      });
+    }
+    tenantId = tenantCheck.resolvedTenantId;
+
     if (!service_key) {
       return safeErrorResponse(SAFE_ERROR_CODES.INVALID_REQUEST, 400, null, { detail: 'service_key is required' });
     }
@@ -438,21 +636,75 @@ export default async function(req: Request): Promise<Response> {
       return safeErrorResponse(SAFE_ERROR_CODES.TENANT_REQUIRED, 400, service_key);
     }
 
-    // ── STEP 3: IDEMPOTENCY CHECK ──────────────────────────
-    const existingAudit = await checkIdempotency(base44, requestId);
-    if (existingAudit) {
-      return Response.json({
-        success: existingAudit.outcome === 'success',
-        service_key: serviceKey,
-        request_id: requestId,
-        audit_event_id: existingAudit.id,
-        duplicate_request: true,
-        message: 'This request was already processed.',
-        outcome: existingAudit.outcome,
-      }, { status: 200 });
+    // ── STEP 4: COMPUTE IDEMPOTENCY FINGERPRINT ────────────
+    // The fingerprint is deterministic: same tenant + requester + service + payload + key = same fingerprint
+    // This is what prevents duplicate execution across retries.
+    const payloadHash = await sha256(normalisePayloadForHash(payload || {}));
+    const idempotencyFingerprint = idempotency_key
+      ? await computeIdempotencyFingerprint({
+          tenantId, requesterId: actorId, serviceKey: service_key,
+          payloadHash, idempotencyKey: idempotency_key,
+        })
+      : '';
+
+    // ── STEP 5: CHECK IDEMPOTENCY BY FINGERPRINT ───────────
+    if (idempotency_key && idempotencyFingerprint) {
+      const idempotencyCheck = await checkIdempotency(base44, idempotencyFingerprint, payloadHash);
+
+      if (idempotencyCheck.status === 'terminal') {
+        // Return the cached result — do NOT execute again
+        const record = idempotencyCheck.existingRecord;
+        return Response.json({
+          success: record.outcome === 'success',
+          service_key: service_key,
+          request_id: requestId,
+          audit_event_id: record.id,
+          idempotency_replay: true,
+          message: 'This request was already processed.',
+          outcome: record.outcome,
+          ...(record.cached_result || {}),
+        }, { status: record.cached_result?.http_status || 200 });
+      }
+
+      if (idempotencyCheck.status === 'processing') {
+        // Original request is still in progress
+        return Response.json({
+          success: false,
+          safe_error_code: SAFE_ERROR_CODES.DUPLICATE_REQUEST,
+          message: 'A request with this idempotency key is currently being processed.',
+          service_key: service_key,
+          request_id: requestId,
+          idempotency_processing: true,
+        }, { status: 409 });
+      }
+
+      if (idempotencyCheck.status === 'conflict') {
+        // Same idempotency key but different payload — reject
+        return Response.json({
+          success: false,
+          safe_error_code: SAFE_ERROR_CODES.DUPLICATE_REQUEST,
+          message: 'This idempotency key was already used with a different payload.',
+          service_key: service_key,
+          request_id: requestId,
+          idempotency_conflict: true,
+        }, { status: 409 });
+      }
     }
 
-    // ── STEP 4: KILL SWITCH (ADR-0018) ────────────────────
+    // ── STEP 6: POST-APPROVAL EXECUTION VALIDATION ─────────
+    let approvalContext: any = null;
+    if (approval_key) {
+      const approvalCheck = await validateApprovalForExecution(base44, approval_key, payloadHash, tenantId);
+      if (!approvalCheck.valid) {
+        return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+          detail: approvalCheck.reason,
+          request_id: requestId,
+        });
+      }
+      approvalContext = approvalCheck.approval;
+    }
+
+    // ── STEP 7: KILL SWITCH (ADR-0018) ────────────────────
     let killSwitchActive = false;
     let killSwitchMessage = '';
     try {
@@ -480,7 +732,7 @@ export default async function(req: Request): Promise<Response> {
       }, { status: 200 });
     }
 
-    // ── STEP 5: RESOLVE CAPABILITY (ADR-0046) ──────────────
+    // ── STEP 8: RESOLVE CAPABILITY (ADR-0046) ──────────────
     const capability = await resolveCapability(base44, service_key, tenantId);
     if (!capability) {
       return safeErrorResponse(SAFE_ERROR_CODES.INVALID_REQUEST, 404, serviceKey, {
@@ -491,33 +743,27 @@ export default async function(req: Request): Promise<Response> {
       return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, { detail: `Capability '${service_key}' is disabled` });
     }
 
-    // ── STEP 6: RESOLVE MODEL AND AGENT IDENTITIES ────────
+    // ── STEP 9: RESOLVE MODEL AND AGENT IDENTITIES ────────
     const modelKey = capability.model_override || payload?.model || 'automatic';
     const model = await resolveModelForKey(base44, modelKey, tenantId);
     const agent = agent_id ? await resolveAgentForId(base44, agent_id, tenantId) : null;
 
-    // Determine autonomy level (default L0 for human-originated requests)
     const autonomyLevel = requested_autonomy || (agent?.autonomy_level) || L0_ANSWER;
-    const actionType = service_key; // The service_key is the action type
+    const actionType = service_key;
     const dataClass = data_classification || 'internal';
 
-    // ── STEP 7: ENFORCE MODEL LIFECYCLE ────────────────────
-    // Migration mode: if model not in registry, allow with audit warning
-    let modelLifecycleResult: { allowed: boolean; reason: string } = { allowed: true, reason: 'Model not in registry — migration mode allow' };
-    let modelLifecycleDenied = false;
-    if (model) {
-      modelLifecycleResult = evaluateModelLifecycle(model);
-      if (!modelLifecycleResult.allowed) {
-        modelLifecycleDenied = true;
-      }
-    }
-
-    if (modelLifecycleDenied) {
+    // ── STEP 10: ENFORCE MODEL LIFECYCLE ───────────────────
+    // After migration exit: unregistered models are DENIED (no migration allow)
+    const modelLifecycleResult = evaluateModelLifecycle(model);
+    if (!modelLifecycleResult.allowed) {
       const isRetired = model?.lifecycle_status === 'retired';
       const errorCode = isRetired ? SAFE_ERROR_CODES.MODEL_RETIRED : SAFE_ERROR_CODES.MODEL_NOT_APPROVED;
       const outcome = classifyOutcome(DECISIONS.DENY, false, 'success');
+
       const auditId = await createAIAuditEvent(base44, {
         tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
+        idempotency_key: idempotency_key || null, idempotency_fingerprint: idempotencyFingerprint,
+        execution_state: 'denied',
         service_key: serviceKey, capability_tier: capability.tier,
         requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
         executing_agent_id: agent_id || null,
@@ -530,19 +776,45 @@ export default async function(req: Request): Promise<Response> {
         runtime_ms: Date.now() - startTime, credits_consumed: 0, estimated_cost_sgd: null,
         validation_result: 'not_validated', provenance_state: outcome.provenanceState,
         outcome: 'denied', error_message: modelLifecycleResult.reason, error_classification: 'model_unavailable',
-        fallback_used: false, metadata: {}, is_consequential: false,
+        fallback_used: false, approval_reference_id: null,
+        metadata: { payload_hash: payloadHash },
+        is_consequential: false,
+        cached_result: { success: false, safe_error_code: errorCode, http_status: 403 },
       }).catch(() => null);
 
-      // Emit inbox event to tenant admins
+      // Emit Worker-safe notification to requester
       await emitGovernanceInboxEvent(base44, {
         tenant_id: tenantId, outlet_id: outlet_id || null,
-        recipient_user_id: actorId, recipient_name: user.full_name,
+        recipient_user_id: actorId, recipient_name: user.full_name, recipient_role: user.role,
         category: 'security', event_type: 'ai_model_lifecycle_denied',
-        title: 'AI Request Denied — Model Lifecycle', body: modelLifecycleResult.reason,
+        title: 'AI Request Denied — Model Lifecycle',
+        body: isWorkerRole(user.role)
+          ? 'Your AI request could not be completed. Please contact your manager if you need assistance.'
+          : modelLifecycleResult.reason,
         priority: 'important', is_actionable: false, action_type: 'none',
-        source_entity: 'AIAuditEvent', source_id: auditId || requestId, link: '/platform/ai-governance',
+        source_entity: 'AIAuditEvent', source_id: auditId || requestId,
+        admin_link: ADMIN_GOVERNANCE_LINK, worker_safe_link: WORKER_SAFE_LINK,
         metadata: { model_key: modelKey, lifecycle_status: model?.lifecycle_status },
       }).catch(() => {});
+
+      // Emit governance event to tenant admins (not to Workers)
+      if (!isWorkerRole(user.role) || true) {
+        const admins = await resolveTenantAdminRecipients(base44, tenantId);
+        for (const admin of admins) {
+          if (admin.user_id !== actorId) {
+            await emitGovernanceInboxEvent(base44, {
+              tenant_id: tenantId, outlet_id: outlet_id || null,
+              recipient_user_id: admin.user_id, recipient_name: admin.full_name, recipient_role: 'tenant_admin',
+              category: 'security', event_type: 'ai_model_lifecycle_denied',
+              title: 'AI Request Denied — Model Lifecycle', body: modelLifecycleResult.reason,
+              priority: 'important', is_actionable: false, action_type: 'none',
+              source_entity: 'AIAuditEvent', source_id: auditId || requestId,
+              admin_link: ADMIN_GOVERNANCE_LINK,
+              metadata: { model_key: modelKey, lifecycle_status: model?.lifecycle_status },
+            }).catch(() => {});
+          }
+        }
+      }
 
       return safeErrorResponse(errorCode, 403, serviceKey, {
         request_id: requestId, audit_event_id: auditId, policy_decision: 'deny',
@@ -550,11 +822,13 @@ export default async function(req: Request): Promise<Response> {
       });
     }
 
-    // ── STEP 8: ENFORCE AGENT LIFECYCLE ───────────────────
+    // ── STEP 11: ENFORCE AGENT LIFECYCLE ───────────────────
     if (agent_id) {
       if (!agent) {
         const auditId = await createAIAuditEvent(base44, {
           tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
+          idempotency_key: idempotency_key || null, idempotency_fingerprint: idempotencyFingerprint,
+          execution_state: 'denied',
           service_key: serviceKey, capability_tier: capability.tier,
           requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
           executing_agent_id: agent_id, provider: PROVIDERS.PLATFORM_BUILTIN,
@@ -566,7 +840,10 @@ export default async function(req: Request): Promise<Response> {
           runtime_ms: Date.now() - startTime, credits_consumed: 0, estimated_cost_sgd: null,
           validation_result: 'not_validated', provenance_state: PROVENANCE_STATES.ai_generated,
           outcome: 'denied', error_message: `Agent '${agent_id}' not found`, error_classification: 'agent_suspended',
-          fallback_used: false, metadata: {}, is_consequential: false,
+          fallback_used: false, approval_reference_id: null,
+          metadata: { payload_hash: payloadHash },
+          is_consequential: false,
+          cached_result: { success: false, safe_error_code: SAFE_ERROR_CODES.AGENT_NOT_FOUND, http_status: 403 },
         }).catch(() => null);
         return safeErrorResponse(SAFE_ERROR_CODES.AGENT_NOT_FOUND, 403, serviceKey, { request_id: requestId, audit_event_id: auditId });
       }
@@ -578,6 +855,8 @@ export default async function(req: Request): Promise<Response> {
 
         const auditId = await createAIAuditEvent(base44, {
           tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
+          idempotency_key: idempotency_key || null, idempotency_fingerprint: idempotencyFingerprint,
+          execution_state: 'denied',
           service_key: serviceKey, capability_tier: capability.tier,
           requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
           executing_agent_id: agent_id, provider: PROVIDERS.PLATFORM_BUILTIN,
@@ -589,19 +868,26 @@ export default async function(req: Request): Promise<Response> {
           runtime_ms: Date.now() - startTime, credits_consumed: 0, estimated_cost_sgd: null,
           validation_result: 'not_validated', provenance_state: PROVENANCE_STATES.ai_generated,
           outcome: 'denied', error_message: agentCheck.reason, error_classification: 'agent_suspended',
-          fallback_used: false, metadata: {}, is_consequential: false,
+          fallback_used: false, approval_reference_id: null,
+          metadata: { payload_hash: payloadHash },
+          is_consequential: false,
+          cached_result: { success: false, safe_error_code: errorCode, http_status: 403 },
         }).catch(() => null);
 
-        // Emit inbox event for agent suspended/expired
-        await emitGovernanceInboxEvent(base44, {
-          tenant_id: tenantId, outlet_id: outlet_id || null,
-          recipient_user_id: actorId, recipient_name: user.full_name,
-          category: 'security', event_type: agent.lifecycle_status === 'suspended' ? 'ai_agent_suspended' : 'ai_agent_expired',
-          title: `AI Agent ${agent.lifecycle_status === 'suspended' ? 'Suspended' : 'Expired'}`,
-          body: agentCheck.reason, priority: 'important', is_actionable: false, action_type: 'none',
-          source_entity: 'AIAuditEvent', source_id: auditId || requestId, link: '/platform/ai-governance',
-          metadata: { agent_id: agent_id, lifecycle_status: agent.lifecycle_status },
-        }).catch(() => {});
+        // Emit to agent owner + tenant admins (NOT to Worker requester)
+        const admins = await resolveTenantAdminRecipients(base44, tenantId);
+        for (const admin of admins) {
+          await emitGovernanceInboxEvent(base44, {
+            tenant_id: tenantId, outlet_id: outlet_id || null,
+            recipient_user_id: admin.user_id, recipient_name: admin.full_name, recipient_role: 'tenant_admin',
+            category: 'security', event_type: agent.lifecycle_status === 'suspended' ? 'ai_agent_suspended' : 'ai_agent_expired',
+            title: `AI Agent ${agent.lifecycle_status === 'suspended' ? 'Suspended' : 'Expired'}`,
+            body: agentCheck.reason, priority: 'important', is_actionable: false, action_type: 'none',
+            source_entity: 'AIAuditEvent', source_id: auditId || requestId,
+            admin_link: ADMIN_GOVERNANCE_LINK,
+            metadata: { agent_id: agent_id, lifecycle_status: agent.lifecycle_status },
+          }).catch(() => {});
+        }
 
         return safeErrorResponse(errorCode, 403, serviceKey, { request_id: requestId, audit_event_id: auditId });
       }
@@ -610,52 +896,57 @@ export default async function(req: Request): Promise<Response> {
       if (agent.tenant_id !== 'system' && agent.tenant_id !== tenantId) {
         const auditId = await createAIAuditEvent(base44, {
           tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
+          idempotency_key: idempotency_key || null, idempotency_fingerprint: idempotencyFingerprint,
+          execution_state: 'denied',
           service_key: serviceKey, capability_tier: capability.tier,
           requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
           executing_agent_id: agent_id, provider: PROVIDERS.PLATFORM_BUILTIN,
           model_key: modelKey, model_version: model?.exact_version || null, model_lifecycle_status: model?.lifecycle_status || null,
           routing_decision: 'registry_resolved', policy_decision: DECISIONS.DENY,
-          policy_reason: `Agent tenant scope mismatch: agent tenant='${agent.tenant_id}', request tenant='${tenantId}'`,
-          policy_keys_evaluated: [], autonomy_level: autonomyLevel, data_classification: dataClass,
+          policy_reason: `Agent tenant scope mismatch`, policy_keys_evaluated: [],
+          autonomy_level: autonomyLevel, data_classification: dataClass,
           tools_invoked: [], integrations_invoked: [],
           runtime_ms: Date.now() - startTime, credits_consumed: 0, estimated_cost_sgd: null,
           validation_result: 'not_validated', provenance_state: PROVENANCE_STATES.ai_generated,
           outcome: 'denied', error_message: 'Agent tenant scope mismatch', error_classification: 'agent_suspended',
-          fallback_used: false, metadata: {}, is_consequential: false,
+          fallback_used: false, approval_reference_id: null,
+          metadata: { payload_hash: payloadHash },
+          is_consequential: false,
+          cached_result: { success: false, safe_error_code: SAFE_ERROR_CODES.FORBIDDEN, http_status: 403 },
         }).catch(() => null);
         return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, { request_id: requestId, audit_event_id: auditId });
       }
     }
 
-    // ── STEP 9: EVALUATE AUTONOMY ──────────────────────────
+    // ── STEP 12: EVALUATE AUTONOMY ──────────────────────────
     const autonomyCheck = canPerformAction(autonomyLevel, actionType);
 
-    // ── STEP 10: EVALUATE AI POLICIES ──────────────────────
+    // ── STEP 13: EVALUATE AI POLICIES (deny-by-default) ────
+    // Migration mode EXITED: when no policies match, deny by default.
+    // No more unrestricted migration allow for non-sensitive actions.
     const matchedPolicies = await resolveMatchingPolicies(base44, {
       tenantId, modelKey, agentId: agent_id || null,
       dataClassification: dataClass, autonomyLevel, environment: 'production',
+      serviceKey: service_key,
     });
 
-    // Migration mode: if NO policies exist at all, allow non-sensitive actions
-    const noPoliciesConfigured = matchedPolicies.length === 0 && (!isSensitiveAction(actionType));
+    const policyResult = evaluateAIRequest({
+      tenantId, userId: actorId, userRole: user.role,
+      agentId: agent_id || null, agent,
+      modelKey, model,
+      serviceKey, dataClassification: dataClass,
+      autonomyLevel, actionType,
+      environment: 'production',
+      matchedPolicies,
+    });
 
-    const policyResult = noPoliciesConfigured
-      ? { decision: DECISIONS.ALLOW, reason: 'No policies configured — migration mode allow (non-sensitive action)', policyKey: null, evaluatedKeys: [], modelAllowed: true, agentAllowed: true, dataAllowed: true, autonomyAllowed: autonomyCheck.allowed }
-      : evaluateAIRequest({
-          tenantId, userId: actorId, userRole: user.role,
-          agentId: agent_id || null, agent,
-          modelKey, model,
-          serviceKey, dataClassification: dataClass,
-          autonomyLevel, actionType,
-          environment: 'production',
-          matchedPolicies,
-        });
-
-    // Handle policy denial
+    // ── STEP 14: HANDLE POLICY DENIAL ───────────────────────
     if (policyResult.decision === DECISIONS.DENY) {
       const outcome = classifyOutcome(DECISIONS.DENY, false, 'success');
       const auditId = await createAIAuditEvent(base44, {
         tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
+        idempotency_key: idempotency_key || null, idempotency_fingerprint: idempotencyFingerprint,
+        execution_state: 'denied',
         service_key: serviceKey, capability_tier: capability.tier,
         requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
         executing_agent_id: agent_id || null, provider: PROVIDERS.PLATFORM_BUILTIN,
@@ -668,16 +959,24 @@ export default async function(req: Request): Promise<Response> {
         runtime_ms: Date.now() - startTime, credits_consumed: 0, estimated_cost_sgd: null,
         validation_result: 'not_validated', provenance_state: outcome.provenanceState,
         outcome: 'denied', error_message: policyResult.reason, error_classification: 'policy_denied',
-        fallback_used: false, metadata: {}, is_consequential: false,
+        fallback_used: false, approval_reference_id: null,
+        metadata: { payload_hash: payloadHash },
+        is_consequential: false,
+        cached_result: { success: false, safe_error_code: SAFE_ERROR_CODES.POLICY_DENIED, http_status: 403 },
       }).catch(() => null);
 
+      // Worker-safe notification to requester
       await emitGovernanceInboxEvent(base44, {
         tenant_id: tenantId, outlet_id: outlet_id || null,
-        recipient_user_id: actorId, recipient_name: user.full_name,
+        recipient_user_id: actorId, recipient_name: user.full_name, recipient_role: user.role,
         category: 'security', event_type: 'ai_policy_denied',
-        title: 'AI Request Denied by Policy', body: policyResult.reason,
+        title: 'AI Request Denied by Policy',
+        body: isWorkerRole(user.role)
+          ? 'Your AI request could not be completed due to a policy restriction. Please contact your manager if you need assistance.'
+          : policyResult.reason,
         priority: 'important', is_actionable: false, action_type: 'none',
-        source_entity: 'AIAuditEvent', source_id: auditId || requestId, link: '/platform/ai-governance',
+        source_entity: 'AIAuditEvent', source_id: auditId || requestId,
+        admin_link: ADMIN_GOVERNANCE_LINK, worker_safe_link: WORKER_SAFE_LINK,
         metadata: { policy_key: policyResult.policyKey, service_key: serviceKey },
       }).catch(() => {});
 
@@ -686,52 +985,123 @@ export default async function(req: Request): Promise<Response> {
       });
     }
 
-    // Handle approval required
+    // ── STEP 15: HANDLE APPROVAL REQUIRED ───────────────────
     if (policyResult.decision === DECISIONS.REQUIRE_APPROVAL ||
         policyResult.decision === DECISIONS.REQUIRE_HUMAN_ESCALATION) {
-      const auditId = await createAIAuditEvent(base44, {
-        tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
-        service_key: serviceKey, capability_tier: capability.tier,
-        requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
-        executing_agent_id: agent_id || null, provider: PROVIDERS.PLATFORM_BUILTIN,
-        model_key: modelKey, model_version: model?.exact_version || null, model_lifecycle_status: model?.lifecycle_status || null,
-        routing_decision: model ? 'registry_resolved' : 'registry_missing',
-        policy_decision: DECISIONS.REQUIRE_APPROVAL, policy_reason: policyResult.reason,
-        policy_keys_evaluated: policyResult.evaluatedKeys,
-        autonomy_level: autonomyLevel, data_classification: dataClass,
-        tools_invoked: [], integrations_invoked: [],
-        runtime_ms: Date.now() - startTime, credits_consumed: 0, estimated_cost_sgd: null,
-        validation_result: 'not_validated', provenance_state: PROVENANCE_STATES.awaiting_review,
-        outcome: 'denied', error_message: policyResult.reason, error_classification: null,
-        fallback_used: false, metadata: {}, is_consequential: true,
-      }).catch(() => null);
 
-      // Emit approval-required inbox event to tenant admins
-      await emitGovernanceInboxEvent(base44, {
-        tenant_id: tenantId, outlet_id: outlet_id || null,
-        recipient_user_id: actorId, recipient_name: user.full_name,
-        category: 'approval', event_type: 'ai_approval_required',
-        title: 'AI Action Requires Approval',
-        body: `The AI request '${serviceKey}' requires human approval before it can proceed. Reason: ${policyResult.reason}`,
-        priority: 'critical', is_actionable: true, action_type: 'approve',
-        source_entity: 'AIAuditEvent', source_id: auditId || requestId, link: '/platform/ai-governance',
-        metadata: { service_key: serviceKey, autonomy_level: autonomyLevel, model_key: modelKey, policy_key: policyResult.policyKey },
-      }).catch(() => {});
+      // If this is a post-approval execution, the approval was already validated in Step 6.
+      // This shouldn't happen normally, but handle it gracefully.
+      if (approvalContext) {
+        // Approval already granted — continue to execution
+      } else {
+        // Create AIApproval record
+        const approvalKey = generateApprovalKey();
+        const approvalExpiry = new Date(Date.now() + APPROVAL_EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
+        const approvingRole = isSensitiveAction(actionType) ? 'admin' : 'tenant_admin';
 
-      return Response.json({
-        success: false,
-        approval_required: true,
-        safe_error_code: SAFE_ERROR_CODES.APPROVAL_REQUIRED,
-        message: SAFE_USER_MESSAGES[SAFE_ERROR_CODES.APPROVAL_REQUIRED],
-        service_key: serviceKey,
-        request_id: requestId,
-        audit_event_id: auditId,
-        policy_decision: 'require_approval',
-        policy_reason: policyResult.reason,
-      }, { status: 202 });
+        let approvalId: string | null = null;
+        try {
+          const approvalRecord = await base44.asServiceRole.entities.AIApproval.create({
+            tenant_id: tenantId,
+            outlet_id: outlet_id || null,
+            approval_key: approvalKey,
+            request_id: requestId,
+            idempotency_fingerprint: idempotencyFingerprint,
+            requester_user_id: actorId,
+            requester_name: user.full_name,
+            requester_role: user.role,
+            executing_agent_id: agent_id || null,
+            service_key: serviceKey,
+            capability_tier: capability.tier,
+            autonomy_level: autonomyLevel,
+            provider: PROVIDERS.PLATFORM_BUILTIN,
+            model_key: modelKey,
+            tools: ['InvokeLLM'],
+            data_classification: dataClass,
+            estimated_credits: capability.default_credits,
+            approval_reason: policyResult.reason,
+            policy_key: policyResult.policyKey,
+            payload_hash: payloadHash,
+            status: 'pending',
+            approving_role: approvingRole,
+            expires_at: approvalExpiry,
+          });
+          approvalId = approvalRecord?.id || null;
+        } catch (err) {
+          console.log(`[nexusGateway] AIApproval creation failed: ${err.message}`);
+        }
+
+        const auditId = await createAIAuditEvent(base44, {
+          tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
+          idempotency_key: idempotency_key || null, idempotency_fingerprint: idempotencyFingerprint,
+          execution_state: 'approval_required',
+          service_key: serviceKey, capability_tier: capability.tier,
+          requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
+          executing_agent_id: agent_id || null, provider: PROVIDERS.PLATFORM_BUILTIN,
+          model_key: modelKey, model_version: model?.exact_version || null, model_lifecycle_status: model?.lifecycle_status || null,
+          routing_decision: model ? 'registry_resolved' : 'registry_missing',
+          policy_decision: DECISIONS.REQUIRE_APPROVAL, policy_reason: policyResult.reason,
+          policy_keys_evaluated: policyResult.evaluatedKeys,
+          autonomy_level: autonomyLevel, data_classification: dataClass,
+          tools_invoked: [], integrations_invoked: [],
+          runtime_ms: Date.now() - startTime, credits_consumed: 0, estimated_cost_sgd: null,
+          validation_result: 'not_validated', provenance_state: PROVENANCE_STATES.awaiting_review,
+          outcome: 'denied', error_message: policyResult.reason, error_classification: null,
+          fallback_used: false, approval_reference_id: approvalId,
+          metadata: { payload_hash: payloadHash, approval_key: approvalKey },
+          is_consequential: true,
+          cached_result: { success: false, safe_error_code: SAFE_ERROR_CODES.APPROVAL_REQUIRED, http_status: 202 },
+        }).catch(() => null);
+
+        // Emit approval-required event to tenant admins (NOT to Worker requester)
+        const admins = await resolveTenantAdminRecipients(base44, tenantId);
+        for (const admin of admins) {
+          // Cannot self-approve: don't send approval event to the requester
+          if (admin.user_id === actorId) continue;
+          await emitGovernanceInboxEvent(base44, {
+            tenant_id: tenantId, outlet_id: outlet_id || null,
+            recipient_user_id: admin.user_id, recipient_name: admin.full_name, recipient_role: 'tenant_admin',
+            category: 'approval', event_type: 'ai_approval_required',
+            title: 'AI Action Requires Approval',
+            body: `The AI request '${serviceKey}' requires human approval. Reason: ${policyResult.reason}`,
+            priority: 'critical', is_actionable: true, action_type: 'approve',
+            source_entity: 'AIApproval', source_id: approvalId || requestId,
+            admin_link: ADMIN_GOVERNANCE_LINK,
+            metadata: { service_key: serviceKey, autonomy_level: autonomyLevel, model_key: modelKey, approval_key: approvalKey },
+          }).catch(() => {});
+        }
+
+        // Worker-safe notification to requester (status only, not approval link)
+        await emitGovernanceInboxEvent(base44, {
+          tenant_id: tenantId, outlet_id: outlet_id || null,
+          recipient_user_id: actorId, recipient_name: user.full_name, recipient_role: user.role,
+          category: 'approval', event_type: 'ai_approval_required',
+          title: 'AI Request Pending Approval',
+          body: isWorkerRole(user.role)
+            ? `Your AI request is pending manager approval. You will be notified once it is reviewed.`
+            : `Your AI request '${serviceKey}' requires approval and has been sent to your tenant administrators.`,
+          priority: 'normal', is_actionable: false, action_type: 'none',
+          source_entity: 'AIApproval', source_id: approvalId || requestId,
+          admin_link: ADMIN_GOVERNANCE_LINK, worker_safe_link: WORKER_SAFE_LINK,
+          metadata: { service_key: serviceKey, approval_key: approvalKey },
+        }).catch(() => {});
+
+        return Response.json({
+          success: false,
+          approval_required: true,
+          safe_error_code: SAFE_ERROR_CODES.APPROVAL_REQUIRED,
+          message: SAFE_USER_MESSAGES[SAFE_ERROR_CODES.APPROVAL_REQUIRED],
+          service_key: serviceKey,
+          request_id: requestId,
+          audit_event_id: auditId,
+          approval_key: approvalKey,
+          policy_decision: 'require_approval',
+          policy_reason: policyResult.reason,
+        }, { status: 202 });
+      }
     }
 
-    // ── STEP 11: VALIDATE EXECUTION POLICY ─────────────────
+    // ── STEP 16: VALIDATE EXECUTION POLICY ─────────────────
     const execPolicy = createExecutionPolicy({
       permitted_tenant_id: tenantId,
       permitted_outlet_id: outlet_id || null,
@@ -749,6 +1119,8 @@ export default async function(req: Request): Promise<Response> {
     if (!execResult.allowed) {
       const auditId = await createAIAuditEvent(base44, {
         tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
+        idempotency_key: idempotency_key || null, idempotency_fingerprint: idempotencyFingerprint,
+        execution_state: 'denied',
         service_key: serviceKey, capability_tier: capability.tier,
         requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
         executing_agent_id: agent_id || null, provider: PROVIDERS.PLATFORM_BUILTIN,
@@ -761,16 +1133,23 @@ export default async function(req: Request): Promise<Response> {
         runtime_ms: Date.now() - startTime, credits_consumed: 0, estimated_cost_sgd: null,
         validation_result: 'failed', provenance_state: PROVENANCE_STATES.ai_generated,
         outcome: 'denied', error_message: execResult.reason, error_classification: 'policy_denied',
-        fallback_used: false, metadata: { violated_conditions: execResult.violatedConditions }, is_consequential: false,
+        fallback_used: false, approval_reference_id: approvalContext?.id || null,
+        metadata: { payload_hash: payloadHash, violated_conditions: execResult.violatedConditions },
+        is_consequential: false,
+        cached_result: { success: false, safe_error_code: SAFE_ERROR_CODES.EXECUTION_POLICY_VIOLATION, http_status: 403 },
       }).catch(() => null);
 
       await emitGovernanceInboxEvent(base44, {
         tenant_id: tenantId, outlet_id: outlet_id || null,
-        recipient_user_id: actorId, recipient_name: user.full_name,
+        recipient_user_id: actorId, recipient_name: user.full_name, recipient_role: user.role,
         category: 'security', event_type: 'ai_execution_policy_blocked',
-        title: 'AI Request Blocked by Security Policy', body: execResult.reason,
+        title: 'AI Request Blocked by Security Policy',
+        body: isWorkerRole(user.role)
+          ? 'Your AI request was blocked by a security policy. Please contact your manager.'
+          : execResult.reason,
         priority: 'important', is_actionable: false, action_type: 'none',
-        source_entity: 'AIAuditEvent', source_id: auditId || requestId, link: '/platform/ai-governance',
+        source_entity: 'AIAuditEvent', source_id: auditId || requestId,
+        admin_link: ADMIN_GOVERNANCE_LINK, worker_safe_link: WORKER_SAFE_LINK,
         metadata: { violated_conditions: execResult.violatedConditions },
       }).catch(() => {});
 
@@ -779,10 +1158,10 @@ export default async function(req: Request): Promise<Response> {
       });
     }
 
-    // ── STEP 12: PAYLOAD SANITISATION (ADR-0044) ───────────
+    // ── STEP 17: PAYLOAD SANITISATION (ADR-0044) ───────────
     const sanitizedPayload = sanitizePayload(payload || {}, capability.sanitization_mode, capability.permitted_fields);
 
-    // ── STEP 13: SHIELD GOVERNANCE GATE ────────────────────
+    // ── STEP 18: SHIELD GOVERNANCE GATE ────────────────────
     let shieldOutcome: any = null;
     let shieldPolicyName: string | null = null;
     if (capability.governance_domain) {
@@ -813,7 +1192,7 @@ export default async function(req: Request): Promise<Response> {
       }
     }
 
-    // ── STEP 14: CHECK CREDITS AND COST BUDGET ────────────
+    // ── STEP 19: CHECK CREDITS AND COST BUDGET ────────────
     const costResult = resolveModelCostMultiplier(model, modelKey);
     if (costResult.warning) {
       console.log(`[nexusGateway] COST WARNING: ${costResult.warning}`);
@@ -844,11 +1223,54 @@ export default async function(req: Request): Promise<Response> {
       console.log(`[nexusGateway] Wallet lookup failed: ${walletErr.message}`);
     }
 
-    // ── STEP 15: RESOLVE APPROVED PROVIDER/MODEL ROUTE ────
+    // ── STEP 20: PRE-EXECUTION AUDIT (consequential actions) ─
+    const isConsequential = isSensitiveAction(actionType) || autonomyLevel === L3_EXECUTE;
+    let preExecutionAuditId: string | null = null;
+
+    if (isConsequential) {
+      // For consequential actions, create a durable pre-execution audit record
+      // BEFORE dispatch. If this fails, we must NOT dispatch (fail-closed).
+      try {
+        preExecutionAuditId = await createAIAuditEvent(base44, {
+          tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
+          idempotency_key: idempotency_key || null, idempotency_fingerprint: idempotencyFingerprint,
+          execution_state: 'executing',
+          service_key: serviceKey, capability_tier: capability.tier,
+          requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
+          executing_agent_id: agent_id || null,
+          provider: PROVIDERS.PLATFORM_BUILTIN, model_key: modelKey, model_version: model?.exact_version || null,
+          model_lifecycle_status: model?.lifecycle_status || null,
+          routing_decision: model ? 'registry_resolved' : 'registry_missing',
+          policy_decision: policyResult.decision, policy_reason: policyResult.reason,
+          policy_keys_evaluated: policyResult.evaluatedKeys,
+          autonomy_level: autonomyLevel, data_classification: dataClass,
+          tools_invoked: [], integrations_invoked: [],
+          runtime_ms: Date.now() - startTime, credits_consumed: 0, estimated_cost_sgd: null,
+          validation_result: 'not_validated', provenance_state: PROVENANCE_STATES.ai_generated,
+          outcome: 'success', error_message: null, error_classification: null,
+          fallback_used: false, approval_reference_id: approvalContext?.id || null,
+          metadata: { payload_hash: payloadHash, pre_execution: true },
+          is_consequential: true, // THIS makes it fail-closed
+          cached_result: null,
+        });
+        // If we get here, the pre-execution audit succeeded — safe to dispatch
+      } catch (auditErr) {
+        // FAIL-CLOSED: cannot dispatch consequential action without audit evidence
+        console.log(`[nexusGateway] FAIL-CLOSED: Pre-execution audit failed for consequential action: ${auditErr.message}`);
+        return safeErrorResponse(SAFE_ERROR_CODES.AUDIT_FAILURE, 500, serviceKey, {
+          request_id: requestId,
+          detail: 'Cannot execute consequential action without audit evidence',
+        });
+      }
+    }
+
+    // ── STEP 21: RESOLVE PROVIDER + DISPATCH ────────────────
     const providerId = PROVIDERS.PLATFORM_BUILTIN;
     if (!isProviderConfigured(providerId)) {
       const auditId = await createAIAuditEvent(base44, {
         tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
+        idempotency_key: idempotency_key || null, idempotency_fingerprint: idempotencyFingerprint,
+        execution_state: 'failed',
         service_key: serviceKey, capability_tier: capability.tier,
         requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
         executing_agent_id: agent_id || null, provider: providerId,
@@ -860,12 +1282,14 @@ export default async function(req: Request): Promise<Response> {
         runtime_ms: Date.now() - startTime, credits_consumed: 0, estimated_cost_sgd: null,
         validation_result: 'not_validated', provenance_state: PROVENANCE_STATES.ai_generated,
         outcome: 'failed', error_message: 'Provider not configured', error_classification: 'model_unavailable',
-        fallback_used: false, metadata: {}, is_consequential: false,
+        fallback_used: false, approval_reference_id: approvalContext?.id || null,
+        metadata: { payload_hash: payloadHash },
+        is_consequential: false,
+        cached_result: { success: false, safe_error_code: SAFE_ERROR_CODES.PROVIDER_UNCONFIGURED, http_status: 503 },
       }).catch(() => null);
       return safeErrorResponse(SAFE_ERROR_CODES.PROVIDER_UNCONFIGURED, 503, serviceKey, { request_id: requestId, audit_event_id: auditId });
     }
 
-    // ── STEP 16: DISPATCH PROVIDER REQUEST ────────────────
     let result: any = null;
     let executionStatus: 'success' | 'failed' | 'timeout' = 'success';
     let errorMessage: string | null = null;
@@ -889,16 +1313,13 @@ export default async function(req: Request): Promise<Response> {
 
     const latencyMs = Date.now() - startTime;
 
-    // ── STEP 17: FALLBACK (re-runs all governance checks) ─
+    // ── STEP 22: FALLBACK (re-runs all governance checks) ─
     let fallbackUsed = false;
     let fallbackRoutingDecision = 'registry_resolved';
 
     if (executionStatus === 'failed' && capability.fallback_capability_key) {
       console.log(`[nexusGateway] Handler failed, invoking fallback: ${capability.fallback_capability_key}`);
       try {
-        // Re-invoke with the fallback capability key — the recursive nexus call
-        // will re-run ALL governance checks (model lifecycle, agent lifecycle,
-        // policy evaluation, execution policy) for the fallback capability.
         const fallbackResponse = await base44.functions.invoke('nexus', {
           service_key: capability.fallback_capability_key,
           payload: sanitizedPayload, tenant_id: tenantId, outlet_id: outlet_id,
@@ -911,7 +1332,6 @@ export default async function(req: Request): Promise<Response> {
         errorMessage = null;
         errorClassification = null;
       } catch (fallbackErr) {
-        // Fallback also failed
         return Response.json({
           success: false,
           safe_error_code: SAFE_ERROR_CODES.INTERNAL_ERROR,
@@ -922,7 +1342,7 @@ export default async function(req: Request): Promise<Response> {
       }
     }
 
-    // ── STEP 19: RECORD USAGE (OrbitUsageTracker) ──────────
+    // ── STEP 23: UPDATE AUDIT + EMIT INBOX EVENTS ──────────
     const trackingTasks: Promise<any>[] = [];
 
     if (walletRecord && executionStatus === 'success') {
@@ -949,7 +1369,6 @@ export default async function(req: Request): Promise<Response> {
       })
     );
 
-    // Update registry fire_count
     if (capability.source === 'registry' && executionStatus === 'success') {
       try {
         const records = await base44.asServiceRole.entities.NexusCapabilityRegistry.filter({
@@ -967,12 +1386,16 @@ export default async function(req: Request): Promise<Response> {
 
     await Promise.allSettled(trackingTasks);
 
-    // ── STEP 20: CREATE AIAUDITEVENT ──────────────────────
-    const isConsequential = isSensitiveAction(actionType) || autonomyLevel === L3_EXECUTE;
+    // Create or update the AIAuditEvent with final outcome
     const outcome = classifyOutcome(policyResult.decision, execResult.allowed, executionStatus);
+    const finalExecutionState = executionStatus === 'success' ? 'succeeded'
+      : executionStatus === 'timeout' ? 'timed_out'
+      : 'failed';
 
-    const auditId = await createAIAuditEvent(base44, {
+    const auditParams = {
       tenant_id: tenantId, outlet_id: outlet_id || null, request_id: requestId,
+      idempotency_key: idempotency_key || null, idempotency_fingerprint: idempotencyFingerprint,
+      execution_state: finalExecutionState,
       service_key: serviceKey, capability_tier: capability.tier,
       requesting_user_id: actorId, requesting_user_name: user.full_name, requesting_user_role: user.role,
       executing_agent_id: agent_id || null,
@@ -988,33 +1411,76 @@ export default async function(req: Request): Promise<Response> {
       credits_consumed: executionStatus === 'success' ? creditsRequired : 0,
       estimated_cost_sgd: null,
       validation_result: executionStatus === 'success' ? 'passed' : 'failed',
-      provenance_state: outcome.provenanceState,
+      provenance_state: approvalContext ? PROVENANCE_STATES.executed_after_approval : outcome.provenanceState,
       outcome: outcome.outcome,
       error_message: errorMessage, error_classification: errorClassification || outcome.errorClassification,
       fallback_used: fallbackUsed,
+      approval_reference_id: approvalContext?.id || null,
       metadata: {
+        payload_hash: payloadHash,
         cost_source: costResult.source,
         cost_warning: costResult.warning,
         credit_multiplier: creditMultiplier,
         shield_policy: shieldPolicyName,
       },
       is_consequential: isConsequential,
-    }).catch((e: any) => {
-      // If audit fails for consequential actions, we need to handle it
-      console.log(`[nexusGateway] AIAuditEvent creation failed: ${e.message}`);
-      return null;
-    });
+      cached_result: {
+        success: executionStatus === 'success',
+        safe_error_code: executionStatus !== 'success' ? (executionStatus === 'timeout' ? SAFE_ERROR_CODES.PROVIDER_TIMEOUT : SAFE_ERROR_CODES.INTERNAL_ERROR) : null,
+        response_summary: executionStatus === 'success' ? 'success' : (errorMessage || 'failed'),
+        http_status: executionStatus === 'success' ? 200 : 500,
+      },
+    };
 
-    // ── STEP 21: EMIT ORBIT INBOX EVENTS ──────────────────
+    let auditId: string | null;
+    if (preExecutionAuditId) {
+      // Update the pre-execution record with final outcome
+      await updateAIAuditEvent(base44, preExecutionAuditId, auditParams);
+      auditId = preExecutionAuditId;
+    } else {
+      // Create a new post-execution audit record
+      // For non-consequential L0: use degraded mode (failure doesn't block)
+      auditId = await createAIAuditEvent(base44, auditParams).catch((e: any) => {
+        console.log(`[nexusGateway] Post-execution audit failed: ${e.message}`);
+        return null;
+      });
+    }
+
+    // If post-approval execution, update the AIApproval record
+    if (approvalContext && executionStatus === 'success') {
+      try {
+        await base44.asServiceRole.entities.AIApproval.update(approvalContext.id, {
+          status: 'executed',
+          execution_audit_event_id: auditId,
+          executed_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.log(`[nexusGateway] AIApproval update to executed failed: ${err.message}`);
+      }
+    } else if (approvalContext && executionStatus !== 'success') {
+      try {
+        await base44.asServiceRole.entities.AIApproval.update(approvalContext.id, {
+          status: 'execution_failed',
+          execution_audit_event_id: auditId,
+        });
+      } catch (err) {
+        console.log(`[nexusGateway] AIApproval update to execution_failed: ${err.message}`);
+      }
+    }
+
+    // Emit Worker-safe Orbit Inbox events
     if (executionStatus === 'failed' || executionStatus === 'timeout') {
       await emitGovernanceInboxEvent(base44, {
         tenant_id: tenantId, outlet_id: outlet_id || null,
-        recipient_user_id: actorId, recipient_name: user.full_name,
+        recipient_user_id: actorId, recipient_name: user.full_name, recipient_role: user.role,
         category: 'ai_insight', event_type: 'ai_execution_failed',
         title: `AI Request ${executionStatus === 'timeout' ? 'Timed Out' : 'Failed'}`,
-        body: `The AI request '${serviceKey}' could not be completed. ${SAFE_USER_MESSAGES[SAFE_ERROR_CODES.INTERNAL_ERROR]}`,
+        body: isWorkerRole(user.role)
+          ? `Your AI request could not be completed. Please try again or contact your manager if the issue persists.`
+          : `The AI request '${serviceKey}' could not be completed. ${SAFE_USER_MESSAGES[SAFE_ERROR_CODES.INTERNAL_ERROR]}`,
         priority: 'normal', is_actionable: false, action_type: 'none',
-        source_entity: 'AIAuditEvent', source_id: auditId || requestId, link: '/platform/ai-governance',
+        source_entity: 'AIAuditEvent', source_id: auditId || requestId,
+        admin_link: ADMIN_GOVERNANCE_LINK, worker_safe_link: WORKER_SAFE_LINK,
         metadata: { service_key: serviceKey, error_classification: errorClassification },
       }).catch(() => {});
     }
@@ -1022,17 +1488,20 @@ export default async function(req: Request): Promise<Response> {
     if (fallbackUsed) {
       await emitGovernanceInboxEvent(base44, {
         tenant_id: tenantId, outlet_id: outlet_id || null,
-        recipient_user_id: actorId, recipient_name: user.full_name,
+        recipient_user_id: actorId, recipient_name: user.full_name, recipient_role: user.role,
         category: 'ai_insight', event_type: 'ai_fallback_used',
         title: 'AI Fallback Used',
-        body: `The primary AI handler for '${serviceKey}' failed and a fallback capability was used.`,
+        body: isWorkerRole(user.role)
+          ? `Your AI request was completed using a backup method. No action needed.`
+          : `The primary AI handler for '${serviceKey}' failed and a fallback capability was used.`,
         priority: 'informational', is_actionable: false, action_type: 'none',
-        source_entity: 'AIAuditEvent', source_id: auditId || requestId, link: '/platform/ai-governance',
+        source_entity: 'AIAuditEvent', source_id: auditId || requestId,
+        admin_link: ADMIN_GOVERNANCE_LINK, worker_safe_link: WORKER_SAFE_LINK,
         metadata: { service_key: serviceKey, fallback_capability: capability.fallback_capability_key },
       }).catch(() => {});
     }
 
-    // ── STEP 22: RETURN STRUCTURED RESPONSE ───────────────
+    // ── STEP 24: RETURN STRUCTURED RESPONSE ───────────────
     if (executionStatus === 'failed' || executionStatus === 'timeout') {
       const errorCode = executionStatus === 'timeout' ? SAFE_ERROR_CODES.PROVIDER_TIMEOUT : SAFE_ERROR_CODES.INTERNAL_ERROR;
       return Response.json({
@@ -1057,13 +1526,14 @@ export default async function(req: Request): Promise<Response> {
       model_lifecycle_status: model?.lifecycle_status || null,
       provider: providerId,
       policy_decision: policyResult.decision,
-      provenance_state: outcome.provenanceState,
+      provenance_state: approvalContext ? PROVENANCE_STATES.executed_after_approval : outcome.provenanceState,
       validation_status: 'passed',
       fallback_used: fallbackUsed,
       latency_ms: latencyMs,
       capability_source: capability.source,
       capability_tier: capability.tier,
       cost_source: costResult.source,
+      ...(approvalContext ? { approval_executed: true } : {}),
     });
 
   } catch (error) {
