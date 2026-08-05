@@ -1,0 +1,198 @@
+{
+  "name": "AIPolicy",
+  "type": "object",
+  "description": "Orbitan AI Operating Layer \u2014 AI-specific policy evaluation registry (Build #28.2M Phase 1). AI policies are evaluated before each AI execution by the ai-policy-evaluator service. Applies deny-by-default behaviour for sensitive actions and most-restrictive-policy-wins when policies overlap. Distinct from GovernancePolicy (which governs entity writes via Shield). AIPolicy governs AI request dimensions: provider, model, data classification, autonomy, environment. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant this policy applies to. 'system' = platform-default policy."
+    },
+    "policy_key": {
+      "type": "string",
+      "description": "Unique policy identifier e.g. 'deny_restricted_data_external_provider', 'require_human_approval_l3_actions'"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable policy name for admin UI"
+    },
+    "description": {
+      "type": "string",
+      "description": "What this policy enforces and why"
+    },
+    "applies_to_providers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Provider IDs this policy applies to. Empty = all providers."
+    },
+    "applies_to_models": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Model keys this policy applies to. Empty = all models."
+    },
+    "applies_to_agents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Agent IDs this policy applies to. Empty = all agents."
+    },
+    "applies_to_use_cases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Use case keys this policy applies to. Empty = all use cases."
+    },
+    "applies_to_data_classifications": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "public",
+          "internal",
+          "confidential",
+          "restricted"
+        ]
+      },
+      "description": "Data classifications this policy applies to. Empty = all classifications."
+    },
+    "applies_to_autonomy_levels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "L0_answer",
+          "L1_recommend",
+          "L2_draft",
+          "L3_execute"
+        ]
+      },
+      "description": "Autonomy levels this policy applies to. Empty = all levels."
+    },
+    "applies_to_environments": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "production",
+          "staging",
+          "development",
+          "test"
+        ]
+      },
+      "default": [
+        "production"
+      ],
+      "description": "Environments this policy is active in"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "allow",
+        "deny",
+        "require_approval",
+        "require_safer_model",
+        "require_reduced_data",
+        "require_read_only_mode",
+        "require_human_escalation"
+      ],
+      "description": "Policy decision when this policy matches. deny-by-default is enforced for sensitive actions without explicit allow."
+    },
+    "priority": {
+      "type": "number",
+      "default": 100,
+      "description": "Priority for most-restrictive-wins resolution. Lower number = higher priority. When multiple policies match, the most restrictive decision wins."
+    },
+    "reason_template": {
+      "type": "string",
+      "description": "Template for the policy decision reason e.g. 'Model {{model_key}} is not approved for data classification {{data_classification}}'"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Runtime enable/disable for this policy"
+    },
+    "is_system_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "True for platform-seeded policies (tenant_id='system'). Read-only for non-admins."
+    },
+    "last_reviewed_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewed_by": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "policy_key",
+    "display_name",
+    "decision"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.tenant_id": "system"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

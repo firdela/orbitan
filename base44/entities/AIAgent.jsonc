@@ -1,0 +1,223 @@
+{
+  "name": "AIAgent",
+  "type": "object",
+  "description": "Orbitan AI Operating Layer \u2014 Managed agent identity registry (Build #28.2M Phase 1). Each production-capable AI agent must have a registered identity with approved skills, tools, data products, autonomy level, and lifecycle. Prevents unrestricted shared agent identities. Default new agents to Draft status with minimum permissions and lowest autonomy. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant this agent belongs to. 'system' = platform-managed agent available to all tenants."
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "Unique agent identifier/slug e.g. 'nexus_copilot', 'procurement_agent', 'feedback_analyst'"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable agent name"
+    },
+    "purpose": {
+      "type": "string",
+      "description": "What this agent does and why it exists"
+    },
+    "business_owner": {
+      "type": "string",
+      "description": "Person or team responsible for the agent's business outcomes"
+    },
+    "technical_owner": {
+      "type": "string",
+      "description": "Person or team responsible for the agent's technical maintenance"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "Outlet scope where applicable. Null = tenant-wide agent."
+    },
+    "approved_skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Skill keys this agent is permitted to use e.g. ['sop_gen', 'training_gen']"
+    },
+    "approved_tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tool keys this agent is permitted to invoke e.g. ['base44.functions.invoke', 'InvokeLLM', 'SendEmail']"
+    },
+    "approved_data_products": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Data product keys this agent is permitted to access (future: semantic data-product catalogue)"
+    },
+    "permitted_integrations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Integration keys this agent may use e.g. ['Core.InvokeLLM', 'Core.UploadFile']"
+    },
+    "credential_type": {
+      "type": "string",
+      "enum": [
+        "platform_builtin",
+        "service_role",
+        "per_agent_oauth",
+        "api_key",
+        "none"
+      ],
+      "default": "platform_builtin",
+      "description": "Credential model this agent uses. platform_builtin = uses Base44 platform integrations (no external credentials)."
+    },
+    "data_classification": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ],
+      "default": "internal",
+      "description": "Maximum data classification this agent is cleared to process"
+    },
+    "autonomy_level": {
+      "type": "string",
+      "enum": [
+        "L0_answer",
+        "L1_recommend",
+        "L2_draft",
+        "L3_execute"
+      ],
+      "default": "L0_answer",
+      "description": "Autonomy classification. L0=Answer, L1=Recommend, L2=Draft, L3=Execute. Default L0 (lowest). L3 is technically restricted and cannot autonomously perform sensitive actions."
+    },
+    "cost_budget_credits": {
+      "type": "number",
+      "default": 100,
+      "description": "Monthly cost budget in Orbitan Credits for this agent"
+    },
+    "runtime_limit_seconds": {
+      "type": "number",
+      "default": 30,
+      "description": "Maximum runtime per invocation in seconds"
+    },
+    "version": {
+      "type": "string",
+      "default": "1.0.0",
+      "description": "Semantic version of this agent definition"
+    },
+    "lifecycle_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "testing",
+        "approved",
+        "suspended",
+        "expired",
+        "retired"
+      ],
+      "default": "draft",
+      "description": "Agent lifecycle state. Default 'draft' = no production access. Production routing requires 'approved'."
+    },
+    "risk_status": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "medium",
+      "description": "Risk assessment for this agent"
+    },
+    "last_activity_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time this agent executed an action"
+    },
+    "last_permission_review_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time this agent's permissions were reviewed"
+    },
+    "expiry_review_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this agent's approval expires and requires re-review"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": false,
+      "description": "Runtime enable/disable. Default false for new agents. Only 'approved' agents with is_active=true can execute."
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "agent_id",
+    "name",
+    "purpose",
+    "lifecycle_status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.tenant_id": "system"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -7,6 +7,54 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2M (AI Operating Layer Phase 1 — Security & Governance Foundation) (2026-08-05)
+
+### Added — AI Operating Layer Gap Register
+- **`src/docs/knowledge-hub/ai/Orbitan-AI-Operating-Layer-Gap-Register.md`** — authoritative audit of every AI-related capability. Classifies each as Complete/Partial/Missing/Deferred. Assigns P0–P3 priorities. Summary table grouped by domain (gateway, models, agents, policies, audit, execution controls, data products, skills, evaluations, incidents, budgets, experience boundaries, Orbit Inbox, documentation).
+
+### Added — AIModel Entity
+- **`base44/entities/AIModel.jsonc`** — authoritative model registry replacing the hardcoded `MODEL_CREDIT_MULTIPLIER` constant in nexus/entry.ts. Lifecycle states: Draft → Evaluation → Approved → Restricted → Deprecated → Retired. Production routing rejects models not in Approved or Restricted state. Fields: provider, exact version, capability profile, supported modalities/languages, context limits, cost configuration, expected latency, processing region, retention classification, security classification, approved/restricted data classifications and use cases, evaluation status, fallback model, deprecation/retirement dates, replacement model, responsible owner. RLS: admin-only create/delete, tenant-scoped read/update for tenant_admin+.
+
+### Added — AIAgent Entity
+- **`base44/entities/AIAgent.jsonc`** — managed agent identity registry. Default new agents to Draft status with minimum permissions and L0 (lowest) autonomy. Lifecycle states: Draft → Testing → Approved → Suspended → Expired → Retired. Fields: business/technical owner, tenant/outlet scope, approved skills, approved tools, approved data products, permitted integrations, credential type, data classification, autonomy level, cost budget, runtime limit, version, risk status, last activity, last permission review, expiry/review date. No unrestricted shared agent identity permitted.
+
+### Added — AIPolicy Entity
+- **`base44/entities/AIPolicy.jsonc`** — AI-specific policy evaluation registry. Distinct from GovernancePolicy (which governs entity writes via Shield). Applies deny-by-default for sensitive actions and most-restrictive-policy-wins when policies overlap. Decision types: allow, deny, require_approval, require_safer_model, require_reduced_data, require_read_only_mode, require_human_escalation. Evaluation dimensions: providers, models, agents, use cases, data classifications, autonomy levels, environments.
+
+### Added — AIAuditEvent Entity
+- **`base44/entities/AIAuditEvent.jsonc`** — AI execution audit and provenance registry. Records every AI execution with full provenance: provider, model, routing decision, policy decision, data-product references, knowledge-source references, tools invoked, approval references, runtime, usage, estimated cost, validation result, outcome, and safe provenance state. Extends (does not duplicate) AuditLog — AuditLog captures operational actions; AIAuditEvent captures AI-specific execution provenance. Never stores secrets, passwords, credentials, tokens, or chain-of-thought. Safe provenance states: AI-generated, AI-assisted, Human-reviewed, Awaiting review, Executed after approval.
+
+### Added — Autonomy Levels Module
+- **`src/lib/ai/ai-autonomy-levels.js`** — canonical L0–L3 autonomy classification (Answer, Recommend, Draft, Execute). L3 cannot autonomously perform: payments, payroll changes, employee-status changes, access-permission changes, destructive database changes, external publication, legal/contractual commitments, customer-data exports, production configuration changes. Default new agents to L0. Pure ESM — safe for frontend and backend.
+
+### Added — AI Policy Evaluator Module
+- **`src/lib/ai/ai-policy-evaluator.js`** — canonical AI policy evaluation service. Evaluates model lifecycle, agent lifecycle, data classification, autonomy level, and matched policies before AI execution. Applies deny-by-default and most-restrictive-policy-wins. Returns structured decisions (allow/deny/require_approval/require_safer_model/require_reduced_data/require_read_only_mode/require_human_escalation). Pure ESM.
+
+### Added — AI Execution Policy Module
+- **`src/lib/ai/ai-execution-policy.js`** — technical execution-policy contract. Defines permitted tenant/org/outlet, allowed tools/integrations/network destinations, credential scope, permitted data classifications, max runtime/tokens/cost, stop conditions, escalation route, kill-switch state. Default: deny by default, narrow tenant scope, short-lived credentials, read-only where possible, domain allowlists, sandboxed testing, reversible actions, explicit production approval. Pure ESM.
+
+### Added — Provider Adapter Interface
+- **`src/lib/ai/ai-provider-adapter.js`** — standard provider-neutral adapter contract for OpenAI, Anthropic, Google Gemini, approved hosted open-source models, and future providers. Phase 1 implements interface shape only; live adapters are Phase 2. Platform currently routes all AI through `base44.integrations.Core.InvokeLLM` (platform_builtin provider). Error classification: timeout, rate_limited, auth_invalid, model_unavailable, network_error, unknown. Pure ESM.
+
+### Added — AI Governance Admin Page
+- **`src/pages/platform/AIGovernancePage.jsx`** — admin-only read-only view at `/platform/ai-governance`. Sections: AI Models (lifecycle status, provider, cost), AI Agents (autonomy level, lifecycle, purpose), AI Policies (decision, active state), AI Audit Events (provider, model, outcome, provenance), Provider Status (configured/unconfigured). Loading, empty, and error states. WCAG 2.2 AA. Responsive design.
+
+### Added — ADR-0067
+- **`src/docs/knowledge-hub/decision-records/0067-ai-operating-layer-phase-1.md`** — formal architecture decision record for the AI Operating Layer Phase 1 foundation. Documents context, decision, alternatives, security & privacy, experience boundaries, database impact, testing, and Phase 2+ roadmap.
+
+### Added — Tests
+- **`src/lib/__tests__/ai-operating-layer.test.js`** — 62 pure-function test cases. **Result: 62/62 passed (100%).** Covers: autonomy level enforcement (L0–L3, 9 prohibited actions, defaults), model lifecycle enforcement (7 states), agent lifecycle enforcement (5 states), data classification evaluation, most-restrictive-policy-wins resolution, deny-by-default for sensitive actions, execution policy validation (kill switch, tenant scope, tools, data, runtime, tokens), provider adapter classification (timeout, rate limit, auth, model unavailable), security verification (no secrets in frontend modules, tenant_id required, RLS present on all 4 entities).
+
+### Route Added
+- `/platform/ai-governance` — admin-only AI Governance page
+
+### Audit Findings
+- **No direct provider SDK calls found** in codebase scan (OpenAI, Anthropic, Gemini SDKs all absent). All AI routes through `base44.integrations.Core.InvokeLLM` (platform_builtin).
+- **No provider secrets in frontend code.** All credentials are server-side.
+- **Existing AI architecture is strong:** Nexus Gateway (ADR-0006), Capability Registry (ADR-0046), Kill Switch (ADR-0018), Zero-PII Sanitization (ADR-0044), Shield governance integration, usage tracking, credit metering — all preserved.
+- **P0 gaps:** Only Worker AI-admin access verification needed (verified — no AI-admin routes existed before, now admin-only).
+- **No duplicate entities created:** AIModel (models, not capabilities), AIAgent (agent identity, not capability routing), AIPolicy (AI-specific, not operational governance), AIAuditEvent (AI provenance, not general audit).
+
 ## [Unreleased] — Build #28.2L (Worker Navigation Repair & Orbit Inbox Integration) (2026-08-05)
 
 ### Fixed — Worker Header Notification Bell

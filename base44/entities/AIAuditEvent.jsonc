@@ -1,0 +1,319 @@
+{
+  "name": "AIAuditEvent",
+  "type": "object",
+  "description": "Orbitan AI Operating Layer \u2014 AI execution audit and provenance registry (Build #28.2M Phase 1). Records every AI execution with full provenance: provider, model, routing decision, policy decision, data-product references, knowledge-source references, tools invoked, approval references, runtime, usage, estimated cost, validation result, and outcome. Extends (does not duplicate) the existing AuditLog entity \u2014 AuditLog captures operational actions; AIAuditEvent captures AI-specific execution provenance. Never stores provider secrets, passwords, credentials, tokens, or chain-of-thought. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant context for this AI execution"
+    },
+    "outlet_id": {
+      "type": "string",
+      "description": "Outlet context. Null = tenant-wide."
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Unique identifier for this AI request (correlates to gateway request_id)"
+    },
+    "service_key": {
+      "type": "string",
+      "description": "Nexus capability key that was invoked e.g. 'sop_gen', 'ocr_receipt'"
+    },
+    "capability_tier": {
+      "type": "number",
+      "enum": [
+        1,
+        2,
+        3
+      ],
+      "description": "Capability tier (ADR-0046): 1=Deterministic, 2=Assistant, 3=Autonomous"
+    },
+    "requesting_user_id": {
+      "type": "string",
+      "description": "User who initiated the request. Null for automation-triggered."
+    },
+    "requesting_user_name": {
+      "type": "string"
+    },
+    "requesting_user_role": {
+      "type": "string"
+    },
+    "executing_agent_id": {
+      "type": "string",
+      "description": "Agent identity that executed this request. Null for direct human-initiated requests with no agent."
+    },
+    "skill_key": {
+      "type": "string",
+      "description": "Skill/capability key invoked. Null if not skill-based."
+    },
+    "skill_version": {
+      "type": "string",
+      "description": "Version of the skill/capability definition"
+    },
+    "provider": {
+      "type": "string",
+      "description": "AI provider that served this request e.g. 'google', 'openai', 'anthropic', 'platform_builtin'"
+    },
+    "model_key": {
+      "type": "string",
+      "description": "Model identifier used e.g. 'gemini_3_flash', 'claude_sonnet_4_6'"
+    },
+    "model_version": {
+      "type": "string",
+      "description": "Exact model version from the provider"
+    },
+    "routing_decision": {
+      "type": "string",
+      "description": "How the request was routed e.g. 'registry_resolved', 'legacy_fallback', 'model_override'"
+    },
+    "policy_decision": {
+      "type": "string",
+      "enum": [
+        "allow",
+        "deny",
+        "require_approval",
+        "require_safer_model",
+        "require_reduced_data",
+        "require_read_only_mode",
+        "require_human_escalation",
+        "not_evaluated"
+      ],
+      "default": "not_evaluated",
+      "description": "AI policy evaluation result for this execution"
+    },
+    "policy_reason": {
+      "type": "string",
+      "description": "Human-readable reason for the policy decision"
+    },
+    "policy_keys_evaluated": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Policy keys that were evaluated for this request"
+    },
+    "data_product_references": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Data product keys referenced during execution (future: semantic data-product catalogue)"
+    },
+    "knowledge_source_references": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Knowledge source IDs referenced during execution (future: RAG)"
+    },
+    "tools_invoked": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tools/functions invoked during execution e.g. ['InvokeLLM', 'UploadFile']"
+    },
+    "integrations_invoked": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Integration endpoints invoked e.g. ['Core.InvokeLLM']"
+    },
+    "approval_reference_id": {
+      "type": "string",
+      "description": "Reference to the approval record if human approval was required"
+    },
+    "autonomy_level": {
+      "type": "string",
+      "enum": [
+        "L0_answer",
+        "L1_recommend",
+        "L2_draft",
+        "L3_execute"
+      ],
+      "description": "Autonomy level of this execution"
+    },
+    "runtime_ms": {
+      "type": "number",
+      "description": "Execution runtime in milliseconds"
+    },
+    "input_tokens": {
+      "type": "number",
+      "description": "Input tokens consumed (if available)"
+    },
+    "output_tokens": {
+      "type": "number",
+      "description": "Output tokens consumed (if available)"
+    },
+    "total_tokens": {
+      "type": "number",
+      "description": "Total tokens consumed"
+    },
+    "estimated_cost_sgd": {
+      "type": "number",
+      "description": "Estimated cost in SGD for this execution"
+    },
+    "credits_consumed": {
+      "type": "number",
+      "description": "Orbitan Credits debited for this execution"
+    },
+    "data_classification": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ],
+      "default": "internal",
+      "description": "Data classification of the input data"
+    },
+    "validation_result": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed",
+        "warning",
+        "not_validated"
+      ],
+      "default": "not_validated",
+      "description": "Validation result for the AI output"
+    },
+    "provenance_state": {
+      "type": "string",
+      "enum": [
+        "ai_generated",
+        "ai_assisted",
+        "human_reviewed",
+        "awaiting_review",
+        "executed_after_approval"
+      ],
+      "default": "ai_generated",
+      "description": "Safe user-facing provenance state for this output"
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "timeout",
+        "denied",
+        "partial",
+        "cancelled"
+      ],
+      "default": "success",
+      "description": "Execution outcome"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error details if outcome is not success. Never includes secrets or chain-of-thought."
+    },
+    "error_classification": {
+      "type": "string",
+      "enum": [
+        "provider_timeout",
+        "provider_error",
+        "policy_denied",
+        "insufficient_credits",
+        "validation_failed",
+        "model_unavailable",
+        "agent_suspended",
+        "unknown"
+      ],
+      "description": "Classified error type for structured error handling"
+    },
+    "incident_reference_id": {
+      "type": "string",
+      "description": "Reference to a security incident if one was created"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional execution metadata. Never contains secrets, tokens, or chain-of-thought."
+    }
+  },
+  "required": [
+    "tenant_id",
+    "request_id",
+    "service_key",
+    "outcome"
+  ],
+  "rls": {
+    "create": {
+      "$and": [
+        {
+          "data.tenant_id": "{{user.data.tenant_id}}"
+        },
+        {
+          "$or": [
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            },
+            {
+              "user_condition": {
+                "role": "outlet_manager"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "$or": [
+                {
+                  "user_condition": {
+                    "role": "tenant_admin"
+                  }
+                },
+                {
+                  "user_condition": {
+                    "role": "outlet_manager"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "data.requesting_user_id": "{{user.id}}"
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

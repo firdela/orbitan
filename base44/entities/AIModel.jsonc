@@ -1,0 +1,290 @@
+{
+  "name": "AIModel",
+  "type": "object",
+  "description": "Orbitan AI Operating Layer \u2014 Authoritative model registry (Build #28.2M Phase 1). Single source of truth for every AI model the platform can route to. Replaces the hardcoded MODEL_CREDIT_MULTIPLIER constant in nexus/entry.ts. Enforces lifecycle states (Draft \u2192 Evaluation \u2192 Approved \u2192 Restricted \u2192 Deprecated \u2192 Retired). Production routing rejects models not in Approved or explicitly Restricted state. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant this model belongs to. 'system' = platform-default model available to all tenants."
+    },
+    "model_key": {
+      "type": "string",
+      "description": "Unique model identifier used in code e.g. 'gemini_3_flash', 'claude_sonnet_4_6', 'gpt_5_mini'. Must match the model string used in InvokeLLM calls."
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable model name for admin UI e.g. 'Gemini 3 Flash', 'Claude Sonnet 4.6'"
+    },
+    "provider": {
+      "type": "string",
+      "enum": [
+        "google",
+        "openai",
+        "anthropic",
+        "open_source_hosted",
+        "platform_builtin",
+        "other"
+      ],
+      "description": "AI provider that serves this model"
+    },
+    "exact_version": {
+      "type": "string",
+      "description": "Exact model version or alias from the provider e.g. 'gemini-3.0-flash-001'"
+    },
+    "capability_profile": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "text_generation",
+          "structured_output",
+          "vision",
+          "code_generation",
+          "function_calling",
+          "web_search",
+          "file_analysis",
+          "audio_transcription",
+          "image_generation",
+          "video_generation",
+          "embedding",
+          "classification",
+          "summarization",
+          "translation"
+        ]
+      },
+      "description": "Capabilities this model supports"
+    },
+    "supported_modalities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "text",
+          "image",
+          "audio",
+          "video",
+          "file",
+          "structured"
+        ]
+      },
+      "default": [
+        "text"
+      ]
+    },
+    "supported_languages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "ISO-639-1 language codes this model supports well e.g. ['en', 'zh', 'ms', 'ta']"
+    },
+    "context_window_tokens": {
+      "type": "number",
+      "description": "Maximum context window in tokens"
+    },
+    "cost_config": {
+      "type": "object",
+      "description": "Cost configuration for credit metering",
+      "properties": {
+        "credit_multiplier": {
+          "type": "number",
+          "default": 1.0,
+          "description": "Multiplier applied to base capability credits. Replaces the hardcoded MODEL_CREDIT_MULTIPLIER."
+        },
+        "input_cost_per_1k_tokens": {
+          "type": "number",
+          "description": "Provider cost per 1K input tokens (for budget tracking)"
+        },
+        "output_cost_per_1k_tokens": {
+          "type": "number",
+          "description": "Provider cost per 1K output tokens (for budget tracking)"
+        }
+      }
+    },
+    "expected_latency_ms": {
+      "type": "number",
+      "description": "Expected response latency in milliseconds"
+    },
+    "processing_region": {
+      "type": "string",
+      "description": "Processing region e.g. 'us-central1', 'eu-west1', 'asia-southeast1'"
+    },
+    "retention_classification": {
+      "type": "string",
+      "enum": [
+        "no_retention",
+        "short_term",
+        "long_term",
+        "enterprise_isolated"
+      ],
+      "default": "no_retention",
+      "description": "Data retention classification. no_retention = provider does not retain inputs. enterprise_isolated = dedicated provider tenant."
+    },
+    "security_classification": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "confidential",
+        "restricted"
+      ],
+      "default": "internal",
+      "description": "Security classification of data this model is cleared to process"
+    },
+    "approved_data_classifications": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "public",
+          "internal",
+          "confidential",
+          "restricted"
+        ]
+      },
+      "default": [
+        "public",
+        "internal"
+      ],
+      "description": "Data classifications this model is approved to process"
+    },
+    "approved_use_cases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Use cases this model is approved for e.g. ['sop_generation', 'feedback_analysis', 'daily_briefing']"
+    },
+    "restricted_use_cases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Use cases where this model is explicitly restricted"
+    },
+    "lifecycle_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "evaluation",
+        "approved",
+        "restricted",
+        "deprecated",
+        "retired"
+      ],
+      "default": "draft",
+      "description": "Lifecycle state. Production routing rejects models not in 'approved' or 'restricted' state."
+    },
+    "evaluation_status": {
+      "type": "string",
+      "enum": [
+        "not_evaluated",
+        "in_progress",
+        "passed",
+        "failed",
+        "exempt"
+      ],
+      "default": "not_evaluated",
+      "description": "Evaluation/assessment status for this model"
+    },
+    "fallback_model_key": {
+      "type": "string",
+      "description": "Model key to fall back to if this model is unavailable. Null = no fallback."
+    },
+    "deprecation_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this model is scheduled for deprecation"
+    },
+    "retirement_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this model will be retired and removed from routing"
+    },
+    "replacement_model_key": {
+      "type": "string",
+      "description": "Model key that replaces this model after retirement"
+    },
+    "last_reviewed_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time this model's approval was reviewed"
+    },
+    "responsible_owner": {
+      "type": "string",
+      "description": "Person or team responsible for this model's governance"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Runtime enable/disable. Inactive models cannot serve requests regardless of lifecycle_status."
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "model_key",
+    "display_name",
+    "provider",
+    "lifecycle_status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.tenant_id": "system"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "$and": [
+            {
+              "data.tenant_id": "{{user.data.tenant_id}}"
+            },
+            {
+              "user_condition": {
+                "role": "tenant_admin"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

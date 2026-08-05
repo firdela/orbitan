@@ -309,6 +309,62 @@ Agents · White Labelling · Enterprise Features · Excessive Customisation.
 - Resend cooldown (30 seconds) is client-side only. The Base44 SDK enforces its own rate limits server-side; the client cooldown is an additional UX safeguard, not a security control.
 - Cross-tab session consistency: when a session expires in one tab, other tabs may not detect it until the next API call or page navigation. A `storage` event listener could be added for instant cross-tab sync in a future enhancement.
 
+## Build #28.2M — AI Operating Layer Phase 1 (2026-08-05)
+
+### Audit Results
+Comprehensive audit of all existing AI implementation found a strong foundation already in place:
+- **Nexus Gateway** (`nexus/entry.ts`) — canonical single-entry gateway since ADR-0006, with kill switch, registry resolution, plan-tier gate, Shield governance, credit debit, usage tracking, and fallback
+- **NexusCapabilityRegistry** entity (ADR-0046) — registry-driven capabilities with tier 1/2/3, governance bindings, sanitization modes
+- **OrbitUsageTracker** entity — tracks every AI request with tenant scope, service key, model, credits, status, latency, shield outcome
+- **NexusInsight** entity — grounded insights with evidence, data sufficiency, generation method
+- **AI Kill Switch** (SystemSettings.nexus_ai_enabled, ADR-0018) — graceful degradation
+- **Shield governance integration** — domain-aware policy resolution for AI requests
+- **useNexusAI hook** — frontend hook with graceful degradation
+- **NexusIntelligence/Copilot/FeedbackAnalyst** functions — grounded, role-gated intelligence services
+- **Zero direct provider calls** — all AI routes through `base44.integrations.Core.InvokeLLM` (platform_builtin)
+- **Zero provider secrets in frontend** — all credentials server-side
+
+### Gap Register
+Created authoritative gap register at `src/docs/knowledge-hub/ai/Orbitan-AI-Operating-Layer-Gap-Register.md`. Classified every capability as Complete/Partial/Missing/Deferred with P0–P3 priorities.
+
+### P0 Gaps Found
+Only one P0 gap: Worker AI-admin access verification — verified as safe (no AI-admin routes existed before this build; new routes are admin-only; Worker notification deep links reject management route prefixes).
+
+### P1 Gaps Implemented
+1. **AIModel entity** — model lifecycle registry (Draft→Evaluation→Approved→Restricted→Deprecated→Retired)
+2. **AIAgent entity** — agent identity registry (Draft→Testing→Approved→Suspended→Expired→Retired)
+3. **AIPolicy entity** — AI-specific policy evaluation (deny-by-default, most-restrictive-wins)
+4. **AIAuditEvent entity** — AI execution audit provenance (provider, model, routing, policy, tools, outcome, safe provenance states)
+5. **ai-autonomy-levels.js** — L0–L3 classification (Answer, Recommend, Draft, Execute) with 9 L3 prohibited actions
+6. **ai-policy-evaluator.js** — policy evaluation service (model/agent lifecycle, data classification, autonomy, most-restrictive-wins)
+7. **ai-execution-policy.js** — technical execution-policy contract (tenant scope, tools, network, credentials, runtime/token/cost limits, stop conditions, kill switch)
+8. **ai-provider-adapter.js** — provider adapter interface (5 providers, error classification)
+9. **AIGovernancePage** — admin-only read-only governance UI at `/platform/ai-governance`
+
+### Tests
+62/62 passed (100%). Covers autonomy enforcement, model/agent lifecycle, data classification, policy resolution, execution policy validation, provider adapter, and security verification.
+
+### Entities Created (4)
+- AIModel, AIAgent, AIPolicy, AIAuditEvent — all with tenant_id required, lifecycle status, RLS
+
+### Files Created (9)
+- `base44/entities/AIModel.jsonc`, `base44/entities/AIAgent.jsonc`, `base44/entities/AIPolicy.jsonc`, `base44/entities/AIAuditEvent.jsonc`
+- `src/lib/ai/ai-autonomy-levels.js`, `src/lib/ai/ai-policy-evaluator.js`, `src/lib/ai/ai-execution-policy.js`, `src/lib/ai/ai-provider-adapter.js`
+- `src/pages/platform/AIGovernancePage.jsx`
+- `src/lib/__tests__/ai-operating-layer.test.js`
+- `src/docs/knowledge-hub/ai/Orbitan-AI-Operating-Layer-Gap-Register.md`
+- `src/docs/knowledge-hub/decision-records/0067-ai-operating-layer-phase-1.md`
+
+### Files Modified (2)
+- `src/App.jsx` — added `/platform/ai-governance` route
+- `src/docs/knowledge-hub/CHANGELOG.md` — Build #28.2M section added
+
+### Remaining Limitations
+- Gateway integration (runtime policy evaluation in nexus/entry.ts) deferred to Phase 2 to avoid breaking changes
+- Live provider adapters (OpenAI, Anthropic, Gemini) deferred to Phase 2 (require external credentials)
+- AI governance Orbit Inbox events deferred to Phase 2
+- Semantic data-product catalogue, strategy graph, full budget analytics, evaluations, voice/video/multimodal deferred to Phase 3+
+
 ## Build #28.2L — Worker Navigation Repair & Orbit Inbox Integration (2026-08-05)
 
 ### Worker Navigation Audit
