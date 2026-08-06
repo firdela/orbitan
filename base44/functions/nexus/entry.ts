@@ -98,6 +98,13 @@ const IDEMPOTENCY_PROCESSING_STATES = ['received', 'validating', 'executing'];
 // ── APPROVAL CONSTANTS ────────────────────────────────────────
 const APPROVAL_EXPIRY_HOURS = 24;
 
+// ── SANDBOX TEST TTL (Build #28.2P-R.0) ────────────────────────
+// Short TTL for tagged test approvals in sandbox tenants only.
+// Production tenants always use the normal 24-hour TTL.
+const SANDBOX_TEST_TTL_MIN_MINUTES = 1;
+const SANDBOX_TEST_TTL_MAX_MINUTES = 10;
+const SANDBOX_TEST_TTL_DEFAULT_MINUTES = 2;
+
 // ── FORBIDDEN FIELDS (ADR-0044 Zero-PII) ─────────────────────
 const FORBIDDEN_FIELDS = [
   'tenant_name', 'actor_name', 'actor_role', 'created_by_id', 'created_by_name',
@@ -1003,7 +1010,53 @@ export default async function(req: Request): Promise<Response> {
       } else {
         // Create AIApproval record
         const approvalKey = generateApprovalKey();
-        const approvalExpiry = new Date(Date.now() + APPROVAL_EXPIRY_HOURS * 60 * 60 * 1000).toISOString();
+
+        // ── SANDBOX TEST TTL (Build #28.2P-R.0) ────────────────
+        // Short TTL for tagged test approvals in sandbox tenants only.
+        let approvalTtlHours = APPROVAL_EXPIRY_HOURS;
+        let isTestApproval = false;
+        let testRunId: string | null = null;
+        let testTag: string | null = null;
+        let testMetadata: Record<string, any> | null = null;
+
+        if (body.test_run_id && body.test_tag) {
+          // Verify tenant is sandbox before applying test TTL
+          let tenantRecord: any = null;
+          try {
+            tenantRecord = await base44.asServiceRole.entities.Tenant.get(tenantId);
+          } catch { /* non-critical */ }
+
+          if (tenantRecord?.is_sandbox) {
+            isTestApproval = true;
+            testRunId = body.test_run_id;
+            testTag = body.test_tag;
+
+            // Server-controlled TTL — client cannot supply arbitrary timestamps
+            const requestedMinutes = body.test_ttl_minutes || SANDBOX_TEST_TTL_DEFAULT_MINUTES;
+            const clampedMinutes = Math.max(SANDBOX_TEST_TTL_MIN_MINUTES, Math.min(SANDBOX_TEST_TTL_MAX_MINUTES, requestedMinutes));
+            approvalTtlHours = clampedMinutes / 60;
+
+            testMetadata = {
+              environment: 'test',
+              test_run_id: testRunId,
+              test_tag: testTag,
+              sandbox_tenant_id: tenantId,
+              created_by_test: true,
+              non_production: true,
+              test_purpose: body.test_purpose || 'Governance verification test',
+              created_by_actor_id: actorId,
+              test_ttl_minutes: clampedMinutes,
+            };
+          } else {
+            // Production tenant attempted test TTL — deny
+            return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+              detail: 'Test TTL is only available for sandbox tenants.',
+              request_id: requestId,
+            });
+          }
+        }
+
+        const approvalExpiry = new Date(Date.now() + approvalTtlHours * 60 * 60 * 1000).toISOString();
         const approvingRole = isSensitiveAction(actionType) ? 'admin' : 'tenant_admin';
 
         let approvalId: string | null = null;
@@ -1032,6 +1085,7 @@ export default async function(req: Request): Promise<Response> {
             status: 'pending',
             approving_role: approvingRole,
             expires_at: approvalExpiry,
+            ...(testMetadata ? { metadata: testMetadata } : {}),
           });
           approvalId = approvalRecord?.id || null;
         } catch (err) {
@@ -1055,7 +1109,7 @@ export default async function(req: Request): Promise<Response> {
           validation_result: 'not_validated', provenance_state: PROVENANCE_STATES.awaiting_review,
           outcome: 'denied', error_message: policyResult.reason, error_classification: null,
           fallback_used: false, approval_reference_id: approvalId,
-          metadata: { payload_hash: payloadHash, approval_key: approvalKey },
+          metadata: { payload_hash: payloadHash, approval_key: approvalKey, ...(testMetadata || {}) },
           is_consequential: true,
           cached_result: { success: false, safe_error_code: SAFE_ERROR_CODES.APPROVAL_REQUIRED, http_status: 202 },
         }).catch(() => null);

@@ -26,7 +26,7 @@ import {
   isSensitiveAction,
   resolveMostRestrictivePolicy,
   evaluateAIRequest,
-} from '../ai-policy-evaluator.js';
+} from '../ai/ai-policy-evaluator.js';
 
 import {
   L0_ANSWER,
@@ -38,14 +38,14 @@ import {
   canPerformAction,
   getDefaultAutonomy,
   isValidAutonomyLevel,
-} from '../ai-autonomy-levels.js';
+} from '../ai/ai-autonomy-levels.js';
 
 import {
   DEFAULT_EXECUTION_POLICY,
   validateExecutionContext,
   createExecutionPolicy,
   shouldStop,
-} from '../ai-execution-policy.js';
+} from '../ai/ai-execution-policy.js';
 
 let passed = 0;
 let failed = 0;

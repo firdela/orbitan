@@ -7,6 +7,35 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2P-R.0 (Orbitan Test Lab Infrastructure) (2026-08-06)
+
+### Added — Internal Test Lab Setup Capability
+- **New shared module:** `base44/shared/test-lab-config.ts` — canonical test-identity allowlist (8 aliases), role mapping, test-run tagging standard, sandbox-only TTL constants, cross-tenant permission constants
+- **New backend function:** `testLabSetup` (`base44/functions/testLabSetup/entry.ts`) — protected server-side authority for: Test Tenant B provisioning (idempotent, sandbox-only), Tenant A readiness audit (read-only), Employee membership preparation (allowlisted aliases only), cross-tenant permission grant/revoke (one fixed permission), email delivery attestation, readiness dashboard, mutable test-data reset
+- **New page:** `/platform/test-lab` (`TestLabSetupPage.jsx`) — readiness dashboard showing Tenant A/B state, 8 identity lifecycle states, test capability readiness; provisioning, membership, permission, attestation, and reset controls
+- **New tests:** `src/lib/__tests__/test-lab-hardening.test.js` (76 tests — allowlist, role mapping, TTL, tagging, security)
+- **Nexus gateway enhancement:** sandbox-only short TTL (1–10 min) at AIApproval creation point for tagged test requests in sandbox tenants; production tenants always use normal 24h TTL; test tagging metadata applied to AIApproval and AIAuditEvent records
+
+### Fixed — Parity Test Import Paths
+- **`src/lib/__tests__/ai-governance-parity.test.js`** — repaired three broken import paths: `'../ai-policy-evaluator.js'` → `'../ai/ai-policy-evaluator.js'`, `'../ai-autonomy-levels.js'` → `'../ai/ai-autonomy-levels.js'`, `'../ai-execution-policy.js'` → `'../ai/ai-execution-policy.js'`
+- Parity tests now execute and pass (84/84)
+
+### Security — What Was NOT Built
+- No generic developer console, generic tenant creator, or generic permission editor
+- No AIApproval record editor, forced approval, or forced execution
+- No generic mock clock
+- No new AuthContext or auth provider
+- No Enterprise Authentication Hardening
+- Cross-tenant permission restricted to one fixed permission (`platform.ai.cross_tenant_operate`) on one fixed allowlisted identity
+- All operations require `platform.test_lab.manage` permission + platform-admin role
+
+### Test Results
+- Test lab hardening: 76/76 passed
+- Gateway hardening: 37/37 passed
+- Governance parity: 84/84 passed
+- Focused lint: 0 errors
+- Production build: exit code 0
+
 ## [Unreleased] — Build #28.2P-R (Secure AI Approval Execution — Correction & Execution Ownership Fix) (2026-08-05)
 
 ### Corrected — Unsupported Documentation Claims
