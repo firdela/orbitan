@@ -34,10 +34,14 @@ Deno.serve(async (req) => {
     // Scans OrbitUsageTracker for patterns and generates EvolutionProposal records
     if (action === 'analyze') {
       // Fetch recent usage data for this tenant
-      const usageRecords = await base44.asServiceRole.entities.OrbitUsageTracker.filter(
+      const usageRecordsRaw = await base44.asServiceRole.entities.OrbitUsageTracker.filter(
         { tenant_id: resolvedTenantId, status: 'success' },
         '-created_date',
         200
+      );
+      // Exclude test usage records from production evolution analysis
+      const usageRecords = (usageRecordsRaw || []).filter(r =>
+        !r.metadata?.environment || r.metadata.environment !== 'test'
       );
 
       // Fetch existing proposals to avoid duplicates

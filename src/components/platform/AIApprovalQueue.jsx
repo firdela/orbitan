@@ -49,10 +49,10 @@ export default function AIApprovalQueue() {
     queryKey: ['ai-approvals-active'],
     queryFn: async () => {
       const result = await base44.entities.AIApproval.filter(
-        { status: { $in: ['pending', 'approved', 'executing', 'execution_failed'] } },
+        { status: { $in: ['pending', 'approved', 'executing', 'execution_failed'] }, is_test: { $ne: true } },
         '-created_date', 50,
       );
-      return result || [];
+      return (result || []).filter(a => !a.is_test && !a.non_production);
     },
     refetchInterval: 30000,
   });

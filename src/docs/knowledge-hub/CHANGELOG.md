@@ -7,6 +7,49 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2P-R.0R.1 (Test Lab Remaining P0 Code-Level Gaps Closed) (2026-08-07)
+
+### P0 Gap Closures
+- **Bootstrap permanently disabled:** The one-time `bootstrap_permission` action now returns HTTP 410 `bootstrap_disabled`. `User.role === 'admin'` alone cannot bootstrap. Bootstrap UI removed from TestLabGuard. Permission management is now exclusively through the canonical Access Control architecture.
+- **Durable operation intent before mutation:** Every privileged Test Lab mutation now follows: (1) persist durable operation intent → (2) verify intent persisted → (3) perform mutation → (4) persist completion/failure → (5) return success only when evidence is durable. Applied to: provision_tenant_b, prepare_membership, grant_permission, revoke_permission, attest_delivery, create_test_run, reset_test_data. Incomplete operations expose a safe recovery state (`OPERATION_INTENT_STATES.INCOMPLETE`).
+- **Client TTL removed:** `ttl_minutes` is removed from the Test Run request contract. The server selects TTL from `SERVER_TTL_POLICY` based on `test_tag`. Forged 1-minute and 10-minute values cannot change the server TTL. The request may identify the test scenario (test_tag) but MUST NOT provide the resulting TTL value.
+- **Single-use TestRun atomic CAS:** TestRun consumption now uses `updateMany` with a conditional filter `{ id, status: 'active', current_uses: { $lt: max_uses } }` as a Compare-And-Swap operation. A unique `consumption_token` proves which concurrent request acquired the Test Run. If acquisition fails, the gateway FAILS CLOSED — no AIApproval is created. No duplicate approval can result from TestRun replay/race.
+- **Hard-coded readiness passes removed:** `test_tagging_ready` and `short_ttl_ready` are now evidence-derived. `test_tagging_ready` requires a real schema-supported tagged AIApproval record (is_test, test_run_id, test_tag, non_production). `short_ttl_ready` requires a consumed TestRun with a consumption_token and valid server-selected TTL. Both are `false` when no evidence exists. Code existence alone is NOT readiness.
+- **Production analytics exclusion completed:** Created ONE canonical exclusion mechanism (`productionExclusionQuery()`, `isProductionRecord()`, `containsTestRecords()`). Applied to: AIGovernancePage (AIAuditEvent), AIApprovalQueue (AIApproval), evolutionEngine (OrbitUsageTracker), pilotReadiness (OrbitUsageTracker). Production records included, test records excluded, non_production records excluded, historical immutable test audit retained but excluded from production metrics.
+- **TestRun schema:** Added `consumption_token` field for proving atomic CAS acquisition.
+
+### Live Backend Verification
+- Bootstrap: 410 `bootstrap_disabled`, `bootstrap_state: permanently_disabled`
+- Readiness: `test_tagging_ready: false`, `short_ttl_ready: false` (0 tagged approvals, 0 consumed test runs)
+- All tenant identities show `user_role: 'user'`
+- Tenant B hierarchy intact (tenant_id, company_id, outlet_id)
+
+### Test Results
+- Test lab hardening: all passed (imports from canonical module, includes new P0 tests)
+- Gateway hardening: all passed
+- Governance parity: all passed
+- Focused lint: 0 errors
+- Production build: exit code 0
+- Deliberate failure test: broken assertion → exit 1, restored → exit 0
+
+### Files Modified
+- `base44/shared/test-lab-config.js` — server TTL policy, operation intent states, bootstrap state, comprehensive analytics exclusion
+- `base44/shared/test-lab-config.ts` — re-exports from .js (unchanged)
+- `base44/entities/TestRun.jsonc` — added consumption_token field
+- `base44/functions/testLabSetup/entry.ts` — bootstrap disabled, operation intent pattern, client TTL removed, truthful readiness
+- `base44/functions/nexus/entry.ts` — atomic CAS TestRun consumption, fail-closed on acquisition failure
+- `src/components/platform/TestLabGuard.jsx` — bootstrap UI removed
+- `src/components/platform/AIApprovalQueue.jsx` — analytics exclusion (is_test: { $ne: true })
+- `src/pages/platform/AIGovernancePage.jsx` — analytics exclusion (filter test audit events), fixed unused imports
+- `base44/functions/evolutionEngine/entry.ts` — analytics exclusion (filter test usage records)
+- `base44/functions/pilotReadiness/entry.ts` — analytics exclusion (filter test usage records)
+- `src/lib/__tests__/test-lab-hardening.test.js` — new P0 tests (bootstrap disabled, server TTL, CAS concurrency, no hard-coded readiness, analytics exclusion, operation intent)
+
+### Remaining P0 Blockers
+- Test Run live verification (requires registered test identities)
+- Worker route/API denial live test (requires Worker session)
+- Full approve-to-execute lifecycle with short TTL (requires registered identities + Test Run)
+
 ## [Unreleased] — Build #28.2P-R.0R (Orbitan Test Lab Security and Operational Repair) (2026-08-07)
 
 ### Security Repair — Blocking Defects Fixed

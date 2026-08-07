@@ -1,7 +1,7 @@
 {
   "name": "TestRun",
   "type": "object",
-  "description": "Orbitan Test Lab \u2014 Protected Test Run authorisation record (Build #28.2P-R.0R). Created by a platform.test_lab.manage operator to authorise a single sandbox test run with server-selected short TTL. Nexus gateway validates this record server-side before applying any short approval expiry. Client-provided TTL values are ignored. Prevents ordinary sandbox requesters from activating test TTL by merely supplying body fields. Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan Test Lab \u2014 Protected Test Run authorisation record (Build #28.2P-R.0R.1). Created by a platform.test_lab.manage operator to authorise a single sandbox test run with server-selected short TTL. Nexus gateway validates this record server-side before applying any short approval expiry. Client-provided TTL values are rejected \u2014 the server selects TTL from SERVER_TTL_POLICY based on the test_tag. Single-use acquisition is enforced via atomic CAS (updateMany with conditional filter + consumption_token verification). Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string",
@@ -42,11 +42,11 @@
     },
     "server_selected_ttl_minutes": {
       "type": "number",
-      "description": "Server-selected TTL in minutes (1-10). Client cannot override this."
+      "description": "Server-selected TTL in minutes (1-10). Client cannot override this. Resolved from SERVER_TTL_POLICY based on test_tag."
     },
     "test_tag": {
       "type": "string",
-      "description": "Test classification tag e.g. 'approve_to_execute'."
+      "description": "Test classification tag e.g. 'approve_to_execute'. Also used by the server to resolve the TTL."
     },
     "test_purpose": {
       "type": "string",
@@ -68,7 +68,7 @@
         "cancelled"
       ],
       "default": "active",
-      "description": "Lifecycle state. active \u2192 consumed (after use) or expired/cancelled."
+      "description": "Lifecycle state. active \u2192 consumed (after atomic CAS acquisition) or expired/cancelled."
     },
     "max_uses": {
       "type": "number",
@@ -78,7 +78,11 @@
     "current_uses": {
       "type": "number",
       "default": 0,
-      "description": "Number of times this run has been consumed."
+      "description": "Number of times this run has been consumed. Incremented atomically via CAS."
+    },
+    "consumption_token": {
+      "type": "string",
+      "description": "Build #28.2P-R.0R.1 \u2014 Unique token written during the atomic CAS acquisition. Used to prove which concurrent request acquired the Test Run. Null until consumed."
     },
     "expires_at": {
       "type": "string",

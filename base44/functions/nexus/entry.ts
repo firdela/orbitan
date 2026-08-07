@@ -1080,11 +1080,42 @@ export default async function(req: Request): Promise<Response> {
               request_id: requestId,
             });
           }
-          // Validate usage limit
-          if (testRun.current_uses >= testRun.max_uses) {
+          // BUILD #28.2P-R.0R.1: ATOMIC CAS TEST RUN CONSUMPTION
+          // Uses updateMany with a conditional filter as a Compare-And-Swap
+          // operation. Only ONE concurrent request can match the filter
+          // (status='active', current_uses < max_uses) and apply the update.
+          // A unique consumption_token proves which request acquired the run.
+          // If acquisition fails, FAIL CLOSED — do NOT create AIApproval.
+          const consumptionToken = `ctok_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 10)}`;
+          const consumedAt = new Date().toISOString();
+
+          let consumptionAcquired = false;
+          try {
+            await base44.asServiceRole.entities.TestRun.updateMany(
+              { id: testRun.id, status: 'active', current_uses: { $lt: testRun.max_uses } },
+              { $inc: { current_uses: 1 }, $set: { status: 'consumed', consumed_at: consumedAt, consumption_token: consumptionToken } }
+            );
+            // Verify we acquired the Test Run by checking the consumption_token
+            const verifyRuns = await base44.asServiceRole.entities.TestRun.filter({ test_run_id: body.test_run_id });
+            const verifyRun = verifyRuns?.[0];
+            if (verifyRun && verifyRun.consumption_token === consumptionToken) {
+              consumptionAcquired = true;
+            }
+          } catch (consumeErr) {
+            // FAIL CLOSED: consumption update failed — do NOT continue to AIApproval creation
             return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
-              detail: 'Test Run has reached its maximum usage.',
+              detail: 'Test Run atomic consumption failed. No approval has been created.',
               request_id: requestId,
+              consumption_error: consumeErr.message,
+            });
+          }
+
+          if (!consumptionAcquired) {
+            // FAIL CLOSED: another concurrent request acquired the Test Run
+            return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+              detail: 'Test Run was already consumed by another request. No duplicate approval can be created.',
+              request_id: requestId,
+              consumption_token_mismatch: true,
             });
           }
 
@@ -1105,19 +1136,7 @@ export default async function(req: Request): Promise<Response> {
             test_purpose: testPurpose,
             created_by_actor_id: testRun.created_by_operator_id,
             test_ttl_minutes: testRun.server_selected_ttl_minutes,
-          };
-
-          // Consume the Test Run (atomic increment)
-          try {
-            const newUses = (testRun.current_uses || 0) + 1;
-            const isConsumed = newUses >= testRun.max_uses;
-            await base44.asServiceRole.entities.TestRun.update(testRun.id, {
-              current_uses: newUses,
-              status: isConsumed ? 'consumed' : 'active',
-              consumed_at: testRun.consumed_at || new Date().toISOString(),
-            });
-          } catch (err) {
-            console.log(`[nexusGateway] TestRun consumption failed: ${err.message}`);
+            consumption_token: consumptionToken,
           }
         }
         // Client-provided test_ttl_minutes, test_tag, test_purpose without

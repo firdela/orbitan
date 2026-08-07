@@ -145,11 +145,40 @@ export const SANDBOX_TENANT_DEFAULTS = {
 // ── SANDBOX-ONLY SHORT TTL ────────────────────────────────────
 // Used only when a valid Test Run authorises short TTL for a
 // sandbox tenant. Production tenants always use the normal
-// 24-hour TTL. Client-provided TTL values are ignored.
+// 24-hour TTL.
+//
+// BUILD #28.2P-R.0R.1 — Client TTL authority REMOVED entirely.
+// The client/operator CANNOT choose the approval TTL. The server
+// selects the TTL from the test_tag using the policy below, or
+// falls back to the canonical default. The request may identify
+// the test scenario (test_tag) but MUST NOT provide the TTL value.
 export const NORMAL_APPROVAL_TTL_HOURS = 24;
 export const SANDBOX_TEST_TTL_MIN_MINUTES = 1;
 export const SANDBOX_TEST_TTL_MAX_MINUTES = 10;
 export const SANDBOX_TEST_TTL_DEFAULT_MINUTES = 2;
+
+// ── SERVER TTL POLICY (Build #28.2P-R.0R.1) ───────────────────
+// Maps test_tag → server-selected TTL in minutes. The client
+// identifies the scenario via test_tag; the server resolves the TTL.
+// If the test_tag is not in this policy, the canonical default is used.
+export const SERVER_TTL_POLICY = {
+  'approve_to_execute': SANDBOX_TEST_TTL_DEFAULT_MINUTES,
+  'cross_tenant_execution': 3,
+  'worker_approval_denial': 2,
+  'concurrent_decision': 2,
+  'replay_single_use': 1,
+  'expiry_test': 1,
+};
+
+// Resolves the server-selected TTL for a given test scenario.
+// The client CANNOT override this value. If the test_tag is not
+// in the policy, the canonical default is used.
+export function resolveServerTtl(testTag) {
+  if (testTag && SERVER_TTL_POLICY[testTag] != null) {
+    return SERVER_TTL_POLICY[testTag];
+  }
+  return SANDBOX_TEST_TTL_DEFAULT_MINUTES;
+}
 
 // ── TEST RUN LIFECYCLE STATES ──────────────────────────────────
 export const TEST_RUN_STATES = {
@@ -191,9 +220,37 @@ export function getTestIdentity(email) {
   return TEST_IDENTITIES.find(t => t.email === email) || null;
 }
 
+// BUILD #28.2P-R.0R.1 — isValidTestTtlMinutes is DEPRECATED.
+// Client TTL values are no longer accepted. The server selects
+// TTL from SERVER_TTL_POLICY. This function is retained only for
+// internal server-side validation, not for accepting client input.
 export function isValidTestTtlMinutes(minutes) {
   return typeof minutes === 'number' && minutes >= SANDBOX_TEST_TTL_MIN_MINUTES && minutes <= SANDBOX_TEST_TTL_MAX_MINUTES;
 }
+
+// ── OPERATION INTENT STATES (Build #28.2P-R.0R.1) ────────────
+// Durable operation intent lifecycle for fail-closed privileged
+// operations. Every privileged mutation MUST:
+//   1. persist durable authorised operation intent BEFORE mutation;
+//   2. verify the intent was persisted;
+//   3. perform the idempotent mutation;
+//   4. persist completion or failure;
+//   5. return success only when required evidence is durable.
+export const OPERATION_INTENT_STATES = {
+  INTENT_PERSISTED: 'intent_persisted',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  INCOMPLETE: 'incomplete',
+};
+
+// ── BOOTSTRAP STATE (Build #28.2P-R.0R.1) ────────────────────
+// The one-time bootstrap has already completed. The action is now
+// permanently disabled. Permission management is handled exclusively
+// through the canonical Access Control architecture.
+export const BOOTSTRAP_STATE = {
+  PERMANENTLY_DISABLED: 'permanently_disabled',
+  DISABLED_CODE: 'bootstrap_disabled',
+};
 
 // ── ROLE RESOLUTION ────────────────────────────────────────────
 // Resolves the canonical workspace route for a given User.role.
@@ -249,8 +306,43 @@ export function productionExclusionFilter() {
 // For entities that store test tagging in metadata only
 export function isProductionRecord(record) {
   if (!record) return false;
+  // Schema-supported test fields (AIApproval, TestRun, TestLabAttestation)
   if (record.is_test === true) return false;
   if (record.non_production === true) return false;
+  // Metadata-based test tagging (OrbitUsageTracker, OrbitInbox, AIAuditEvent)
   if (record.metadata?.environment === 'test') return false;
+  if (record.metadata?.created_by_test === true) return false;
+  if (record.metadata?.non_production === true) return false;
+  if (record.metadata?.test_run_id) return false;
+  // OrbitUsageTracker: shield_outcome='ai_disabled' is not test data,
+  // but metadata.test_run_id indicates test usage
+  if (record.service_key && record.metadata?.test_tag) return false;
   return true;
+}
+
+// ── COMPREHENSIVE PRODUCTION EXCLUSION ────────────────────────
+// Returns a MongoDB-style filter object that excludes all test
+// records. Use with .filter() calls on ANY entity that might
+// contain test data. This is the ONE canonical exclusion mechanism.
+//
+// Supports both schema-level fields (is_test, non_production) and
+// metadata-level fields (environment, created_by_test, test_run_id).
+export function productionExclusionQuery() {
+  return {
+    $and: [
+      { is_test: { $ne: true } },
+      { non_production: { $ne: true } },
+      { 'metadata.environment': { $ne: 'test' } },
+      { 'metadata.created_by_test': { $ne: true } },
+      { 'metadata.non_production': { $ne: true } },
+      { 'metadata.test_run_id': { $exists: false } },
+    ],
+  };
+}
+
+// Returns true if a list of records contains ANY test records
+// (useful for post-filter verification in tests)
+export function containsTestRecords(records) {
+  if (!records || !Array.isArray(records)) return false;
+  return records.some(r => !isProductionRecord(r));
 }

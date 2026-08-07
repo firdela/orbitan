@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Shield, Bot, Cpu, FileCheck, Activity, AlertTriangle, CheckCircle2, XCircle, Zap, Clock, Lock } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Shield, Bot, Cpu, FileCheck, Activity, CheckCircle2, XCircle, Zap, Clock, Lock } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import PageHeader from '@/components/shared/PageHeader';
@@ -177,7 +177,10 @@ function AuditSection() {
     queryKey: ['ai-audit-events'],
     queryFn: async () => {
       const result = await base44.entities.AIAuditEvent.list('-created_date', 20);
-      return result || [];
+      // Exclude test audit events from production governance view
+      return (result || []).filter(e =>
+        !e.metadata?.environment || e.metadata.environment !== 'test'
+      );
     },
   });
 
