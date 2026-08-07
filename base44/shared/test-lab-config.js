@@ -263,6 +263,61 @@ export const OPERATION_LOOKUP_STATES = {
   UNAVAILABLE: 'unavailable',
 };
 
+// ── BLOCKING vs NON-BLOCKING OPERATION STATES (Build #28.2P-R.0R.1C) ──
+// Build #28.2P-R.0R.1C expands blocking to include PENDING and
+// INTENT_PERSISTED — a second operation against the same target
+// MUST NOT start while another operation is already in any active
+// state. Only terminal safe states (COMPLETED, FAILED, RECONCILED)
+// are non-blocking.
+export const BLOCKING_OPERATION_STATUSES = [
+  OPERATION_LIFECYCLE_STATES.PENDING,
+  OPERATION_LIFECYCLE_STATES.INTENT_PERSISTED,
+  OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED,
+  OPERATION_LIFECYCLE_STATES.INCOMPLETE,
+];
+
+export const NON_BLOCKING_OPERATION_STATUSES = [
+  OPERATION_LIFECYCLE_STATES.COMPLETED,
+  OPERATION_LIFECYCLE_STATES.FAILED,
+  OPERATION_LIFECYCLE_STATES.RECONCILED,
+];
+
+export function isBlockingOperationStatus(status) {
+  return BLOCKING_OPERATION_STATUSES.includes(status);
+}
+
+export function isNonBlockingOperationStatus(status) {
+  return NON_BLOCKING_OPERATION_STATUSES.includes(status);
+}
+
+// ── VERIFICATION RUN LOOKUP STATES (Build #28.2P-R.0R.1C) ──────
+// Fail-closed verification run lookup. Distinguishes:
+// NONE — query succeeded, zero active runs.
+// ACTIVE — query succeeded, exactly one active run.
+// UNAVAILABLE — query failed (MUST fail closed).
+// CONFLICT — more than one active run (MUST fail closed).
+export const VERIFICATION_RUN_LOOKUP_STATES = {
+  NONE: 'none',
+  ACTIVE: 'active',
+  UNAVAILABLE: 'unavailable',
+  CONFLICT: 'conflict',
+};
+
+// ── VERIFICATION RUN LEGAL TRANSITIONS (Build #28.2P-R.0R.1C) ─
+// Enforced server-side. Illegal transitions are denied.
+export const VERIFICATION_RUN_TRANSITIONS = {
+  [VERIFICATION_RUN_STATUSES.PREPARING]: [VERIFICATION_RUN_STATUSES.ACTIVE],
+  [VERIFICATION_RUN_STATUSES.ACTIVE]: [VERIFICATION_RUN_STATUSES.COMPLETED, VERIFICATION_RUN_STATUSES.FAILED],
+  [VERIFICATION_RUN_STATUSES.COMPLETED]: [VERIFICATION_RUN_STATUSES.ARCHIVED],
+  [VERIFICATION_RUN_STATUSES.FAILED]: [VERIFICATION_RUN_STATUSES.ARCHIVED],
+  [VERIFICATION_RUN_STATUSES.ARCHIVED]: [],
+};
+
+export function isLegalVerificationRunTransition(fromStatus, toStatus) {
+  const allowed = VERIFICATION_RUN_TRANSITIONS[fromStatus] || [];
+  return allowed.includes(toStatus);
+}
+
 // ── VERIFICATION RUN STATUSES (Build #28.2P-R.0R.1B) ──────────
 export const VERIFICATION_RUN_STATUSES = {
   PREPARING: 'preparing',
@@ -283,6 +338,8 @@ export const TARGET_TYPES = {
   TEST_ATTESTATION: 'test_attestation',
   TEST_RUN: 'test_run',
   TEST_RESET: 'test_reset',
+  VERIFICATION_RUN: 'verification_run',
+  VERIFICATION_ACTIVATION: 'verification_activation',
 };
 
 export function targetKeyForSandboxTenant() {
@@ -307,6 +364,26 @@ export function targetKeyForTestRun(verificationRunId, sandboxTenantId, requeste
 
 export function targetKeyForReset(tenantId, testRunId) {
   return `${tenantId}:${testRunId}`;
+}
+
+// Build #28.2P-R.0R.1C — Verification run target keys
+export function targetKeyForVerificationRun(verificationRunId) {
+  return `vrun:${verificationRunId}`;
+}
+
+// Global activation lock — ensures at most one ACTIVE verification run.
+// All activation requests must acquire this lock before transitioning
+// any run to ACTIVE.
+export function targetKeyForVerificationActivation() {
+  return 'global';
+}
+
+// Build #28.2P-R.0R.1C — Lock key generator (for the atomic lock registry).
+// The lock key is derived from the target_type + target_key, ensuring
+// one lock per canonical target. For verification activation, a global
+// lock key is used to serialize all activations.
+export function lockKeyForTarget(targetType, targetKey) {
+  return `${targetType}:${targetKey}`;
 }
 
 // ── OPERATION ID GENERATOR (Build #28.2P-R.0R.1B) ────────────
