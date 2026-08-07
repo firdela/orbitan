@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { isProductionRecord } from '../../shared/test-lab-config.ts';
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
@@ -39,10 +40,8 @@ Deno.serve(async (req) => {
         '-created_date',
         200
       );
-      // Exclude test usage records from production evolution analysis
-      const usageRecords = (usageRecordsRaw || []).filter(r =>
-        !r.metadata?.environment || r.metadata.environment !== 'test'
-      );
+      // Exclude test usage records using canonical helper (Build #28.2P-R.0R.1A)
+      const usageRecords = (usageRecordsRaw || []).filter(r => isProductionRecord(r));
 
       // Fetch existing proposals to avoid duplicates
       const existingProposals = await base44.asServiceRole.entities.EvolutionProposal.filter(

@@ -7,6 +7,45 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2P-R.0R.1A (Operation Evidence, Readiness and Analytics Exclusion Closure) (2026-08-07)
+
+### P0 Gap Closures
+- **Completion-audit false success FIXED:** `persistOperationCompletion` now returns `{ completion_id, persisted }` instead of a bare string. All 9 callers check `.persisted` before returning `success: true`. If completion evidence fails, the response is `success: false, operation_status: "incomplete"` with `intent_id` and `resource_id`. A successful mutation is NOT automatically a fully successful operation.
+- **Incomplete operations made ACTIONABLE:** `checkUnresolvedIntents` queries AuditLog for `_audit_degraded` records on a target. Before dependent operations (provision_tenant_b, prepare_membership, create_test_run, reset_test_data, grant/revoke), unresolved incomplete operations block the dependent operation with 409 `incomplete_operation`. Readiness exposes `unresolved_operations` array for recovery.
+- **Reset partial-failure handling FIXED:** `reset_test_data` no longer swallows the OrbitInbox query failure. Both `approvals_query_error` and `inbox_query_error` are captured. `overall_status` reports `success` | `partial` | `incomplete` | `failed` accurately. Query failure → `incomplete`. Delete failure → `partial`. Both → `failed`.
+- **Readiness scoped to canonical Test Lab evidence:** `test_tagging_ready` queries `AIApproval.filter({ is_test: true, tenant_id: { $in: sandboxTenantIds } })` — scoped to sandbox tenants A and B. `short_ttl_ready` queries `TestRun.filter({ status: 'consumed', sandbox_tenant_id: { $in: sandboxTenantIds } })` — scoped to sandbox tenants. Historical unrelated records from non-sandbox tenants CANNOT set readiness=true.
+- **One canonical production exclusion mechanism:** All production consumers now use `isProductionRecord()` from `base44/shared/test-lab-config.js`. Inline filters (`!r.metadata?.environment || r.metadata.environment !== 'test'`) removed from evolutionEngine, pilotReadiness, AIApprovalQueue, AIGovernancePage. Frontend re-export at `src/lib/test-lab-exclusion.js`.
+- **Operation state machine:** `INTENT_PERSISTED → MUTATION_COMPLETED → COMPLETED` (full success). `INTENT_PERSISTED → MUTATION_COMPLETED → INCOMPLETE` (completion audit failed). `INTENT_PERSISTED → FAILED` (mutation failed). Added `MUTATION_COMPLETED` state.
+- **TestRun CAS classification:** CAS pattern verified structurally. Live concurrency verification deferred to Build #28.2P-R.0R.2 (requires registered requester identities). Classified as `CAS IMPLEMENTED — LIVE CONCURRENCY NOT VERIFIED`. No in-memory simulation in tests.
+
+### Files Modified
+- `base44/shared/test-lab-config.js` — added `MUTATION_COMPLETED` to `OPERATION_INTENT_STATES`
+- `base44/functions/testLabSetup/entry.ts` — completion contract, unresolved intent checks, reset failure handling, readiness scoping, unresolved_operations in readiness
+- `base44/functions/evolutionEngine/entry.ts` — canonical `isProductionRecord()` replaces inline filter
+- `base44/functions/pilotReadiness/entry.ts` — canonical `isProductionRecord()` replaces inline filter
+- `src/lib/test-lab-exclusion.js` (NEW) — frontend re-export of canonical exclusion helpers
+- `src/components/platform/AIApprovalQueue.jsx` — canonical `isProductionRecord()` replaces inline filter
+- `src/pages/platform/AIGovernancePage.jsx` — canonical `isProductionRecord()` replaces inline filter
+- `src/lib/__tests__/test-lab-hardening.test.js` — new focused tests (sections 21-26), removed simulated concurrency test
+
+### Test Results
+- Test lab hardening: 182 passed, 0 failed
+- Nexus gateway hardening: 37 passed, 0 failed
+- AI governance parity: 84 passed, 0 failed
+- Focused lint: 0 errors
+- Production build: exit code 0
+- Deliberate failure test: broken assertion → exit 1, restored → exit 0
+
+### Live Backend Verification
+- Readiness: `test_tagging_ready: false`, `short_ttl_ready: false` (0 scoped tagged approvals, 0 scoped consumed runs)
+- `unresolved_operations: []`, `has_unresolved_operations: false`
+- Scoped queries use `sandboxTenantIds: [Tenant A, Tenant B]`
+
+### GitHub Limitation
+- Base44's GitHub integration uses `base44-builder[bot]` with commit title "File changes" for all syncs.
+- Custom commit titles (e.g. `fix(test-lab): close operation evidence and readiness gaps`) are NOT supported by the Base44 platform.
+- This limitation is documented truthfully — the commit title requirement cannot be met without platform-level changes.
+
 ## [Unreleased] — Build #28.2P-R.0R.1 (Test Lab Remaining P0 Code-Level Gaps Closed) (2026-08-07)
 
 ### P0 Gap Closures

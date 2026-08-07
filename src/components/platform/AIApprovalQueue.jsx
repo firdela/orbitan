@@ -22,6 +22,7 @@ import {
 import OrbitanLoader from '@/components/brand/OrbitanLoader';
 import EmptyState from '@/components/shared/EmptyState';
 import { useToast } from '@/components/ui/use-toast';
+import { isProductionRecord } from '@/lib/test-lab-exclusion';
 
 // ── STATUS CONFIG ──────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -49,10 +50,10 @@ export default function AIApprovalQueue() {
     queryKey: ['ai-approvals-active'],
     queryFn: async () => {
       const result = await base44.entities.AIApproval.filter(
-        { status: { $in: ['pending', 'approved', 'executing', 'execution_failed'] }, is_test: { $ne: true } },
+        { status: { $in: ['pending', 'approved', 'executing', 'execution_failed'] } },
         '-created_date', 50,
       );
-      return (result || []).filter(a => !a.is_test && !a.non_production);
+      return (result || []).filter(isProductionRecord);
     },
     refetchInterval: 30000,
   });

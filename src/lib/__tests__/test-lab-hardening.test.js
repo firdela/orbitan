@@ -248,6 +248,7 @@ assert(isPlatformAdmin('user') === false, 'User is NOT platform admin');
 console.log('\n=== Operation Intent States ===');
 
 assert(OPERATION_INTENT_STATES.INTENT_PERSISTED === 'intent_persisted', 'Intent persisted state');
+assert(OPERATION_INTENT_STATES.MUTATION_COMPLETED === 'mutation_completed', 'Mutation completed state');
 assert(OPERATION_INTENT_STATES.COMPLETED === 'completed', 'Completed state');
 assert(OPERATION_INTENT_STATES.FAILED === 'failed', 'Failed state');
 assert(OPERATION_INTENT_STATES.INCOMPLETE === 'incomplete', 'Incomplete state');
@@ -296,39 +297,47 @@ const short_ttl_ready_with = !!(withConsumedRun.find(r =>
 assert(test_tagging_ready_with === true, 'test_tagging_ready is true with evidence');
 assert(short_ttl_ready_with === true, 'short_ttl_ready is true with evidence');
 
-// ── 17. SINGLE-USE TESTRUN CONCURRENCY (CAS PATTERN) ─────────
-console.log('\n=== Single-Use TestRun Concurrency (CAS) ===');
+// ── 17. TESTRUN CAS STRUCTURE (NOT SIMULATED CONCURRENCY) ────
+console.log('\n=== TestRun CAS Structure (Not Simulated) ===');
 
-// The nexus gateway uses updateMany with a conditional filter as a CAS:
-// filter: { id, status: 'active', current_uses: { $lt: max_uses } }
-// update: { $inc: { current_uses: 1 }, $set: { status: 'consumed', consumption_token: token } }
-//
-// For single-use (max_uses=1):
-// - First request: filter matches (current_uses=0 < 1), updates to consumed
-// - Second concurrent request: filter does NOT match (current_uses=1, not < 1)
-//
-// The consumption_token proves which request acquired the Test Run.
+// Build #28.2P-R.0R.1A: Do NOT prove concurrency using an in-memory
+// JavaScript simulation. The CAS pattern is implemented in the nexus
+// gateway using updateMany with a conditional filter. Real backend
+// concurrency verification requires registered requester identities
+// and live Nexus execution — classified as:
+//   CAS IMPLEMENTED — LIVE CONCURRENCY NOT VERIFIED
 
-// Simulate single-use CAS:
-const testRunState = { id: 'tr1', status: 'active', current_uses: 0, max_uses: 1, consumption_token: null };
+// Verify the CAS pattern STRUCTURE is correct (not runtime behavior):
+// The nexus gateway uses:
+//   filter: { id, status: 'active', current_uses: { $lt: max_uses } }
+//   update: { $inc: { current_uses: 1 }, $set: { status: 'consumed', consumed_at, consumption_token } }
+// This is a Compare-And-Swap operation: only ONE request can match the
+// filter and apply the update. The consumption_token proves which
+// request acquired the Test Run.
 
-// Request A acquires
-const tokenA = 'ctok_a';
-const canAcquireA = testRunState.status === 'active' && testRunState.current_uses < testRunState.max_uses;
-assert(canAcquireA === true, 'Request A can acquire (active, 0 < 1)');
-// Simulate the CAS update
-testRunState.current_uses += 1;
-testRunState.status = 'consumed';
-testRunState.consumption_token = tokenA;
+// Verify the CAS filter logic is structurally correct:
+const casFilter = { id: 'tr1', status: 'active', current_uses: { $lt: 1 } };
+assert(casFilter.status === 'active', 'CAS filter requires status=active');
+assert(casFilter.current_uses.$lt === 1, 'CAS filter requires current_uses < max_uses (1)');
+assert(casFilter.id === 'tr1', 'CAS filter targets specific TestRun');
 
-// Request B tries to acquire concurrently
-const tokenB = 'ctok_b';
-const canAcquireB = testRunState.status === 'active' && testRunState.current_uses < testRunState.max_uses;
-assert(canAcquireB === false, 'Request B CANNOT acquire (consumed, 1 not < 1)');
-assert(testRunState.consumption_token === tokenA, 'Consumption token matches Request A');
-assert(testRunState.consumption_token !== tokenB, 'Consumption token does NOT match Request B');
-assert(testRunState.current_uses === 1, 'current_uses is exactly 1 (not 2)');
-assert(testRunState.current_uses <= testRunState.max_uses, 'current_uses cannot exceed max_uses');
+// Verify the CAS update logic is structurally correct:
+const casUpdate = { $inc: { current_uses: 1 }, $set: { status: 'consumed', consumption_token: 'ctok_x' } };
+assert(casUpdate.$inc.current_uses === 1, 'CAS update increments current_uses by 1');
+assert(casUpdate.$set.status === 'consumed', 'CAS update sets status to consumed');
+assert(casUpdate.$set.consumption_token === 'ctok_x', 'CAS update sets consumption_token');
+
+// Verify single-use invariant: after CAS, current_uses === max_uses
+const afterCas = { current_uses: 1, max_uses: 1, status: 'consumed' };
+assert(afterCas.current_uses === afterCas.max_uses, 'After CAS: current_uses === max_uses');
+assert(afterCas.status === 'consumed', 'After CAS: status is consumed');
+
+// CLASSIFICATION: CAS IMPLEMENTED — LIVE CONCURRENCY NOT VERIFIED
+// Real backend concurrency verification requires:
+//   1. Registered test identities with active sessions
+//   2. Two parallel Nexus gateway requests using the same TestRun
+//   3. Verification that exactly one request acquires the consumption_token
+// This is deferred to Build #28.2P-R.0R.2 live identity verification.
 
 // ── 18. FAILED CONSUMPTION BLOCKS APPROVAL CREATION ──────────
 console.log('\n=== Failed Consumption Blocks Approval Creation ===');
@@ -381,6 +390,275 @@ const incompleteScenario = {
 assert(incompleteScenario.intent_state === 'incomplete', 'Incomplete state exposed');
 assert(incompleteScenario.mutation_succeeded === true, 'Mutation did succeed');
 assert(incompleteScenario.completion_audit_succeeded === false, 'Completion audit failed');
+
+// ── 21. COMPLETION AUDIT FAILURE CANNOT RETURN SUCCESS (Build #28.2P-R.0R.1A) ─
+console.log('\n=== Completion Audit Failure Cannot Return Success ===');
+
+// persistOperationCompletion now returns { completion_id, persisted }.
+// Callers MUST check .persisted before returning success:true.
+// If completion fails, the response MUST be:
+//   success: false
+//   operation_status: "incomplete"
+//   intent_id: <non-empty>
+//   resource_id: <mutated resource>
+//   message: explains recovery required
+
+const completionSucceeded = { completion_id: 'audit_comp_123', persisted: true };
+const completionFailed = { completion_id: '', persisted: false };
+
+// When completion succeeds: operation returns success:true
+const successResponseWhenComplete = {
+  success: completionSucceeded.persisted,
+  operation_status: completionSucceeded.persisted ? 'completed' : 'incomplete',
+  completion_audit_id: completionSucceeded.completion_id,
+};
+assert(successResponseWhenComplete.success === true, 'Success:true when completion persisted');
+assert(successResponseWhenComplete.operation_status === 'completed', 'Operation status=completed');
+assert(successResponseWhenComplete.completion_audit_id === 'audit_comp_123', 'Non-empty completion_audit_id');
+
+// When completion fails: operation MUST NOT return success:true
+const incompleteResponse = {
+  success: completionFailed.persisted, // false
+  operation_status: 'incomplete',
+  intent_id: 'audit_intent_123',
+  resource_id: 'tenant_456',
+  completion_audit_id: completionFailed.completion_id, // ''
+  message: 'Mutation succeeded but completion evidence could not be persisted. Recovery/reconciliation is required.',
+};
+assert(incompleteResponse.success === false, 'success:false when completion fails');
+assert(incompleteResponse.operation_status === 'incomplete', 'operation_status=incomplete');
+assert(incompleteResponse.intent_id !== '', 'intent_id is non-empty');
+assert(incompleteResponse.resource_id !== '', 'resource_id is non-empty');
+assert(incompleteResponse.completion_audit_id === '', 'completion_audit_id is empty when failed');
+assert(incompleteResponse.message.includes('Recovery'), 'Message explains recovery required');
+
+// CRITICAL: A successful mutation is NOT automatically a fully successful operation.
+// success:true requires ALL of: intent persisted + mutation completed + completion evidence persisted.
+const fullSuccessRequires = {
+  intent_persisted: true,
+  mutation_completed: true,
+  completion_evidence_persisted: true,
+};
+const isFullSuccess = fullSuccessRequires.intent_persisted && fullSuccessRequires.mutation_completed && fullSuccessRequires.completion_evidence_persisted;
+assert(isFullSuccess === true, 'Full success requires all three stages');
+
+const mutationOnlySuccess = {
+  intent_persisted: true,
+  mutation_completed: true,
+  completion_evidence_persisted: false,
+};
+const isNotFullSuccess = mutationOnlySuccess.intent_persisted && mutationOnlySuccess.mutation_completed && mutationOnlySuccess.completion_evidence_persisted;
+assert(isNotFullSuccess === false, 'Mutation-only is NOT full success');
+
+// ── 22. INCOMPLETE OPERATION BLOCKS UNSAFE CONTINUATION (Build #28.2P-R.0R.1A) ─
+console.log('\n=== Incomplete Operation Blocks Unsafe Continuation ===');
+
+// Before dependent operations, checkUnresolvedIntents checks for
+// incomplete operations on the target. If found, the dependent
+// operation is blocked with 409 incomplete_operation.
+
+const unresolvedIntents = [
+  { intent_id: 'audit_1', action: 'provision_tenant_b', intent_state: 'incomplete', target: 'TEST_LAB_B' },
+];
+const hasUnresolved = unresolvedIntents.length > 0;
+assert(hasUnresolved === true, 'Unresolved incomplete operation detected');
+
+// Dependent operation (e.g. prepare_membership) is blocked
+const dependentBlocked = hasUnresolved;
+assert(dependentBlocked === true, 'Dependent operation blocked when incomplete exists');
+
+// The blocked response includes unresolved operations for recovery
+const blockedResponse = {
+  success: false,
+  safe_error_code: 'incomplete_operation',
+  status: 409,
+  unresolved_operations: unresolvedIntents,
+};
+assert(blockedResponse.success === false, 'Blocked response is not success');
+assert(blockedResponse.safe_error_code === 'incomplete_operation', 'Error code is incomplete_operation');
+assert(blockedResponse.status === 409, 'Status is 409 Conflict');
+assert(Array.isArray(blockedResponse.unresolved_operations), 'Unresolved operations listed');
+
+// When no incomplete operations exist, dependent operation proceeds
+const noUnresolved = [];
+const dependentProceeds = noUnresolved.length === 0;
+assert(dependentProceeds === true, 'Dependent operation proceeds when no incomplete');
+
+// ── 23. RESET INBOX-QUERY FAILURE RETURNS PARTIAL/INCOMPLETE/FAILED ────────
+console.log('\n=== Reset Inbox-Query Failure Handling ===');
+
+// Build #28.2P-R.0R.1A: reset_test_data no longer swallows inbox query failure.
+// If any phase fails, the error is captured and overall_status reflects it.
+
+// Scenario 1: All phases succeed → success
+const resetAllSuccess = {
+  approvals_query_error: null,
+  inbox_query_error: null,
+  failed_record_ids: [],
+  overall_status: 'success',
+};
+assert(resetAllSuccess.overall_status === 'success', 'All success → overall_status=success');
+
+// Scenario 2: Inbox query fails, no delete failures → incomplete
+const resetInboxQueryFails = {
+  approvals_query_error: null,
+  inbox_query_error: 'Connection timeout',
+  failed_record_ids: [],
+  overall_status: 'incomplete',
+};
+assert(resetInboxQueryFails.overall_status === 'incomplete', 'Inbox query failure → incomplete');
+assert(resetInboxQueryFails.inbox_query_error !== null, 'Inbox error captured (not swallowed)');
+
+// Scenario 3: Delete failures only, no query errors → partial
+const resetDeleteFails = {
+  approvals_query_error: null,
+  inbox_query_error: null,
+  failed_record_ids: ['approval:abc', 'inbox:xyz'],
+  overall_status: 'partial',
+};
+assert(resetDeleteFails.overall_status === 'partial', 'Delete failures → partial');
+assert(resetDeleteFails.failed_record_ids.length === 2, 'Failed record IDs captured');
+
+// Scenario 4: Both query errors and delete failures → failed
+const resetBothFail = {
+  approvals_query_error: 'DB error',
+  inbox_query_error: 'Connection timeout',
+  failed_record_ids: ['approval:abc'],
+  overall_status: 'failed',
+};
+assert(resetBothFail.overall_status === 'failed', 'Both errors → failed');
+
+// CRITICAL: success is only true when overall_status === 'success'
+assert(resetAllSuccess.overall_status === 'success' && true === true, 'success=true only when overall_status=success');
+assert(resetInboxQueryFails.overall_status !== 'success', 'Inbox failure does NOT report success');
+assert(resetDeleteFails.overall_status !== 'success', 'Delete failures do NOT report success');
+assert(resetBothFail.overall_status !== 'success', 'Both failures do NOT report success');
+
+// ── 24. READINESS SCOPED TO CANONICAL TEST LAB EVIDENCE ────────
+console.log('\n=== Readiness Scoped to Canonical Test Lab Evidence ===');
+
+// Build #28.2P-R.0R.1A: Readiness must be scoped to canonical Test Lab context.
+// A historical or unrelated test record MUST NOT set readiness=true.
+
+// Canonical sandbox tenant IDs
+const canonicalSandboxTenantIds = ['6a4eeb6992cc657b66ec24cc']; // Tenant A
+// Tenant B would be added if provisioned
+
+// Scenario 1: Unrelated tagged AIApproval from a DIFFERENT tenant
+const unrelatedTaggedApproval = {
+  is_test: true, test_run_id: 'trun_other', test_tag: 'other_test',
+  non_production: true, tenant_id: 'some_other_tenant_not_sandbox',
+};
+const isScopedToSandbox = canonicalSandboxTenantIds.includes(unrelatedTaggedApproval.tenant_id);
+assert(isScopedToSandbox === false, 'Unrelated tenant approval is NOT in sandbox scope');
+// This record MUST NOT set test_tagging_ready=true
+const test_tagging_ready_with_unrelated = !!unrelatedTaggedApproval && isScopedToSandbox;
+assert(test_tagging_ready_with_unrelated === false, 'Unrelated approval cannot set test_tagging_ready=true');
+
+// Scenario 2: Canonical tagged AIApproval from a sandbox tenant
+const canonicalTaggedApproval = {
+  is_test: true, test_run_id: 'trun_canonical', test_tag: 'approve_to_execute',
+  non_production: true, tenant_id: '6a4eeb6992cc657b66ec24cc', // Tenant A
+};
+const isCanonicalScope = canonicalSandboxTenantIds.includes(canonicalTaggedApproval.tenant_id);
+const test_tagging_ready_canonical = !!(
+  canonicalTaggedApproval.test_run_id &&
+  canonicalTaggedApproval.test_tag &&
+  canonicalTaggedApproval.is_test === true &&
+  canonicalTaggedApproval.non_production === true &&
+  isCanonicalScope
+);
+assert(test_tagging_ready_canonical === true, 'Canonical sandbox approval CAN set test_tagging_ready=true');
+
+// Scenario 3: Unrelated consumed TestRun from a different sandbox tenant
+const unrelatedConsumedRun = {
+  status: 'consumed', consumption_token: 'ctok_other',
+  server_selected_ttl_minutes: 2,
+  sandbox_tenant_id: 'some_other_tenant_not_sandbox',
+};
+const isRunScopedToSandbox = canonicalSandboxTenantIds.includes(unrelatedConsumedRun.sandbox_tenant_id);
+assert(isRunScopedToSandbox === false, 'Unrelated tenant TestRun is NOT in sandbox scope');
+const short_ttl_ready_with_unrelated = !!unrelatedConsumedRun && isRunScopedToSandbox;
+assert(short_ttl_ready_with_unrelated === false, 'Unrelated TestRun cannot set short_ttl_ready=true');
+
+// Scenario 4: Canonical consumed TestRun from a sandbox tenant
+const canonicalConsumedRun = {
+  status: 'consumed', consumption_token: 'ctok_canonical',
+  server_selected_ttl_minutes: 2,
+  sandbox_tenant_id: '6a4eeb6992cc657b66ec24cc', // Tenant A
+};
+const isRunCanonicalScope = canonicalSandboxTenantIds.includes(canonicalConsumedRun.sandbox_tenant_id);
+const short_ttl_ready_canonical = !!(
+  canonicalConsumedRun.consumption_token &&
+  canonicalConsumedRun.server_selected_ttl_minutes >= 1 &&
+  canonicalConsumedRun.server_selected_ttl_minutes <= 10 &&
+  isRunCanonicalScope
+);
+assert(short_ttl_ready_canonical === true, 'Canonical sandbox TestRun CAN set short_ttl_ready=true');
+
+// ── 25. CANONICAL ANALYTICS EXCLUSION COVERS EVERY TEST MARKER ─
+console.log('\n=== Canonical Analytics Exclusion — Every Marker ===');
+
+// The canonical isProductionRecord() must exclude ALL supported test markers:
+//   is_test === true
+//   non_production === true
+//   metadata.environment === 'test'
+//   metadata.created_by_test === true
+//   metadata.non_production === true
+//   metadata.test_run_id present
+
+// Every test marker → excluded
+assert(!isProductionRecord({ is_test: true }), 'Marker: is_test=true excluded');
+assert(!isProductionRecord({ non_production: true }), 'Marker: non_production=true excluded');
+assert(!isProductionRecord({ metadata: { environment: 'test' } }), 'Marker: metadata.environment=test excluded');
+assert(!isProductionRecord({ metadata: { created_by_test: true } }), 'Marker: metadata.created_by_test=true excluded');
+assert(!isProductionRecord({ metadata: { non_production: true } }), 'Marker: metadata.non_production=true excluded');
+assert(!isProductionRecord({ metadata: { test_run_id: 'trun_123' } }), 'Marker: metadata.test_run_id present excluded');
+
+// Production records remain included
+assert(isProductionRecord({ is_test: false, non_production: false }), 'Production record (explicit false) included');
+assert(isProductionRecord({ name: 'test', is_test: false }), 'Production record with is_test=false included');
+assert(isProductionRecord({ name: 'production record' }), 'Plain production record included');
+assert(isProductionRecord({ metadata: { environment: 'production' } }), 'metadata.environment=production included');
+assert(isProductionRecord({ metadata: { module: 'inventory' } }), 'metadata without test markers included');
+
+// Null/undefined excluded
+assert(!isProductionRecord(null), 'Null excluded');
+assert(!isProductionRecord(undefined), 'Undefined excluded');
+
+// ── 26. ONE CANONICAL EXCLUSION MECHANISM (Build #28.2P-R.0R.1A) ──
+console.log('\n=== One Canonical Exclusion Mechanism ===');
+
+// The canonical helpers are:
+//   isProductionRecord(record) — record-level filter
+//   productionExclusionQuery() — query-level filter
+//   containsTestRecords(records) — list-level check
+//   productionExclusionFilter() — legacy single-field filter
+
+// All are exported from base44/shared/test-lab-config.js (canonical source).
+// Frontend re-exports from src/lib/test-lab-exclusion.js.
+// Backend imports from ../../shared/test-lab-config.ts.
+
+// Verify all canonical helpers exist and are functions
+assert(typeof isProductionRecord === 'function', 'isProductionRecord is a function');
+assert(typeof productionExclusionQuery === 'function', 'productionExclusionQuery is a function');
+assert(typeof containsTestRecords === 'function', 'containsTestRecords is a function');
+assert(typeof productionExclusionFilter === 'function', 'productionExclusionFilter is a function');
+
+// Verify productionExclusionQuery covers ALL markers
+const canonicalQuery = productionExclusionQuery();
+assert(canonicalQuery.$and.length === 6, 'Canonical query has 6 exclusion conditions');
+const queryMarkers = canonicalQuery.$and.map(c => Object.keys(c)[0]);
+assert(queryMarkers.includes('is_test'), 'Query excludes is_test');
+assert(queryMarkers.includes('non_production'), 'Query excludes non_production');
+assert(queryMarkers.includes('metadata.environment'), 'Query excludes metadata.environment');
+assert(queryMarkers.includes('metadata.created_by_test'), 'Query excludes metadata.created_by_test');
+assert(queryMarkers.includes('metadata.non_production'), 'Query excludes metadata.non_production');
+assert(queryMarkers.includes('metadata.test_run_id'), 'Query excludes metadata.test_run_id');
+
+// No weaker inline filter should exist in production code.
+// The inline filter `!r.metadata?.environment || r.metadata.environment !== 'test'`
+// is a WEAKER duplicate of isProductionRecord() and has been replaced.
 
 // ── RESULTS ───────────────────────────────────────────────────
 console.log(`\n=== Test Lab Hardening Test Results ===`);

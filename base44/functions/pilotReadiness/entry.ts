@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { isProductionRecord } from '../../shared/test-lab-config.ts';
 
 /**
  * Pilot Readiness Engine (Build Package #14, Parts R/W/O/V)
@@ -188,7 +189,7 @@ Deno.serve(async (req) => {
       }
       const [tenants, usage, queue, insights, credentials, settings] = await Promise.all([
         tenantId ? base44.asServiceRole.entities.Tenant.filter({ id: tenantId }).catch(() => []) : Promise.resolve([]),
-        base44.asServiceRole.entities.OrbitUsageTracker.filter({ status: { $in: ['failed', 'ai_disabled', 'insufficient_credits', 'shield_blocked'] } }, '-created_date', 20).then(records => (records || []).filter(r => !r.metadata?.environment || r.metadata.environment !== 'test')).catch(() => []),
+        base44.asServiceRole.entities.OrbitUsageTracker.filter({ status: { $in: ['failed', 'ai_disabled', 'insufficient_credits', 'shield_blocked'] } }, '-created_date', 20).then(records => (records || []).filter(r => isProductionRecord(r))).catch(() => []),
         base44.asServiceRole.entities.FinanceSyncQueue.filter({ tenant_id: tenantId }, '-created_date', 50).catch(() => []),
         base44.asServiceRole.entities.NexusInsight.filter({ tenant_id: tenantId }, '-created_date', 5).catch(() => []),
         base44.asServiceRole.entities.IntegrationCredential.filter({ tenant_id: tenantId }).catch(() => []),

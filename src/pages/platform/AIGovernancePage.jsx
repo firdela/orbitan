@@ -12,6 +12,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import AIApprovalQueue from '@/components/platform/AIApprovalQueue';
 import { getConfiguredProviders, PROVIDER_REGISTRY } from '@/lib/ai/ai-provider-adapter';
 import { AUTONOMY_LEVELS } from '@/lib/ai/ai-autonomy-levels';
+import { isProductionRecord } from '@/lib/test-lab-exclusion';
 
 const LIFECYCLE_VARIANT = {
   approved: 'default',
@@ -177,10 +178,8 @@ function AuditSection() {
     queryKey: ['ai-audit-events'],
     queryFn: async () => {
       const result = await base44.entities.AIAuditEvent.list('-created_date', 20);
-      // Exclude test audit events from production governance view
-      return (result || []).filter(e =>
-        !e.metadata?.environment || e.metadata.environment !== 'test'
-      );
+      // Exclude test audit events using canonical helper (Build #28.2P-R.0R.1A)
+      return (result || []).filter(isProductionRecord);
     },
   });
 

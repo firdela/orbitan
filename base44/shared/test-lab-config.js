@@ -238,6 +238,7 @@ export function isValidTestTtlMinutes(minutes) {
 //   5. return success only when required evidence is durable.
 export const OPERATION_INTENT_STATES = {
   INTENT_PERSISTED: 'intent_persisted',
+  MUTATION_COMPLETED: 'mutation_completed',
   COMPLETED: 'completed',
   FAILED: 'failed',
   INCOMPLETE: 'incomplete',
