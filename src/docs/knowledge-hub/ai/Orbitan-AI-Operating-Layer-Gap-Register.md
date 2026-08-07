@@ -40,7 +40,14 @@ abstraction** — all addressed in this Phase 1 build.
 | **Test Lab** | Operation-create exception releases lock | ✅ Implemented (1C-F) | P0 | ✅ Closed |
 | **Test Lab** | Intent transition fail-closed | ✅ Implemented (1C-F) | P0 | ✅ Closed |
 | **Test Lab** | Singleton lock registry (lookup-only) | ✅ Provisioned + closed (1C-F) | P0 | ✅ Closed |
-| **Test Lab** | Live identity verification | ❌ Deferred to #28.2P-R.0R.2 | P0 | Phase 2 |
+| **Test Lab** | Live identity verification | ⏳ BLOCKED — invitations sent, human auth required (1C-F→0R.2) | P0 | Phase 2 |
+| **Test Lab** | Worker security boundary (live) | ⏳ BLOCKED — requires authenticated Worker session (0R.2) | P0 | Phase 2 |
+| **Test Lab** | Approver boundary (live) | ⏳ BLOCKED — requires authenticated Approver session (0R.2) | P0 | Phase 2 |
+| **Test Lab** | Requester→approve→execute (live) | ⏳ BLOCKED — requires authenticated Requester session (0R.2) | P0 | Phase 2 |
+| **Test Lab** | Tenant A/B isolation (live) | ⏳ BLOCKED — requires authenticated sessions both tenants (0R.2) | P0 | Phase 2 |
+| **Test Lab** | Platform allowed/denied (live) | ⏳ BLOCKED — requires authenticated platform sessions (0R.2) | P0 | Phase 2 |
+| **Test Lab** | Production-tenant isolation regression | ✅ VERIFIED — 4 prod tenants, 0 sandbox leaks (0R.2) | P0 | ✅ Closed |
+| **Test Lab** | Test Lab data excluded from prod analytics | ✅ VERIFIED — all records non_production=true (0R.2) | P0 | ✅ Closed |
 
 ## Summary Table
 

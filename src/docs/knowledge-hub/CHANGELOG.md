@@ -7,6 +7,65 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2P-R.0R.2 (Live Identity, Tenant Isolation & Approve→Execute Verification) (2026-08-07)
+
+### Status: PASS WITH BLOCKING GAPS — Human authentication checkpoint required
+
+### What Was Completed (Programmatic)
+- **Preflight RLS denial verified:** All 5 Test Lab entities (TestLabOperation, TestLabLockRegistry, VerificationRun, TestRun, TestLabAttestation) deny direct client create/update/delete operations. Plain-client create attempts return "Permission denied" for all 5 entities. Update on TestLabLockRegistry also denied. Service-role operations continue to work correctly.
+- **Test identity invitations sent:** All 8 test identities invited via `base44.users.inviteUser`:
+  - Tenant A: test.requester.a, test.approver.a, test.leader.a, test.worker.a
+  - Tenant B: test.admin.b, test.worker.b
+  - Platform: test.platform.allowed, test.platform.denied
+- **Employee memberships prepared:** All 6 tenant test identities have Employee records created via canonical `testLabSetup/prepare_membership` flow with full TestLabOperation audit trail (intent + completion evidence).
+- **VerificationRun created and activated:** `vrun_msj2zitu_kbcxjg` — active, scoped to Build #28.2P-R.0R.2 verification campaign.
+- **Production-tenant isolation regression:** 4 production tenants (Taqueria, Renewed Resources, Renewed Fashion, Izaliqa Bakes) — none have `is_sandbox`, `test_lab_key`, or Test Lab controls. Test Lab data all tagged `non_production=true`.
+- **Regression suites pass:** test-lab-hardening (475), nexus-gateway-hardening (37), ai-governance-parity (84).
+- **Lint:** 0 errors, 2 warnings.
+- **Production build:** exit 0.
+
+### What Is Blocked (Requires Human Authentication)
+The following verification gates require REAL authenticated browser sessions with registered and email-verified test identities. Invitations have been sent but none have been accepted/registered/verified yet.
+
+**Human actions required for each test identity:**
+1. Open the invitation email sent to the @orbitan.net alias
+2. Click the invitation link to accept
+3. Register with a password (or use SSO)
+4. Verify the email address (if separate verification is sent)
+5. Sign in to establish an authenticated session
+
+**Verification gates blocked on human authentication:**
+- Step 6: Identity / membership linkage (requires registered + verified users)
+- Step 7: Worker security boundary (requires authenticated Worker A session)
+- Step 8: Approver security boundary (requires authenticated Approver session)
+- Step 9: Requester → approval → requester execution (requires authenticated Requester session)
+- Step 10: Payload integrity (requires authenticated requester execution)
+- Step 11: TestRun single-use / concurrency (requires authenticated requester)
+- Step 12: Expiry (requires authenticated requester after real elapsed time)
+- Step 13: Rejection (requires authenticated requester + approver)
+- Step 14: Cancellation (requires authenticated requester)
+- Step 15: Execution_failed (requires authenticated requester)
+- Step 16: Tenant A / Tenant B isolation (requires authenticated sessions in both tenants)
+- Step 17: Platform cross-tenant permission (requires authenticated platform identity sessions)
+- Step 19: Exact side-effect accounting (requires authenticated execution)
+
+### Entities Modified
+- None (no schema changes in this build — all verification is operational, not structural)
+
+### Files Modified
+- None (no code changes — all verification is runtime, not code)
+
+### Test Results
+- Test lab hardening: 475 passed, 0 failed
+- Nexus gateway hardening: 37 passed, 0 failed
+- AI governance parity: 84 passed, 0 failed
+- Focused lint: 0 errors, 2 warnings
+- Production build: exit code 0
+
+### Defects Deferred to Build #28.2Q
+- Auth UX repair (invitation acceptance, registration, email verification, session handling)
+- OTP authentication system limitation (agent-side email read failure)
+
 ## [Unreleased] — Build #28.2P-R.0R.1C-F (Test Lab Final Closure: Atomic Lock Proof, Service-Only RLS, Runtime Safety) (2026-08-07)
 
 ### P0 Gap Closures — Final Closure
