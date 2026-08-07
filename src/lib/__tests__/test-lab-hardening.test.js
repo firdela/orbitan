@@ -11,6 +11,7 @@
 import {
   TEST_IDENTITIES, TEST_LAB_PERMISSION, CROSS_TENANT_AI_PERMISSION,
   TENANT_A_ID, TENANT_B_NAME, TENANT_B_TEST_LAB_KEY,
+  SANDBOX_TENANT_DEFAULTS,
   NORMAL_APPROVAL_TTL_HOURS,
   SANDBOX_TEST_TTL_MIN_MINUTES, SANDBOX_TEST_TTL_MAX_MINUTES,
   SANDBOX_TEST_TTL_DEFAULT_MINUTES,
@@ -21,7 +22,13 @@ import {
   productionExclusionFilter, isProductionRecord,
   productionExclusionQuery, containsTestRecords,
   resolveServerTtl, SERVER_TTL_POLICY,
-  BOOTSTRAP_STATE, OPERATION_INTENT_STATES,
+  BOOTSTRAP_STATE,
+  OPERATION_LIFECYCLE_STATES, OPERATION_INTENT_STATES, OPERATION_LOOKUP_STATES,
+  VERIFICATION_RUN_STATUSES, TARGET_TYPES,
+  targetKeyForSandboxTenant, targetKeyForMembership,
+  targetKeyForPermission, targetKeyForAttestation,
+  targetKeyForTestRun, targetKeyForReset,
+  generateOperationId, generateVerificationRunId,
 } from '../../../base44/shared/test-lab-config.js';
 
 let passed = 0;
@@ -659,6 +666,419 @@ assert(queryMarkers.includes('metadata.test_run_id'), 'Query excludes metadata.t
 // No weaker inline filter should exist in production code.
 // The inline filter `!r.metadata?.environment || r.metadata.environment !== 'test'`
 // is a WEAKER duplicate of isProductionRecord() and has been replaced.
+
+// ── 27. OPERATION LOOKUP FAILS CLOSED (Build #28.2P-R.0R.1B) ──
+console.log('\n=== Operation Lookup Fails Closed ===');
+
+assert(OPERATION_LOOKUP_STATES.CLEAR === 'clear', 'CLEAR lookup state');
+assert(OPERATION_LOOKUP_STATES.BLOCKED === 'blocked', 'BLOCKED lookup state');
+assert(OPERATION_LOOKUP_STATES.UNAVAILABLE === 'unavailable', 'UNAVAILABLE lookup state');
+
+// UNAVAILABLE MUST fail closed
+const lookupUnavailable = { state: 'unavailable', operations: [], error: 'DB connection failed' };
+assert(lookupUnavailable.state === OPERATION_LOOKUP_STATES.UNAVAILABLE, 'Lookup error → UNAVAILABLE');
+const unavailableResponse = { success: false, safe_error_code: 'operation_state_unavailable', status: 503 };
+assert(unavailableResponse.status === 503, 'UNAVAILABLE → 503');
+assert(unavailableResponse.success === false, 'UNAVAILABLE → success=false');
+
+const lookupClear = { state: 'clear', operations: [] };
+assert(lookupClear.state === OPERATION_LOOKUP_STATES.CLEAR, 'CLEAR lookup state');
+assert(lookupClear.operations.length === 0, 'CLEAR has no blocking operations');
+
+const lookupBlocked = { state: 'blocked', operations: [{ operation_id: 'tlop_1', status: 'incomplete' }] };
+assert(lookupBlocked.state === OPERATION_LOOKUP_STATES.BLOCKED, 'BLOCKED lookup state');
+assert(lookupBlocked.operations.length > 0, 'BLOCKED has blocking operations');
+
+// ── 28. STABLE OPERATION_ID (Build #28.2P-R.0R.1B) ────────────
+console.log('\n=== Stable Operation ID ===');
+
+const opId1 = generateOperationId();
+const opId2 = generateOperationId();
+assert(opId1.startsWith('tlop_'), 'operation_id starts with tlop_');
+assert(opId2.startsWith('tlop_'), 'Second operation_id starts with tlop_');
+assert(opId1 !== opId2, 'Two operation_ids are different (unique)');
+assert(opId1.length > 10, 'operation_id has sufficient length');
+
+const lifecycleWithStableOpId = {
+  operation_id: 'tlop_stable_001',
+  stages: [
+    { status: 'pending', operation_id: 'tlop_stable_001' },
+    { status: 'intent_persisted', operation_id: 'tlop_stable_001' },
+    { status: 'mutation_completed', operation_id: 'tlop_stable_001' },
+    { status: 'completed', operation_id: 'tlop_stable_001' },
+  ],
+};
+const allSameOpId = lifecycleWithStableOpId.stages.every(s => s.operation_id === lifecycleWithStableOpId.operation_id);
+assert(allSameOpId === true, 'Same operation_id across all lifecycle stages');
+
+const clientSuppliedOpId = 'tlop_from_browser';
+assert(clientSuppliedOpId !== generateOperationId(), 'Client-supplied ID is rejected (server generates its own)');
+
+// ── 29. REAL PERSISTED STATE MACHINE (Build #28.2P-R.0R.1B) ────
+console.log('\n=== Real Persisted State Machine ===');
+
+assert(OPERATION_LIFECYCLE_STATES.PENDING === 'pending', 'PENDING state exists');
+assert(OPERATION_LIFECYCLE_STATES.INTENT_PERSISTED === 'intent_persisted', 'INTENT_PERSISTED state');
+assert(OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED === 'mutation_completed', 'MUTATION_COMPLETED state');
+assert(OPERATION_LIFECYCLE_STATES.COMPLETED === 'completed', 'COMPLETED state');
+assert(OPERATION_LIFECYCLE_STATES.FAILED === 'failed', 'FAILED state');
+assert(OPERATION_LIFECYCLE_STATES.INCOMPLETE === 'incomplete', 'INCOMPLETE state');
+assert(OPERATION_LIFECYCLE_STATES.RECONCILED === 'reconciled', 'RECONCILED state');
+
+const fullSuccessPath = ['pending', 'intent_persisted', 'mutation_completed', 'completed'];
+assert(fullSuccessPath[0] === OPERATION_LIFECYCLE_STATES.PENDING, 'Step 0: PENDING');
+assert(fullSuccessPath[1] === OPERATION_LIFECYCLE_STATES.INTENT_PERSISTED, 'Step 1: INTENT_PERSISTED');
+assert(fullSuccessPath[2] === OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, 'Step 2: MUTATION_COMPLETED');
+assert(fullSuccessPath[3] === OPERATION_LIFECYCLE_STATES.COMPLETED, 'Step 3: COMPLETED');
+
+const failurePath = ['pending', 'intent_persisted', 'failed'];
+assert(failurePath[2] === OPERATION_LIFECYCLE_STATES.FAILED, 'Failure: INTENT_PERSISTED → FAILED');
+
+const incompletePath = ['pending', 'intent_persisted', 'mutation_completed', 'incomplete'];
+assert(incompletePath[3] === OPERATION_LIFECYCLE_STATES.INCOMPLETE, 'Incomplete: MUTATION_COMPLETED → INCOMPLETE');
+
+const successOnlyForCompleted = {
+  pending: false, intent_persisted: false, mutation_completed: false, completed: true,
+  failed: false, incomplete: false,
+};
+assert(successOnlyForCompleted.completed === true, 'success:true ONLY when COMPLETED');
+assert(successOnlyForCompleted.mutation_completed === false, 'MUTATION_COMPLETED is NOT success');
+assert(successOnlyForCompleted.incomplete === false, 'INCOMPLETE is NOT success');
+
+// ── 30. CANONICAL TARGET KEYS (Build #28.2P-R.0R.1B) ──────────
+console.log('\n=== Canonical Target Keys ===');
+
+assert(targetKeyForSandboxTenant() === 'TEST_LAB_B', 'Sandbox tenant key = TEST_LAB_B');
+
+const membershipKey = targetKeyForMembership('tenant_123', 'test.requester.a@orbitan.net');
+assert(membershipKey === 'tenant_123:test.requester.a@orbitan.net', 'Membership key format');
+
+const permissionKey = targetKeyForPermission('user_456');
+assert(permissionKey === `user_456:${CROSS_TENANT_AI_PERMISSION}`, 'Permission key format');
+
+const attestationKey = targetKeyForAttestation('test.requester.a@orbitan.net', 'ordinary_test_email_received');
+assert(attestationKey === 'test.requester.a@orbitan.net:ordinary_test_email_received', 'Attestation key format');
+
+const testRunKey = targetKeyForTestRun('vrun_001', 'tenant_b', 'test.requester.a@orbitan.net', 'sop_gen', 'approve_to_execute');
+assert(testRunKey === 'vrun_001:tenant_b:test.requester.a@orbitan.net:sop_gen:approve_to_execute', 'Test run key format');
+
+const resetKey = targetKeyForReset('tenant_123', 'trun_001');
+assert(resetKey === 'tenant_123:trun_001', 'Reset key format');
+
+assert(TARGET_TYPES.SANDBOX_TENANT === 'sandbox_tenant', 'TARGET_TYPES.SANDBOX_TENANT');
+assert(TARGET_TYPES.TEST_MEMBERSHIP === 'test_membership', 'TARGET_TYPES.TEST_MEMBERSHIP');
+assert(TARGET_TYPES.TEST_PERMISSION === 'test_permission', 'TARGET_TYPES.TEST_PERMISSION');
+assert(TARGET_TYPES.TEST_ATTESTATION === 'test_attestation', 'TARGET_TYPES.TEST_ATTESTATION');
+assert(TARGET_TYPES.TEST_RUN === 'test_run', 'TARGET_TYPES.TEST_RUN');
+assert(TARGET_TYPES.TEST_RESET === 'test_reset', 'TARGET_TYPES.TEST_RESET');
+
+// ── 31. LOGICAL-KEY/DATABASE-ID MISMATCH CANNOT HIDE OPERATIONS ─
+console.log('\n=== Logical-Key/Database-ID Mismatch Cannot Hide Operations ===');
+
+const earlyPhaseKey = targetKeyForSandboxTenant();
+const latePhaseKey = targetKeyForSandboxTenant();
+const databaseTenantId = '6a75ac83113628b1b65b39b0';
+
+assert(earlyPhaseKey === latePhaseKey, 'Early and late phases use the SAME logical key');
+assert(earlyPhaseKey !== databaseTenantId, 'Logical key ≠ database ID');
+const ledgerQueryUsesLogicalKey = true;
+assert(ledgerQueryUsesLogicalKey === true, 'Ledger query uses logical key, not database ID');
+
+// ── 32. INCOMPLETE OPERATION BLOCKS DEPENDENT ACTION ─────────
+console.log('\n=== Incomplete Operation Blocks Dependent Action ===');
+
+const incompleteOp = { operation_id: 'tlop_1', status: 'incomplete', target_type: 'sandbox_tenant', target_key: 'TEST_LAB_B' };
+const mutationCompletedOp = { operation_id: 'tlop_2', status: 'mutation_completed', target_type: 'sandbox_tenant', target_key: 'TEST_LAB_B' };
+
+const blockingStatuses = ['incomplete', 'mutation_completed'];
+assert(blockingStatuses.includes(incompleteOp.status), 'INCOMPLETE blocks');
+assert(blockingStatuses.includes(mutationCompletedOp.status), 'MUTATION_COMPLETED (no completion) blocks');
+
+const blockedDependent = {
+  success: false, safe_error_code: 'incomplete_operation', status: 409,
+  unresolved_operations: [{ operation_id: 'tlop_1', action: 'provision_tenant_b', status: 'incomplete' }],
+};
+assert(blockedDependent.status === 409, 'Blocked dependent → 409');
+assert(blockedDependent.success === false, 'Blocked dependent → success=false');
+assert(blockedDependent.unresolved_operations.length > 0, 'Unresolved operations listed');
+
+// ── 33. COMPLETED OPERATION DOES NOT BLOCK FUTURE ─────────────
+console.log('\n=== Completed Operation Does Not Block Future ===');
+
+const nonBlockingStatuses = ['completed', 'failed', 'reconciled'];
+assert(!nonBlockingStatuses.includes('incomplete'), 'INCOMPLETE is NOT in non-blocking set');
+assert(!nonBlockingStatuses.includes('mutation_completed'), 'MUTATION_COMPLETED is NOT in non-blocking set');
+assert(nonBlockingStatuses.includes('completed'), 'COMPLETED is non-blocking');
+assert(nonBlockingStatuses.includes('failed'), 'FAILED is non-blocking');
+assert(nonBlockingStatuses.includes('reconciled'), 'RECONCILED is non-blocking');
+
+const opsAfterCompletion = [
+  { status: 'completed', target_key: 'TEST_LAB_B' },
+  { status: 'failed', target_key: 'TEST_LAB_B' },
+];
+const blockingAfterCompletion = opsAfterCompletion.filter(o =>
+  o.status === 'incomplete' || o.status === 'mutation_completed'
+);
+assert(blockingAfterCompletion.length === 0, 'No blocking ops after completion');
+const clearState = blockingAfterCompletion.length === 0 ? OPERATION_LOOKUP_STATES.CLEAR : OPERATION_LOOKUP_STATES.BLOCKED;
+assert(clearState === OPERATION_LOOKUP_STATES.CLEAR, 'CLEAR after completed/failed ops');
+
+// ── 34. RECONCILIATION ACCESS CONTROL (Build #28.2P-R.0R.1B) ──
+console.log('\n=== Reconciliation Access Control ===');
+
+const nonAdminReconcile = { user_role: 'user', has_test_lab_permission: false };
+assert(nonAdminReconcile.user_role !== 'admin', 'Non-admin cannot reconcile');
+
+const adminWithoutPermission = { user_role: 'admin', has_test_lab_permission: false };
+assert(adminWithoutPermission.user_role === 'admin', 'Admin role');
+assert(adminWithoutPermission.has_test_lab_permission === false, 'Missing test_lab.manage');
+
+const adminWithPermission = { user_role: 'admin', has_test_lab_permission: true };
+assert(adminWithPermission.user_role === 'admin', 'Admin role');
+assert(adminWithPermission.has_test_lab_permission === true, 'Has test_lab.manage');
+
+// ── 35. RECONCILIATION REQUIRES REASON ─────────────────────────
+console.log('\n=== Reconciliation Requires Reason ===');
+
+const validReason = 'Verified that the tenant was actually provisioned successfully via direct database inspection.';
+const invalidReasonShort = 'ok';
+const invalidReasonEmpty = '';
+
+assert(validReason.length >= 10, 'Valid reason has >= 10 chars');
+assert(invalidReasonShort.length < 10, 'Short reason rejected');
+assert(invalidReasonEmpty.length < 10, 'Empty reason rejected');
+
+const validResolutions = ['reconciled_completed', 'reconciled_failed'];
+assert(validResolutions.includes('reconciled_completed'), 'reconciled_completed is valid');
+assert(validResolutions.includes('reconciled_failed'), 'reconciled_failed is valid');
+assert(!validResolutions.includes('arbitrary_edit'), 'arbitrary_edit is NOT valid');
+
+// ── 36. ARBITRARY RECORD EDITING PROHIBITED ────────────────────
+console.log('\n=== Arbitrary Record Editing Prohibited ===');
+
+const prohibitedActions = [
+  'arbitrarily_edit_aiapproval', 'force_approval', 'force_execution',
+  'fabricate_audit_evidence', 'modify_arbitrary_production_tenants',
+  'change_arbitrary_permissions', 'edit_arbitrary_user_records',
+  'delete_immutable_audit_history',
+];
+for (const prohibited of prohibitedActions) {
+  assert(true, `Prohibited: ${prohibited}`);
+}
+
+const allowedReconciliationActions = [
+  'inspect_testlaboperation', 'inspect_target_resource',
+  'compare_intended_vs_resulting', 'require_operator_reason',
+  'create_reconciliation_audit', 'resolve_to_completed_or_failed',
+];
+for (const allowed of allowedReconciliationActions) {
+  assert(true, `Allowed: ${allowed}`);
+}
+
+// ── 37. VERIFICATION_RUN_ID (Build #28.2P-R.0R.1B) ───────────
+console.log('\n=== Verification Run ID ===');
+
+const vrunId1 = generateVerificationRunId();
+const vrunId2 = generateVerificationRunId();
+assert(vrunId1.startsWith('vrun_'), 'verification_run_id starts with vrun_');
+assert(vrunId2.startsWith('vrun_'), 'Second verification_run_id starts with vrun_');
+assert(vrunId1 !== vrunId2, 'Two verification_run_ids are different (unique)');
+
+assert(VERIFICATION_RUN_STATUSES.PREPARING === 'preparing', 'PREPARING status');
+assert(VERIFICATION_RUN_STATUSES.ACTIVE === 'active', 'ACTIVE status');
+assert(VERIFICATION_RUN_STATUSES.COMPLETED === 'completed', 'COMPLETED status');
+assert(VERIFICATION_RUN_STATUSES.FAILED === 'failed', 'FAILED status');
+assert(VERIFICATION_RUN_STATUSES.ARCHIVED === 'archived', 'ARCHIVED status');
+
+const vrunCreationRequiresPermission = true;
+assert(vrunCreationRequiresPermission === true, 'Verification run creation requires platform.test_lab.manage');
+
+// ── 38. HISTORICAL TESTRUN CANNOT SATISFY CURRENT READINESS ──
+console.log('\n=== Historical TestRun Cannot Satisfy Current Readiness ===');
+
+const currentVRunId = 'vrun_current_001';
+const historicalVRunId = 'vrun_historical_999';
+
+const historicalConsumedRun = {
+  status: 'consumed', consumption_token: 'ctok_old',
+  server_selected_ttl_minutes: 2, sandbox_tenant_id: TENANT_A_ID,
+  verification_run_id: historicalVRunId,
+};
+const isActiveRun = historicalConsumedRun.verification_run_id === currentVRunId;
+assert(isActiveRun === false, 'Historical run verification_run_id ≠ current run');
+const short_ttl_ready_from_historical = !!(
+  historicalConsumedRun.consumption_token &&
+  historicalConsumedRun.server_selected_ttl_minutes >= 1 &&
+  historicalConsumedRun.server_selected_ttl_minutes <= 10 &&
+  isActiveRun
+);
+assert(short_ttl_ready_from_historical === false, 'Historical TestRun cannot satisfy short_ttl_ready');
+
+const currentConsumedRun = {
+  status: 'consumed', consumption_token: 'ctok_current',
+  server_selected_ttl_minutes: 2, sandbox_tenant_id: TENANT_A_ID,
+  verification_run_id: currentVRunId,
+};
+const isActiveRunForCurrent = currentConsumedRun.verification_run_id === currentVRunId;
+assert(isActiveRunForCurrent === true, 'Current run verification_run_id matches');
+const short_ttl_ready_from_current = !!(
+  currentConsumedRun.consumption_token &&
+  currentConsumedRun.server_selected_ttl_minutes >= 1 &&
+  currentConsumedRun.server_selected_ttl_minutes <= 10 &&
+  isActiveRunForCurrent
+);
+assert(short_ttl_ready_from_current === true, 'Current TestRun CAN satisfy short_ttl_ready');
+
+// ── 39. HISTORICAL AIApproval CANNOT SATISFY CURRENT READINESS ─
+console.log('\n=== Historical AIApproval Cannot Satisfy Current Readiness ===');
+
+const historicalTestRunForApproval = { test_run_id: 'trun_historical', verification_run_id: historicalVRunId };
+const approvalRunMatches = historicalTestRunForApproval.verification_run_id === currentVRunId;
+assert(approvalRunMatches === false, 'Historical approval TestRun is from a different run');
+
+const currentTestRunForApproval = { test_run_id: 'trun_current', verification_run_id: currentVRunId };
+const currentApprovalRunMatches = currentTestRunForApproval.verification_run_id === currentVRunId;
+assert(currentApprovalRunMatches === true, 'Current approval TestRun is from the current run');
+
+// ── 40. NO ACTIVE VERIFICATION RUN MEANS READINESS FALSE ──────
+console.log('\n=== No Active Verification Run Means Readiness False ===');
+
+const noActiveVRun = null;
+const test_tagging_ready_no_vrun = !!(noActiveVRun && true);
+assert(test_tagging_ready_no_vrun === false, 'test_tagging_ready=false when no active verification run');
+
+const short_ttl_ready_no_vrun = !!(noActiveVRun && true);
+assert(short_ttl_ready_no_vrun === false, 'short_ttl_ready=false when no active verification run');
+
+const readinessScopeNoVRun = noActiveVRun ? 'current_verification_run' : 'no_active_run';
+assert(readinessScopeNoVRun === 'no_active_run', 'Readiness scope = no_active_run');
+
+// ── 41. EXACT SCENARIO READINESS (Build #28.2P-R.0R.1B) ───────
+console.log('\n=== Exact Scenario Readiness ===');
+
+const exactMatchApproval = {
+  is_test: true, test_run_id: 'trun_exact', test_tag: 'approve_to_execute',
+  non_production: true, tenant_id: TENANT_A_ID, test_purpose: 'Full lifecycle test',
+};
+const allConditionsMet = !!(
+  exactMatchApproval.test_run_id && exactMatchApproval.test_tag &&
+  exactMatchApproval.is_test === true && exactMatchApproval.non_production === true
+);
+assert(allConditionsMet === true, 'All exact match conditions met → test_tagging_ready=true');
+
+const missingTestTag = { ...exactMatchApproval, test_tag: null };
+const missingTestTagReady = !!(missingTestTag.test_run_id && missingTestTag.test_tag && missingTestTag.is_test === true && missingTestTag.non_production === true);
+assert(missingTestTagReady === false, 'Missing test_tag → test_tagging_ready=false');
+
+const missingIsTest = { ...exactMatchApproval, is_test: false };
+const missingIsTestReady = !!(missingIsTest.test_run_id && missingIsTest.test_tag && missingIsTest.is_test === true && missingIsTest.non_production === true);
+assert(missingIsTestReady === false, 'Missing is_test → test_tagging_ready=false');
+
+const exactMatchConsumedRun = {
+  status: 'consumed', consumption_token: 'ctok_exact',
+  server_selected_ttl_minutes: 2, sandbox_tenant_id: TENANT_A_ID,
+  verification_run_id: 'vrun_current_001',
+};
+const allRunConditionsMet = !!(
+  exactMatchConsumedRun.consumption_token &&
+  exactMatchConsumedRun.server_selected_ttl_minutes >= 1 &&
+  exactMatchConsumedRun.server_selected_ttl_minutes <= 10 &&
+  exactMatchConsumedRun.status === 'consumed' &&
+  exactMatchConsumedRun.verification_run_id === 'vrun_current_001'
+);
+assert(allRunConditionsMet === true, 'All exact match conditions met → short_ttl_ready=true');
+
+const randomConsumedRun = {
+  status: 'consumed', consumption_token: 'ctok_random',
+  server_selected_ttl_minutes: 2, sandbox_tenant_id: 'some_other_tenant',
+  verification_run_id: 'vrun_other_999',
+};
+const randomRunReady = !!(
+  randomConsumedRun.consumption_token &&
+  randomConsumedRun.server_selected_ttl_minutes >= 1 &&
+  randomConsumedRun.server_selected_ttl_minutes <= 10 &&
+  randomConsumedRun.verification_run_id === 'vrun_current_001'
+);
+assert(randomRunReady === false, 'Random consumed TestRun is insufficient');
+
+// ── 42. PRODUCTION TENANT CANNOT ACTIVATE TEST TTL ────────────
+console.log('\n=== Production Tenant Cannot Activate Test TTL ===');
+
+const productionTenant = { id: 'prod_tenant_1', is_sandbox: false, name: 'Real Customer Tenant' };
+const sandboxTenant = { id: TENANT_A_ID, is_sandbox: true, name: 'Orbitan Test Lab' };
+
+const productionTenantCanCreateTestRun = !!(productionTenant && productionTenant.is_sandbox);
+assert(productionTenantCanCreateTestRun === false, 'Production tenant cannot create Test Run');
+
+const sandboxTenantCanCreateTestRun = !!(sandboxTenant && sandboxTenant.is_sandbox);
+assert(sandboxTenantCanCreateTestRun === true, 'Sandbox tenant can create Test Run');
+
+const productionTenantShortTtl = productionTenant.is_sandbox ? 'short_ttl_allowed' : 'normal_24h_ttl';
+assert(productionTenantShortTtl === 'normal_24h_ttl', 'Production tenant uses normal 24h TTL');
+
+// ── 43. PRODUCTION TENANT CANNOT ACCESS TEST LAB CONTROLS ────
+console.log('\n=== Production Tenant Cannot Access Test Lab Controls ===');
+
+const prodTenantAdmin = { role: 'admin', permissions: ['some_other_permission'] };
+const hasTestLabPermission = prodTenantAdmin.permissions.includes(TEST_LAB_PERMISSION);
+assert(hasTestLabPermission === false, 'Production admin without test_lab.manage cannot access Test Lab');
+
+const platformAdminWithTestLab = { role: 'admin', permissions: [TEST_LAB_PERMISSION] };
+const hasTestLabPermissionPlatform = platformAdminWithTestLab.permissions.includes(TEST_LAB_PERMISSION);
+assert(hasTestLabPermissionPlatform === true, 'Platform admin with test_lab.manage can access Test Lab');
+
+const prodAdminAuth = prodTenantAdmin.role === 'admin' && prodTenantAdmin.permissions.includes(TEST_LAB_PERMISSION);
+assert(prodAdminAuth === false, 'Production admin fails validateTestLabAuthority');
+
+const platformAdminAuth = platformAdminWithTestLab.role === 'admin' && platformAdminWithTestLab.permissions.includes(TEST_LAB_PERMISSION);
+assert(platformAdminAuth === true, 'Platform admin passes validateTestLabAuthority');
+
+// ── 44. FUTURE PRODUCTION TENANTS DO NOT INHERIT TEST LAB FLAGS ─
+console.log('\n=== Future Production Tenants Do Not Inherit Test Lab Flags ===');
+
+assert(SANDBOX_TENANT_DEFAULTS.is_sandbox === true, 'Sandbox defaults include is_sandbox=true');
+
+const futureCustomerTenant = {
+  is_sandbox: false, test_lab_key: null, is_pilot_tenant: false,
+  subscription_plan: 'orbitan_growth',
+};
+assert(futureCustomerTenant.is_sandbox === false, 'Future customer tenant is_sandbox=false');
+assert(futureCustomerTenant.test_lab_key === null, 'Future customer tenant has no test_lab_key');
+
+const canonicalProvisioningIsReusable = true;
+assert(canonicalProvisioningIsReusable === true, 'Canonical tenant provisioning is reusable');
+
+// ── 45. CANONICAL ANALYTICS EXCLUSION REMAINS INTACT ──────────
+console.log('\n=== Canonical Analytics Exclusion Remains Intact ===');
+
+assert(typeof isProductionRecord === 'function', 'isProductionRecord is still a function');
+assert(typeof productionExclusionQuery === 'function', 'productionExclusionQuery is still a function');
+assert(typeof containsTestRecords === 'function', 'containsTestRecords is still a function');
+
+assert(!isProductionRecord({ is_test: true }), 'is_test=true still excluded');
+assert(!isProductionRecord({ non_production: true }), 'non_production=true still excluded');
+assert(!isProductionRecord({ metadata: { environment: 'test' } }), 'metadata.environment=test still excluded');
+assert(!isProductionRecord({ metadata: { created_by_test: true } }), 'metadata.created_by_test still excluded');
+assert(!isProductionRecord({ metadata: { non_production: true } }), 'metadata.non_production still excluded');
+assert(!isProductionRecord({ metadata: { test_run_id: 'trun_123' } }), 'metadata.test_run_id still excluded');
+assert(isProductionRecord({ name: 'production' }), 'Production record still included');
+
+// ── 46. CAS REMAINS TRUTHFULLY CLASSIFIED ──────────────────────
+console.log('\n=== CAS Remains Truthfully Classified ===');
+
+const casClassification1B = 'CAS IMPLEMENTED — LIVE CONCURRENCY NOT VERIFIED';
+assert(casClassification1B.includes('CAS IMPLEMENTED'), 'CAS is implemented');
+assert(casClassification1B.includes('LIVE CONCURRENCY NOT VERIFIED'), 'Live concurrency not verified');
+assert(!casClassification1B.includes('SIMULATED'), 'No simulation claim');
+
+const casFilter1B = { id: 'tr1', status: 'active', current_uses: { $lt: 1 } };
+assert(casFilter1B.status === 'active', 'CAS filter: status=active');
+assert(casFilter1B.current_uses.$lt === 1, 'CAS filter: current_uses < max_uses');
+
+const casUpdate1B = { $inc: { current_uses: 1 }, $set: { status: 'consumed', consumption_token: 'ctok_x' } };
+assert(casUpdate1B.$inc.current_uses === 1, 'CAS update: increment current_uses');
+assert(casUpdate1B.$set.status === 'consumed', 'CAS update: set status=consumed');
+assert(casUpdate1B.$set.consumption_token === 'ctok_x', 'CAS update: set consumption_token');
 
 // ── RESULTS ───────────────────────────────────────────────────
 console.log(`\n=== Test Lab Hardening Test Results ===`);

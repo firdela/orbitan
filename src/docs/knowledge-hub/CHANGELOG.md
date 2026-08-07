@@ -7,6 +7,53 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2P-R.0R.1B (Correlated Test Lab Operation Ledger, Verification-Run Readiness, Future-Tenant Architecture Boundary) (2026-08-07)
+
+### Architecture Boundary — Test Lab vs Future Production Tenants
+- **TestLabOperation** and **VerificationRun** entities are INTERNAL TEST-LAB ONLY — admin-only RLS, `non_production=true`, never exposed to customer tenants.
+- **Canonical tenant provisioning** (Tenant/Company/Outlet creation) remains reusable for future customer tenants — Test Lab wrapper adds ONLY `is_sandbox`, `test_lab_key`, non-production config.
+- Future customer tenants do NOT inherit `is_sandbox`, `test_lab_key`, `platform.test_lab.manage`, short TTL, TestRun authorisation, `test_run_id`, `verification_run_id`, test aliases, reconciliation tools, or test-data reset.
+
+### P0 Gap Closures
+- **Operation-state lookup FAILS CLOSED:** `checkOperationState` returns CLEAR / BLOCKED / UNAVAILABLE. UNAVAILABLE returns 503 `operation_state_unavailable` — a lookup error NEVER means "no incomplete operation exists".
+- **Stable TestLabOperation ledger:** One server-generated immutable `operation_id` correlates the entire lifecycle: PENDING → INTENT_PERSISTED → MUTATION_COMPLETED → COMPLETED (or FAILED / INCOMPLETE). Replaces fragile AuditLog.target_record_id correlation.
+- **Real persisted state machine:** Transitions are actually persisted in TestLabOperation records — not merely declared in constants. `success:true` ONLY for COMPLETED.
+- **Canonical target keys:** Deterministic server-side correlation prevents logical-key/database-ID mismatch from hiding incomplete operations. Target types: sandbox_tenant, test_membership, test_permission, test_attestation, test_run, test_reset.
+- **Dependent operations block correctly:** Query TestLabOperation ledger by canonical target_type + target_key. Block on INCOMPLETE, MUTATION_COMPLETED without completion, conflicting active operation, UNAVAILABLE. COMPLETED/FAILED/RECONCILED do NOT permanently block.
+- **Narrow reconciliation:** `reconcile_operation` action resolves INCOMPLETE states. Requires admin + `platform.test_lab.manage` + meaningful reason (min 10 chars). Can only inspect TestLabOperation, inspect target resource, compare intended vs resulting, create reconciliation audit, resolve to COMPLETED or FAILED. Cannot arbitrarily edit AIApproval, force approval, fabricate audit, or modify arbitrary records.
+- **VerificationRun model:** `verification_run_id` server-generated, immutable. Statuses: PREPARING → ACTIVE → COMPLETED/FAILED/ARCHIVED. Only `platform.test_lab.manage` may create or activate.
+- **TestRun linked to verification_run_id:** Every TestRun created for a governance verification campaign contains `verification_run_id`. Nexus validation preserves traceability.
+- **Current-run readiness only:** Readiness calculated against the currently active verification_run_id. Historical TestRuns/AIApprovals from other runs cannot satisfy current readiness. No active run → `test_tagging_ready=false`, `short_ttl_ready=false`.
+- **Exact scenario readiness:** `test_tagging_ready` requires matching verification_run_id, sandbox tenant, requester, scenario, test_run_id, test_tag, is_test=true, non_production=true. `short_ttl_ready` requires matching verification_run_id, TestRun, sandbox tenant, requester, service, action, autonomy level, server-selected TTL, successful consumption, valid consumption_token, status=consumed.
+
+### Entities Added
+- `TestLabOperation` — stable operation ledger with operation_id, action, target_type, target_key, status, intent_audit_id, mutation_resource_ids, completion_audit_id, failure_code, failure_summary, reconciliation_state
+- `VerificationRun` — verification campaign with verification_run_id, status, tenant_a_id, tenant_b_id, expected_identity_matrix, expected_scenarios, test_purpose
+
+### Entities Modified
+- `TestRun` — added `verification_run_id` field linking to active VerificationRun
+
+### Files Modified
+- `base44/shared/test-lab-config.js` — OPERATION_LIFECYCLE_STATES (with PENDING), OPERATION_LOOKUP_STATES, VERIFICATION_RUN_STATUSES, TARGET_TYPES, target key generators, generateOperationId, generateVerificationRunId
+- `base44/functions/testLabSetup/entry.ts` — TestLabOperation ledger, fail-closed checkOperationState, canonical target keys, verification run management, reconciliation, current-run-scoped readiness
+- `src/lib/__tests__/test-lab-hardening.test.js` — 20 new test sections (27-46)
+
+### Test Results
+- Test lab hardening: 303 passed, 0 failed
+- Nexus gateway hardening: 37 passed, 0 failed
+- AI governance parity: 84 passed, 0 failed
+- Focused lint: 0 errors
+- Production build: exit code 0
+
+### Live Backend Verification
+- Readiness: `active_verification_run: null`, `test_tagging_ready: false`, `short_ttl_ready: false` (no active run → readiness false)
+- TestLabOperation entity: accessible, 0 records
+- VerificationRun entity: accessible, 0 records
+- TestRun entity: accessible, 0 records, verification_run_id field present in schema
+
+### GitHub Limitation
+- Base44's GitHub integration uses `base44-builder[bot]` with commit title "File changes" for all syncs. Custom commit titles are NOT supported by the platform.
+
 ## [Unreleased] — Build #28.2P-R.0R.1A (Operation Evidence, Readiness and Analytics Exclusion Closure) (2026-08-07)
 
 ### P0 Gap Closures

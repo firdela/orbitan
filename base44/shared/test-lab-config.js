@@ -228,21 +228,97 @@ export function isValidTestTtlMinutes(minutes) {
   return typeof minutes === 'number' && minutes >= SANDBOX_TEST_TTL_MIN_MINUTES && minutes <= SANDBOX_TEST_TTL_MAX_MINUTES;
 }
 
-// ── OPERATION INTENT STATES (Build #28.2P-R.0R.1) ────────────
-// Durable operation intent lifecycle for fail-closed privileged
+// ── OPERATION LIFECYCLE STATES (Build #28.2P-R.0R.1B) ─────────
+// Durable operation lifecycle for fail-closed privileged Test Lab
 // operations. Every privileged mutation MUST:
-//   1. persist durable authorised operation intent BEFORE mutation;
-//   2. verify the intent was persisted;
-//   3. perform the idempotent mutation;
-//   4. persist completion or failure;
-//   5. return success only when required evidence is durable.
-export const OPERATION_INTENT_STATES = {
+//   1. create a TestLabOperation record (PENDING);
+//   2. persist durable authorised operation intent (INTENT_PERSISTED);
+//   3. verify the intent was persisted;
+//   4. perform the idempotent mutation (MUTATION_COMPLETED);
+//   5. persist completion evidence (COMPLETED) or failure (FAILED/INCOMPLETE);
+//   6. return success ONLY when status = COMPLETED.
+//
+// Build #28.2P-R.0R.1B adds PENDING as the initial state — the
+// TestLabOperation record exists before authority/intent is durably
+// established.
+export const OPERATION_LIFECYCLE_STATES = {
+  PENDING: 'pending',
   INTENT_PERSISTED: 'intent_persisted',
   MUTATION_COMPLETED: 'mutation_completed',
   COMPLETED: 'completed',
   FAILED: 'failed',
   INCOMPLETE: 'incomplete',
+  RECONCILED: 'reconciled',
 };
+
+// Legacy alias for backward compatibility
+export const OPERATION_INTENT_STATES = OPERATION_LIFECYCLE_STATES;
+
+// ── OPERATION LOOKUP STATES (Build #28.2P-R.0R.1B) ────────────
+// Fail-closed operation-state lookup. UNAVAILABLE MUST fail closed.
+// A lookup error MUST NOT mean "no incomplete operation exists".
+export const OPERATION_LOOKUP_STATES = {
+  CLEAR: 'clear',
+  BLOCKED: 'blocked',
+  UNAVAILABLE: 'unavailable',
+};
+
+// ── VERIFICATION RUN STATUSES (Build #28.2P-R.0R.1B) ──────────
+export const VERIFICATION_RUN_STATUSES = {
+  PREPARING: 'preparing',
+  ACTIVE: 'active',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  ARCHIVED: 'archived',
+};
+
+// ── CANONICAL TARGET KEY GENERATORS (Build #28.2P-R.0R.1B) ────
+// Deterministic server-side target correlation. Prevents incomplete
+// operations from becoming invisible due to logical-key vs database-ID
+// mismatch. Never client-defined.
+export const TARGET_TYPES = {
+  SANDBOX_TENANT: 'sandbox_tenant',
+  TEST_MEMBERSHIP: 'test_membership',
+  TEST_PERMISSION: 'test_permission',
+  TEST_ATTESTATION: 'test_attestation',
+  TEST_RUN: 'test_run',
+  TEST_RESET: 'test_reset',
+};
+
+export function targetKeyForSandboxTenant() {
+  return TENANT_B_TEST_LAB_KEY;
+}
+
+export function targetKeyForMembership(tenantId, alias) {
+  return `${tenantId}:${alias}`;
+}
+
+export function targetKeyForPermission(userId) {
+  return `${userId}:${CROSS_TENANT_AI_PERMISSION}`;
+}
+
+export function targetKeyForAttestation(alias, checkKey) {
+  return `${alias}:${checkKey}`;
+}
+
+export function targetKeyForTestRun(verificationRunId, sandboxTenantId, requesterEmail, serviceKey, testTag) {
+  return `${verificationRunId}:${sandboxTenantId}:${requesterEmail}:${serviceKey}:${testTag}`;
+}
+
+export function targetKeyForReset(tenantId, testRunId) {
+  return `${tenantId}:${testRunId}`;
+}
+
+// ── OPERATION ID GENERATOR (Build #28.2P-R.0R.1B) ────────────
+// Server-generated, immutable, correlates every lifecycle stage.
+export function generateOperationId() {
+  return `tlop_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
+}
+
+// ── VERIFICATION RUN ID GENERATOR (Build #28.2P-R.0R.1B) ──────
+export function generateVerificationRunId() {
+  return `vrun_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
+}
 
 // ── BOOTSTRAP STATE (Build #28.2P-R.0R.1) ────────────────────
 // The one-time bootstrap has already completed. The action is now

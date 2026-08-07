@@ -1,0 +1,102 @@
+{
+  "name": "VerificationRun",
+  "type": "object",
+  "description": "Orbitan Test Lab \u2014 Verification Campaign (Build #28.2P-R.0R.1B). Represents ONE complete governance verification cycle. Server-generated immutable verification_run_id links TestRun \u2192 AIApproval \u2192 audit evidence \u2192 Orbit Inbox lifecycle. Only platform.test_lab.manage may create or activate. Readiness is calculated against the currently active verification run only \u2014 historical evidence from other runs cannot satisfy current readiness. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "verification_run_id": {
+      "type": "string",
+      "description": "Server-generated immutable identifier e.g. 'vrun_2026_0001'. Never comes from the browser."
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User ID of the platform admin who created this verification run."
+    },
+    "created_by_name": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the verification run transitioned to ACTIVE status."
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the verification run transitioned to COMPLETED or FAILED status."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "preparing",
+        "active",
+        "completed",
+        "failed",
+        "archived"
+      ],
+      "default": "preparing",
+      "description": "Lifecycle state. preparing \u2192 active \u2192 completed/failed. archived = superseded by a newer run."
+    },
+    "tenant_a_id": {
+      "type": "string",
+      "description": "Tenant A ID for this verification run."
+    },
+    "tenant_b_id": {
+      "type": "string",
+      "description": "Tenant B ID if provisioned. Null if not yet provisioned."
+    },
+    "expected_identity_matrix": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Expected test identity emails for this verification cycle."
+    },
+    "expected_scenarios": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Expected test scenario tags e.g. ['approve_to_execute', 'cross_tenant_execution']."
+    },
+    "test_purpose": {
+      "type": "string",
+      "description": "Human-readable purpose of this verification campaign."
+    },
+    "non_production": {
+      "type": "boolean",
+      "default": true,
+      "description": "Always true \u2014 internal test infrastructure excluded from production analytics."
+    }
+  },
+  "required": [
+    "verification_run_id",
+    "created_by",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

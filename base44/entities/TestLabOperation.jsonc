@@ -1,0 +1,152 @@
+{
+  "name": "TestLabOperation",
+  "type": "object",
+  "description": "Orbitan Test Lab \u2014 Stable Operation Ledger (Build #28.2P-R.0R.1B). One record per privileged Test Lab mutation, correlated by a server-generated immutable operation_id across the entire lifecycle: PENDING \u2192 INTENT_PERSISTED \u2192 MUTATION_COMPLETED \u2192 COMPLETED (or FAILED / INCOMPLETE). Replaces fragile AuditLog.target_record_id correlation. Supports fail-closed lookup (CLEAR / BLOCKED / UNAVAILABLE), canonical target keys, and narrow reconciliation. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "operation_id": {
+      "type": "string",
+      "description": "Server-generated immutable identifier e.g. 'tlop_2026_0001'. Correlates every lifecycle stage. Never comes from the browser."
+    },
+    "verification_run_id": {
+      "type": "string",
+      "description": "Reference to the active VerificationRun this operation belongs to. Null for operations not tied to a specific verification campaign."
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "provision_tenant_b",
+        "prepare_membership",
+        "grant_permission",
+        "revoke_permission",
+        "attest_delivery",
+        "create_test_run",
+        "reset_test_data",
+        "reconcile_operation"
+      ],
+      "description": "The privileged Test Lab action this operation represents."
+    },
+    "target_type": {
+      "type": "string",
+      "enum": [
+        "sandbox_tenant",
+        "test_membership",
+        "test_permission",
+        "test_attestation",
+        "test_run",
+        "test_reset"
+      ],
+      "description": "Canonical target classification for deterministic correlation."
+    },
+    "target_key": {
+      "type": "string",
+      "description": "Deterministic server-side target correlation key. Prevents incomplete operations from becoming invisible due to logical-key vs database-ID mismatch. Never client-defined."
+    },
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant context where applicable. 'platform' for platform-level operations."
+    },
+    "actor_id": {
+      "type": "string",
+      "description": "User ID of the platform admin performing the operation."
+    },
+    "actor_name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "intent_persisted",
+        "mutation_completed",
+        "completed",
+        "failed",
+        "incomplete",
+        "reconciled"
+      ],
+      "default": "pending",
+      "description": "Lifecycle state. pending \u2192 intent_persisted \u2192 mutation_completed \u2192 completed. Failure: intent_persisted \u2192 failed. Incomplete: intent_persisted \u2192 mutation_completed \u2192 incomplete. Reconciled: incomplete \u2192 reconciled (via reconciliation)."
+    },
+    "intent_audit_id": {
+      "type": "string",
+      "description": "AuditLog record ID of the durable intent evidence. Non-empty when status >= intent_persisted."
+    },
+    "mutation_resource_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Resource IDs created/modified during the mutation. Populated when status >= mutation_completed."
+    },
+    "completion_audit_id": {
+      "type": "string",
+      "description": "AuditLog record ID of the completion evidence. Non-empty when status = completed."
+    },
+    "failure_code": {
+      "type": "string",
+      "description": "Safe error code when status = failed or incomplete."
+    },
+    "failure_summary": {
+      "type": "string",
+      "description": "Human-readable failure summary. Never includes secrets or tokens."
+    },
+    "reconciliation_state": {
+      "type": "string",
+      "enum": [
+        "not_reconciled",
+        "reconciled_completed",
+        "reconciled_failed"
+      ],
+      "default": "not_reconciled",
+      "description": "Reconciliation lifecycle for incomplete operations. not_reconciled \u2192 reconciled_completed or reconciled_failed."
+    },
+    "reconciled_by_id": {
+      "type": "string",
+      "description": "Platform admin who performed the reconciliation."
+    },
+    "reconciled_by_name": {
+      "type": "string"
+    },
+    "reconciliation_reason": {
+      "type": "string",
+      "description": "Operator-provided reason for the reconciliation decision."
+    },
+    "reconciliation_audit_id": {
+      "type": "string",
+      "description": "AuditLog record ID of the reconciliation evidence."
+    },
+    "non_production": {
+      "type": "boolean",
+      "default": true,
+      "description": "Always true \u2014 internal test infrastructure excluded from production analytics."
+    }
+  },
+  "required": [
+    "operation_id",
+    "action",
+    "target_type",
+    "target_key",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

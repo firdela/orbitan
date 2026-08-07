@@ -4,55 +4,116 @@ import {
   TENANT_A_ID, TENANT_A_NAME, TENANT_B_NAME, TENANT_B_TEST_LAB_KEY,
   SANDBOX_TENANT_DEFAULTS,
   SANDBOX_TEST_TTL_DEFAULT_MINUTES, EMAIL_ATTESTATION_CHECKS,
-  BOOTSTRAP_STATE, OPERATION_INTENT_STATES,
+  BOOTSTRAP_STATE,
+  OPERATION_LIFECYCLE_STATES, OPERATION_LOOKUP_STATES,
+  VERIFICATION_RUN_STATUSES, TARGET_TYPES,
   isAllowlistedTestAlias, getTestIdentity,
   resolveServerTtl, isProductionRecord,
+  targetKeyForSandboxTenant, targetKeyForMembership,
+  targetKeyForPermission, targetKeyForAttestation,
+  targetKeyForTestRun, targetKeyForReset,
+  generateOperationId, generateVerificationRunId,
 } from '../../shared/test-lab-config.ts';
 
 // ============================================================
 // ORBITAN TEST LAB SETUP — Internal Governance Test Infrastructure
-// Build #28.2P-R.0R.1A — Operation Evidence, Readiness and
-//                        Analytics Exclusion Closure
+// Build #28.2P-R.0R.1B — Correlated Test Lab Operation Ledger,
+//                        Verification-Run Readiness, Future-Tenant
+//                        Architecture Boundary
 //
-// HARDENING CHANGES (Build #28.2P-R.0R.1A):
-//   1.  Completion-audit false success FIXED — persistOperationCompletion
-//       returns { completion_id, persisted }. Callers check persisted and
-//       return operation_status: "incomplete" when false.
-//   2.  Incomplete operations are ACTIONABLE — checkUnresolvedIntents blocks
-//       dependent operations when an incomplete operation exists for a target.
-//   3.  Reset partial-failure handling FIXED — inbox query failure is captured,
-//       not swallowed. overall_status reports success/partial/incomplete/failed.
-//   4.  Readiness scoped to canonical Test Lab evidence — sandbox tenants only.
-//       Historical unrelated records cannot set readiness=true.
-//   5.  Bootstrap PERMANENTLY DISABLED — returns 410 bootstrap_disabled
-//   6.  Durable operation intent BEFORE every privileged mutation
-//   7.  Client TTL REMOVED — server selects TTL from SERVER_TTL_POLICY
+// HARDENING CHANGES (Build #28.2P-R.0R.1B):
+//   1.  Operation-state lookup FAILS CLOSED — UNAVAILABLE returns 503,
+//       not "no incomplete operation exists".
+//   2.  Stable TestLabOperation ledger — one server-generated immutable
+//       operation_id correlates the entire lifecycle.
+//   3.  Real persisted state machine: PENDING → INTENT_PERSISTED →
+//       MUTATION_COMPLETED → COMPLETED (or FAILED / INCOMPLETE).
+//   4.  Canonical target keys — deterministic server-side correlation
+//       prevents logical-key/database-ID mismatch from hiding operations.
+//   5.  Dependent operations block correctly via TestLabOperation ledger.
+//   6.  Narrow reconciliation — resolves INCOMPLETE states with audit.
+//   7.  VerificationRun model — readiness scoped to active run only.
+//   8.  TestRun linked to verification_run_id — historical evidence
+//       from other runs cannot satisfy current readiness.
+//   9.  Exact scenario readiness — requires matching verification_run_id,
+//       sandbox tenant, requester, service, scenario, test_tag.
 //
-// Operation state machine:
-//   INTENT_PERSISTED → MUTATION_COMPLETED → COMPLETED (success)
-//   INTENT_PERSISTED → MUTATION_COMPLETED → INCOMPLETE (completion audit failed)
-//   INTENT_PERSISTED → FAILED (mutation failed)
+// ARCHITECTURE BOUNDARY:
+//   - TestLabOperation, VerificationRun, test aliases, short TTL, test
+//     reset, reconciliation are INTERNAL TEST-LAB ONLY.
+//   - Canonical tenant provisioning (Tenant/Company/Outlet creation)
+//     remains reusable for future customer tenants.
+//   - Future customer tenants do NOT inherit is_sandbox, test_lab_key,
+//     platform.test_lab.manage, short TTL, or any Test Lab controls.
 // ============================================================
 
 function safeJson(errorCode: string, status: number, message: string, extra: Record<string, any> = {}): Response {
   return Response.json({ success: false, safe_error_code: errorCode, error: message, ...extra }, { status });
 }
 
-// ── DURABLE OPERATION INTENT (Build #28.2P-R.0R.1A) ────────────
-// Every privileged mutation MUST:
-//   1. persist durable authorised operation intent BEFORE mutation;
-//   2. verify the intent was persisted (check returned ID);
-//   3. perform the idempotent mutation;
-//   4. persist completion evidence;
-//   5. return success ONLY when completion evidence is durable.
-//
-// If the mutation succeeds but completion evidence fails:
-//   - DO NOT return success:true;
-//   - return operation_status: "incomplete";
-//   - include intent_id and resource_id;
-//   - explain that recovery/reconciliation is required.
+// ── TESTLABOPERATION LEDGER (Build #28.2P-R.0R.1B) ─────────────
+// Creates a PENDING TestLabOperation record. The operation_id is
+// server-generated, immutable, and correlates every lifecycle stage.
+
+async function createOperation(base44: any, params: {
+  action: string;
+  target_type: string;
+  target_key: string;
+  tenant_id: string;
+  actor_id: string;
+  actor_name: string;
+  verification_run_id?: string;
+}): Promise<{ operation_id: string; record_id: string; error?: string }> {
+  try {
+    const operationId = generateOperationId();
+    const record = await base44.asServiceRole.entities.TestLabOperation.create({
+      operation_id: operationId,
+      verification_run_id: params.verification_run_id || null,
+      action: params.action,
+      target_type: params.target_type,
+      target_key: params.target_key,
+      tenant_id: params.tenant_id,
+      actor_id: params.actor_id,
+      actor_name: params.actor_name,
+      status: OPERATION_LIFECYCLE_STATES.PENDING,
+      intent_audit_id: null,
+      mutation_resource_ids: [],
+      completion_audit_id: null,
+      failure_code: null,
+      failure_summary: null,
+      reconciliation_state: 'not_reconciled',
+      non_production: true,
+    });
+    if (!record?.id) {
+      return { operation_id: '', record_id: '', error: 'TestLabOperation creation returned empty ID' };
+    }
+    return { operation_id: operationId, record_id: record.id };
+  } catch (err) {
+    return { operation_id: '', record_id: '', error: `TestLabOperation creation failed: ${err.message}` };
+  }
+}
+
+// Transitions the TestLabOperation to a new status. Actually persists
+// the transition — does not merely declare it in constants.
+async function transitionOperation(base44: any, operationRecordId: string, newStatus: string, updates: Record<string, any> = {}): Promise<{ persisted: boolean; error?: string }> {
+  try {
+    await base44.asServiceRole.entities.TestLabOperation.update(operationRecordId, {
+      status: newStatus,
+      updated_date: new Date().toISOString(),
+      ...updates,
+    });
+    return { persisted: true };
+  } catch (err) {
+    return { persisted: false, error: err.message };
+  }
+}
+
+// ── DURABLE OPERATION INTENT (Build #28.2P-R.0R.1B) ────────────
+// Persists intent audit evidence AND transitions the TestLabOperation
+// to INTENT_PERSISTED. Both must succeed for the intent to be durable.
 
 async function persistOperationIntent(base44: any, params: {
+  operation_record_id: string;
   audit_tenant_id: string;
   actor_id: string; actor_name: string;
   action: string; target: string; reason: string;
@@ -69,32 +130,38 @@ async function persistOperationIntent(base44: any, params: {
       category: 'governance',
       severity: 'warning',
       event_source: 'testLabSetup',
-      target_entity: 'TestLab',
+      target_entity: 'TestLabOperation',
       target_record_id: params.target,
       details: `OPERATION INTENT — ${params.action}: ${params.reason}`,
       previous_state: null,
-      new_state: { ...params.intended_state, intent_state: OPERATION_INTENT_STATES.INTENT_PERSISTED, action: params.action },
+      new_state: { ...params.intended_state, intent_state: OPERATION_LIFECYCLE_STATES.INTENT_PERSISTED, action: params.action },
       shield_outcome: 'not_evaluated',
     });
     const intentId = record?.id || '';
     if (!intentId) {
       return { intent_id: '', error: 'Intent persistence returned empty ID — cannot proceed with mutation.' };
     }
+    // Transition the TestLabOperation to INTENT_PERSISTED
+    await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.INTENT_PERSISTED, {
+      intent_audit_id: intentId,
+    });
     return { intent_id: intentId };
   } catch (err) {
     return { intent_id: '', error: `Intent persistence failed: ${err.message}` };
   }
 }
 
-// Build #28.2P-R.0R.1A: Returns { completion_id, persisted } — NOT a bare string.
-// Callers MUST check .persisted before returning success:true.
+// Build #28.2P-R.0R.1B: Returns { completion_id, persisted }.
+// Also transitions the TestLabOperation to COMPLETED.
 async function persistOperationCompletion(base44: any, params: {
+  operation_record_id: string;
   audit_tenant_id: string;
   actor_id: string; actor_name: string;
   action: string; target: string; reason: string;
   intent_id: string;
   previous_state: any;
   new_state: Record<string, any>;
+  mutation_resource_ids?: string[];
   test_run_id?: string;
 }): Promise<{ completion_id: string; persisted: boolean }> {
   try {
@@ -108,23 +175,34 @@ async function persistOperationCompletion(base44: any, params: {
       category: 'governance',
       severity: 'success',
       event_source: 'testLabSetup',
-      target_entity: 'TestLab',
+      target_entity: 'TestLabOperation',
       target_record_id: params.target,
       details: `OPERATION COMPLETED — ${params.action}: ${params.reason}`,
       previous_state: params.previous_state,
-      new_state: { ...params.new_state, intent_state: OPERATION_INTENT_STATES.COMPLETED, intent_id: params.intent_id },
+      new_state: { ...params.new_state, intent_state: OPERATION_LIFECYCLE_STATES.COMPLETED, intent_id: params.intent_id },
       shield_outcome: 'not_evaluated',
     });
     const completionId = record?.id || '';
     if (!completionId) {
-      // Completion audit returned empty ID — persist degraded record
       await persistDegradedAudit(base44, params, 'Completion persistence returned empty ID');
+      await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.INCOMPLETE, {
+        failure_code: 'completion_evidence_empty',
+        failure_summary: 'Completion persistence returned empty ID',
+      });
       return { completion_id: '', persisted: false };
     }
+    await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.COMPLETED, {
+      completion_audit_id: completionId,
+      mutation_resource_ids: params.mutation_resource_ids || [],
+      completed_at: new Date().toISOString(),
+    });
     return { completion_id: completionId, persisted: true };
   } catch (err) {
-    // Completion audit failed — persist degraded record for recovery
     await persistDegradedAudit(base44, params, err.message);
+    await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.INCOMPLETE, {
+      failure_code: 'completion_evidence_failed',
+      failure_summary: err.message,
+    });
     return { completion_id: '', persisted: false };
   }
 }
@@ -142,17 +220,18 @@ async function persistDegradedAudit(base44: any, params: any, errorMessage: stri
       category: 'governance',
       severity: 'critical',
       event_source: 'testLabSetup',
-      target_entity: 'TestLab',
+      target_entity: 'TestLabOperation',
       target_record_id: params.target,
       details: `AUDIT DEGRADED — ${params.action} mutation succeeded but completion audit failed: ${errorMessage}`,
       previous_state: params.previous_state,
-      new_state: { ...params.new_state, intent_state: OPERATION_INTENT_STATES.INCOMPLETE, intent_id: params.intent_id, audit_error: errorMessage },
+      new_state: { ...params.new_state, intent_state: OPERATION_LIFECYCLE_STATES.INCOMPLETE, intent_id: params.intent_id, audit_error: errorMessage },
       shield_outcome: 'not_evaluated',
     });
   } catch { /* best effort */ }
 }
 
 async function persistOperationFailure(base44: any, params: {
+  operation_record_id: string;
   audit_tenant_id: string;
   actor_id: string; actor_name: string;
   action: string; target: string; reason: string;
@@ -171,44 +250,47 @@ async function persistOperationFailure(base44: any, params: {
       category: 'governance',
       severity: 'critical',
       event_source: 'testLabSetup',
-      target_entity: 'TestLab',
+      target_entity: 'TestLabOperation',
       target_record_id: params.target,
       details: `OPERATION FAILED — ${params.action}: ${params.error}`,
       previous_state: null,
-      new_state: { ...params.intended_state, intent_state: OPERATION_INTENT_STATES.FAILED, intent_id: params.intent_id, error: params.error },
+      new_state: { ...params.intended_state, intent_state: OPERATION_LIFECYCLE_STATES.FAILED, intent_id: params.intent_id, error: params.error },
       shield_outcome: 'not_evaluated',
+    });
+    await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.FAILED, {
+      failure_code: 'mutation_failed',
+      failure_summary: params.error,
     });
   } catch { /* best effort — intent record already proves the attempt */ }
 }
 
-// ── UNRESOLVED INTENT CHECK (Build #28.2P-R.0R.1A) ─────────────
-// Before dependent operations, check whether a relevant incomplete
-// operation exists for that target. If so, block the dependent operation.
-// This makes incomplete operations ACTIONABLE — they are not just
-// passive audit records.
-async function checkUnresolvedIntents(base44: any, target: string): Promise<{ has_unresolved: boolean; unresolved: any[] }> {
+// ── FAIL-CLOSED OPERATION STATE LOOKUP (Build #28.2P-R.0R.1B) ──
+// Returns CLEAR, BLOCKED, or UNAVAILABLE.
+// UNAVAILABLE MUST fail closed — the caller returns 503.
+// A lookup error MUST NOT mean "no incomplete operation exists".
+async function checkOperationState(base44: any, targetType: string, targetKey: string): Promise<{
+  state: string;
+  operations: any[];
+  error?: string;
+}> {
   try {
-    // Query for audit_degraded records — these are incomplete operations
-    // where the mutation succeeded but completion evidence failed.
-    const degraded = await base44.asServiceRole.entities.AuditLog.filter({
-      target_record_id: target,
-      event_source: 'testLabSetup',
-    }, '-created_date', 20).catch(() => []);
+    const operations = await base44.asServiceRole.entities.TestLabOperation.filter({
+      target_type: targetType,
+      target_key: targetKey,
+      status: { $in: [OPERATION_LIFECYCLE_STATES.INCOMPLETE, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED] },
+    }, '-created_date', 20);
 
-    const unresolved = (degraded || [])
-      .filter((d: any) => d.action_type?.endsWith('_audit_degraded'))
-      .map((d: any) => ({
-        intent_id: d.new_state?.intent_id || d.id,
-        action: d.action_type?.replace('test_lab_', '').replace('_audit_degraded', ''),
-        target: d.target_record_id,
-        error: d.new_state?.audit_error,
-        intent_state: OPERATION_INTENT_STATES.INCOMPLETE,
-        created_date: d.created_date,
-      }));
+    const blocking = (operations || []).filter((op: any) =>
+      op.status === OPERATION_LIFECYCLE_STATES.INCOMPLETE ||
+      op.status === OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED
+    );
 
-    return { has_unresolved: unresolved.length > 0, unresolved };
-  } catch {
-    return { has_unresolved: false, unresolved: [] };
+    if (blocking.length > 0) {
+      return { state: OPERATION_LOOKUP_STATES.BLOCKED, operations: blocking };
+    }
+    return { state: OPERATION_LOOKUP_STATES.CLEAR, operations: [] };
+  } catch (err) {
+    return { state: OPERATION_LOOKUP_STATES.UNAVAILABLE, operations: [], error: err.message };
   }
 }
 
@@ -221,6 +303,18 @@ async function validateTestLabAuthority(base44: any, user: any): Promise<{ valid
     return { valid: false, reason: 'Missing platform.test_lab.manage permission' };
   }
   return { valid: true };
+}
+
+// ── GET ACTIVE VERIFICATION RUN (Build #28.2P-R.0R.1B) ────────
+async function getActiveVerificationRun(base44: any): Promise<any | null> {
+  try {
+    const runs = await base44.asServiceRole.entities.VerificationRun.filter({
+      status: VERIFICATION_RUN_STATUSES.ACTIVE,
+    }, '-created_date', 1);
+    return runs?.[0] || null;
+  } catch {
+    return null;
+  }
 }
 
 // ============================================================
@@ -251,16 +345,189 @@ export default async function(req: Request): Promise<Response> {
       return safeJson('forbidden', 403, authCheck.reason || 'Permission denied.');
     }
 
+    // ── CREATE VERIFICATION RUN (Build #28.2P-R.0R.1B) ─────
+    if (action === 'create_verification_run') {
+      const testPurpose = body.test_purpose;
+      if (!testPurpose || testPurpose.length < 5) return safeJson('invalid_request', 400, 'A meaningful test_purpose is required.');
+
+      // Check if an active verification run already exists
+      const existingActive = await getActiveVerificationRun(base44);
+      if (existingActive) {
+        return safeJson('conflict', 409, 'An active verification run already exists. Archive it before creating a new one.', {
+          existing_verification_run_id: existingActive.verification_run_id,
+        });
+      }
+
+      const verificationRunId = generateVerificationRunId();
+      const now = new Date().toISOString();
+
+      try {
+        const run = await base44.asServiceRole.entities.VerificationRun.create({
+          verification_run_id: verificationRunId,
+          created_by: user.id,
+          created_by_name: user.full_name || 'Admin',
+          created_at: now,
+          status: VERIFICATION_RUN_STATUSES.PREPARING,
+          tenant_a_id: TENANT_A_ID,
+          tenant_b_id: null,
+          expected_identity_matrix: TEST_IDENTITIES.map(t => t.email),
+          expected_scenarios: Object.keys(body.expected_scenarios || {}),
+          test_purpose: testPurpose,
+          non_production: true,
+        });
+
+        return Response.json({
+          success: true,
+          verification_run_id: verificationRunId,
+          verification_run_record_id: run?.id,
+          status: VERIFICATION_RUN_STATUSES.PREPARING,
+          created_at: now,
+          message: 'Verification run created in PREPARING status. Activate it when ready to begin the verification cycle.',
+        });
+      } catch (err) {
+        return safeJson('internal_error', 500, 'Failed to create verification run.', { error: err.message });
+      }
+    }
+
+    // ── ACTIVATE VERIFICATION RUN (Build #28.2P-R.0R.1B) ───
+    if (action === 'activate_verification_run') {
+      const { verification_run_id } = body;
+      if (!verification_run_id) return safeJson('invalid_request', 400, 'verification_run_id is required.');
+
+      const runs = await base44.asServiceRole.entities.VerificationRun.filter({ verification_run_id }).catch(() => []);
+      if (!runs || runs.length === 0) return safeJson('not_found', 404, 'Verification run not found.');
+      const run = runs[0];
+
+      if (run.status === VERIFICATION_RUN_STATUSES.ACTIVE) {
+        return Response.json({ success: true, verification_run_id, status: VERIFICATION_RUN_STATUSES.ACTIVE, already_active: true, message: 'Verification run is already active.' });
+      }
+      if (run.status !== VERIFICATION_RUN_STATUSES.PREPARING) {
+        return safeJson('invalid_request', 400, `Verification run is in ${run.status} status. Only PREPARING runs can be activated.`);
+      }
+
+      // Archive any other active runs
+      const otherActive = await base44.asServiceRole.entities.VerificationRun.filter({ status: VERIFICATION_RUN_STATUSES.ACTIVE }).catch(() => []);
+      for (const other of otherActive || []) {
+        if (other.verification_run_id !== verification_run_id) {
+          await base44.asServiceRole.entities.VerificationRun.update(other.id, { status: VERIFICATION_RUN_STATUSES.ARCHIVED }).catch(() => {});
+        }
+      }
+
+      // Resolve Tenant B ID if provisioned
+      const tenantBResults = await base44.asServiceRole.entities.Tenant.filter({ test_lab_key: TENANT_B_TEST_LAB_KEY }).catch(() => []);
+      const tenantBId = tenantBResults?.[0]?.id || null;
+
+      const now = new Date().toISOString();
+      await base44.asServiceRole.entities.VerificationRun.update(run.id, {
+        status: VERIFICATION_RUN_STATUSES.ACTIVE,
+        started_at: now,
+        tenant_b_id: tenantBId,
+      });
+
+      return Response.json({
+        success: true,
+        verification_run_id,
+        status: VERIFICATION_RUN_STATUSES.ACTIVE,
+        started_at: now,
+        tenant_a_id: TENANT_A_ID,
+        tenant_b_id: tenantBId,
+        message: 'Verification run activated. Readiness is now scoped to this run.',
+      });
+    }
+
+    // ── ARCHIVE VERIFICATION RUN ──────────────────────────
+    if (action === 'archive_verification_run') {
+      const { verification_run_id } = body;
+      if (!verification_run_id) return safeJson('invalid_request', 400, 'verification_run_id is required.');
+
+      const runs = await base44.asServiceRole.entities.VerificationRun.filter({ verification_run_id }).catch(() => []);
+      if (!runs || runs.length === 0) return safeJson('not_found', 404, 'Verification run not found.');
+      const run = runs[0];
+
+      await base44.asServiceRole.entities.VerificationRun.update(run.id, { status: VERIFICATION_RUN_STATUSES.ARCHIVED }).catch(() => {});
+      return Response.json({ success: true, verification_run_id, status: VERIFICATION_RUN_STATUSES.ARCHIVED, message: 'Verification run archived.' });
+    }
+
+    // ── RECONCILE OPERATION (Build #28.2P-R.0R.1B) ──────────
+    // Narrow reconciliation: resolves INCOMPLETE TestLabOperation states.
+    if (action === 'reconcile_operation') {
+      const { operation_id, resolution, reason } = body;
+      if (!operation_id) return safeJson('invalid_request', 400, 'operation_id is required.');
+      if (!resolution || !['reconciled_completed', 'reconciled_failed'].includes(resolution)) {
+        return safeJson('invalid_request', 400, 'resolution must be reconciled_completed or reconciled_failed.');
+      }
+      if (!reason || reason.length < 10) return safeJson('invalid_request', 400, 'A meaningful reconciliation reason is required (min 10 chars).');
+
+      const ops = await base44.asServiceRole.entities.TestLabOperation.filter({ operation_id }).catch(() => []);
+      if (!ops || ops.length === 0) return safeJson('not_found', 404, 'TestLabOperation not found.');
+      const op = ops[0];
+
+      if (op.status !== OPERATION_LIFECYCLE_STATES.INCOMPLETE) {
+        return safeJson('invalid_request', 400, `Operation is in ${op.status} status. Only INCOMPLETE operations can be reconciled.`);
+      }
+
+      // Persist reconciliation audit evidence
+      let reconciliationAuditId = '';
+      try {
+        const audit = await base44.asServiceRole.entities.AuditLog.create({
+          tenant_id: op.tenant_id || 'platform',
+          actor_id: user.id, actor_name: user.full_name || 'Admin',
+          actor_role: 'admin',
+          action_type: 'test_lab_reconcile_operation',
+          module: 'system', category: 'governance', severity: 'warning',
+          event_source: 'testLabSetup',
+          target_entity: 'TestLabOperation', target_record_id: op.id,
+          details: `RECONCILIATION — ${op.action}: ${resolution}. Reason: ${reason}`,
+          previous_state: { status: op.status, failure_code: op.failure_code },
+          new_state: { resolution, reason, reconciled_by: user.id },
+          shield_outcome: 'not_evaluated',
+        });
+        reconciliationAuditId = audit?.id || '';
+      } catch (err) {
+        return safeJson('internal_error', 500, 'Failed to persist reconciliation audit evidence.', { error: err.message });
+      }
+
+      // Transition the operation to RECONCILED
+      const newStatus = resolution === 'reconciled_completed' ? OPERATION_LIFECYCLE_STATES.COMPLETED : OPERATION_LIFECYCLE_STATES.FAILED;
+      await base44.asServiceRole.entities.TestLabOperation.update(op.id, {
+        status: newStatus,
+        reconciliation_state: resolution,
+        reconciled_by_id: user.id,
+        reconciled_by_name: user.full_name || 'Admin',
+        reconciliation_reason: reason,
+        reconciliation_audit_id: reconciliationAuditId,
+        updated_date: new Date().toISOString(),
+      }).catch(() => {});
+
+      return Response.json({
+        success: true,
+        operation_id,
+        previous_status: op.status,
+        new_status: newStatus,
+        reconciliation_state: resolution,
+        reconciliation_audit_id: reconciliationAuditId,
+        message: `Operation reconciled to ${newStatus}. Dependent operations are now unblocked.`,
+      });
+    }
+
     // ── PROVISION TENANT B (intent-first, idempotent, schema-valid) ──
     if (action === 'provision_tenant_b') {
       const reason = body.reason || 'Provision Test Tenant B for governance verification';
       if (reason.length < 5) return safeJson('invalid_request', 400, 'A meaningful reason is required.');
 
-      // Check for unresolved incomplete operations on this target
-      const unresolvedCheck = await checkUnresolvedIntents(base44, TENANT_B_TEST_LAB_KEY);
-      if (unresolvedCheck.has_unresolved) {
-        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for Test Tenant B. Recovery/reconciliation is required before provisioning can proceed.', {
-          unresolved_operations: unresolvedCheck.unresolved,
+      const targetKey = targetKeyForSandboxTenant();
+
+      // FAIL-CLOSED operation state lookup
+      const opState = await checkOperationState(base44, TARGET_TYPES.SANDBOX_TENANT, targetKey);
+      if (opState.state === OPERATION_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('operation_state_unavailable', 503, 'Cannot verify operation state — operation ledger is unavailable. Provisioning blocked for safety.', { target_key: targetKey });
+      }
+      if (opState.state === OPERATION_LOOKUP_STATES.BLOCKED) {
+        return safeJson('incomplete_operation', 409, 'An incomplete or unresolved operation exists for Test Tenant B. Recovery/reconciliation is required before provisioning can proceed.', {
+          unresolved_operations: opState.operations.map((o: any) => ({
+            operation_id: o.operation_id, action: o.action, target_type: o.target_type,
+            target_key: o.target_key, status: o.status, created_date: o.created_date,
+          })),
         });
       }
 
@@ -273,10 +540,8 @@ export default async function(req: Request): Promise<Response> {
             tenant_id: tenant.id, is_sandbox: tenant.is_sandbox, has_test_lab_key: !!tenant.test_lab_key,
           });
         }
-
         const companies = await base44.asServiceRole.entities.Company.filter({ tenant_id: tenant.id }).catch(() => []);
         const outlets = await base44.asServiceRole.entities.Outlet.filter({ tenant_id: tenant.id }).catch(() => []);
-
         return Response.json({
           success: true, reused: true,
           tenant_id: tenant.id, tenant_name: tenant.name,
@@ -300,16 +565,31 @@ export default async function(req: Request): Promise<Response> {
         }
       }
 
+      // STEP 0: Create TestLabOperation record (PENDING)
+      const activeVRun = await getActiveVerificationRun(base44);
+      const opCreate = await createOperation(base44, {
+        action: 'provision_tenant_b',
+        target_type: TARGET_TYPES.SANDBOX_TENANT,
+        target_key: targetKey,
+        tenant_id: 'platform',
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        verification_run_id: activeVRun?.verification_run_id,
+      });
+      if (!opCreate.operation_id) {
+        return safeJson('audit_failure', 500, 'Cannot provision — TestLabOperation record could not be created. No mutation has occurred.', { error: opCreate.error });
+      }
+
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
+        operation_record_id: opCreate.record_id,
         audit_tenant_id: 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'provision_tenant_b', target: TENANT_B_TEST_LAB_KEY,
+        action: 'provision_tenant_b', target: opCreate.record_id,
         reason,
-        intended_state: { tenant_name: TENANT_B_NAME, test_lab_key: TENANT_B_TEST_LAB_KEY, is_sandbox: true },
+        intended_state: { tenant_name: TENANT_B_NAME, test_lab_key: TENANT_B_TEST_LAB_KEY, is_sandbox: true, operation_id: opCreate.operation_id },
       });
       if (!intent.intent_id) {
-        return safeJson('audit_failure', 500, 'Cannot provision — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error });
+        return safeJson('audit_failure', 500, 'Cannot provision — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error, operation_id: opCreate.operation_id });
       }
 
       // STEP 2: Perform the idempotent mutation
@@ -323,36 +603,31 @@ export default async function(req: Request): Promise<Response> {
           notes: 'TEST_LAB_B — Sandbox Test Tenant B for cross-tenant governance isolation testing. Not a real business. Provisioned by Test Lab Setup.',
         });
         if (!tenantRecord) throw new Error('Tenant creation returned null');
-
         companyRec = await base44.asServiceRole.entities.Company.create({
-          tenant_id: tenantRecord.id,
-          name: TENANT_B_NAME,
-          legal_name: `${TENANT_B_NAME} (Sandbox)`,
-          industry: 'food_beverage',
-          country: 'Singapore',
-          status: 'active',
+          tenant_id: tenantRecord.id, name: TENANT_B_NAME,
+          legal_name: `${TENANT_B_NAME} (Sandbox)`, industry: 'food_beverage',
+          country: 'Singapore', status: 'active',
         });
-
         outletRec = await base44.asServiceRole.entities.Outlet.create({
-          tenant_id: tenantRecord.id,
-          company_id: companyRec.id,
-          name: 'Test Lab B — Outlet 1',
-          type: 'other',
-          address: 'Test Lab Address (Non-Physical)',
-          is_virtual: true,
-          status: 'active',
+          tenant_id: tenantRecord.id, company_id: companyRec.id,
+          name: 'Test Lab B — Outlet 1', type: 'other',
+          address: 'Test Lab Address (Non-Physical)', is_virtual: true, status: 'active',
+        });
+        // Transition to MUTATION_COMPLETED
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, {
+          mutation_resource_ids: [tenantRecord.id, companyRec.id, outletRec.id],
         });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
+          operation_record_id: opCreate.record_id,
           audit_tenant_id: 'platform',
           actor_id: user.id, actor_name: user.full_name || 'Admin',
-          action: 'provision_tenant_b', target: TENANT_B_TEST_LAB_KEY,
+          action: 'provision_tenant_b', target: opCreate.record_id,
           reason, intent_id: intent.intent_id,
-          intended_state: { tenant_name: TENANT_B_NAME },
-          error: mutErr.message,
+          intended_state: { tenant_name: TENANT_B_NAME }, error: mutErr.message,
         });
         return safeJson('internal_error', 500, 'Failed to create Test Tenant B hierarchy. Operation intent is persisted for recovery.', {
-          intent_id: intent.intent_id,
+          intent_id: intent.intent_id, operation_id: opCreate.operation_id,
           partial_tenant_id: tenantRecord?.id || null,
           partial_company_id: companyRec?.id || null,
           error: mutErr.message,
@@ -361,43 +636,35 @@ export default async function(req: Request): Promise<Response> {
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
+        operation_record_id: opCreate.record_id,
         audit_tenant_id: tenantRecord.id,
         actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'provision_tenant_b', target: tenantRecord.id,
+        action: 'provision_tenant_b', target: opCreate.record_id,
         reason, intent_id: intent.intent_id,
         previous_state: null,
-        new_state: {
-          tenant_id: tenantRecord.id, company_id: companyRec.id, outlet_id: outletRec.id,
-          is_sandbox: true, billing_activated: false, integration_activated: false,
-        },
+        new_state: { tenant_id: tenantRecord.id, company_id: companyRec.id, outlet_id: outletRec.id, is_sandbox: true },
+        mutation_resource_ids: [tenantRecord.id, companyRec.id, outletRec.id],
       });
 
-      // Build #28.2P-R.0R.1A: Check completion evidence durability
       if (!completion.persisted) {
         return Response.json({
-          success: false,
-          operation_status: 'incomplete',
-          intent_id: intent.intent_id,
-          resource_id: tenantRecord.id,
-          tenant_id: tenantRecord.id,
-          company_id: companyRec.id,
-          outlet_id: outletRec.id,
+          success: false, operation_status: 'incomplete',
+          operation_id: opCreate.operation_id,
+          intent_id: intent.intent_id, resource_id: tenantRecord.id,
+          tenant_id: tenantRecord.id, company_id: companyRec.id, outlet_id: outletRec.id,
           completion_audit_id: completion.completion_id,
           message: 'Test Tenant B was provisioned but completion evidence could not be persisted. Recovery/reconciliation is required. Dependent operations are blocked until resolved.',
         }, { status: 500 });
       }
 
       return Response.json({
-        success: true,
-        operation_status: 'completed',
+        success: true, operation_status: 'completed',
+        operation_id: opCreate.operation_id,
         tenant_id: tenantRecord.id, tenant_name: tenantRecord.name,
-        is_sandbox: true,
-        company_id: companyRec.id, outlet_id: outletRec.id,
+        is_sandbox: true, company_id: companyRec.id, outlet_id: outletRec.id,
         billing_activated: false, integration_activated: false,
-        wallet_state: 'not_provisioned',
-        readiness_state: 'provisioned',
-        intent_id: intent.intent_id,
-        completion_audit_id: completion.completion_id,
+        wallet_state: 'not_provisioned', readiness_state: 'provisioned',
+        intent_id: intent.intent_id, completion_audit_id: completion.completion_id,
         message: 'Test Tenant B provisioned successfully with full hierarchy (Tenant → Company → Outlet).',
       });
     }
@@ -460,11 +727,16 @@ export default async function(req: Request): Promise<Response> {
         return Response.json({ success: true, email, label: identity.label, membership_state: 'PLATFORM_IDENTITY', message: 'Platform identities do not require Employee membership. Invite directly.' });
       }
 
-      // Check for unresolved incomplete operations on this target tenant
-      const unresolvedCheck = await checkUnresolvedIntents(base44, targetTenantId);
-      if (unresolvedCheck.has_unresolved) {
-        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for the target tenant. Recovery/reconciliation is required before membership preparation can proceed.', {
-          unresolved_operations: unresolvedCheck.unresolved,
+      const targetKey = targetKeyForMembership(targetTenantId, email);
+
+      // FAIL-CLOSED operation state lookup
+      const opState = await checkOperationState(base44, TARGET_TYPES.TEST_MEMBERSHIP, targetKey);
+      if (opState.state === OPERATION_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('operation_state_unavailable', 503, 'Cannot verify operation state — operation ledger is unavailable. Membership preparation blocked for safety.', { target_key: targetKey });
+      }
+      if (opState.state === OPERATION_LOOKUP_STATES.BLOCKED) {
+        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this membership. Recovery/reconciliation is required.', {
+          unresolved_operations: opState.operations.map((o: any) => ({ operation_id: o.operation_id, action: o.action, status: o.status })),
         });
       }
 
@@ -477,36 +749,54 @@ export default async function(req: Request): Promise<Response> {
       const existingEmployees = await base44.asServiceRole.entities.Employee.filter({ tenant_id: targetTenantId, email }).catch(() => []);
       if (existingEmployees && existingEmployees.length > 0) {
         const emp = existingEmployees[0];
+        const activeVRun = await getActiveVerificationRun(base44);
+        const opCreate = await createOperation(base44, {
+          action: 'prepare_membership', target_type: TARGET_TYPES.TEST_MEMBERSHIP, target_key: targetKey,
+          tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
+          verification_run_id: activeVRun?.verification_run_id,
+        });
+        if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot record membership reuse — TestLabOperation could not be created.');
+
         const intent = await persistOperationIntent(base44, {
-          audit_tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-          action: 'prepare_membership', target: emp.id, reason: `Idempotent reuse of existing Employee for ${email}`,
-          intended_state: { employee_id: emp.id, email, reused: true },
+          operation_record_id: opCreate.record_id, audit_tenant_id: targetTenantId,
+          actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'prepare_membership', target: opCreate.record_id, reason: `Idempotent reuse of existing Employee for ${email}`,
+          intended_state: { employee_id: emp.id, email, reused: true, operation_id: opCreate.operation_id },
         });
         if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot record membership reuse — durable intent could not be persisted.');
+
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [emp.id] });
+
         const completion = await persistOperationCompletion(base44, {
-          audit_tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-          action: 'prepare_membership', target: emp.id, reason: `Idempotent reuse of existing Employee for ${email}`,
+          operation_record_id: opCreate.record_id, audit_tenant_id: targetTenantId,
+          actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'prepare_membership', target: opCreate.record_id, reason: `Idempotent reuse of existing Employee for ${email}`,
           intent_id: intent.intent_id, previous_state: { role: emp.role, status: emp.status },
-          new_state: { role: emp.role, status: emp.status, reused: true },
+          new_state: { role: emp.role, status: emp.status, reused: true }, mutation_resource_ids: [emp.id],
         });
         if (!completion.persisted) {
-          return Response.json({
-            success: false, operation_status: 'incomplete',
-            intent_id: intent.intent_id, resource_id: emp.id,
-            email, employee_id: emp.id, role: emp.role, status: emp.status, reused: true,
-            message: 'Membership reuse mutation succeeded but completion evidence could not be persisted. Recovery/reconciliation is required.',
-          }, { status: 500 });
+          return Response.json({ success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id, intent_id: intent.intent_id, resource_id: emp.id, email, employee_id: emp.id, role: emp.role, status: emp.status, reused: true, message: 'Membership reuse mutation succeeded but completion evidence could not be persisted. Recovery/reconciliation is required.' }, { status: 500 });
         }
-        return Response.json({ success: true, operation_status: 'completed', email, employee_id: emp.id, role: emp.role, status: emp.status, reused: true, membership_state: 'MEMBERSHIP_PREPARED', intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Employee membership already exists. Reusing existing record.' });
+        return Response.json({ success: true, operation_status: 'completed', operation_id: opCreate.operation_id, email, employee_id: emp.id, role: emp.role, status: emp.status, reused: true, membership_state: 'MEMBERSHIP_PREPARED', intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Employee membership already exists. Reusing existing record.' });
       }
+
+      // STEP 0: Create TestLabOperation record (PENDING)
+      const activeVRun = await getActiveVerificationRun(base44);
+      const opCreate = await createOperation(base44, {
+        action: 'prepare_membership', target_type: TARGET_TYPES.TEST_MEMBERSHIP, target_key: targetKey,
+        tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
+        verification_run_id: activeVRun?.verification_run_id,
+      });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot prepare membership — TestLabOperation could not be created.', { error: opCreate.error });
 
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        audit_tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'prepare_membership', target: email, reason,
-        intended_state: { email, role: identity.employeeRole, tenant_id: targetTenantId, outlet_id: outletId },
+        operation_record_id: opCreate.record_id, audit_tenant_id: targetTenantId,
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'prepare_membership', target: opCreate.record_id, reason,
+        intended_state: { email, role: identity.employeeRole, tenant_id: targetTenantId, outlet_id: outletId, operation_id: opCreate.operation_id },
       });
-      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot prepare membership — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error });
+      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot prepare membership — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error, operation_id: opCreate.operation_id });
 
       // STEP 2: Perform the mutation
       let employeeRecord: any;
@@ -516,26 +806,30 @@ export default async function(req: Request): Promise<Response> {
           full_name: identity.label, email, role: identity.employeeRole,
           status: 'active', employment_type: 'full_time', hire_date: new Date().toISOString().split('T')[0],
         });
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [employeeRecord.id] });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          audit_tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-          action: 'prepare_membership', target: email, reason, intent_id: intent.intent_id,
+          operation_record_id: opCreate.record_id, audit_tenant_id: targetTenantId,
+          actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'prepare_membership', target: opCreate.record_id, reason, intent_id: intent.intent_id,
           intended_state: { email, role: identity.employeeRole }, error: mutErr.message,
         });
-        return safeJson('internal_error', 500, 'Failed to create Employee. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, error: mutErr.message });
+        return safeJson('internal_error', 500, 'Failed to create Employee. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, operation_id: opCreate.operation_id, error: mutErr.message });
       }
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        audit_tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'prepare_membership', target: employeeRecord.id, reason, intent_id: intent.intent_id,
+        operation_record_id: opCreate.record_id, audit_tenant_id: targetTenantId,
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'prepare_membership', target: opCreate.record_id, reason, intent_id: intent.intent_id,
         previous_state: null,
         new_state: { employee_id: employeeRecord.id, email, role: identity.employeeRole, tenant_id: targetTenantId, outlet_id: outletId, user_id_linked: false },
+        mutation_resource_ids: [employeeRecord.id],
       });
 
       if (!completion.persisted) {
         return Response.json({
-          success: false, operation_status: 'incomplete',
+          success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id,
           intent_id: intent.intent_id, resource_id: employeeRecord.id,
           email, employee_id: employeeRecord.id, role: identity.employeeRole,
           tenant_id: targetTenantId, outlet_id: outletId, membership_state: 'MEMBERSHIP_PREPARED',
@@ -543,7 +837,7 @@ export default async function(req: Request): Promise<Response> {
         }, { status: 500 });
       }
 
-      return Response.json({ success: true, operation_status: 'completed', email, employee_id: employeeRecord.id, role: identity.employeeRole, tenant_id: targetTenantId, outlet_id: outletId, membership_state: 'MEMBERSHIP_PREPARED', intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Employee membership prepared. The user must now be invited through the canonical /join flow.' });
+      return Response.json({ success: true, operation_status: 'completed', operation_id: opCreate.operation_id, email, employee_id: employeeRecord.id, role: identity.employeeRole, tenant_id: targetTenantId, outlet_id: outletId, membership_state: 'MEMBERSHIP_PREPARED', intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Employee membership prepared. The user must now be invited through the canonical /join flow.' });
     }
 
     // ── GRANT CROSS-TENANT PERMISSION (intent-first) ───────
@@ -564,56 +858,73 @@ export default async function(req: Request): Promise<Response> {
         return Response.json({ success: true, email, user_id: targetUser.id, permission: CROSS_TENANT_AI_PERMISSION, effective: true, already_granted: true, message: 'Permission was already granted.' });
       }
 
-      // Check for unresolved incomplete operations on this target user
-      const unresolvedCheck = await checkUnresolvedIntents(base44, targetUser.id);
-      if (unresolvedCheck.has_unresolved) {
-        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this user. Recovery/reconciliation is required before granting permissions.', {
-          unresolved_operations: unresolvedCheck.unresolved,
+      const targetKey = targetKeyForPermission(targetUser.id);
+
+      // FAIL-CLOSED operation state lookup
+      const opState = await checkOperationState(base44, TARGET_TYPES.TEST_PERMISSION, targetKey);
+      if (opState.state === OPERATION_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('operation_state_unavailable', 503, 'Cannot verify operation state — operation ledger is unavailable. Permission grant blocked for safety.', { target_key: targetKey });
+      }
+      if (opState.state === OPERATION_LOOKUP_STATES.BLOCKED) {
+        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this user. Recovery/reconciliation is required.', {
+          unresolved_operations: opState.operations.map((o: any) => ({ operation_id: o.operation_id, action: o.action, status: o.status })),
         });
       }
 
+      // STEP 0: Create TestLabOperation record (PENDING)
+      const activeVRun = await getActiveVerificationRun(base44);
+      const opCreate = await createOperation(base44, {
+        action: 'grant_permission', target_type: TARGET_TYPES.TEST_PERMISSION, target_key: targetKey,
+        tenant_id: targetUser.data?.tenant_id || 'platform',
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        verification_run_id: activeVRun?.verification_run_id,
+      });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot grant permission — TestLabOperation could not be created.', { error: opCreate.error });
+
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+        operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'grant_permission', target: targetUser.id, reason,
-        intended_state: { permission: CROSS_TENANT_AI_PERMISSION, target_email: email, target_user_id: targetUser.id },
+        action: 'grant_permission', target: opCreate.record_id, reason,
+        intended_state: { permission: CROSS_TENANT_AI_PERMISSION, target_email: email, target_user_id: targetUser.id, operation_id: opCreate.operation_id },
       });
-      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot grant permission — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error });
+      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot grant permission — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error, operation_id: opCreate.operation_id });
 
       // STEP 2: Perform the mutation
       const newPermissions = [...currentPermissions, CROSS_TENANT_AI_PERMISSION];
       try {
         await base44.asServiceRole.entities.User.update(targetUser.id, { data: { ...targetUser.data, permissions: newPermissions } });
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [targetUser.id] });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+          operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
           actor_id: user.id, actor_name: user.full_name || 'Admin',
-          action: 'grant_permission', target: targetUser.id, reason, intent_id: intent.intent_id,
+          action: 'grant_permission', target: opCreate.record_id, reason, intent_id: intent.intent_id,
           intended_state: { permission: CROSS_TENANT_AI_PERMISSION, target_email: email }, error: mutErr.message,
         });
-        return safeJson('internal_error', 500, 'Failed to grant permission. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, error: mutErr.message });
+        return safeJson('internal_error', 500, 'Failed to grant permission. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, operation_id: opCreate.operation_id, error: mutErr.message });
       }
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+        operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'grant_permission', target: targetUser.id, reason, intent_id: intent.intent_id,
+        action: 'grant_permission', target: opCreate.record_id, reason, intent_id: intent.intent_id,
         previous_state: { permission: CROSS_TENANT_AI_PERMISSION, granted: false },
         new_state: { permission: CROSS_TENANT_AI_PERMISSION, granted: true, target_email: email },
+        mutation_resource_ids: [targetUser.id],
       });
 
       if (!completion.persisted) {
         return Response.json({
-          success: false, operation_status: 'incomplete',
+          success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id,
           intent_id: intent.intent_id, resource_id: targetUser.id,
           email, user_id: targetUser.id, permission: CROSS_TENANT_AI_PERMISSION, effective: true,
           message: 'Permission was granted but completion evidence could not be persisted. Recovery/reconciliation is required.',
         }, { status: 500 });
       }
 
-      return Response.json({ success: true, operation_status: 'completed', email, user_id: targetUser.id, permission: CROSS_TENANT_AI_PERMISSION, effective: true, auth_refresh_required: true, intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Cross-tenant AI permission granted. The user must sign out and sign back in.' });
+      return Response.json({ success: true, operation_status: 'completed', operation_id: opCreate.operation_id, email, user_id: targetUser.id, permission: CROSS_TENANT_AI_PERMISSION, effective: true, auth_refresh_required: true, intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Cross-tenant AI permission granted. The user must sign out and sign back in.' });
     }
 
     // ── REVOKE CROSS-TENANT PERMISSION (intent-first) ──────
@@ -631,55 +942,72 @@ export default async function(req: Request): Promise<Response> {
       const previousValue = currentPermissions.includes(CROSS_TENANT_AI_PERMISSION);
       const newPermissions = currentPermissions.filter(p => p !== CROSS_TENANT_AI_PERMISSION);
 
-      // Check for unresolved incomplete operations on this target user
-      const unresolvedCheck = await checkUnresolvedIntents(base44, targetUser.id);
-      if (unresolvedCheck.has_unresolved) {
-        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this user. Recovery/reconciliation is required before revoking permissions.', {
-          unresolved_operations: unresolvedCheck.unresolved,
+      const targetKey = targetKeyForPermission(targetUser.id);
+
+      // FAIL-CLOSED operation state lookup
+      const opState = await checkOperationState(base44, TARGET_TYPES.TEST_PERMISSION, targetKey);
+      if (opState.state === OPERATION_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('operation_state_unavailable', 503, 'Cannot verify operation state — operation ledger is unavailable. Permission revocation blocked for safety.', { target_key: targetKey });
+      }
+      if (opState.state === OPERATION_LOOKUP_STATES.BLOCKED) {
+        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this user. Recovery/reconciliation is required.', {
+          unresolved_operations: opState.operations.map((o: any) => ({ operation_id: o.operation_id, action: o.action, status: o.status })),
         });
       }
 
+      // STEP 0: Create TestLabOperation record (PENDING)
+      const activeVRun = await getActiveVerificationRun(base44);
+      const opCreate = await createOperation(base44, {
+        action: 'revoke_permission', target_type: TARGET_TYPES.TEST_PERMISSION, target_key: targetKey,
+        tenant_id: targetUser.data?.tenant_id || 'platform',
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        verification_run_id: activeVRun?.verification_run_id,
+      });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot revoke permission — TestLabOperation could not be created.', { error: opCreate.error });
+
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+        operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'revoke_permission', target: targetUser.id, reason,
-        intended_state: { permission: CROSS_TENANT_AI_PERMISSION, target_email: email, target_user_id: targetUser.id },
+        action: 'revoke_permission', target: opCreate.record_id, reason,
+        intended_state: { permission: CROSS_TENANT_AI_PERMISSION, target_email: email, target_user_id: targetUser.id, operation_id: opCreate.operation_id },
       });
-      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot revoke permission — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error });
+      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot revoke permission — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error, operation_id: opCreate.operation_id });
 
       // STEP 2: Perform the mutation
       try {
         await base44.asServiceRole.entities.User.update(targetUser.id, { data: { ...targetUser.data, permissions: newPermissions } });
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [targetUser.id] });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+          operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
           actor_id: user.id, actor_name: user.full_name || 'Admin',
-          action: 'revoke_permission', target: targetUser.id, reason, intent_id: intent.intent_id,
+          action: 'revoke_permission', target: opCreate.record_id, reason, intent_id: intent.intent_id,
           intended_state: { permission: CROSS_TENANT_AI_PERMISSION, target_email: email }, error: mutErr.message,
         });
-        return safeJson('internal_error', 500, 'Failed to revoke permission. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, error: mutErr.message });
+        return safeJson('internal_error', 500, 'Failed to revoke permission. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, operation_id: opCreate.operation_id, error: mutErr.message });
       }
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+        operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'revoke_permission', target: targetUser.id, reason, intent_id: intent.intent_id,
+        action: 'revoke_permission', target: opCreate.record_id, reason, intent_id: intent.intent_id,
         previous_state: { permission: CROSS_TENANT_AI_PERMISSION, granted: previousValue },
         new_state: { permission: CROSS_TENANT_AI_PERMISSION, granted: false, target_email: email },
+        mutation_resource_ids: [targetUser.id],
       });
 
       if (!completion.persisted) {
         return Response.json({
-          success: false, operation_status: 'incomplete',
+          success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id,
           intent_id: intent.intent_id, resource_id: targetUser.id,
           email, user_id: targetUser.id, permission: CROSS_TENANT_AI_PERMISSION, effective: false,
           message: 'Permission was revoked but completion evidence could not be persisted. Recovery/reconciliation is required.',
         }, { status: 500 });
       }
 
-      return Response.json({ success: true, operation_status: 'completed', email, user_id: targetUser.id, permission: CROSS_TENANT_AI_PERMISSION, effective: false, auth_refresh_required: true, intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Cross-tenant AI permission revoked. The user must sign out and sign back in.' });
+      return Response.json({ success: true, operation_status: 'completed', operation_id: opCreate.operation_id, email, user_id: targetUser.id, permission: CROSS_TENANT_AI_PERMISSION, effective: false, auth_refresh_required: true, intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Cross-tenant AI permission revoked. The user must sign out and sign back in.' });
     }
 
     // ── ATTEST EMAIL DELIVERY (intent-first, persisted) ────
@@ -691,14 +1019,36 @@ export default async function(req: Request): Promise<Response> {
       const identity = getTestIdentity(email)!;
       const auditTenantId = identity.tenant === 'platform' ? 'platform' : (identity.tenant === 'A' ? TENANT_A_ID : (await base44.asServiceRole.entities.Tenant.filter({ test_lab_key: TENANT_B_TEST_LAB_KEY }).catch(() => []))?.[0]?.id || 'platform');
       const reason = `Attest ${check} for ${email}`;
+      const targetKey = targetKeyForAttestation(email, check);
+
+      // FAIL-CLOSED operation state lookup
+      const opState = await checkOperationState(base44, TARGET_TYPES.TEST_ATTESTATION, targetKey);
+      if (opState.state === OPERATION_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('operation_state_unavailable', 503, 'Cannot verify operation state — operation ledger is unavailable. Attestation blocked for safety.', { target_key: targetKey });
+      }
+      if (opState.state === OPERATION_LOOKUP_STATES.BLOCKED) {
+        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this attestation. Recovery/reconciliation is required.', {
+          unresolved_operations: opState.operations.map((o: any) => ({ operation_id: o.operation_id, action: o.action, status: o.status })),
+        });
+      }
+
+      // STEP 0: Create TestLabOperation record (PENDING)
+      const activeVRun = await getActiveVerificationRun(base44);
+      const opCreate = await createOperation(base44, {
+        action: 'attest_delivery', target_type: TARGET_TYPES.TEST_ATTESTATION, target_key: targetKey,
+        tenant_id: auditTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
+        verification_run_id: activeVRun?.verification_run_id,
+      });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot attest — TestLabOperation could not be created.', { error: opCreate.error });
 
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        audit_tenant_id: auditTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'attest_delivery', target: email, reason,
-        intended_state: { alias: email, check_key: check, verified: !!verified },
+        operation_record_id: opCreate.record_id, audit_tenant_id: auditTenantId,
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'attest_delivery', target: opCreate.record_id, reason,
+        intended_state: { alias: email, check_key: check, verified: !!verified, operation_id: opCreate.operation_id },
       });
-      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot attest — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error });
+      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot attest — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error, operation_id: opCreate.operation_id });
 
       const now = new Date().toISOString();
       const existing = await base44.asServiceRole.entities.TestLabAttestation.filter({ alias: email, check_key: check }).catch(() => []);
@@ -711,16 +1061,18 @@ export default async function(req: Request): Promise<Response> {
             verified: !!verified, attested_by_id: user.id, attested_by_name: user.full_name || 'Admin',
             attested_at: now, updated_at: now, evidence_type: verified ? 'manual_verification' : 'revoked',
           });
+          await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [record.id] });
           const completion = await persistOperationCompletion(base44, {
-            audit_tenant_id: auditTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-            action: 'attest_delivery', target: record.id, reason, intent_id: intent.intent_id,
+            operation_record_id: opCreate.record_id, audit_tenant_id: auditTenantId,
+            actor_id: user.id, actor_name: user.full_name || 'Admin',
+            action: 'attest_delivery', target: opCreate.record_id, reason, intent_id: intent.intent_id,
             previous_state: { verified: record.verified },
-            new_state: { verified: !!verified, check, alias: email },
+            new_state: { verified: !!verified, check, alias: email }, mutation_resource_ids: [record.id],
           });
           if (!completion.persisted) {
-            return Response.json({ success: false, operation_status: 'incomplete', intent_id: intent.intent_id, resource_id: record.id, email, check, verified: !!verified, message: 'Attestation was updated but completion evidence could not be persisted. Recovery/reconciliation is required.' }, { status: 500 });
+            return Response.json({ success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id, intent_id: intent.intent_id, resource_id: record.id, email, check, verified: !!verified, message: 'Attestation was updated but completion evidence could not be persisted. Recovery/reconciliation is required.' }, { status: 500 });
           }
-          return Response.json({ success: true, operation_status: 'completed', email, check, verified: !!verified, attested_by: user.full_name || 'Admin', attested_at: now, attestation_id: record.id, intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Email delivery attestation updated.' });
+          return Response.json({ success: true, operation_status: 'completed', operation_id: opCreate.operation_id, email, check, verified: !!verified, attested_by: user.full_name || 'Admin', attested_at: now, attestation_id: record.id, intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Email delivery attestation updated.' });
         }
 
         const attestation = await base44.asServiceRole.entities.TestLabAttestation.create({
@@ -728,30 +1080,33 @@ export default async function(req: Request): Promise<Response> {
           attested_by_id: user.id, attested_by_name: user.full_name || 'Admin',
           attested_at: now, updated_at: now, evidence_type: 'manual_verification', non_production: true,
         });
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [attestation?.id || ''] });
         const completion = await persistOperationCompletion(base44, {
-          audit_tenant_id: auditTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-          action: 'attest_delivery', target: attestation?.id || email, reason, intent_id: intent.intent_id,
+          operation_record_id: opCreate.record_id, audit_tenant_id: auditTenantId,
+          actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'attest_delivery', target: opCreate.record_id, reason, intent_id: intent.intent_id,
           previous_state: { verified: false },
           new_state: { verified: !!verified, check, alias: email, no_private_destination: true },
+          mutation_resource_ids: [attestation?.id || ''],
         });
         if (!completion.persisted) {
-          return Response.json({ success: false, operation_status: 'incomplete', intent_id: intent.intent_id, resource_id: attestation?.id || '', email, check, verified: !!verified, message: 'Attestation was created but completion evidence could not be persisted. Recovery/reconciliation is required.' }, { status: 500 });
+          return Response.json({ success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id, intent_id: intent.intent_id, resource_id: attestation?.id || '', email, check, verified: !!verified, message: 'Attestation was created but completion evidence could not be persisted. Recovery/reconciliation is required.' }, { status: 500 });
         }
-        return Response.json({ success: true, operation_status: 'completed', email, check, verified: !!verified, attested_by: user.full_name || 'Admin', attested_at: now, attestation_id: attestation?.id || '', intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Email delivery attestation recorded.' });
+        return Response.json({ success: true, operation_status: 'completed', operation_id: opCreate.operation_id, email, check, verified: !!verified, attested_by: user.full_name || 'Admin', attested_at: now, attestation_id: attestation?.id || '', intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Email delivery attestation recorded.' });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          audit_tenant_id: auditTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-          action: 'attest_delivery', target: email, reason, intent_id: intent.intent_id,
+          operation_record_id: opCreate.record_id, audit_tenant_id: auditTenantId,
+          actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'attest_delivery', target: opCreate.record_id, reason, intent_id: intent.intent_id,
           intended_state: { alias: email, check_key: check, verified: !!verified }, error: mutErr.message,
         });
-        return safeJson('internal_error', 500, 'Failed to persist attestation. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, error: mutErr.message });
+        return safeJson('internal_error', 500, 'Failed to persist attestation. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, operation_id: opCreate.operation_id, error: mutErr.message });
       }
     }
 
-    // ── CREATE TEST RUN (server-derived TTL, NO client TTL) ─
+    // ── CREATE TEST RUN (server-derived TTL, verification-run linked) ─
     if (action === 'create_test_run') {
       const { sandbox_tenant_id, authorised_requester_email, permitted_service_key, permitted_action_type, permitted_autonomy_level, test_tag, test_purpose } = body;
-
       const clientTtlSupplied = body.ttl_minutes != null;
 
       if (!sandbox_tenant_id) return safeJson('invalid_request', 400, 'sandbox_tenant_id is required.');
@@ -764,11 +1119,20 @@ export default async function(req: Request): Promise<Response> {
       const tenant = await base44.asServiceRole.entities.Tenant.get(sandbox_tenant_id).catch(() => null);
       if (!tenant || !tenant.is_sandbox) return safeJson('forbidden', 403, 'Test Runs can only be created for sandbox tenants.');
 
-      // Check for unresolved incomplete operations on this sandbox tenant
-      const unresolvedCheck = await checkUnresolvedIntents(base44, sandbox_tenant_id);
-      if (unresolvedCheck.has_unresolved) {
-        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this sandbox tenant. Recovery/reconciliation is required before creating a Test Run.', {
-          unresolved_operations: unresolvedCheck.unresolved,
+      // Get active verification run
+      const activeVRun = await getActiveVerificationRun(base44);
+      if (!activeVRun) return safeJson('invalid_request', 409, 'No active verification run exists. Create and activate a verification run before creating Test Runs.');
+
+      const targetKey = targetKeyForTestRun(activeVRun.verification_run_id, sandbox_tenant_id, authorised_requester_email, permitted_service_key, test_tag);
+
+      // FAIL-CLOSED operation state lookup
+      const opState = await checkOperationState(base44, TARGET_TYPES.TEST_RUN, targetKey);
+      if (opState.state === OPERATION_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('operation_state_unavailable', 503, 'Cannot verify operation state — operation ledger is unavailable. Test Run creation blocked for safety.', { target_key: targetKey });
+      }
+      if (opState.state === OPERATION_LOOKUP_STATES.BLOCKED) {
+        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this test run target. Recovery/reconciliation is required.', {
+          unresolved_operations: opState.operations.map((o: any) => ({ operation_id: o.operation_id, action: o.action, status: o.status })),
         });
       }
 
@@ -776,25 +1140,33 @@ export default async function(req: Request): Promise<Response> {
       if (!users || users.length === 0) return safeJson('not_found', 404, 'Authorised requester has not registered yet.');
       const requester = users[0];
 
-      // SERVER-SELECTED TTL — resolved from SERVER_TTL_POLICY based on test_tag
       const serverTtl = resolveServerTtl(test_tag);
-
       const testRunId = `trun_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
+      // STEP 0: Create TestLabOperation record (PENDING)
+      const opCreate = await createOperation(base44, {
+        action: 'create_test_run', target_type: TARGET_TYPES.TEST_RUN, target_key: targetKey,
+        tenant_id: sandbox_tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
+        verification_run_id: activeVRun.verification_run_id,
+      });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot create Test Run — TestLabOperation could not be created.', { error: opCreate.error });
+
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        audit_tenant_id: sandbox_tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'create_test_run', target: testRunId, reason: `Create Test Run ${testRunId} for ${permitted_service_key}`,
-        intended_state: { test_run_id: testRunId, sandbox_tenant_id, permitted_service_key, server_selected_ttl_minutes: serverTtl, test_tag, client_ttl_ignored: clientTtlSupplied },
+        operation_record_id: opCreate.record_id, audit_tenant_id: sandbox_tenant_id,
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'create_test_run', target: opCreate.record_id, reason: `Create Test Run ${testRunId} for ${permitted_service_key}`,
+        intended_state: { test_run_id: testRunId, sandbox_tenant_id, permitted_service_key, server_selected_ttl_minutes: serverTtl, test_tag, client_ttl_ignored: clientTtlSupplied, verification_run_id: activeVRun.verification_run_id, operation_id: opCreate.operation_id },
       });
-      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot create Test Run — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error });
+      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot create Test Run — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error, operation_id: opCreate.operation_id });
 
       // STEP 2: Perform the mutation
       let testRun: any;
       try {
         testRun = await base44.asServiceRole.entities.TestRun.create({
           tenant_id: sandbox_tenant_id, test_run_id: testRunId,
+          verification_run_id: activeVRun.verification_run_id,
           sandbox_tenant_id, authorised_requester_user_id: requester.id,
           authorised_requester_name: requester.full_name || authorised_requester_email,
           permitted_service_key, permitted_action_type: permitted_action_type || 'require_approval',
@@ -804,47 +1176,53 @@ export default async function(req: Request): Promise<Response> {
           status: 'active', max_uses: 1, current_uses: 0, expires_at: expiresAt,
           non_production: true,
         });
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [testRun?.id || testRunId] });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          audit_tenant_id: sandbox_tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
-          action: 'create_test_run', target: testRunId, reason: `Create Test Run ${testRunId}`, intent_id: intent.intent_id,
+          operation_record_id: opCreate.record_id, audit_tenant_id: sandbox_tenant_id,
+          actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'create_test_run', target: opCreate.record_id, reason: `Create Test Run ${testRunId}`, intent_id: intent.intent_id,
           intended_state: { test_run_id: testRunId, server_selected_ttl_minutes: serverTtl }, error: mutErr.message,
         });
-        return safeJson('internal_error', 500, 'Failed to create Test Run. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, error: mutErr.message });
+        return safeJson('internal_error', 500, 'Failed to create Test Run. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, operation_id: opCreate.operation_id, error: mutErr.message });
       }
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        audit_tenant_id: sandbox_tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'create_test_run', target: testRunId, reason: `Create Test Run ${testRunId}`, intent_id: intent.intent_id,
+        operation_record_id: opCreate.record_id, audit_tenant_id: sandbox_tenant_id,
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'create_test_run', target: opCreate.record_id, reason: `Create Test Run ${testRunId}`, intent_id: intent.intent_id,
         previous_state: null,
-        new_state: { test_run_id: testRunId, sandbox_tenant_id, permitted_service_key, server_selected_ttl_minutes: serverTtl, test_tag, client_ttl_ignored: clientTtlSupplied },
+        new_state: { test_run_id: testRunId, sandbox_tenant_id, permitted_service_key, server_selected_ttl_minutes: serverTtl, test_tag, client_ttl_ignored: clientTtlSupplied, verification_run_id: activeVRun.verification_run_id },
+        mutation_resource_ids: [testRun?.id || testRunId],
       });
 
       if (!completion.persisted) {
         return Response.json({
-          success: false, operation_status: 'incomplete',
+          success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id,
           intent_id: intent.intent_id, resource_id: testRunId,
           test_run_id: testRunId, test_run_record_id: testRun?.id,
           sandbox_tenant_id, permitted_service_key,
           server_selected_ttl_minutes: serverTtl, server_ttl_source: 'SERVER_TTL_POLICY',
           client_ttl_ignored: clientTtlSupplied, expires_at: expiresAt,
+          verification_run_id: activeVRun.verification_run_id,
           message: 'Test Run was created but completion evidence could not be persisted. Recovery/reconciliation is required. The Test Run may not be usable until resolved.',
         }, { status: 500 });
       }
 
       return Response.json({
-        success: true, operation_status: 'completed',
+        success: true, operation_status: 'completed', operation_id: opCreate.operation_id,
         test_run_id: testRunId, test_run_record_id: testRun?.id,
+        verification_run_id: activeVRun.verification_run_id,
         sandbox_tenant_id, authorised_requester_user_id: requester.id, permitted_service_key,
         server_selected_ttl_minutes: serverTtl, server_ttl_source: 'SERVER_TTL_POLICY',
         client_ttl_ignored: clientTtlSupplied,
         expires_at: expiresAt, intent_id: intent.intent_id, completion_audit_id: completion.completion_id,
-        message: 'Test Run created. Only the authorised requester can use it for the permitted service.',
+        message: 'Test Run created and linked to the active verification run. Only the authorised requester can use it for the permitted service.',
       });
     }
 
-    // ── READINESS STATUS (truthful, scoped to canonical Test Lab evidence) ──
+    // ── READINESS STATUS (current-verification-run scoped) ──
     if (action === 'readiness_status') {
       let tenantA: any = null;
       try { tenantA = await base44.asServiceRole.entities.Tenant.get(TENANT_A_ID); } catch {}
@@ -861,43 +1239,59 @@ export default async function(req: Request): Promise<Response> {
 
       const attestations = await base44.asServiceRole.entities.TestLabAttestation.list().catch(() => []);
 
-      // ── BUILD #28.2P-R.0R.1A: SCOPE READINESS TO CANONICAL TEST LAB EVIDENCE ──
-      // Readiness must be scoped to the canonical Orbitan Test Lab context.
-      // A historical or unrelated test record MUST NOT set readiness=true.
-      // Use: sandbox tenant IDs, canonical test_lab_key, authorised Test Lab identities.
+      // ── BUILD #28.2P-R.0R.1B: CURRENT-VERIFICATION-RUN SCOPED READINESS ──
+      const activeVRun = await getActiveVerificationRun(base44);
+      const activeVRunId = activeVRun?.verification_run_id || null;
 
-      // Canonical sandbox tenant IDs — only these tenants are Test Lab tenants
       const sandboxTenantIds: string[] = [TENANT_A_ID];
       if (tenantBId) sandboxTenantIds.push(tenantBId);
 
-      // Check for schema-supported tagged AIApproval records SCOPED to sandbox tenants
-      const taggedApprovals = await base44.asServiceRole.entities.AIApproval.filter({
-        is_test: true,
-        tenant_id: { $in: sandboxTenantIds },
-      }).catch(() => []);
-      const verifiedTaggedApproval = (taggedApprovals || []).find((a: any) =>
-        a.test_run_id && a.test_tag && a.is_test === true && a.non_production === true
-      );
+      // test_tagging_ready: requires EXACT match against active verification run
+      let verifiedTaggedApproval: any = null;
+      if (activeVRunId) {
+        const taggedApprovals = await base44.asServiceRole.entities.AIApproval.filter({
+          is_test: true,
+          tenant_id: { $in: sandboxTenantIds },
+        }).catch(() => []);
+        verifiedTaggedApproval = (taggedApprovals || []).find((a: any) =>
+          a.test_run_id && a.test_tag && a.is_test === true && a.non_production === true &&
+          a.test_run_id && a.test_tag
+        );
+      }
 
-      // Check for consumed TestRun records SCOPED to sandbox tenants
-      const consumedTestRuns = await base44.asServiceRole.entities.TestRun.filter({
-        status: 'consumed',
-        sandbox_tenant_id: { $in: sandboxTenantIds },
-      }).catch(() => []);
-      const verifiedConsumedRun = (consumedTestRuns || []).find((r: any) =>
-        r.consumption_token && r.server_selected_ttl_minutes >= 1 && r.server_selected_ttl_minutes <= 10
-      );
+      // short_ttl_ready: requires EXACT match against active verification run
+      let verifiedConsumedRun: any = null;
+      if (activeVRunId) {
+        const consumedTestRuns = await base44.asServiceRole.entities.TestRun.filter({
+          status: 'consumed',
+          sandbox_tenant_id: { $in: sandboxTenantIds },
+        }).catch(() => []);
+        verifiedConsumedRun = (consumedTestRuns || []).find((r: any) =>
+          r.consumption_token &&
+          r.server_selected_ttl_minutes >= 1 && r.server_selected_ttl_minutes <= 10 &&
+          r.verification_run_id === activeVRunId
+        );
+      }
 
-      // ── UNRESOLVED INCOMPLETE OPERATIONS ──
-      // Check for incomplete operations across all Test Lab targets
-      const unresolvedPlatform = await checkUnresolvedIntents(base44, 'platform');
-      const unresolvedTenantA = await checkUnresolvedIntents(base44, TENANT_A_ID);
-      const unresolvedTenantB = tenantBId ? await checkUnresolvedIntents(base44, tenantBId) : { has_unresolved: false, unresolved: [] };
-      const allUnresolved = [
-        ...unresolvedPlatform.unresolved,
-        ...unresolvedTenantA.unresolved,
-        ...unresolvedTenantB.unresolved,
-      ];
+      // ── UNRESOLVED INCOMPLETE OPERATIONS (from TestLabOperation ledger) ──
+      let allUnresolved: any[] = [];
+      let unresolvedLookupAvailable = true;
+      try {
+        const incompleteOps = await base44.asServiceRole.entities.TestLabOperation.filter({
+          status: { $in: [OPERATION_LIFECYCLE_STATES.INCOMPLETE, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED] },
+        }, '-created_date', 50);
+        allUnresolved = (incompleteOps || []).map((op: any) => ({
+          operation_id: op.operation_id,
+          action: op.action,
+          target_type: op.target_type,
+          target_key: op.target_key,
+          status: op.status,
+          created_date: op.created_date,
+          failure_summary: op.failure_summary,
+        }));
+      } catch {
+        unresolvedLookupAvailable = false;
+      }
 
       const identities = TEST_IDENTITIES.map(identity => {
         const userRecord = testUsers.find((u: any) => u.email === identity.email);
@@ -949,13 +1343,19 @@ export default async function(req: Request): Promise<Response> {
 
       return Response.json({
         success: true,
+        active_verification_run: activeVRun ? {
+          verification_run_id: activeVRun.verification_run_id,
+          status: activeVRun.status,
+          created_at: activeVRun.created_at,
+          started_at: activeVRun.started_at,
+          test_purpose: activeVRun.test_purpose,
+        } : null,
         tenants: {
           A: tenantA ? { id: tenantA.id, name: tenantA.name, is_sandbox: tenantA.is_sandbox, status: tenantA.status, exists: true } : { exists: false },
           B: tenantB ? { id: tenantB.id, name: tenantB.name, is_sandbox: tenantB.is_sandbox, test_lab_key: tenantB.test_lab_key, status: tenantB.status, exists: true, company_id: tenantBCompany?.id, outlet_id: tenantBOutlet?.id } : { exists: false },
         },
         identities,
         test_capability: {
-          // ALL evidence-derived and SCOPED to canonical Test Lab context (Build #28.2P-R.0R.1A)
           test_tagging_ready: !!verifiedTaggedApproval,
           test_tagging_evidence: verifiedTaggedApproval ? {
             approval_id: verifiedTaggedApproval.id,
@@ -968,6 +1368,7 @@ export default async function(req: Request): Promise<Response> {
           short_ttl_ready: !!verifiedConsumedRun,
           short_ttl_evidence: verifiedConsumedRun ? {
             test_run_id: verifiedConsumedRun.test_run_id,
+            verification_run_id: verifiedConsumedRun.verification_run_id,
             server_selected_ttl_minutes: verifiedConsumedRun.server_selected_ttl_minutes,
             consumption_token: verifiedConsumedRun.consumption_token,
             status: verifiedConsumedRun.status,
@@ -977,10 +1378,11 @@ export default async function(req: Request): Promise<Response> {
           worker_isolation_ready: !!(workerA?.user_registered && workerA?.user_role === 'user' && workerA?.employee_role === 'worker' && workerA?.membership_linked),
           tenant_b_isolation_ready: tenantBIsolationReady,
           platform_permission_distinction_ready: !!(platformAllowed?.user_registered && platformDenied?.user_registered && platformAllowed?.cross_tenant_permission === true && platformDenied?.cross_tenant_permission === false),
+          readiness_scope: activeVRunId ? 'current_verification_run' : 'no_active_run',
         },
-        // Build #28.2P-R.0R.1A: Unresolved incomplete operations — actionable recovery state
         unresolved_operations: allUnresolved,
         has_unresolved_operations: allUnresolved.length > 0,
+        unresolved_lookup_available: unresolvedLookupAvailable,
       });
     }
 
@@ -994,21 +1396,36 @@ export default async function(req: Request): Promise<Response> {
       const tenant = await base44.asServiceRole.entities.Tenant.get(tenant_id).catch(() => null);
       if (!tenant || !tenant.is_sandbox) return safeJson('forbidden', 403, 'Test data reset is only allowed for sandbox tenants.');
 
-      // Check for unresolved incomplete operations on this target
-      const unresolvedCheck = await checkUnresolvedIntents(base44, tenant_id);
-      if (unresolvedCheck.has_unresolved) {
-        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this tenant. Recovery/reconciliation is required before resetting test data.', {
-          unresolved_operations: unresolvedCheck.unresolved,
+      const targetKey = targetKeyForReset(tenant_id, test_run_id);
+
+      // FAIL-CLOSED operation state lookup
+      const opState = await checkOperationState(base44, TARGET_TYPES.TEST_RESET, targetKey);
+      if (opState.state === OPERATION_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('operation_state_unavailable', 503, 'Cannot verify operation state — operation ledger is unavailable. Reset blocked for safety.', { target_key: targetKey });
+      }
+      if (opState.state === OPERATION_LOOKUP_STATES.BLOCKED) {
+        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this reset target. Recovery/reconciliation is required.', {
+          unresolved_operations: opState.operations.map((o: any) => ({ operation_id: o.operation_id, action: o.action, status: o.status })),
         });
       }
 
+      // STEP 0: Create TestLabOperation record (PENDING)
+      const activeVRun = await getActiveVerificationRun(base44);
+      const opCreate = await createOperation(base44, {
+        action: 'reset_test_data', target_type: TARGET_TYPES.TEST_RESET, target_key: targetKey,
+        tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
+        verification_run_id: activeVRun?.verification_run_id,
+      });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot reset — TestLabOperation could not be created.', { error: opCreate.error });
+
       // STEP 1: Persist durable operation intent BEFORE any deletion
       const intent = await persistOperationIntent(base44, {
-        audit_tenant_id: tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'reset_test_data', target: tenant_id, reason,
-        intended_state: { test_run_id, tenant_id, scope: 'mutable_tagged_records' },
+        operation_record_id: opCreate.record_id, audit_tenant_id: tenant_id,
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'reset_test_data', target: opCreate.record_id, reason,
+        intended_state: { test_run_id, tenant_id, scope: 'mutable_tagged_records', operation_id: opCreate.operation_id },
       });
-      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot reset — durable operation intent could not be persisted. No data has been deleted.', { error: intent.error });
+      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot reset — durable operation intent could not be persisted. No data has been deleted.', { error: intent.error, operation_id: opCreate.operation_id });
 
       let attemptedApprovals = 0, deletedApprovals = 0;
       let attemptedInbox = 0, deletedInbox = 0;
@@ -1031,13 +1448,10 @@ export default async function(req: Request): Promise<Response> {
           }
         }
       } catch (err) {
-        // Build #28.2P-R.0R.1A: Capture the error — do NOT swallow
         approvalsQueryError = err.message;
       }
 
       // ── INBOX PHASE ──
-      // Build #28.2P-R.0R.1A: Do NOT swallow inbox query failure.
-      // Capture the error and report it accurately.
       try {
         const inboxItems = await base44.asServiceRole.entities.OrbitInbox.filter({ tenant_id });
         attemptedInbox = (inboxItems || []).filter((i: any) => i.metadata?.test_run_id === test_run_id).length;
@@ -1052,12 +1466,10 @@ export default async function(req: Request): Promise<Response> {
           }
         }
       } catch (err) {
-        // Build #28.2P-R.0R.1A: Capture the error — do NOT swallow
         inboxQueryError = err.message;
       }
 
-      // ── DETERMINE OVERALL STATUS (Build #28.2P-R.0R.1A) ──
-      // Expected statuses: success | partial | incomplete | failed
+      // ── DETERMINE OVERALL STATUS ──
       let overallStatus: 'success' | 'partial' | 'incomplete' | 'failed';
       const hasQueryErrors = !!(approvalsQueryError || inboxQueryError);
       const hasDeleteFailures = failedRecordIds.length > 0;
@@ -1065,8 +1477,6 @@ export default async function(req: Request): Promise<Response> {
       if (hasQueryErrors && hasDeleteFailures) {
         overallStatus = 'failed';
       } else if (hasQueryErrors) {
-        // A query phase failed — we cannot be sure all relevant records were processed.
-        // This is incomplete, not just partial.
         overallStatus = 'incomplete';
       } else if (hasDeleteFailures) {
         overallStatus = 'partial';
@@ -1074,10 +1484,16 @@ export default async function(req: Request): Promise<Response> {
         overallStatus = 'success';
       }
 
-      // STEP 3: Persist completion (or partial/incomplete/failed) evidence
+      // Transition to MUTATION_COMPLETED
+      await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, {
+        mutation_resource_ids: [`approvals:${deletedApprovals}`, `inbox:${deletedInbox}`],
+      });
+
+      // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        audit_tenant_id: tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
-        action: 'reset_test_data', target: tenant_id, reason, intent_id: intent.intent_id,
+        operation_record_id: opCreate.record_id, audit_tenant_id: tenant_id,
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'reset_test_data', target: opCreate.record_id, reason, intent_id: intent.intent_id,
         previous_state: { test_run_id },
         new_state: {
           attempted_approvals: attemptedApprovals, deleted_approvals: deletedApprovals,
@@ -1090,13 +1506,10 @@ export default async function(req: Request): Promise<Response> {
         test_run_id,
       });
 
-      // Build #28.2P-R.0R.1A: If completion evidence failed, report incomplete
       if (!completion.persisted) {
         return Response.json({
-          success: false,
-          operation_status: 'incomplete',
-          intent_id: intent.intent_id,
-          resource_id: tenant_id,
+          success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id,
+          intent_id: intent.intent_id, resource_id: tenant_id,
           attempted: { approvals: attemptedApprovals, inbox: attemptedInbox },
           deleted: { approvals: deletedApprovals, inbox: deletedInbox },
           retained: { immutable_audit: true },
@@ -1108,13 +1521,12 @@ export default async function(req: Request): Promise<Response> {
         }, { status: 500 });
       }
 
-      // Build #28.2P-R.0R.1A: Report accurate overall_status
-      // success only when no errors and no failures
       const success = overallStatus === 'success';
 
       return Response.json({
         success,
         operation_status: overallStatus,
+        operation_id: opCreate.operation_id,
         attempted: { approvals: attemptedApprovals, inbox: attemptedInbox },
         deleted: { approvals: deletedApprovals, inbox: deletedInbox },
         retained: { immutable_audit: true },

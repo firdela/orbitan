@@ -1,7 +1,7 @@
 {
   "name": "TestRun",
   "type": "object",
-  "description": "Orbitan Test Lab \u2014 Protected Test Run authorisation record (Build #28.2P-R.0R.1). Created by a platform.test_lab.manage operator to authorise a single sandbox test run with server-selected short TTL. Nexus gateway validates this record server-side before applying any short approval expiry. Client-provided TTL values are rejected \u2014 the server selects TTL from SERVER_TTL_POLICY based on the test_tag. Single-use acquisition is enforced via atomic CAS (updateMany with conditional filter + consumption_token verification). Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan Test Lab \u2014 Protected Test Run authorisation record (Build #28.2P-R.0R.1B). Created by a platform.test_lab.manage operator to authorise a single sandbox test run with server-selected short TTL. Nexus gateway validates this record server-side before applying any short approval expiry. Client-provided TTL values are rejected \u2014 the server selects TTL from SERVER_TTL_POLICY based on the test_tag. Single-use acquisition is enforced via atomic CAS (updateMany with conditional filter + consumption_token verification). Build #28.2P-R.0R.1B adds verification_run_id linking to the active VerificationRun campaign. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string",
@@ -10,6 +10,10 @@
     "test_run_id": {
       "type": "string",
       "description": "Server-generated unique identifier for this test run e.g. 'trun_2026_0001'."
+    },
+    "verification_run_id": {
+      "type": "string",
+      "description": "Build #28.2P-R.0R.1B \u2014 Reference to the VerificationRun this test run belongs to. Nexus validation preserves traceability: verification_run_id \u2192 TestRun \u2192 AIApproval \u2192 audit evidence. A TestRun from another verification campaign cannot count toward the current run's readiness."
     },
     "sandbox_tenant_id": {
       "type": "string",
