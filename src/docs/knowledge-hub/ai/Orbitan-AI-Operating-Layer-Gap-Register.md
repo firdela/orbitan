@@ -32,6 +32,16 @@ abstraction** — all addressed in this Phase 1 build.
 
 ---
 
+| **Test Lab** | Atomic operation lock (CAS) | ✅ LIVE PROVEN (Build #28.2P-R.0R.1C-F) | P0 | ✅ Closed |
+| **Test Lab** | Service-only RLS (all 5 entities) | ✅ LIVE VERIFIED — all direct client writes denied 403 (1C-F) | P0 | ✅ Closed |
+| **Test Lab** | Lock release read-back verification | ✅ Implemented (1C-F) | P0 | ✅ Closed |
+| **Test Lab** | Completion lock-release failure → INCOMPLETE | ✅ Implemented (1C-F) | P0 | ✅ Closed |
+| **Test Lab** | Failure lock-release not swallowed | ✅ Implemented (1C-F) | P0 | ✅ Closed |
+| **Test Lab** | Operation-create exception releases lock | ✅ Implemented (1C-F) | P0 | ✅ Closed |
+| **Test Lab** | Intent transition fail-closed | ✅ Implemented (1C-F) | P0 | ✅ Closed |
+| **Test Lab** | Singleton lock registry (lookup-only) | ✅ Provisioned + closed (1C-F) | P0 | ✅ Closed |
+| **Test Lab** | Live identity verification | ❌ Deferred to #28.2P-R.0R.2 | P0 | Phase 2 |
+
 ## Summary Table
 
 | Domain | Capability | Status | Priority | Phase |

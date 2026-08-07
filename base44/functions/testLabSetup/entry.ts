@@ -137,7 +137,7 @@ export default async function(req: Request): Promise<Response> {
         tenant_id: 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target.', { target_key: targetKeyVar });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot create verification run — TestLabOperation could not be created.', { error: opCreate.error });
@@ -235,7 +235,7 @@ export default async function(req: Request): Promise<Response> {
         verification_run_id: verification_run_id,
         lock_key_override: lockKeyForTarget(TARGET_TYPES.VERIFICATION_ACTIVATION, targetKeyForVerificationActivation()),
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another verification run activation is already in progress. Wait for it to complete.', { lock_key: 'verification_activation:global' });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot activate — TestLabOperation could not be created.', { error: opCreate.error });
@@ -345,7 +345,7 @@ export default async function(req: Request): Promise<Response> {
         action: 'complete_verification_run', target_type: TARGET_TYPES.VERIFICATION_RUN, target_key: targetKey,
         tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', verification_run_id,
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this verification run.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot complete — TestLabOperation could not be created.', { error: opCreate.error });
@@ -391,7 +391,7 @@ export default async function(req: Request): Promise<Response> {
         action: 'fail_verification_run', target_type: TARGET_TYPES.VERIFICATION_RUN, target_key: targetKey,
         tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', verification_run_id,
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this verification run.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot fail — TestLabOperation could not be created.', { error: opCreate.error });
@@ -438,7 +438,7 @@ export default async function(req: Request): Promise<Response> {
         action: 'archive_verification_run', target_type: TARGET_TYPES.VERIFICATION_RUN, target_key: targetKey,
         tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', verification_run_id,
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this verification run.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot archive — TestLabOperation could not be created.', { error: opCreate.error });
@@ -619,7 +619,7 @@ export default async function(req: Request): Promise<Response> {
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: optionalVRunId,
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) {
         return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
@@ -804,7 +804,7 @@ export default async function(req: Request): Promise<Response> {
           tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
           verification_run_id: optionalVRunId,
         });
-        if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+        if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot record membership reuse — TestLabOperation could not be created.');
@@ -839,7 +839,7 @@ export default async function(req: Request): Promise<Response> {
         tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: optionalVRunId,
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot prepare membership — TestLabOperation could not be created.', { error: opCreate.error });
@@ -934,7 +934,7 @@ export default async function(req: Request): Promise<Response> {
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: optionalVRunId,
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot grant permission — TestLabOperation could not be created.', { error: opCreate.error });
@@ -1021,7 +1021,7 @@ export default async function(req: Request): Promise<Response> {
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: optionalVRunId,
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot revoke permission — TestLabOperation could not be created.', { error: opCreate.error });
@@ -1100,7 +1100,7 @@ export default async function(req: Request): Promise<Response> {
         tenant_id: auditTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: optionalVRunId,
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot attest — TestLabOperation could not be created.', { error: opCreate.error });
@@ -1225,7 +1225,7 @@ export default async function(req: Request): Promise<Response> {
         tenant_id: sandbox_tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: activeVRun.verification_run_id,
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot create Test Run — TestLabOperation could not be created.', { error: opCreate.error });
@@ -1499,7 +1499,7 @@ export default async function(req: Request): Promise<Response> {
         tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: optionalVRunId,
       });
-      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
       if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot reset — TestLabOperation could not be created.', { error: opCreate.error });

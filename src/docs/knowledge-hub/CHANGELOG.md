@@ -7,6 +7,57 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2P-R.0R.1C-F (Test Lab Final Closure: Atomic Lock Proof, Service-Only RLS, Runtime Safety) (2026-08-07)
+
+### P0 Gap Closures — Final Closure
+- **Live CAS concurrency PROVEN:** Two parallel `lock_probe` requests against the SAME probe key produced exactly one winner (`acquired=true, released=true, verified=true`) and exactly one loser (`acquired=false, error=operation_in_progress`, 409). Different probe keys acquired independently. This is LIVE runtime evidence, not simulation.
+- **Singleton lock registry provisioned:** Exactly one `TestLabLockRegistry` exists (ID: `6a75e87c2dce26c94dee0b3c`, `registry_key: test_lab_global`, 0 active locks). Normal runtime is LOOKUP-ONLY — cannot lazily create another registry.
+- **initialize_lock_registry REMOVED from normal routing:** The action is no longer accessible through the testLabSetup action router. The `initializeLockRegistry` function remains in `runtime.ts` for disaster recovery only.
+- **lock_probe REMOVED from normal routing:** The temporary CAS proof endpoint is no longer accessible. `probeLock` and `PROBE_LOCK_KEYS` removed from `runtime.ts`.
+- **Service-only RLS — single impossible user_condition:** All 5 Test Lab entities (TestLabOperation, TestLabLockRegistry, VerificationRun, TestRun, TestLabAttestation) use `{ user_condition: { role: '___service_only___' } }` for create/update/delete. No app user has this role → all direct client writes denied (403). Service role bypasses RLS.
+- **Lock release read-back verification:** `releaseOperationLock` performs `$pull` by `operation_id`, then reads back the registry to confirm the lock is absent. Returns `verified: true/false`.
+- **Completion lock-release failure cannot return clean COMPLETED:** `persistOperationCompletion` verifies lock release after transitioning to COMPLETED. If release fails, transitions to INCOMPLETE and returns `persisted: false`.
+- **Failure lock-release not swallowed:** `persistOperationFailure` no longer uses `.catch(() => {})`. Verifies release and records a degraded audit if verification fails. Returns `{ lock_release_degraded, lock_release_error }`.
+- **Operation-create exception releases lock:** `createOperation` tracks `acquiredRegistryId` and `acquiredOperationId`. If `TestLabOperation.create()` throws, the catch block attempts an ownership-safe release with read-back verification. If release also fails, the error message includes "Manual lock recovery may be required."
+- **Intent transition fail-closed:** `persistOperationIntent` now verifies `transitionOperation.persisted` before returning `intent_id`. If the transition fails, returns `intent_id: ''` — mutation MUST NOT proceed. AuditLog evidence alone is NOT sufficient authorization to mutate.
+- **create_test_run verification run state handling:** NONE → 409 `no_active_verification_run`, UNAVAILABLE → 503 `verification_run_unavailable`, CONFLICT → 409 `verification_run_conflict` (fail closed), ACTIVE → proceeds to validation.
+
+### Live RLS Verification Results
+| Entity | Client Create | Client Update | Client Delete |
+|--------|:---:|:---:|:---:|
+| TestLabOperation | 403 DENIED | 403 DENIED | 403 DENIED |
+| TestLabLockRegistry | 403 DENIED | 403 DENIED | 404 DENIED |
+| VerificationRun | 403 DENIED | 403 DENIED | 403 DENIED |
+| TestRun | 403 DENIED | 403 DENIED | 403 DENIED |
+| TestLabAttestation | 403 DENIED | 403 DENIED | 403 DENIED |
+
+Service-role writes (via backend functions) still work correctly — proven by singleton creation and readiness_status reads.
+
+### Entities Modified
+- `TestLabOperation` — RLS changed from `$and` (admin + service_only) to single impossible `user_condition` (role: `___service_only___`)
+- `TestLabLockRegistry` — same RLS change
+- `VerificationRun` — same RLS change
+- `TestRun` — same RLS change
+- `TestLabAttestation` — same RLS change
+
+### Files Modified
+- `base44/functions/testLabSetup/runtime.ts` — createOperation lock-leak fix, persistOperationIntent fail-closed, persistOperationCompletion lock-release verification, persistOperationFailure not-swallowed, probeLock/PROBE_LOCK_KEYS removed
+- `base44/functions/testLabSetup/entry.ts` — initialize_lock_registry + lock_probe actions removed from router, imports cleaned, stale messages updated
+- `src/lib/__tests__/test-lab-hardening.test.js` — sections 17, 46, 53, 54, 55 rewritten for live CAS proof + final RLS; new sections 58-64 added (lock release verification, completion failure, failure not-swallowed, create exception, intent fail-closed, create_test_run states, routes removed)
+
+### Test Results
+- Test lab hardening: 475 passed, 0 failed
+- Nexus gateway hardening: 37 passed, 0 failed
+- AI governance parity: 84 passed, 0 failed
+- Deliberate test failure: broken→exit 1 (474/475), restored→exit 0 (475/475)
+- Focused lint: 0 errors, 2 warnings
+- Production build: exit code 0
+
+### What Remains for Build #28.2P-R.0R.2
+- Live identity verification with registered test identities
+- Worker session denial live testing
+- Production-tenant isolation regression testing
+
 ## [Unreleased] — Build #28.2P-R.0R.1B (Correlated Test Lab Operation Ledger, Verification-Run Readiness, Future-Tenant Architecture Boundary) (2026-08-07)
 
 ### Architecture Boundary — Test Lab vs Future Production Tenants
