@@ -1,7 +1,7 @@
 {
   "name": "TestLabLockRegistry",
   "type": "object",
-  "description": "Orbitan Test Lab \u2014 Atomic Operation Lock Registry (Build #28.2P-R.0R.1C). Singleton record that owns the active_locks array. Atomic CAS ($ne + $push on a single document) prevents check-then-create races for privileged Test Lab operations. The service role bypasses RLS to mutate; no app user can directly create/update/delete. Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan Test Lab \u2014 Atomic Operation Lock Registry (Build #28.2P-R.0R.1C). Singleton record that owns the active_locks array. Atomic CAS ($ne + $push on a single document) prevents check-then-create races for privileged Test Lab operations. The service role bypasses RLS to mutate; no app user can directly create/update/delete. Build #28.2P-R.0R.1C-F uses a single impossible user_condition for clearer service-only boundary. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "registry_key": {
       "type": "string",
@@ -46,18 +46,9 @@
   ],
   "rls": {
     "create": {
-      "$and": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "___service_only___"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "___service_only___"
+      }
     },
     "read": {
       "user_condition": {
@@ -65,32 +56,14 @@
       }
     },
     "update": {
-      "$and": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "___service_only___"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "___service_only___"
+      }
     },
     "delete": {
-      "$and": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "___service_only___"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "___service_only___"
+      }
     }
   }
 }
