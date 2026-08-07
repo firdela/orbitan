@@ -1,7 +1,7 @@
 {
   "name": "VerificationRun",
   "type": "object",
-  "description": "Orbitan Test Lab \u2014 Verification Campaign (Build #28.2P-R.0R.1B). Represents ONE complete governance verification cycle. Server-generated immutable verification_run_id links TestRun \u2192 AIApproval \u2192 audit evidence \u2192 Orbit Inbox lifecycle. Only platform.test_lab.manage may create or activate. Readiness is calculated against the currently active verification run only \u2014 historical evidence from other runs cannot satisfy current readiness. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan Test Lab \u2014 Verification Campaign (Build #28.2P-R.0R.1B). Represents ONE complete governance verification cycle. Server-generated immutable verification_run_id links TestRun \u2192 AIApproval \u2192 audit evidence \u2192 Orbit Inbox lifecycle. Build #28.2P-R.0R.1C hardens RLS to service-role-only writes and enforces legal lifecycle transitions server-side. Only platform.test_lab.manage may create or activate. Readiness is calculated against the currently active verification run only. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "verification_run_id": {
       "type": "string",
@@ -28,6 +28,11 @@
       "format": "date-time",
       "description": "When the verification run transitioned to COMPLETED or FAILED status."
     },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the verification run transitioned to ARCHIVED status."
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -38,7 +43,7 @@
         "archived"
       ],
       "default": "preparing",
-      "description": "Lifecycle state. preparing \u2192 active \u2192 completed/failed. archived = superseded by a newer run."
+      "description": "Lifecycle state. Legal transitions: preparing \u2192 active \u2192 completed/failed \u2192 archived. Illegal: completed/failed/archived \u2192 active."
     },
     "tenant_a_id": {
       "type": "string",
@@ -79,9 +84,18 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "___service_only___"
+          }
+        }
+      ]
     },
     "read": {
       "user_condition": {
@@ -89,14 +103,32 @@
       }
     },
     "update": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "___service_only___"
+          }
+        }
+      ]
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "___service_only___"
+          }
+        }
+      ]
     }
   }
 }
