@@ -7,7 +7,7 @@
 >
 > **Build Philosophy:** Build less. Validate more.
 >
-> **Last updated:** 2026-08-05 (Build #28.2P — Secure AI Approval Execution & Verification)
+> **Last updated:** 2026-08-07 (Build #28.2P-R.0R.1B — Correlated Test Lab Operation Ledger, Verification-Run Readiness & Future-Tenant Architecture Boundary)
 
 ---
 

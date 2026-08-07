@@ -479,3 +479,44 @@ abstraction** — all addressed in this Phase 1 build.
 - External provider credentials (OpenAI, Anthropic, Gemini) — platform_builtin active
 - Nexus entry file maintainability — extraction is a refactor, not a security gap
 - Live multi-tenant regression with real tenant data (requires pilot tenant provisioning)
+
+---
+
+## Build #28.2P-R.0R.1B — Test Lab Operation Ledger & Verification-Run Readiness (2026-08-07)
+
+### Test Lab Infrastructure Hardening (Internal — Not Customer-Facing)
+
+Build #28.2P-R.0R.1B introduces internal test-infrastructure entities that are NOT part of the
+AI Operating Layer customer-facing architecture. These are sandbox-only governance verification
+tools:
+
+- **TestLabOperation** — stable operation ledger with server-generated immutable `operation_id`
+  correlating the entire privileged-operation lifecycle (PENDING → INTENT_PERSISTED →
+  MUTATION_COMPLETED → COMPLETED / FAILED / INCOMPLETE / RECONCILED).
+- **VerificationRun** — verification campaign model with server-generated immutable
+  `verification_run_id`. Readiness is calculated against the currently active verification run
+  only — historical evidence from other runs cannot satisfy current readiness.
+- **TestRun.verification_run_id** — links each TestRun to its governing verification campaign.
+
+### Architecture Boundary
+
+These entities are admin-only (`role: "admin"` RLS), `non_production=true`, and never exposed to
+customer tenants. Future production tenants do NOT inherit Test Lab flags, short TTL, TestRun
+authorisation, verification-run UI, or test-data-reset capability.
+
+Canonical tenant provisioning (Tenant/Company/Outlet creation) remains reusable for future
+customer tenants — the Test Lab wrapper adds ONLY `is_sandbox`, `test_lab_key`, and sandbox-safe
+defaults.
+
+### Readiness Scope
+
+- `test_tagging_ready` and `short_ttl_ready` require evidence matching the current
+  `verification_run_id`, expected sandbox tenant, requester, scenario, service, action, autonomy
+  level, server-selected TTL, and successful consumption.
+- No active verification run → readiness false.
+- Historical TestRuns/AIApprovals from other runs cannot satisfy current readiness.
+
+### CAS Classification
+
+**CAS IMPLEMENTED — LIVE CONCURRENCY NOT VERIFIED** — real parallel request verification
+belongs to Build #28.2P-R.0R.2 after test identities exist.
