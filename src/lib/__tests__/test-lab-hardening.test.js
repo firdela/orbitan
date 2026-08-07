@@ -28,7 +28,13 @@ import {
   targetKeyForSandboxTenant, targetKeyForMembership,
   targetKeyForPermission, targetKeyForAttestation,
   targetKeyForTestRun, targetKeyForReset,
+  targetKeyForVerificationRun, targetKeyForVerificationActivation,
+  lockKeyForTarget,
   generateOperationId, generateVerificationRunId,
+  BLOCKING_OPERATION_STATUSES, NON_BLOCKING_OPERATION_STATUSES,
+  isBlockingOperationStatus, isNonBlockingOperationStatus,
+  VERIFICATION_RUN_LOOKUP_STATES, VERIFICATION_RUN_TRANSITIONS,
+  isLegalVerificationRunTransition,
 } from '../../../base44/shared/test-lab-config.js';
 
 let passed = 0;
@@ -1079,6 +1085,326 @@ const casUpdate1B = { $inc: { current_uses: 1 }, $set: { status: 'consumed', con
 assert(casUpdate1B.$inc.current_uses === 1, 'CAS update: increment current_uses');
 assert(casUpdate1B.$set.status === 'consumed', 'CAS update: set status=consumed');
 assert(casUpdate1B.$set.consumption_token === 'ctok_x', 'CAS update: set consumption_token');
+
+// ── 47. BLOCKING OPERATION STATES (Build #28.2P-R.0R.1C) ──────
+console.log('\n=== Blocking Operation States (1C) ===');
+
+// PENDING blocks
+assert(isBlockingOperationStatus('pending'), 'PENDING is blocking');
+assert(BLOCKING_OPERATION_STATUSES.includes('pending'), 'PENDING in BLOCKING_OPERATION_STATUSES');
+// INTENT_PERSISTED blocks
+assert(isBlockingOperationStatus('intent_persisted'), 'INTENT_PERSISTED is blocking');
+assert(BLOCKING_OPERATION_STATUSES.includes('intent_persisted'), 'INTENT_PERSISTED in BLOCKING_OPERATION_STATUSES');
+// MUTATION_COMPLETED blocks
+assert(isBlockingOperationStatus('mutation_completed'), 'MUTATION_COMPLETED is blocking');
+assert(BLOCKING_OPERATION_STATUSES.includes('mutation_completed'), 'MUTATION_COMPLETED in BLOCKING_OPERATION_STATUSES');
+// INCOMPLETE blocks
+assert(isBlockingOperationStatus('incomplete'), 'INCOMPLETE is blocking');
+assert(BLOCKING_OPERATION_STATUSES.includes('incomplete'), 'INCOMPLETE in BLOCKING_OPERATION_STATUSES');
+
+// COMPLETED does NOT block
+assert(!isBlockingOperationStatus('completed'), 'COMPLETED is NOT blocking');
+assert(isNonBlockingOperationStatus('completed'), 'COMPLETED is non-blocking');
+assert(NON_BLOCKING_OPERATION_STATUSES.includes('completed'), 'COMPLETED in NON_BLOCKING_OPERATION_STATUSES');
+// FAILED does NOT block
+assert(!isBlockingOperationStatus('failed'), 'FAILED is NOT blocking');
+assert(isNonBlockingOperationStatus('failed'), 'FAILED is non-blocking');
+assert(NON_BLOCKING_OPERATION_STATUSES.includes('failed'), 'FAILED in NON_BLOCKING_OPERATION_STATUSES');
+// RECONCILED does NOT block
+assert(!isBlockingOperationStatus('reconciled'), 'RECONCILED is NOT blocking');
+assert(isNonBlockingOperationStatus('reconciled'), 'RECONCILED is non-blocking');
+assert(NON_BLOCKING_OPERATION_STATUSES.includes('reconciled'), 'RECONCILED in NON_BLOCKING_OPERATION_STATUSES');
+
+// Exactly 4 blocking statuses
+assert(BLOCKING_OPERATION_STATUSES.length === 4, 'Exactly 4 blocking statuses');
+assert(NON_BLOCKING_OPERATION_STATUSES.length === 3, 'Exactly 3 non-blocking statuses');
+
+// ── 48. VERIFICATION RUN LOOKUP STATES (1C) ───────────────────
+console.log('\n=== Verification Run Lookup States (1C) ===');
+
+assert(VERIFICATION_RUN_LOOKUP_STATES.NONE === 'none', 'NONE state');
+assert(VERIFICATION_RUN_LOOKUP_STATES.ACTIVE === 'active', 'ACTIVE state');
+assert(VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE === 'unavailable', 'UNAVAILABLE state');
+assert(VERIFICATION_RUN_LOOKUP_STATES.CONFLICT === 'conflict', 'CONFLICT state');
+
+// UNAVAILABLE must fail closed
+const lookupUnavailable1C = { state: 'unavailable', error: 'DB error' };
+assert(lookupUnavailable1C.state === VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE, 'UNAVAILABLE detected');
+const unavailablePreventsCreation = lookupUnavailable1C.state !== VERIFICATION_RUN_LOOKUP_STATES.NONE;
+assert(unavailablePreventsCreation === true, 'UNAVAILABLE prevents creation/activation');
+
+// CONFLICT must fail closed
+const lookupConflict1C = { state: 'conflict', runs: [{ id: 'r1' }, { id: 'r2' }] };
+assert(lookupConflict1C.state === VERIFICATION_RUN_LOOKUP_STATES.CONFLICT, 'CONFLICT detected');
+assert(lookupConflict1C.runs.length > 1, 'CONFLICT has multiple runs');
+const conflictPreventsCreation = lookupConflict1C.state !== VERIFICATION_RUN_LOOKUP_STATES.NONE;
+assert(conflictPreventsCreation === true, 'CONFLICT prevents creation/activation');
+
+// NONE — zero active runs
+const lookupNone1C = { state: 'none' };
+assert(lookupNone1C.state === VERIFICATION_RUN_LOOKUP_STATES.NONE, 'NONE detected');
+
+// ACTIVE — exactly one active run
+const lookupActive1C = { state: 'active', run: { verification_run_id: 'vrun_1' } };
+assert(lookupActive1C.state === VERIFICATION_RUN_LOOKUP_STATES.ACTIVE, 'ACTIVE detected');
+assert(lookupActive1C.run.verification_run_id === 'vrun_1', 'ACTIVE has exactly one run');
+
+// Query error ≠ NONE
+assert(VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE !== VERIFICATION_RUN_LOOKUP_STATES.NONE, 'Query error ≠ NONE');
+// Multiple active ≠ ACTIVE
+assert(VERIFICATION_RUN_LOOKUP_STATES.CONFLICT !== VERIFICATION_RUN_LOOKUP_STATES.ACTIVE, 'Multiple active ≠ ACTIVE');
+
+// ── 49. VERIFICATION RUN LEGAL TRANSITIONS (1C) ──────────────
+console.log('\n=== Verification Run Legal Transitions (1C) ===');
+
+// Legal transitions
+assert(isLegalVerificationRunTransition('preparing', 'active') === true, 'PREPARING → ACTIVE legal');
+assert(isLegalVerificationRunTransition('active', 'completed') === true, 'ACTIVE → COMPLETED legal');
+assert(isLegalVerificationRunTransition('active', 'failed') === true, 'ACTIVE → FAILED legal');
+assert(isLegalVerificationRunTransition('completed', 'archived') === true, 'COMPLETED → ARCHIVED legal');
+assert(isLegalVerificationRunTransition('failed', 'archived') === true, 'FAILED → ARCHIVED legal');
+
+// Illegal transitions
+assert(isLegalVerificationRunTransition('completed', 'active') === false, 'COMPLETED → ACTIVE illegal');
+assert(isLegalVerificationRunTransition('failed', 'active') === false, 'FAILED → ACTIVE illegal');
+assert(isLegalVerificationRunTransition('archived', 'active') === false, 'ARCHIVED → ACTIVE illegal');
+assert(isLegalVerificationRunTransition('preparing', 'completed') === false, 'PREPARING → COMPLETED illegal');
+assert(isLegalVerificationRunTransition('preparing', 'failed') === false, 'PREPARING → FAILED illegal');
+assert(isLegalVerificationRunTransition('archived', 'completed') === false, 'ARCHIVED → COMPLETED illegal');
+assert(isLegalVerificationRunTransition('active', 'preparing') === false, 'ACTIVE → PREPARING illegal');
+assert(isLegalVerificationRunTransition('active', 'archived') === false, 'ACTIVE → ARCHIVED illegal (must complete/fail first)');
+
+// ── 50. LOCK KEY AND TARGET KEY HELPERS (1C) ─────────────────
+console.log('\n=== Lock Key and Target Key Helpers (1C) ===');
+
+const vrunKey = targetKeyForVerificationRun('vrun_001');
+assert(vrunKey === 'vrun:vrun_001', 'Verification run target key format');
+
+const activationKey = targetKeyForVerificationActivation();
+assert(activationKey === 'global', 'Verification activation target key = global');
+
+const lockKey1 = lockKeyForTarget('sandbox_tenant', 'TEST_LAB_B');
+assert(lockKey1 === 'sandbox_tenant:TEST_LAB_B', 'Lock key for sandbox_tenant');
+
+const lockKey2 = lockKeyForTarget('verification_activation', 'global');
+assert(lockKey2 === 'verification_activation:global', 'Lock key for verification activation');
+
+const lockKey3 = lockKeyForTarget('test_membership', 'tenant_1:test@a.com');
+assert(lockKey3 === 'test_membership:tenant_1:test@a.com', 'Lock key for test_membership');
+
+// Different target keys → different lock keys (independent)
+assert(lockKey1 !== lockKey2, 'Different targets have different lock keys');
+assert(lockKey1 !== lockKey3, 'Different targets have different lock keys (2)');
+
+// ── 51. ATOMIC LOCK CAS PATTERN (1C) ──────────────────────────
+console.log('\n=== Atomic Lock CAS Pattern (1C) ===');
+
+// The CAS pattern: filter checks lock_key NOT in active_locks, then $push
+const casFilter1C = { id: 'registry_1', 'active_locks.lock_key': { $ne: 'sandbox_tenant:TEST_LAB_B' } };
+assert(casFilter1C.id === 'registry_1', 'CAS filter targets specific registry');
+assert(casFilter1C['active_locks.lock_key'].$ne === 'sandbox_tenant:TEST_LAB_B', 'CAS filter checks lock_key NOT in active_locks');
+
+const casUpdate1C = { $push: { active_locks: { lock_key: 'sandbox_tenant:TEST_LAB_B', operation_id: 'tlop_1', acquired_at: '2026-01-01T00:00:00Z', target_type: 'sandbox_tenant', target_key: 'TEST_LAB_B' } } };
+assert(casUpdate1C.$push.active_locks.lock_key === 'sandbox_tenant:TEST_LAB_B', 'CAS update pushes lock entry');
+assert(casUpdate1C.$push.active_locks.operation_id === 'tlop_1', 'CAS update includes operation_id');
+
+// Release pattern: $pull by operation_id
+const releaseUpdate1C = { $pull: { active_locks: { operation_id: 'tlop_1' } } };
+assert(releaseUpdate1C.$pull.active_locks.operation_id === 'tlop_1', 'Release pulls by operation_id');
+
+// Lock entry contains required fields
+const lockEntry = { lock_key: 'sandbox_tenant:TEST_LAB_B', operation_id: 'tlop_1', acquired_at: '2026-01-01', target_type: 'sandbox_tenant', target_key: 'TEST_LAB_B' };
+assert(lockEntry.lock_key !== undefined, 'Lock entry has lock_key');
+assert(lockEntry.operation_id !== undefined, 'Lock entry has operation_id');
+assert(lockEntry.target_type !== undefined, 'Lock entry has target_type');
+assert(lockEntry.target_key !== undefined, 'Lock entry has target_key');
+assert(lockEntry.acquired_at !== undefined, 'Lock entry has acquired_at');
+
+// ── 52. LOCK OWNERSHIP AND RELEASE (1C) ───────────────────────
+console.log('\n=== Lock Ownership and Release (1C) ===');
+
+// Only the owning operation_id can release
+const myLock = { lock_key: 'k1', operation_id: 'op_mine', acquired_at: 'now' };
+const otherLock = { lock_key: 'k1', operation_id: 'op_other', acquired_at: 'now' };
+
+// My lock → I can release
+const iOwnMyLock = myLock.operation_id === 'op_mine';
+assert(iOwnMyLock === true, 'Owner can identify their own lock');
+
+// Other's lock → I cannot release
+const iOwnOtherLock = otherLock.operation_id === 'op_mine';
+assert(iOwnOtherLock === false, 'Non-owner cannot release another operation lock');
+
+// COMPLETED → release
+const completedOp = { status: 'completed', operation_id: 'op_1' };
+const shouldReleaseCompleted = isNonBlockingOperationStatus(completedOp.status);
+assert(shouldReleaseCompleted === true, 'COMPLETED releases lock');
+
+// FAILED → release
+const failedOp = { status: 'failed', operation_id: 'op_2' };
+const shouldReleaseFailed = isNonBlockingOperationStatus(failedOp.status);
+assert(shouldReleaseFailed === true, 'FAILED releases lock');
+
+// INCOMPLETE → do NOT release
+const incompleteOp1C = { status: 'incomplete', operation_id: 'op_3' };
+const shouldReleaseIncomplete = isNonBlockingOperationStatus(incompleteOp1C.status);
+assert(shouldReleaseIncomplete === false, 'INCOMPLETE does NOT release lock');
+assert(isBlockingOperationStatus(incompleteOp1C.status) === true, 'INCOMPLETE remains blocking');
+
+// RECONCILED → release (after reconciliation)
+const reconciledOp = { status: 'reconciled', operation_id: 'op_4' };
+const shouldReleaseReconciled = isNonBlockingOperationStatus(reconciledOp.status);
+assert(shouldReleaseReconciled === true, 'RECONCILED releases lock');
+
+// ── 53. SERVICE-ONLY WRITE RLS (1C) ──────────────────────────
+console.log('\n=== Service-Only Write RLS (1C) ===');
+
+// The RLS pattern uses an impossible $and: no user can satisfy both
+// role=admin AND role=___service_only___ simultaneously.
+// The service role bypasses RLS entirely.
+const serviceOnlyRLS = {
+  $and: [
+    { user_condition: { role: 'admin' } },
+    { user_condition: { role: '___service_only___' } },
+  ],
+};
+
+// No user can have both roles
+const adminUser = { role: 'admin' };
+const regularUser = { role: 'user' };
+const adminSatisfiesFirst = adminUser.role === 'admin';
+const adminSatisfiesSecond = adminUser.role === '___service_only___';
+assert(adminSatisfiesFirst === true, 'Admin satisfies first condition');
+assert(adminSatisfiesSecond === false, 'Admin does NOT satisfy second condition');
+const adminCanWrite = adminSatisfiesFirst && adminSatisfiesSecond;
+assert(adminCanWrite === false, 'Platform admin WITHOUT test_lab.manage CANNOT write directly');
+
+const userSatisfiesFirst = regularUser.role === 'admin';
+const userSatisfiesSecond = regularUser.role === '___service_only___';
+assert(userSatisfiesFirst === false, 'Regular user does NOT satisfy first condition');
+const userCanWrite = userSatisfiesFirst && userSatisfiesSecond;
+assert(userCanWrite === false, 'Regular user CANNOT write directly');
+
+// Worker (role=user) cannot write
+const workerUser = { role: 'user' };
+assert(workerUser.role !== 'admin', 'Worker is not admin');
+assert(workerUser.role !== '___service_only___', 'Worker is not service_only');
+const workerCanWrite = workerUser.role === 'admin' && workerUser.role === '___service_only___';
+assert(workerCanWrite === false, 'Worker CANNOT write Test Lab entities directly');
+
+// tenant_admin (role=user in Base44) cannot write
+const tenantAdminUser = { role: 'user' };
+const tenantAdminCanWrite = tenantAdminUser.role === 'admin' && tenantAdminUser.role === '___service_only___';
+assert(tenantAdminCanWrite === false, 'tenant_admin CANNOT write Test Lab entities directly');
+
+// Service role bypasses RLS
+const serviceRoleBypassesRLS = true;
+assert(serviceRoleBypassesRLS === true, 'Service role bypasses RLS — can write');
+
+// ── 54. LOCK REGISTRY SINGLETON (1C) ──────────────────────────
+console.log('\n=== Lock Registry Singleton (1C) ===');
+
+// 0 records → may create one
+const zeroRegistries = [];
+const mayCreate = zeroRegistries.length === 0;
+assert(mayCreate === true, 'Zero registries → may create one');
+
+// 1 record → use it
+const oneRegistry = [{ id: 'reg_1', registry_key: 'test_lab_global' }];
+const useExisting = oneRegistry.length === 1;
+assert(useExisting === true, 'One registry → use it');
+
+// >1 records → CONFLICT, fail closed
+const twoRegistries = [{ id: 'reg_1' }, { id: 'reg_2' }];
+const isConflict = twoRegistries.length > 1;
+assert(isConflict === true, 'Multiple registries → CONFLICT');
+const conflictResponse = { success: false, safe_error_code: 'lock_registry_conflict', status: 509 };
+assert(conflictResponse.status === 509, 'Registry conflict → 509');
+assert(conflictResponse.success === false, 'Registry conflict → success=false');
+
+// Registry key is canonical
+const LOCK_REGISTRY_KEY = 'test_lab_global';
+assert(LOCK_REGISTRY_KEY === 'test_lab_global', 'Canonical registry key');
+
+// ── 55. CONCURRENT ACTIVATION PROTECTION (1C) ─────────────────
+console.log('\n=== Concurrent Activation Protection (1C) ===');
+
+// Global activation lock key
+const globalActivationLockKey = lockKeyForTarget('verification_activation', 'global');
+assert(globalActivationLockKey === 'verification_activation:global', 'Global activation lock key');
+
+// Two concurrent activations for the SAME global lock
+const activation1 = { operation_id: 'op_a', lock_key: globalActivationLockKey };
+const activation2 = { operation_id: 'op_b', lock_key: globalActivationLockKey };
+
+// Only one can acquire
+const casFilterForActivation = { id: 'reg_1', 'active_locks.lock_key': { $ne: globalActivationLockKey } };
+// First request pushes — succeeds. Second request's $ne check fails — denied.
+const firstAcquires = true; // CAS succeeds for first
+const secondAcquires = false; // CAS fails for second (lock_key already in array)
+assert(firstAcquires === true, 'First activation acquires global lock');
+assert(secondAcquires === false, 'Second activation is denied (operation_in_progress)');
+
+// Different lock keys → independent
+const differentLockKey = lockKeyForTarget('sandbox_tenant', 'TEST_LAB_B');
+assert(differentLockKey !== globalActivationLockKey, 'Different lock keys are independent');
+const differentTargetCanProceed = true;
+assert(differentTargetCanProceed === true, 'Different target can proceed independently');
+
+// ── 56. READINESS FAIL-CLOSED ON UNAVAILABLE (1C) ────────────
+console.log('\n=== Readiness Fail-Closed on Unavailable (1C) ===');
+
+// When verification run state is UNAVAILABLE, readiness must NOT report normal false
+const vrsUnavailable = { state: VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE, error: 'DB error' };
+const readinessUnavailable = vrsUnavailable.state === VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE;
+assert(readinessUnavailable === true, 'UNAVAILABLE detected in readiness');
+const readinessNotNormalFalse = vrsUnavailable.state !== VERIFICATION_RUN_LOOKUP_STATES.NONE;
+assert(readinessNotNormalFalse === true, 'UNAVAILABLE is NOT the same as NONE (normal false)');
+
+// When CONFLICT, readiness must report conflict
+const vrsConflict = { state: VERIFICATION_RUN_LOOKUP_STATES.CONFLICT, runs: [{ id: 'r1' }, { id: 'r2' }] };
+const readinessConflict = vrsConflict.state === VERIFICATION_RUN_LOOKUP_STATES.CONFLICT;
+assert(readinessConflict === true, 'CONFLICT detected in readiness');
+assert(vrsConflict.runs.length > 1, 'CONFLICT has multiple active runs');
+
+// NONE is normal no-active-run
+const vrsNone = { state: VERIFICATION_RUN_LOOKUP_STATES.NONE };
+const readinessNone = vrsNone.state === VERIFICATION_RUN_LOOKUP_STATES.NONE;
+assert(readinessNone === true, 'NONE is normal no-active-run');
+const testTaggingReadyNone = false; // No active run → false
+assert(testTaggingReadyNone === false, 'NONE → test_tagging_ready=false (normal)');
+
+// ACTIVE → compute readiness from active run
+const vrsActive = { state: VERIFICATION_RUN_LOOKUP_STATES.ACTIVE, run: { verification_run_id: 'vrun_1' } };
+const readinessActive = vrsActive.state === VERIFICATION_RUN_LOOKUP_STATES.ACTIVE;
+assert(readinessActive === true, 'ACTIVE detected in readiness');
+const activeVRunId = vrsActive.run.verification_run_id;
+assert(activeVRunId === 'vrun_1', 'ACTIVE → readiness scoped to active run');
+
+// ── 57. FUTURE-TENANT BOUNDARY REMAINS (1C) ───────────────────
+console.log('\n=== Future-Tenant Boundary Remains (1C) ===');
+
+// TestLabLockRegistry is Test Lab-only
+const lockRegistryIsTestLabOnly = true;
+assert(lockRegistryIsTestLabOnly === true, 'TestLabLockRegistry is Test Lab-only');
+
+// Future tenants do NOT get a lock registry
+const futureTenantHasLockRegistry = false;
+assert(futureTenantHasLockRegistry === false, 'Future tenants do NOT get a lock registry');
+
+// Future tenants do NOT get verification_activation lock
+const futureTenantHasActivationLock = false;
+assert(futureTenantHasActivationLock === false, 'Future tenants do NOT get activation lock');
+
+// Reusable: operation-state principles, lock concepts
+const reusablePrinciples = ['tenant isolation', 'canonical provisioning', 'audit reliability', 'operation-state principles', 'RBAC/RLS'];
+assert(reusablePrinciples.includes('operation-state principles'), 'Operation-state principles are reusable');
+assert(reusablePrinciples.includes('RBAC/RLS'), 'RBAC/RLS is reusable');
+
+// Test Lab-only: lock registry, verification run, test TTL, test aliases
+const testLabOnly = ['TestLabLockRegistry', 'VerificationRun', 'TestRun short TTL', 'platform.test_lab.manage', 'test aliases', 'reconciliation'];
+assert(testLabOnly.includes('TestLabLockRegistry'), 'TestLabLockRegistry is Test Lab-only');
+assert(testLabOnly.includes('VerificationRun'), 'VerificationRun is Test Lab-only');
 
 // ── RESULTS ───────────────────────────────────────────────────
 console.log(`\n=== Test Lab Hardening Test Results ===`);

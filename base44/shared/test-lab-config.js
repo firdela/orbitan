@@ -303,6 +303,15 @@ export const VERIFICATION_RUN_LOOKUP_STATES = {
   CONFLICT: 'conflict',
 };
 
+// ── VERIFICATION RUN STATUSES (Build #28.2P-R.0R.1B) ──────────
+export const VERIFICATION_RUN_STATUSES = {
+  PREPARING: 'preparing',
+  ACTIVE: 'active',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+  ARCHIVED: 'archived',
+};
+
 // ── VERIFICATION RUN LEGAL TRANSITIONS (Build #28.2P-R.0R.1C) ─
 // Enforced server-side. Illegal transitions are denied.
 export const VERIFICATION_RUN_TRANSITIONS = {
@@ -317,15 +326,6 @@ export function isLegalVerificationRunTransition(fromStatus, toStatus) {
   const allowed = VERIFICATION_RUN_TRANSITIONS[fromStatus] || [];
   return allowed.includes(toStatus);
 }
-
-// ── VERIFICATION RUN STATUSES (Build #28.2P-R.0R.1B) ──────────
-export const VERIFICATION_RUN_STATUSES = {
-  PREPARING: 'preparing',
-  ACTIVE: 'active',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
-  ARCHIVED: 'archived',
-};
 
 // ── CANONICAL TARGET KEY GENERATORS (Build #28.2P-R.0R.1B) ────
 // Deterministic server-side target correlation. Prevents incomplete

@@ -6,12 +6,18 @@ import {
   SANDBOX_TEST_TTL_DEFAULT_MINUTES, EMAIL_ATTESTATION_CHECKS,
   BOOTSTRAP_STATE,
   OPERATION_LIFECYCLE_STATES, OPERATION_LOOKUP_STATES,
-  VERIFICATION_RUN_STATUSES, TARGET_TYPES,
+  BLOCKING_OPERATION_STATUSES, NON_BLOCKING_OPERATION_STATUSES,
+  isBlockingOperationStatus, isNonBlockingOperationStatus,
+  VERIFICATION_RUN_STATUSES, VERIFICATION_RUN_LOOKUP_STATES,
+  VERIFICATION_RUN_TRANSITIONS, isLegalVerificationRunTransition,
+  TARGET_TYPES,
   isAllowlistedTestAlias, getTestIdentity,
   resolveServerTtl, isProductionRecord,
   targetKeyForSandboxTenant, targetKeyForMembership,
   targetKeyForPermission, targetKeyForAttestation,
   targetKeyForTestRun, targetKeyForReset,
+  targetKeyForVerificationRun, targetKeyForVerificationActivation,
+  lockKeyForTarget,
   generateOperationId, generateVerificationRunId,
 } from '../../shared/test-lab-config.ts';
 
@@ -55,6 +61,9 @@ function safeJson(errorCode: string, status: number, message: string, extra: Rec
 // Creates a PENDING TestLabOperation record. The operation_id is
 // server-generated, immutable, and correlates every lifecycle stage.
 
+// Build #28.2P-R.0R.1C: createOperation now acquires the atomic lock
+// BEFORE creating the TestLabOperation record. The lock prevents
+// check-then-create races. Returns registry_id for later release.
 async function createOperation(base44: any, params: {
   action: string;
   target_type: string;
@@ -63,9 +72,25 @@ async function createOperation(base44: any, params: {
   actor_id: string;
   actor_name: string;
   verification_run_id?: string;
-}): Promise<{ operation_id: string; record_id: string; error?: string }> {
+  lock_key_override?: string;
+}): Promise<{ operation_id: string; record_id: string; registry_id: string; error?: string; lock_error?: string }> {
   try {
+    // 1. Ensure lock registry exists
+    const registry = await ensureLockRegistry(base44);
+    if (registry.error) return { operation_id: '', record_id: '', registry_id: '', error: `Lock registry unavailable: ${registry.error}` };
+    if (registry.conflict) return { operation_id: '', record_id: '', registry_id: '', error: 'Lock registry conflict — multiple registries exist' };
+
+    // 2. Generate operation_id
     const operationId = generateOperationId();
+
+    // 3. Acquire atomic lock
+    const lockKey = params.lock_key_override || lockKeyForTarget(params.target_type, params.target_key);
+    const lockResult = await acquireOperationLock(base44, registry.registry_id!, lockKey, operationId, params.target_type, params.target_key);
+    if (!lockResult.acquired) {
+      return { operation_id: '', record_id: '', registry_id: '', lock_error: 'operation_in_progress' };
+    }
+
+    // 4. Create TestLabOperation record
     const record = await base44.asServiceRole.entities.TestLabOperation.create({
       operation_id: operationId,
       verification_run_id: params.verification_run_id || null,
@@ -85,11 +110,13 @@ async function createOperation(base44: any, params: {
       non_production: true,
     });
     if (!record?.id) {
-      return { operation_id: '', record_id: '', error: 'TestLabOperation creation returned empty ID' };
+      // Lock acquired but record creation failed — release lock
+      await releaseOperationLock(base44, registry.registry_id!, operationId);
+      return { operation_id: '', record_id: '', registry_id: '', error: 'TestLabOperation creation returned empty ID' };
     }
-    return { operation_id: operationId, record_id: record.id };
+    return { operation_id: operationId, record_id: record.id, registry_id: registry.registry_id! };
   } catch (err) {
-    return { operation_id: '', record_id: '', error: `TestLabOperation creation failed: ${err.message}` };
+    return { operation_id: '', record_id: '', registry_id: '', error: `TestLabOperation creation failed: ${err.message}` };
   }
 }
 
@@ -151,8 +178,9 @@ async function persistOperationIntent(base44: any, params: {
   }
 }
 
-// Build #28.2P-R.0R.1B: Returns { completion_id, persisted }.
+// Build #28.2P-R.0R.1C: Returns { completion_id, persisted }.
 // Also transitions the TestLabOperation to COMPLETED.
+// On COMPLETED: releases the atomic lock. On INCOMPLETE: lock remains held.
 async function persistOperationCompletion(base44: any, params: {
   operation_record_id: string;
   audit_tenant_id: string;
@@ -163,6 +191,8 @@ async function persistOperationCompletion(base44: any, params: {
   new_state: Record<string, any>;
   mutation_resource_ids?: string[];
   test_run_id?: string;
+  registry_id?: string;
+  operation_id?: string;
 }): Promise<{ completion_id: string; persisted: boolean }> {
   try {
     const record = await base44.asServiceRole.entities.AuditLog.create({
@@ -189,6 +219,7 @@ async function persistOperationCompletion(base44: any, params: {
         failure_code: 'completion_evidence_empty',
         failure_summary: 'Completion persistence returned empty ID',
       });
+      // INCOMPLETE — do NOT release lock
       return { completion_id: '', persisted: false };
     }
     await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.COMPLETED, {
@@ -196,6 +227,10 @@ async function persistOperationCompletion(base44: any, params: {
       mutation_resource_ids: params.mutation_resource_ids || [],
       completed_at: new Date().toISOString(),
     });
+    // COMPLETED — release lock
+    if (params.registry_id && params.operation_id) {
+      await releaseOperationLock(base44, params.registry_id, params.operation_id);
+    }
     return { completion_id: completionId, persisted: true };
   } catch (err) {
     await persistDegradedAudit(base44, params, err.message);
@@ -203,6 +238,7 @@ async function persistOperationCompletion(base44: any, params: {
       failure_code: 'completion_evidence_failed',
       failure_summary: err.message,
     });
+    // INCOMPLETE — do NOT release lock
     return { completion_id: '', persisted: false };
   }
 }
@@ -230,6 +266,7 @@ async function persistDegradedAudit(base44: any, params: any, errorMessage: stri
   } catch { /* best effort */ }
 }
 
+// Build #28.2P-R.0R.1C: On FAILED — releases the atomic lock.
 async function persistOperationFailure(base44: any, params: {
   operation_record_id: string;
   audit_tenant_id: string;
@@ -238,6 +275,8 @@ async function persistOperationFailure(base44: any, params: {
   intent_id: string;
   intended_state: Record<string, any>;
   error: string;
+  registry_id?: string;
+  operation_id?: string;
 }): Promise<void> {
   try {
     await base44.asServiceRole.entities.AuditLog.create({
@@ -262,12 +301,18 @@ async function persistOperationFailure(base44: any, params: {
       failure_summary: params.error,
     });
   } catch { /* best effort — intent record already proves the attempt */ }
+  // FAILED — release lock (terminal state)
+  if (params.registry_id && params.operation_id) {
+    await releaseOperationLock(base44, params.registry_id, params.operation_id).catch(() => {});
+  }
 }
 
-// ── FAIL-CLOSED OPERATION STATE LOOKUP (Build #28.2P-R.0R.1B) ──
+// ── FAIL-CLOSED OPERATION STATE LOOKUP (Build #28.2P-R.0R.1C) ──
 // Returns CLEAR, BLOCKED, or UNAVAILABLE.
 // UNAVAILABLE MUST fail closed — the caller returns 503.
 // A lookup error MUST NOT mean "no incomplete operation exists".
+// Build #28.2P-R.0R.1C: Now blocks ALL active states (PENDING, INTENT_PERSISTED,
+// MUTATION_COMPLETED, INCOMPLETE) — not just INCOMPLETE and MUTATION_COMPLETED.
 async function checkOperationState(base44: any, targetType: string, targetKey: string): Promise<{
   state: string;
   operations: any[];
@@ -277,13 +322,10 @@ async function checkOperationState(base44: any, targetType: string, targetKey: s
     const operations = await base44.asServiceRole.entities.TestLabOperation.filter({
       target_type: targetType,
       target_key: targetKey,
-      status: { $in: [OPERATION_LIFECYCLE_STATES.INCOMPLETE, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED] },
+      status: { $in: BLOCKING_OPERATION_STATUSES },
     }, '-created_date', 20);
 
-    const blocking = (operations || []).filter((op: any) =>
-      op.status === OPERATION_LIFECYCLE_STATES.INCOMPLETE ||
-      op.status === OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED
-    );
+    const blocking = (operations || []).filter((op: any) => isBlockingOperationStatus(op.status));
 
     if (blocking.length > 0) {
       return { state: OPERATION_LOOKUP_STATES.BLOCKED, operations: blocking };
@@ -305,16 +347,183 @@ async function validateTestLabAuthority(base44: any, user: any): Promise<{ valid
   return { valid: true };
 }
 
-// ── GET ACTIVE VERIFICATION RUN (Build #28.2P-R.0R.1B) ────────
-async function getActiveVerificationRun(base44: any): Promise<any | null> {
+// ── GET VERIFICATION RUN STATE (Build #28.2P-R.0R.1C) ────────
+// Fail-closed verification run lookup. Distinguishes:
+// NONE — query succeeded, zero active runs.
+// ACTIVE — query succeeded, exactly one active run.
+// UNAVAILABLE — query failed (MUST fail closed).
+// CONFLICT — more than one active run (MUST fail closed).
+async function getVerificationRunState(base44: any): Promise<{
+  state: string;
+  run?: any;
+  runs?: any[];
+  error?: string;
+}> {
   try {
     const runs = await base44.asServiceRole.entities.VerificationRun.filter({
       status: VERIFICATION_RUN_STATUSES.ACTIVE,
-    }, '-created_date', 1);
-    return runs?.[0] || null;
-  } catch {
-    return null;
+    }, '-created_date', 10);
+    if (!runs || runs.length === 0) return { state: VERIFICATION_RUN_LOOKUP_STATES.NONE };
+    if (runs.length === 1) return { state: VERIFICATION_RUN_LOOKUP_STATES.ACTIVE, run: runs[0] };
+    return { state: VERIFICATION_RUN_LOOKUP_STATES.CONFLICT, runs };
+  } catch (err) {
+    return { state: VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE, error: err.message };
   }
+}
+
+// Legacy wrapper — returns the active run or null. Callers that need
+// fail-closed semantics should use getVerificationRunState directly.
+async function getActiveVerificationRun(base44: any): Promise<any | null> {
+  const vrs = await getVerificationRunState(base44);
+  if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.ACTIVE) return vrs.run;
+  return null;
+}
+
+// ── ATOMIC OPERATION LOCK (Build #28.2P-R.0R.1C) ───────────────
+// Uses a singleton TestLabLockRegistry record with a CAS pattern:
+//   filter: { id, 'active_locks.lock_key': { $ne: lockKey } }
+//   update: { $push: { active_locks: { lock_key, operation_id, ... } } }
+// MongoDB guarantees updateMany on a single document is atomic.
+// Read-back verification confirms which operation_id acquired the lock.
+
+const LOCK_REGISTRY_KEY = 'test_lab_global';
+
+async function ensureLockRegistry(base44: any): Promise<{
+  registry_id?: string;
+  conflict?: boolean;
+  error?: string;
+}> {
+  try {
+    const existing = await base44.asServiceRole.entities.TestLabLockRegistry.filter(
+      { registry_key: LOCK_REGISTRY_KEY }, '-created_date', 10
+    );
+    if (!existing || existing.length === 0) {
+      // Create the singleton
+      try {
+        const record = await base44.asServiceRole.entities.TestLabLockRegistry.create({
+          registry_key: LOCK_REGISTRY_KEY,
+          active_locks: [],
+          non_production: true,
+        });
+        return { registry_id: record?.id || '' };
+      } catch {
+        // Another request may have created it — re-query
+        const retry = await base44.asServiceRole.entities.TestLabLockRegistry.filter(
+          { registry_key: LOCK_REGISTRY_KEY }, '-created_date', 10
+        );
+        if (retry && retry.length === 1) return { registry_id: retry[0].id };
+        if (retry && retry.length > 1) return { conflict: true };
+        return { error: 'Cannot create or find lock registry' };
+      }
+    }
+    if (existing.length === 1) return { registry_id: existing[0].id };
+    // More than one registry — CONFLICT, fail closed
+    return { conflict: true };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
+async function acquireOperationLock(base44: any, registryId: string, lockKey: string, operationId: string, targetType: string, targetKey: string): Promise<{ acquired: boolean; error?: string }> {
+  try {
+    // Atomic CAS: push only if lock_key is NOT already in active_locks
+    await base44.asServiceRole.entities.TestLabLockRegistry.updateMany(
+      { id: registryId, 'active_locks.lock_key': { $ne: lockKey } },
+      { $push: { active_locks: { lock_key: lockKey, operation_id: operationId, acquired_at: new Date().toISOString(), target_type: targetType, target_key: targetKey } } }
+    );
+    // Read back to verify acquisition
+    const registry = await base44.asServiceRole.entities.TestLabLockRegistry.get(registryId);
+    const myLock = (registry?.active_locks || []).find((l: any) => l.lock_key === lockKey);
+    if (myLock?.operation_id === operationId) return { acquired: true };
+    return { acquired: false };
+  } catch (err) {
+    return { acquired: false, error: err.message };
+  }
+}
+
+async function releaseOperationLock(base44: any, registryId: string, operationId: string): Promise<{ released: boolean; error?: string }> {
+  try {
+    await base44.asServiceRole.entities.TestLabLockRegistry.updateMany(
+      { id: registryId },
+      { $pull: { active_locks: { operation_id: operationId } } }
+    );
+    return { released: true };
+  } catch (err) {
+    return { released: false, error: err.message };
+  }
+}
+
+// ── PRIVILEGED OPERATION WRAPPER (Build #28.2P-R.0R.1C) ────────
+// Wraps the lock-acquire + createOperation + persistIntent pattern.
+// Returns { operation_id, record_id, intent_id, registry_id } or { error, status }.
+async function startPrivilegedOperation(base44: any, params: {
+  action: string;
+  target_type: string;
+  target_key: string;
+  tenant_id: string;
+  actor_id: string;
+  actor_name: string;
+  verification_run_id?: string;
+  reason: string;
+  intended_state: Record<string, any>;
+  lock_key_override?: string; // For verification activation global lock
+}): Promise<{ operation_id: string; record_id: string; intent_id: string; registry_id: string } | { error: string; status: number; extra?: any }> {
+  // 1. Ensure lock registry
+  const registry = await ensureLockRegistry(base44);
+  if (registry.error) return { error: 'lock_registry_unavailable', status: 503, extra: { error: registry.error } };
+  if (registry.conflict) return { error: 'lock_registry_conflict', status: 509 };
+
+  // 2. Generate operation_id
+  const operationId = generateOperationId();
+
+  // 3. Acquire lock
+  const lockKey = params.lock_key_override || lockKeyForTarget(params.target_type, params.target_key);
+  const lockResult = await acquireOperationLock(base44, registry.registry_id!, lockKey, operationId, params.target_type, params.target_key);
+  if (!lockResult.acquired) {
+    return { error: 'operation_in_progress', status: 409, extra: { lock_key: lockKey } };
+  }
+
+  // 4. Create TestLabOperation (PENDING)
+  const opCreate = await createOperation(base44, {
+    action: params.action,
+    target_type: params.target_type,
+    target_key: params.target_key,
+    tenant_id: params.tenant_id,
+    actor_id: params.actor_id,
+    actor_name: params.actor_name,
+    verification_run_id: params.verification_run_id,
+  });
+  if (!opCreate.operation_id) {
+    await releaseOperationLock(base44, registry.registry_id!, operationId);
+    return { error: 'audit_failure', status: 500, extra: { error: opCreate.error } };
+  }
+
+  // 5. Persist durable intent
+  const intent = await persistOperationIntent(base44, {
+    operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+    audit_tenant_id: params.tenant_id,
+    actor_id: params.actor_id,
+    actor_name: params.actor_name,
+    action: params.action,
+    target: opCreate.record_id,
+    reason: params.reason,
+    intended_state: { ...params.intended_state, operation_id: operationId },
+  });
+  if (!intent.intent_id) {
+    await releaseOperationLock(base44, registry.registry_id!, operationId);
+    await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.FAILED, {
+      failure_code: 'intent_persistence_failed',
+      failure_summary: intent.error,
+    });
+    return { error: 'audit_failure', status: 500, extra: { error: intent.error, operation_id: operationId } };
+  }
+
+  return { operation_id: operationId, record_id: opCreate.record_id, intent_id: intent.intent_id, registry_id: registry.registry_id! };
+}
+
+// Release lock on terminal states (COMPLETED, FAILED). NOT on INCOMPLETE.
+async function releaseOnTerminal(base44: any, registryId: string, operationId: string): Promise<void> {
+  await releaseOperationLock(base44, registry.registry_id || registryId, operationId).catch(() => {});
 }
 
 // ============================================================
@@ -345,24 +554,59 @@ export default async function(req: Request): Promise<Response> {
       return safeJson('forbidden', 403, authCheck.reason || 'Permission denied.');
     }
 
-    // ── CREATE VERIFICATION RUN (Build #28.2P-R.0R.1B) ─────
+    // ── CREATE VERIFICATION RUN (Build #28.2P-R.0R.1C) ─────
+    // Uses operation ledger + atomic lock on the verification run target.
     if (action === 'create_verification_run') {
       const testPurpose = body.test_purpose;
       if (!testPurpose || testPurpose.length < 5) return safeJson('invalid_request', 400, 'A meaningful test_purpose is required.');
 
-      // Check if an active verification run already exists
-      const existingActive = await getActiveVerificationRun(base44);
-      if (existingActive) {
-        return safeJson('conflict', 409, 'An active verification run already exists. Archive it before creating a new one.', {
-          existing_verification_run_id: existingActive.verification_run_id,
+      // Fail-closed verification run state check
+      const vrs = await getVerificationRunState(base44);
+      if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('verification_run_unavailable', 503, 'Cannot verify verification run state — database lookup failed. Creation blocked for safety.');
+      }
+      if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.CONFLICT) {
+        return safeJson('verification_run_conflict', 409, 'Multiple active verification runs detected. Reconciliation is required before creating a new run.');
+      }
+      if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.ACTIVE) {
+        return safeJson('conflict', 409, 'An active verification run already exists. Complete, fail, or archive it before creating a new one.', {
+          existing_verification_run_id: vrs.run.verification_run_id,
         });
       }
 
       const verificationRunId = generateVerificationRunId();
-      const now = new Date().toISOString();
+      const targetKey = targetKeyForVerificationRun(verificationRunId);
+      const targetKeyVar = targetKey;
 
+      // Use operation ledger with atomic lock
+      const opCreate = await createOperation(base44, {
+        action: 'create_verification_run',
+        target_type: TARGET_TYPES.VERIFICATION_RUN,
+        target_key: targetKey,
+        tenant_id: 'platform',
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+      });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target.', { target_key: targetKeyVar });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot create verification run — TestLabOperation could not be created.', { error: opCreate.error });
+
+      const intent = await persistOperationIntent(base44, {
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+        audit_tenant_id: 'platform',
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'create_verification_run', target: opCreate.record_id,
+        reason: `Create verification run: ${testPurpose}`,
+        intended_state: { verification_run_id: verificationRunId, status: VERIFICATION_RUN_STATUSES.PREPARING, test_purpose: testPurpose },
+      });
+      if (!intent.intent_id) {
+        await releaseOperationLock(base44, opCreate.registry_id, opCreate.operation_id);
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.FAILED, { failure_code: 'intent_failed', failure_summary: intent.error });
+        return safeJson('audit_failure', 500, 'Cannot create verification run — durable intent could not be persisted.', { error: intent.error });
+      }
+
+      const now = new Date().toISOString();
+      let run: any = null;
       try {
-        const run = await base44.asServiceRole.entities.VerificationRun.create({
+        run = await base44.asServiceRole.entities.VerificationRun.create({
           verification_run_id: verificationRunId,
           created_by: user.id,
           created_by_name: user.full_name || 'Admin',
@@ -375,21 +619,43 @@ export default async function(req: Request): Promise<Response> {
           test_purpose: testPurpose,
           non_production: true,
         });
-
-        return Response.json({
-          success: true,
-          verification_run_id: verificationRunId,
-          verification_run_record_id: run?.id,
-          status: VERIFICATION_RUN_STATUSES.PREPARING,
-          created_at: now,
-          message: 'Verification run created in PREPARING status. Activate it when ready to begin the verification cycle.',
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [run?.id || ''] });
+      } catch (mutErr) {
+        await persistOperationFailure(base44, {
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+          audit_tenant_id: 'platform',
+          actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'create_verification_run', target: opCreate.record_id, reason: testPurpose, intent_id: intent.intent_id,
+          intended_state: { verification_run_id: verificationRunId }, error: mutErr.message,
         });
-      } catch (err) {
-        return safeJson('internal_error', 500, 'Failed to create verification run.', { error: err.message });
+        return safeJson('internal_error', 500, 'Failed to create verification run. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, operation_id: opCreate.operation_id, error: mutErr.message });
       }
+
+      const completion = await persistOperationCompletion(base44, {
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+        audit_tenant_id: 'platform',
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'create_verification_run', target: opCreate.record_id, reason: testPurpose, intent_id: intent.intent_id,
+        previous_state: null,
+        new_state: { verification_run_id: verificationRunId, status: VERIFICATION_RUN_STATUSES.PREPARING },
+        mutation_resource_ids: [run?.id || ''],
+      });
+      if (!completion.persisted) {
+        return Response.json({ success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id, intent_id: intent.intent_id, verification_run_id: verificationRunId, verification_run_record_id: run?.id, message: 'Verification run was created but completion evidence could not be persisted. Recovery/reconciliation is required.' }, { status: 500 });
+      }
+
+      return Response.json({
+        success: true, operation_status: 'completed', operation_id: opCreate.operation_id,
+        verification_run_id: verificationRunId, verification_run_record_id: run?.id,
+        status: VERIFICATION_RUN_STATUSES.PREPARING, created_at: now,
+        intent_id: intent.intent_id, completion_audit_id: completion.completion_id,
+        message: 'Verification run created in PREPARING status. Activate it when ready to begin the verification cycle.',
+      });
     }
 
-    // ── ACTIVATE VERIFICATION RUN (Build #28.2P-R.0R.1B) ───
+    // ── ACTIVATE VERIFICATION RUN (Build #28.2P-R.0R.1C) ───
+    // Uses GLOBAL activation lock to guarantee at most one ACTIVE run.
+    // Does NOT swallow archive errors. Enforces legal transitions.
     if (action === 'activate_verification_run') {
       const { verification_run_id } = body;
       if (!verification_run_id) return safeJson('invalid_request', 400, 'verification_run_id is required.');
@@ -398,19 +664,69 @@ export default async function(req: Request): Promise<Response> {
       if (!runs || runs.length === 0) return safeJson('not_found', 404, 'Verification run not found.');
       const run = runs[0];
 
+      // Enforce legal transition
+      if (!isLegalVerificationRunTransition(run.status, VERIFICATION_RUN_STATUSES.ACTIVE)) {
+        return safeJson('invalid_request', 400, `Illegal transition: ${run.status} → ${VERIFICATION_RUN_STATUSES.ACTIVE}. Only PREPARING runs can be activated.`);
+      }
       if (run.status === VERIFICATION_RUN_STATUSES.ACTIVE) {
         return Response.json({ success: true, verification_run_id, status: VERIFICATION_RUN_STATUSES.ACTIVE, already_active: true, message: 'Verification run is already active.' });
       }
-      if (run.status !== VERIFICATION_RUN_STATUSES.PREPARING) {
-        return safeJson('invalid_request', 400, `Verification run is in ${run.status} status. Only PREPARING runs can be activated.`);
+
+      // Acquire GLOBAL activation lock
+      const opCreate = await createOperation(base44, {
+        action: 'activate_verification_run',
+        target_type: TARGET_TYPES.VERIFICATION_ACTIVATION,
+        target_key: targetKeyForVerificationActivation(),
+        tenant_id: 'platform',
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        verification_run_id: verification_run_id,
+        lock_key_override: lockKeyForTarget(TARGET_TYPES.VERIFICATION_ACTIVATION, targetKeyForVerificationActivation()),
+      });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another verification run activation is already in progress. Wait for it to complete.', { lock_key: 'verification_activation:global' });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot activate — TestLabOperation could not be created.', { error: opCreate.error });
+
+      const intent = await persistOperationIntent(base44, {
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+        audit_tenant_id: 'platform',
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'activate_verification_run', target: opCreate.record_id,
+        reason: `Activate verification run ${verification_run_id}`,
+        intended_state: { verification_run_id, from_status: run.status, to_status: VERIFICATION_RUN_STATUSES.ACTIVE },
+      });
+      if (!intent.intent_id) {
+        await releaseOperationLock(base44, opCreate.registry_id, opCreate.operation_id);
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.FAILED, { failure_code: 'intent_failed', failure_summary: intent.error });
+        return safeJson('audit_failure', 500, 'Cannot activate — durable intent could not be persisted.', { error: intent.error });
       }
 
-      // Archive any other active runs
-      const otherActive = await base44.asServiceRole.entities.VerificationRun.filter({ status: VERIFICATION_RUN_STATUSES.ACTIVE }).catch(() => []);
-      for (const other of otherActive || []) {
-        if (other.verification_run_id !== verification_run_id) {
-          await base44.asServiceRole.entities.VerificationRun.update(other.id, { status: VERIFICATION_RUN_STATUSES.ARCHIVED }).catch(() => {});
-        }
+      // Fail-closed: check for other active runs (do NOT swallow)
+      const vrs = await getVerificationRunState(base44);
+      if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE) {
+        await persistOperationFailure(base44, {
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+          audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'activate_verification_run', target: opCreate.record_id, reason: 'Activate', intent_id: intent.intent_id,
+          intended_state: { verification_run_id }, error: 'Verification run state unavailable',
+        });
+        return safeJson('verification_run_unavailable', 503, 'Cannot verify verification run state — activation blocked for safety.');
+      }
+      if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.CONFLICT) {
+        await persistOperationFailure(base44, {
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+          audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'activate_verification_run', target: opCreate.record_id, reason: 'Activate', intent_id: intent.intent_id,
+          intended_state: { verification_run_id }, error: 'Multiple active runs detected',
+        });
+        return safeJson('verification_run_conflict', 409, 'Multiple active verification runs detected. Reconciliation is required.');
+      }
+      if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.ACTIVE && vrs.run.verification_run_id !== verification_run_id) {
+        await persistOperationFailure(base44, {
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+          audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'activate_verification_run', target: opCreate.record_id, reason: 'Activate', intent_id: intent.intent_id,
+          intended_state: { verification_run_id }, error: 'Another run is already active',
+        });
+        return safeJson('conflict', 409, 'Another verification run is already active. Complete, fail, or archive it first.', { existing_verification_run_id: vrs.run.verification_run_id });
       }
 
       // Resolve Tenant B ID if provisioned
@@ -418,24 +734,134 @@ export default async function(req: Request): Promise<Response> {
       const tenantBId = tenantBResults?.[0]?.id || null;
 
       const now = new Date().toISOString();
-      await base44.asServiceRole.entities.VerificationRun.update(run.id, {
-        status: VERIFICATION_RUN_STATUSES.ACTIVE,
-        started_at: now,
-        tenant_b_id: tenantBId,
+      try {
+        await base44.asServiceRole.entities.VerificationRun.update(run.id, {
+          status: VERIFICATION_RUN_STATUSES.ACTIVE,
+          started_at: now,
+          tenant_b_id: tenantBId,
+        });
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [run.id] });
+      } catch (mutErr) {
+        await persistOperationFailure(base44, {
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+          audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'activate_verification_run', target: opCreate.record_id, reason: 'Activate', intent_id: intent.intent_id,
+          intended_state: { verification_run_id }, error: mutErr.message,
+        });
+        return safeJson('internal_error', 500, 'Failed to activate verification run. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, operation_id: opCreate.operation_id, error: mutErr.message });
+      }
+
+      const completion = await persistOperationCompletion(base44, {
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+        audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'activate_verification_run', target: opCreate.record_id, reason: 'Activate', intent_id: intent.intent_id,
+        previous_state: { status: VERIFICATION_RUN_STATUSES.PREPARING },
+        new_state: { status: VERIFICATION_RUN_STATUSES.ACTIVE, started_at: now, tenant_b_id: tenantBId },
+        mutation_resource_ids: [run.id],
       });
+      if (!completion.persisted) {
+        return Response.json({ success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id, intent_id: intent.intent_id, verification_run_id, message: 'Verification run was activated but completion evidence could not be persisted. Recovery/reconciliation is required.' }, { status: 500 });
+      }
 
       return Response.json({
-        success: true,
-        verification_run_id,
-        status: VERIFICATION_RUN_STATUSES.ACTIVE,
-        started_at: now,
-        tenant_a_id: TENANT_A_ID,
-        tenant_b_id: tenantBId,
+        success: true, operation_status: 'completed', operation_id: opCreate.operation_id,
+        verification_run_id, status: VERIFICATION_RUN_STATUSES.ACTIVE, started_at: now,
+        tenant_a_id: TENANT_A_ID, tenant_b_id: tenantBId,
+        intent_id: intent.intent_id, completion_audit_id: completion.completion_id,
         message: 'Verification run activated. Readiness is now scoped to this run.',
       });
     }
 
-    // ── ARCHIVE VERIFICATION RUN ──────────────────────────
+    // ── COMPLETE VERIFICATION RUN (Build #28.2P-R.0R.1C) ───
+    if (action === 'complete_verification_run') {
+      const { verification_run_id } = body;
+      if (!verification_run_id) return safeJson('invalid_request', 400, 'verification_run_id is required.');
+
+      const runs = await base44.asServiceRole.entities.VerificationRun.filter({ verification_run_id }).catch(() => []);
+      if (!runs || runs.length === 0) return safeJson('not_found', 404, 'Verification run not found.');
+      const run = runs[0];
+
+      if (!isLegalVerificationRunTransition(run.status, VERIFICATION_RUN_STATUSES.COMPLETED)) {
+        return safeJson('invalid_request', 400, `Illegal transition: ${run.status} → ${VERIFICATION_RUN_STATUSES.COMPLETED}. Only ACTIVE runs can be completed.`);
+      }
+
+      const targetKey = targetKeyForVerificationRun(verification_run_id);
+      const opCreate = await createOperation(base44, {
+        action: 'complete_verification_run', target_type: TARGET_TYPES.VERIFICATION_RUN, target_key: targetKey,
+        tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', verification_run_id,
+      });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this verification run.', { target_key: targetKey });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot complete — TestLabOperation could not be created.', { error: opCreate.error });
+
+      const intent = await persistOperationIntent(base44, {
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+        audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'complete_verification_run', target: opCreate.record_id, reason: `Complete ${verification_run_id}`,
+        intended_state: { verification_run_id, from_status: run.status, to_status: VERIFICATION_RUN_STATUSES.COMPLETED },
+      });
+      if (!intent.intent_id) { await releaseOperationLock(base44, opCreate.registry_id, opCreate.operation_id); await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.FAILED, { failure_code: 'intent_failed', failure_summary: intent.error }); return safeJson('audit_failure', 500, 'Cannot complete — durable intent could not be persisted.', { error: intent.error }); }
+
+      const now = new Date().toISOString();
+      try {
+        await base44.asServiceRole.entities.VerificationRun.update(run.id, { status: VERIFICATION_RUN_STATUSES.COMPLETED, completed_at: now });
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [run.id] });
+      } catch (mutErr) {
+        await persistOperationFailure(base44, { operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', action: 'complete_verification_run', target: opCreate.record_id, reason: 'Complete', intent_id: intent.intent_id, intended_state: { verification_run_id }, error: mutErr.message });
+        return safeJson('internal_error', 500, 'Failed to complete verification run.', { error: mutErr.message });
+      }
+
+      const completion = await persistOperationCompletion(base44, { operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', action: 'complete_verification_run', target: opCreate.record_id, reason: 'Complete', intent_id: intent.intent_id, previous_state: { status: run.status }, new_state: { status: VERIFICATION_RUN_STATUSES.COMPLETED, completed_at: now }, mutation_resource_ids: [run.id] });
+      if (!completion.persisted) return Response.json({ success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id, verification_run_id, message: 'Verification run was completed but completion evidence could not be persisted.' }, { status: 500 });
+
+      return Response.json({ success: true, operation_status: 'completed', operation_id: opCreate.operation_id, verification_run_id, status: VERIFICATION_RUN_STATUSES.COMPLETED, completed_at: now, message: 'Verification run completed.' });
+    }
+
+    // ── FAIL VERIFICATION RUN (Build #28.2P-R.0R.1C) ──────
+    if (action === 'fail_verification_run') {
+      const { verification_run_id, reason: failReason } = body;
+      if (!verification_run_id) return safeJson('invalid_request', 400, 'verification_run_id is required.');
+
+      const runs = await base44.asServiceRole.entities.VerificationRun.filter({ verification_run_id }).catch(() => []);
+      if (!runs || runs.length === 0) return safeJson('not_found', 404, 'Verification run not found.');
+      const run = runs[0];
+
+      if (!isLegalVerificationRunTransition(run.status, VERIFICATION_RUN_STATUSES.FAILED)) {
+        return safeJson('invalid_request', 400, `Illegal transition: ${run.status} → ${VERIFICATION_RUN_STATUSES.FAILED}. Only ACTIVE runs can be failed.`);
+      }
+
+      const targetKey = targetKeyForVerificationRun(verification_run_id);
+      const opCreate = await createOperation(base44, {
+        action: 'fail_verification_run', target_type: TARGET_TYPES.VERIFICATION_RUN, target_key: targetKey,
+        tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', verification_run_id,
+      });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this verification run.', { target_key: targetKey });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot fail — TestLabOperation could not be created.', { error: opCreate.error });
+
+      const intent = await persistOperationIntent(base44, {
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+        audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'fail_verification_run', target: opCreate.record_id, reason: `Fail ${verification_run_id}: ${failReason || 'no reason provided'}`,
+        intended_state: { verification_run_id, from_status: run.status, to_status: VERIFICATION_RUN_STATUSES.FAILED },
+      });
+      if (!intent.intent_id) { await releaseOperationLock(base44, opCreate.registry_id, opCreate.operation_id); await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.FAILED, { failure_code: 'intent_failed', failure_summary: intent.error }); return safeJson('audit_failure', 500, 'Cannot fail — durable intent could not be persisted.', { error: intent.error }); }
+
+      const now = new Date().toISOString();
+      try {
+        await base44.asServiceRole.entities.VerificationRun.update(run.id, { status: VERIFICATION_RUN_STATUSES.FAILED, completed_at: now });
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [run.id] });
+      } catch (mutErr) {
+        await persistOperationFailure(base44, { operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', action: 'fail_verification_run', target: opCreate.record_id, reason: 'Fail', intent_id: intent.intent_id, intended_state: { verification_run_id }, error: mutErr.message });
+        return safeJson('internal_error', 500, 'Failed to fail verification run.', { error: mutErr.message });
+      }
+
+      const completion = await persistOperationCompletion(base44, { operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', action: 'fail_verification_run', target: opCreate.record_id, reason: 'Fail', intent_id: intent.intent_id, previous_state: { status: run.status }, new_state: { status: VERIFICATION_RUN_STATUSES.FAILED, completed_at: now }, mutation_resource_ids: [run.id] });
+      if (!completion.persisted) return Response.json({ success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id, verification_run_id, message: 'Verification run was failed but completion evidence could not be persisted.' }, { status: 500 });
+
+      return Response.json({ success: true, operation_status: 'completed', operation_id: opCreate.operation_id, verification_run_id, status: VERIFICATION_RUN_STATUSES.FAILED, completed_at: now, message: 'Verification run failed.' });
+    }
+
+    // ── ARCHIVE VERIFICATION RUN (Build #28.2P-R.0R.1C) ──
+    // Uses operation ledger. Does NOT swallow errors. Enforces legal transitions.
     if (action === 'archive_verification_run') {
       const { verification_run_id } = body;
       if (!verification_run_id) return safeJson('invalid_request', 400, 'verification_run_id is required.');
@@ -444,8 +870,39 @@ export default async function(req: Request): Promise<Response> {
       if (!runs || runs.length === 0) return safeJson('not_found', 404, 'Verification run not found.');
       const run = runs[0];
 
-      await base44.asServiceRole.entities.VerificationRun.update(run.id, { status: VERIFICATION_RUN_STATUSES.ARCHIVED }).catch(() => {});
-      return Response.json({ success: true, verification_run_id, status: VERIFICATION_RUN_STATUSES.ARCHIVED, message: 'Verification run archived.' });
+      if (!isLegalVerificationRunTransition(run.status, VERIFICATION_RUN_STATUSES.ARCHIVED)) {
+        return safeJson('invalid_request', 400, `Illegal transition: ${run.status} → ${VERIFICATION_RUN_STATUSES.ARCHIVED}. Only COMPLETED or FAILED runs can be archived.`);
+      }
+
+      const targetKey = targetKeyForVerificationRun(verification_run_id);
+      const opCreate = await createOperation(base44, {
+        action: 'archive_verification_run', target_type: TARGET_TYPES.VERIFICATION_RUN, target_key: targetKey,
+        tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', verification_run_id,
+      });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this verification run.', { target_key: targetKey });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot archive — TestLabOperation could not be created.', { error: opCreate.error });
+
+      const intent = await persistOperationIntent(base44, {
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
+        audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'archive_verification_run', target: opCreate.record_id, reason: `Archive ${verification_run_id}`,
+        intended_state: { verification_run_id, from_status: run.status, to_status: VERIFICATION_RUN_STATUSES.ARCHIVED },
+      });
+      if (!intent.intent_id) { await releaseOperationLock(base44, opCreate.registry_id, opCreate.operation_id); await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.FAILED, { failure_code: 'intent_failed', failure_summary: intent.error }); return safeJson('audit_failure', 500, 'Cannot archive — durable intent could not be persisted.', { error: intent.error }); }
+
+      const now = new Date().toISOString();
+      try {
+        await base44.asServiceRole.entities.VerificationRun.update(run.id, { status: VERIFICATION_RUN_STATUSES.ARCHIVED, archived_at: now });
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [run.id] });
+      } catch (mutErr) {
+        await persistOperationFailure(base44, { operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', action: 'archive_verification_run', target: opCreate.record_id, reason: 'Archive', intent_id: intent.intent_id, intended_state: { verification_run_id }, error: mutErr.message });
+        return safeJson('internal_error', 500, 'Failed to archive verification run. Operation intent is persisted for recovery.', { error: mutErr.message });
+      }
+
+      const completion = await persistOperationCompletion(base44, { operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', action: 'archive_verification_run', target: opCreate.record_id, reason: 'Archive', intent_id: intent.intent_id, previous_state: { status: run.status }, new_state: { status: VERIFICATION_RUN_STATUSES.ARCHIVED, archived_at: now }, mutation_resource_ids: [run.id] });
+      if (!completion.persisted) return Response.json({ success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id, verification_run_id, message: 'Verification run was archived but completion evidence could not be persisted.' }, { status: 500 });
+
+      return Response.json({ success: true, operation_status: 'completed', operation_id: opCreate.operation_id, verification_run_id, status: VERIFICATION_RUN_STATUSES.ARCHIVED, archived_at: now, message: 'Verification run archived.' });
     }
 
     // ── RECONCILE OPERATION (Build #28.2P-R.0R.1B) ──────────
@@ -489,15 +946,25 @@ export default async function(req: Request): Promise<Response> {
 
       // Transition the operation to RECONCILED
       const newStatus = resolution === 'reconciled_completed' ? OPERATION_LIFECYCLE_STATES.COMPLETED : OPERATION_LIFECYCLE_STATES.FAILED;
-      await base44.asServiceRole.entities.TestLabOperation.update(op.id, {
-        status: newStatus,
-        reconciliation_state: resolution,
-        reconciled_by_id: user.id,
-        reconciled_by_name: user.full_name || 'Admin',
-        reconciliation_reason: reason,
-        reconciliation_audit_id: reconciliationAuditId,
-        updated_date: new Date().toISOString(),
-      }).catch(() => {});
+      try {
+        await base44.asServiceRole.entities.TestLabOperation.update(op.id, {
+          status: newStatus,
+          reconciliation_state: resolution,
+          reconciled_by_id: user.id,
+          reconciled_by_name: user.full_name || 'Admin',
+          reconciliation_reason: reason,
+          reconciliation_audit_id: reconciliationAuditId,
+          updated_date: new Date().toISOString(),
+        });
+      } catch (reconcileErr) {
+        return safeJson('internal_error', 500, 'Failed to transition operation to reconciled state. Reconciliation audit is persisted but the operation lock remains held.', { error: reconcileErr.message, reconciliation_audit_id: reconciliationAuditId });
+      }
+
+      // Release the atomic lock (INCOMPLETE → COMPLETED or FAILED is a terminal transition)
+      const registry = await ensureLockRegistry(base44);
+      if (registry.registry_id && op.operation_id) {
+        await releaseOperationLock(base44, registry.registry_id, op.operation_id).catch(() => {});
+      }
 
       return Response.json({
         success: true,
@@ -565,7 +1032,7 @@ export default async function(req: Request): Promise<Response> {
         }
       }
 
-      // STEP 0: Create TestLabOperation record (PENDING)
+      // STEP 0: Create TestLabOperation record (PENDING) + acquire atomic lock
       const activeVRun = await getActiveVerificationRun(base44);
       const opCreate = await createOperation(base44, {
         action: 'provision_tenant_b',
@@ -575,13 +1042,16 @@ export default async function(req: Request): Promise<Response> {
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: activeVRun?.verification_run_id,
       });
+      if (opCreate.lock_error) {
+        return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
+      }
       if (!opCreate.operation_id) {
         return safeJson('audit_failure', 500, 'Cannot provision — TestLabOperation record could not be created. No mutation has occurred.', { error: opCreate.error });
       }
 
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        operation_record_id: opCreate.record_id,
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
         audit_tenant_id: 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'provision_tenant_b', target: opCreate.record_id,
@@ -619,7 +1089,7 @@ export default async function(req: Request): Promise<Response> {
         });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          operation_record_id: opCreate.record_id,
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
           audit_tenant_id: 'platform',
           actor_id: user.id, actor_name: user.full_name || 'Admin',
           action: 'provision_tenant_b', target: opCreate.record_id,
@@ -636,7 +1106,7 @@ export default async function(req: Request): Promise<Response> {
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        operation_record_id: opCreate.record_id,
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
         audit_tenant_id: tenantRecord.id,
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'provision_tenant_b', target: opCreate.record_id,
@@ -755,10 +1225,11 @@ export default async function(req: Request): Promise<Response> {
           tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
           verification_run_id: activeVRun?.verification_run_id,
         });
-        if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot record membership reuse — TestLabOperation could not be created.');
+        if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot record membership reuse — TestLabOperation could not be created.');
 
         const intent = await persistOperationIntent(base44, {
-          operation_record_id: opCreate.record_id, audit_tenant_id: targetTenantId,
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetTenantId,
           actor_id: user.id, actor_name: user.full_name || 'Admin',
           action: 'prepare_membership', target: opCreate.record_id, reason: `Idempotent reuse of existing Employee for ${email}`,
           intended_state: { employee_id: emp.id, email, reused: true, operation_id: opCreate.operation_id },
@@ -768,7 +1239,7 @@ export default async function(req: Request): Promise<Response> {
         await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [emp.id] });
 
         const completion = await persistOperationCompletion(base44, {
-          operation_record_id: opCreate.record_id, audit_tenant_id: targetTenantId,
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetTenantId,
           actor_id: user.id, actor_name: user.full_name || 'Admin',
           action: 'prepare_membership', target: opCreate.record_id, reason: `Idempotent reuse of existing Employee for ${email}`,
           intent_id: intent.intent_id, previous_state: { role: emp.role, status: emp.status },
@@ -787,11 +1258,12 @@ export default async function(req: Request): Promise<Response> {
         tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: activeVRun?.verification_run_id,
       });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot prepare membership — TestLabOperation could not be created.', { error: opCreate.error });
 
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: targetTenantId,
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetTenantId,
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'prepare_membership', target: opCreate.record_id, reason,
         intended_state: { email, role: identity.employeeRole, tenant_id: targetTenantId, outlet_id: outletId, operation_id: opCreate.operation_id },
@@ -809,7 +1281,7 @@ export default async function(req: Request): Promise<Response> {
         await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [employeeRecord.id] });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          operation_record_id: opCreate.record_id, audit_tenant_id: targetTenantId,
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetTenantId,
           actor_id: user.id, actor_name: user.full_name || 'Admin',
           action: 'prepare_membership', target: opCreate.record_id, reason, intent_id: intent.intent_id,
           intended_state: { email, role: identity.employeeRole }, error: mutErr.message,
@@ -819,7 +1291,7 @@ export default async function(req: Request): Promise<Response> {
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: targetTenantId,
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetTenantId,
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'prepare_membership', target: opCreate.record_id, reason, intent_id: intent.intent_id,
         previous_state: null,
@@ -879,11 +1351,12 @@ export default async function(req: Request): Promise<Response> {
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: activeVRun?.verification_run_id,
       });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot grant permission — TestLabOperation could not be created.', { error: opCreate.error });
 
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'grant_permission', target: opCreate.record_id, reason,
         intended_state: { permission: CROSS_TENANT_AI_PERMISSION, target_email: email, target_user_id: targetUser.id, operation_id: opCreate.operation_id },
@@ -897,7 +1370,7 @@ export default async function(req: Request): Promise<Response> {
         await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [targetUser.id] });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
           actor_id: user.id, actor_name: user.full_name || 'Admin',
           action: 'grant_permission', target: opCreate.record_id, reason, intent_id: intent.intent_id,
           intended_state: { permission: CROSS_TENANT_AI_PERMISSION, target_email: email }, error: mutErr.message,
@@ -907,7 +1380,7 @@ export default async function(req: Request): Promise<Response> {
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'grant_permission', target: opCreate.record_id, reason, intent_id: intent.intent_id,
         previous_state: { permission: CROSS_TENANT_AI_PERMISSION, granted: false },
@@ -963,11 +1436,12 @@ export default async function(req: Request): Promise<Response> {
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: activeVRun?.verification_run_id,
       });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot revoke permission — TestLabOperation could not be created.', { error: opCreate.error });
 
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'revoke_permission', target: opCreate.record_id, reason,
         intended_state: { permission: CROSS_TENANT_AI_PERMISSION, target_email: email, target_user_id: targetUser.id, operation_id: opCreate.operation_id },
@@ -980,7 +1454,7 @@ export default async function(req: Request): Promise<Response> {
         await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [targetUser.id] });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
           actor_id: user.id, actor_name: user.full_name || 'Admin',
           action: 'revoke_permission', target: opCreate.record_id, reason, intent_id: intent.intent_id,
           intended_state: { permission: CROSS_TENANT_AI_PERMISSION, target_email: email }, error: mutErr.message,
@@ -990,7 +1464,7 @@ export default async function(req: Request): Promise<Response> {
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: targetUser.data?.tenant_id || 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'revoke_permission', target: opCreate.record_id, reason, intent_id: intent.intent_id,
         previous_state: { permission: CROSS_TENANT_AI_PERMISSION, granted: previousValue },
@@ -1039,11 +1513,12 @@ export default async function(req: Request): Promise<Response> {
         tenant_id: auditTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: activeVRun?.verification_run_id,
       });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot attest — TestLabOperation could not be created.', { error: opCreate.error });
 
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: auditTenantId,
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: auditTenantId,
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'attest_delivery', target: opCreate.record_id, reason,
         intended_state: { alias: email, check_key: check, verified: !!verified, operation_id: opCreate.operation_id },
@@ -1063,7 +1538,7 @@ export default async function(req: Request): Promise<Response> {
           });
           await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [record.id] });
           const completion = await persistOperationCompletion(base44, {
-            operation_record_id: opCreate.record_id, audit_tenant_id: auditTenantId,
+            operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: auditTenantId,
             actor_id: user.id, actor_name: user.full_name || 'Admin',
             action: 'attest_delivery', target: opCreate.record_id, reason, intent_id: intent.intent_id,
             previous_state: { verified: record.verified },
@@ -1082,7 +1557,7 @@ export default async function(req: Request): Promise<Response> {
         });
         await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [attestation?.id || ''] });
         const completion = await persistOperationCompletion(base44, {
-          operation_record_id: opCreate.record_id, audit_tenant_id: auditTenantId,
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: auditTenantId,
           actor_id: user.id, actor_name: user.full_name || 'Admin',
           action: 'attest_delivery', target: opCreate.record_id, reason, intent_id: intent.intent_id,
           previous_state: { verified: false },
@@ -1095,7 +1570,7 @@ export default async function(req: Request): Promise<Response> {
         return Response.json({ success: true, operation_status: 'completed', operation_id: opCreate.operation_id, email, check, verified: !!verified, attested_by: user.full_name || 'Admin', attested_at: now, attestation_id: attestation?.id || '', intent_id: intent.intent_id, completion_audit_id: completion.completion_id, message: 'Email delivery attestation recorded.' });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          operation_record_id: opCreate.record_id, audit_tenant_id: auditTenantId,
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: auditTenantId,
           actor_id: user.id, actor_name: user.full_name || 'Admin',
           action: 'attest_delivery', target: opCreate.record_id, reason, intent_id: intent.intent_id,
           intended_state: { alias: email, check_key: check, verified: !!verified }, error: mutErr.message,
@@ -1150,11 +1625,12 @@ export default async function(req: Request): Promise<Response> {
         tenant_id: sandbox_tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: activeVRun.verification_run_id,
       });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot create Test Run — TestLabOperation could not be created.', { error: opCreate.error });
 
       // STEP 1: Persist durable operation intent BEFORE mutation
       const intent = await persistOperationIntent(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: sandbox_tenant_id,
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: sandbox_tenant_id,
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'create_test_run', target: opCreate.record_id, reason: `Create Test Run ${testRunId} for ${permitted_service_key}`,
         intended_state: { test_run_id: testRunId, sandbox_tenant_id, permitted_service_key, server_selected_ttl_minutes: serverTtl, test_tag, client_ttl_ignored: clientTtlSupplied, verification_run_id: activeVRun.verification_run_id, operation_id: opCreate.operation_id },
@@ -1179,7 +1655,7 @@ export default async function(req: Request): Promise<Response> {
         await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, { mutation_resource_ids: [testRun?.id || testRunId] });
       } catch (mutErr) {
         await persistOperationFailure(base44, {
-          operation_record_id: opCreate.record_id, audit_tenant_id: sandbox_tenant_id,
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: sandbox_tenant_id,
           actor_id: user.id, actor_name: user.full_name || 'Admin',
           action: 'create_test_run', target: opCreate.record_id, reason: `Create Test Run ${testRunId}`, intent_id: intent.intent_id,
           intended_state: { test_run_id: testRunId, server_selected_ttl_minutes: serverTtl }, error: mutErr.message,
@@ -1189,7 +1665,7 @@ export default async function(req: Request): Promise<Response> {
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: sandbox_tenant_id,
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: sandbox_tenant_id,
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'create_test_run', target: opCreate.record_id, reason: `Create Test Run ${testRunId}`, intent_id: intent.intent_id,
         previous_state: null,
@@ -1239,9 +1715,11 @@ export default async function(req: Request): Promise<Response> {
 
       const attestations = await base44.asServiceRole.entities.TestLabAttestation.list().catch(() => []);
 
-      // ── BUILD #28.2P-R.0R.1B: CURRENT-VERIFICATION-RUN SCOPED READINESS ──
-      const activeVRun = await getActiveVerificationRun(base44);
+      // ── BUILD #28.2P-R.0R.1C: FAIL-CLOSED VERIFICATION RUN STATE ──
+      const vrs = await getVerificationRunState(base44);
+      const activeVRun = vrs.state === VERIFICATION_RUN_LOOKUP_STATES.ACTIVE ? vrs.run : null;
       const activeVRunId = activeVRun?.verification_run_id || null;
+      const vrunLookupState = vrs.state; // NONE, ACTIVE, UNAVAILABLE, CONFLICT
 
       const sandboxTenantIds: string[] = [TENANT_A_ID];
       if (tenantBId) sandboxTenantIds.push(tenantBId);
@@ -1278,7 +1756,7 @@ export default async function(req: Request): Promise<Response> {
       let unresolvedLookupAvailable = true;
       try {
         const incompleteOps = await base44.asServiceRole.entities.TestLabOperation.filter({
-          status: { $in: [OPERATION_LIFECYCLE_STATES.INCOMPLETE, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED] },
+          status: { $in: BLOCKING_OPERATION_STATUSES },
         }, '-created_date', 50);
         allUnresolved = (incompleteOps || []).map((op: any) => ({
           operation_id: op.operation_id,
@@ -1379,6 +1857,9 @@ export default async function(req: Request): Promise<Response> {
           tenant_b_isolation_ready: tenantBIsolationReady,
           platform_permission_distinction_ready: !!(platformAllowed?.user_registered && platformDenied?.user_registered && platformAllowed?.cross_tenant_permission === true && platformDenied?.cross_tenant_permission === false),
           readiness_scope: activeVRunId ? 'current_verification_run' : 'no_active_run',
+          verification_run_lookup_state: vrunLookupState,
+          readiness_unavailable: vrunLookupState === VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE,
+          readiness_conflict: vrunLookupState === VERIFICATION_RUN_LOOKUP_STATES.CONFLICT,
         },
         unresolved_operations: allUnresolved,
         has_unresolved_operations: allUnresolved.length > 0,
@@ -1416,11 +1897,12 @@ export default async function(req: Request): Promise<Response> {
         tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: activeVRun?.verification_run_id,
       });
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot reset — TestLabOperation could not be created.', { error: opCreate.error });
 
       // STEP 1: Persist durable operation intent BEFORE any deletion
       const intent = await persistOperationIntent(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: tenant_id,
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: tenant_id,
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'reset_test_data', target: opCreate.record_id, reason,
         intended_state: { test_run_id, tenant_id, scope: 'mutable_tagged_records', operation_id: opCreate.operation_id },
@@ -1491,7 +1973,7 @@ export default async function(req: Request): Promise<Response> {
 
       // STEP 3: Persist completion evidence
       const completion = await persistOperationCompletion(base44, {
-        operation_record_id: opCreate.record_id, audit_tenant_id: tenant_id,
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: tenant_id,
         actor_id: user.id, actor_name: user.full_name || 'Admin',
         action: 'reset_test_data', target: opCreate.record_id, reason, intent_id: intent.intent_id,
         previous_state: { test_run_id },
