@@ -1,7 +1,7 @@
 {
   "name": "TestLabOperation",
   "type": "object",
-  "description": "Orbitan Test Lab \u2014 Stable Operation Ledger (Build #28.2P-R.0R.1B). One record per privileged Test Lab mutation, correlated by a server-generated immutable operation_id across the entire lifecycle: PENDING \u2192 INTENT_PERSISTED \u2192 MUTATION_COMPLETED \u2192 COMPLETED (or FAILED / INCOMPLETE). Replaces fragile AuditLog.target_record_id correlation. Supports fail-closed lookup (CLEAR / BLOCKED / UNAVAILABLE), canonical target keys, and narrow reconciliation. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan Test Lab \u2014 Stable Operation Ledger (Build #28.2P-R.0R.1B). One record per privileged Test Lab mutation, correlated by a server-generated immutable operation_id across the entire lifecycle: PENDING \u2192 INTENT_PERSISTED \u2192 MUTATION_COMPLETED \u2192 COMPLETED (or FAILED / INCOMPLETE). Build #28.2P-R.0R.1C hardens RLS to service-role-only writes \u2014 no app user (including platform admins without platform.test_lab.manage) can directly create/update/delete. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "operation_id": {
       "type": "string",
@@ -21,7 +21,12 @@
         "attest_delivery",
         "create_test_run",
         "reset_test_data",
-        "reconcile_operation"
+        "reconcile_operation",
+        "create_verification_run",
+        "activate_verification_run",
+        "complete_verification_run",
+        "fail_verification_run",
+        "archive_verification_run"
       ],
       "description": "The privileged Test Lab action this operation represents."
     },
@@ -33,7 +38,9 @@
         "test_permission",
         "test_attestation",
         "test_run",
-        "test_reset"
+        "test_reset",
+        "verification_run",
+        "verification_activation"
       ],
       "description": "Canonical target classification for deterministic correlation."
     },
@@ -129,9 +136,18 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "___service_only___"
+          }
+        }
+      ]
     },
     "read": {
       "user_condition": {
@@ -139,14 +155,32 @@
       }
     },
     "update": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "___service_only___"
+          }
+        }
+      ]
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "___service_only___"
+          }
+        }
+      ]
     }
   }
 }
