@@ -1,7 +1,7 @@
 {
   "name": "TestLabOperation",
   "type": "object",
-  "description": "Orbitan Test Lab \u2014 Stable Operation Ledger (Build #28.2P-R.0R.1B). One record per privileged Test Lab mutation, correlated by a server-generated immutable operation_id across the entire lifecycle: PENDING \u2192 INTENT_PERSISTED \u2192 MUTATION_COMPLETED \u2192 COMPLETED (or FAILED / INCOMPLETE). Build #28.2P-R.0R.1C hardens RLS to service-role-only writes \u2014 no app user (including platform admins without platform.test_lab.manage) can directly create/update/delete. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan Test Lab \u2014 Stable Operation Ledger (Build #28.2P-R.0R.1B). One record per privileged Test Lab mutation, correlated by a server-generated immutable operation_id across the entire lifecycle: PENDING \u2192 INTENT_PERSISTED \u2192 MUTATION_COMPLETED \u2192 COMPLETED (or FAILED / INCOMPLETE). Build #28.2P-R.0R.1C-F hardens RLS to service-role-only writes using a single impossible user_condition \u2014 no app user (including platform admins) can directly create/update/delete. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "operation_id": {
       "type": "string",
@@ -136,18 +136,9 @@
   ],
   "rls": {
     "create": {
-      "$and": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "___service_only___"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "___service_only___"
+      }
     },
     "read": {
       "user_condition": {
@@ -155,32 +146,14 @@
       }
     },
     "update": {
-      "$and": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "___service_only___"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "___service_only___"
+      }
     },
     "delete": {
-      "$and": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "___service_only___"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "___service_only___"
+      }
     }
   }
 }
