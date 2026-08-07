@@ -6,8 +6,7 @@ import {
   SANDBOX_TEST_TTL_DEFAULT_MINUTES, EMAIL_ATTESTATION_CHECKS,
   BOOTSTRAP_STATE,
   OPERATION_LIFECYCLE_STATES, OPERATION_LOOKUP_STATES,
-  BLOCKING_OPERATION_STATUSES, NON_BLOCKING_OPERATION_STATUSES,
-  isBlockingOperationStatus, isNonBlockingOperationStatus,
+  BLOCKING_OPERATION_STATUSES,
   VERIFICATION_RUN_STATUSES, VERIFICATION_RUN_LOOKUP_STATES,
   VERIFICATION_RUN_TRANSITIONS, isLegalVerificationRunTransition,
   TARGET_TYPES,
@@ -18,8 +17,18 @@ import {
   targetKeyForTestRun, targetKeyForReset,
   targetKeyForVerificationRun, targetKeyForVerificationActivation,
   lockKeyForTarget,
-  generateOperationId, generateVerificationRunId,
+  generateVerificationRunId,
 } from '../../shared/test-lab-config.ts';
+
+// Runtime helpers extracted to runtime.ts (Build #28.2P-R.0R.1C-F)
+import {
+  ensureLockRegistry, initializeLockRegistry,
+  acquireOperationLock, releaseOperationLock,
+  getVerificationRunState, getOptionalVerificationRunId,
+  checkOperationState, createOperation, transitionOperation,
+  persistOperationIntent, persistOperationCompletion,
+  persistOperationFailure, probeLock, PROBE_LOCK_KEYS,
+} from './runtime.ts';
 
 // ============================================================
 // ORBITAN TEST LAB SETUP — Internal Governance Test Infrastructure
@@ -57,285 +66,6 @@ function safeJson(errorCode: string, status: number, message: string, extra: Rec
   return Response.json({ success: false, safe_error_code: errorCode, error: message, ...extra }, { status });
 }
 
-// ── TESTLABOPERATION LEDGER (Build #28.2P-R.0R.1B) ─────────────
-// Creates a PENDING TestLabOperation record. The operation_id is
-// server-generated, immutable, and correlates every lifecycle stage.
-
-// Build #28.2P-R.0R.1C: createOperation now acquires the atomic lock
-// BEFORE creating the TestLabOperation record. The lock prevents
-// check-then-create races. Returns registry_id for later release.
-async function createOperation(base44: any, params: {
-  action: string;
-  target_type: string;
-  target_key: string;
-  tenant_id: string;
-  actor_id: string;
-  actor_name: string;
-  verification_run_id?: string;
-  lock_key_override?: string;
-}): Promise<{ operation_id: string; record_id: string; registry_id: string; error?: string; lock_error?: string }> {
-  try {
-    // 1. Ensure lock registry exists
-    const registry = await ensureLockRegistry(base44);
-    if (registry.error) return { operation_id: '', record_id: '', registry_id: '', error: `Lock registry unavailable: ${registry.error}` };
-    if (registry.conflict) return { operation_id: '', record_id: '', registry_id: '', error: 'Lock registry conflict — multiple registries exist' };
-
-    // 2. Generate operation_id
-    const operationId = generateOperationId();
-
-    // 3. Acquire atomic lock
-    const lockKey = params.lock_key_override || lockKeyForTarget(params.target_type, params.target_key);
-    const lockResult = await acquireOperationLock(base44, registry.registry_id!, lockKey, operationId, params.target_type, params.target_key);
-    if (!lockResult.acquired) {
-      return { operation_id: '', record_id: '', registry_id: '', lock_error: 'operation_in_progress' };
-    }
-
-    // 4. Create TestLabOperation record
-    const record = await base44.asServiceRole.entities.TestLabOperation.create({
-      operation_id: operationId,
-      verification_run_id: params.verification_run_id || null,
-      action: params.action,
-      target_type: params.target_type,
-      target_key: params.target_key,
-      tenant_id: params.tenant_id,
-      actor_id: params.actor_id,
-      actor_name: params.actor_name,
-      status: OPERATION_LIFECYCLE_STATES.PENDING,
-      intent_audit_id: null,
-      mutation_resource_ids: [],
-      completion_audit_id: null,
-      failure_code: null,
-      failure_summary: null,
-      reconciliation_state: 'not_reconciled',
-      non_production: true,
-    });
-    if (!record?.id) {
-      // Lock acquired but record creation failed — release lock
-      await releaseOperationLock(base44, registry.registry_id!, operationId);
-      return { operation_id: '', record_id: '', registry_id: '', error: 'TestLabOperation creation returned empty ID' };
-    }
-    return { operation_id: operationId, record_id: record.id, registry_id: registry.registry_id! };
-  } catch (err) {
-    return { operation_id: '', record_id: '', registry_id: '', error: `TestLabOperation creation failed: ${err.message}` };
-  }
-}
-
-// Transitions the TestLabOperation to a new status. Actually persists
-// the transition — does not merely declare it in constants.
-async function transitionOperation(base44: any, operationRecordId: string, newStatus: string, updates: Record<string, any> = {}): Promise<{ persisted: boolean; error?: string }> {
-  try {
-    await base44.asServiceRole.entities.TestLabOperation.update(operationRecordId, {
-      status: newStatus,
-      updated_date: new Date().toISOString(),
-      ...updates,
-    });
-    return { persisted: true };
-  } catch (err) {
-    return { persisted: false, error: err.message };
-  }
-}
-
-// ── DURABLE OPERATION INTENT (Build #28.2P-R.0R.1B) ────────────
-// Persists intent audit evidence AND transitions the TestLabOperation
-// to INTENT_PERSISTED. Both must succeed for the intent to be durable.
-
-async function persistOperationIntent(base44: any, params: {
-  operation_record_id: string;
-  audit_tenant_id: string;
-  actor_id: string; actor_name: string;
-  action: string; target: string; reason: string;
-  intended_state: Record<string, any>;
-}): Promise<{ intent_id: string; error?: string }> {
-  try {
-    const record = await base44.asServiceRole.entities.AuditLog.create({
-      tenant_id: params.audit_tenant_id,
-      actor_id: params.actor_id,
-      actor_name: params.actor_name,
-      actor_role: 'admin',
-      action_type: `test_lab_intent_${params.action}`,
-      module: 'system',
-      category: 'governance',
-      severity: 'warning',
-      event_source: 'testLabSetup',
-      target_entity: 'TestLabOperation',
-      target_record_id: params.target,
-      details: `OPERATION INTENT — ${params.action}: ${params.reason}`,
-      previous_state: null,
-      new_state: { ...params.intended_state, intent_state: OPERATION_LIFECYCLE_STATES.INTENT_PERSISTED, action: params.action },
-      shield_outcome: 'not_evaluated',
-    });
-    const intentId = record?.id || '';
-    if (!intentId) {
-      return { intent_id: '', error: 'Intent persistence returned empty ID — cannot proceed with mutation.' };
-    }
-    // Transition the TestLabOperation to INTENT_PERSISTED
-    await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.INTENT_PERSISTED, {
-      intent_audit_id: intentId,
-    });
-    return { intent_id: intentId };
-  } catch (err) {
-    return { intent_id: '', error: `Intent persistence failed: ${err.message}` };
-  }
-}
-
-// Build #28.2P-R.0R.1C: Returns { completion_id, persisted }.
-// Also transitions the TestLabOperation to COMPLETED.
-// On COMPLETED: releases the atomic lock. On INCOMPLETE: lock remains held.
-async function persistOperationCompletion(base44: any, params: {
-  operation_record_id: string;
-  audit_tenant_id: string;
-  actor_id: string; actor_name: string;
-  action: string; target: string; reason: string;
-  intent_id: string;
-  previous_state: any;
-  new_state: Record<string, any>;
-  mutation_resource_ids?: string[];
-  test_run_id?: string;
-  registry_id?: string;
-  operation_id?: string;
-}): Promise<{ completion_id: string; persisted: boolean }> {
-  try {
-    const record = await base44.asServiceRole.entities.AuditLog.create({
-      tenant_id: params.audit_tenant_id,
-      actor_id: params.actor_id,
-      actor_name: params.actor_name,
-      actor_role: 'admin',
-      action_type: `test_lab_${params.action}_completed`,
-      module: 'system',
-      category: 'governance',
-      severity: 'success',
-      event_source: 'testLabSetup',
-      target_entity: 'TestLabOperation',
-      target_record_id: params.target,
-      details: `OPERATION COMPLETED — ${params.action}: ${params.reason}`,
-      previous_state: params.previous_state,
-      new_state: { ...params.new_state, intent_state: OPERATION_LIFECYCLE_STATES.COMPLETED, intent_id: params.intent_id },
-      shield_outcome: 'not_evaluated',
-    });
-    const completionId = record?.id || '';
-    if (!completionId) {
-      await persistDegradedAudit(base44, params, 'Completion persistence returned empty ID');
-      await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.INCOMPLETE, {
-        failure_code: 'completion_evidence_empty',
-        failure_summary: 'Completion persistence returned empty ID',
-      });
-      // INCOMPLETE — do NOT release lock
-      return { completion_id: '', persisted: false };
-    }
-    await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.COMPLETED, {
-      completion_audit_id: completionId,
-      mutation_resource_ids: params.mutation_resource_ids || [],
-      completed_at: new Date().toISOString(),
-    });
-    // COMPLETED — release lock
-    if (params.registry_id && params.operation_id) {
-      await releaseOperationLock(base44, params.registry_id, params.operation_id);
-    }
-    return { completion_id: completionId, persisted: true };
-  } catch (err) {
-    await persistDegradedAudit(base44, params, err.message);
-    await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.INCOMPLETE, {
-      failure_code: 'completion_evidence_failed',
-      failure_summary: err.message,
-    });
-    // INCOMPLETE — do NOT release lock
-    return { completion_id: '', persisted: false };
-  }
-}
-
-// Helper: persist a degraded (incomplete) audit record when completion fails
-async function persistDegradedAudit(base44: any, params: any, errorMessage: string): Promise<void> {
-  try {
-    await base44.asServiceRole.entities.AuditLog.create({
-      tenant_id: params.audit_tenant_id,
-      actor_id: params.actor_id,
-      actor_name: params.actor_name,
-      actor_role: 'admin',
-      action_type: `test_lab_${params.action}_audit_degraded`,
-      module: 'system',
-      category: 'governance',
-      severity: 'critical',
-      event_source: 'testLabSetup',
-      target_entity: 'TestLabOperation',
-      target_record_id: params.target,
-      details: `AUDIT DEGRADED — ${params.action} mutation succeeded but completion audit failed: ${errorMessage}`,
-      previous_state: params.previous_state,
-      new_state: { ...params.new_state, intent_state: OPERATION_LIFECYCLE_STATES.INCOMPLETE, intent_id: params.intent_id, audit_error: errorMessage },
-      shield_outcome: 'not_evaluated',
-    });
-  } catch { /* best effort */ }
-}
-
-// Build #28.2P-R.0R.1C: On FAILED — releases the atomic lock.
-async function persistOperationFailure(base44: any, params: {
-  operation_record_id: string;
-  audit_tenant_id: string;
-  actor_id: string; actor_name: string;
-  action: string; target: string; reason: string;
-  intent_id: string;
-  intended_state: Record<string, any>;
-  error: string;
-  registry_id?: string;
-  operation_id?: string;
-}): Promise<void> {
-  try {
-    await base44.asServiceRole.entities.AuditLog.create({
-      tenant_id: params.audit_tenant_id,
-      actor_id: params.actor_id,
-      actor_name: params.actor_name,
-      actor_role: 'admin',
-      action_type: `test_lab_${params.action}_failed`,
-      module: 'system',
-      category: 'governance',
-      severity: 'critical',
-      event_source: 'testLabSetup',
-      target_entity: 'TestLabOperation',
-      target_record_id: params.target,
-      details: `OPERATION FAILED — ${params.action}: ${params.error}`,
-      previous_state: null,
-      new_state: { ...params.intended_state, intent_state: OPERATION_LIFECYCLE_STATES.FAILED, intent_id: params.intent_id, error: params.error },
-      shield_outcome: 'not_evaluated',
-    });
-    await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.FAILED, {
-      failure_code: 'mutation_failed',
-      failure_summary: params.error,
-    });
-  } catch { /* best effort — intent record already proves the attempt */ }
-  // FAILED — release lock (terminal state)
-  if (params.registry_id && params.operation_id) {
-    await releaseOperationLock(base44, params.registry_id, params.operation_id).catch(() => {});
-  }
-}
-
-// ── FAIL-CLOSED OPERATION STATE LOOKUP (Build #28.2P-R.0R.1C) ──
-// Returns CLEAR, BLOCKED, or UNAVAILABLE.
-// UNAVAILABLE MUST fail closed — the caller returns 503.
-// A lookup error MUST NOT mean "no incomplete operation exists".
-// Build #28.2P-R.0R.1C: Now blocks ALL active states (PENDING, INTENT_PERSISTED,
-// MUTATION_COMPLETED, INCOMPLETE) — not just INCOMPLETE and MUTATION_COMPLETED.
-async function checkOperationState(base44: any, targetType: string, targetKey: string): Promise<{
-  state: string;
-  operations: any[];
-  error?: string;
-}> {
-  try {
-    const operations = await base44.asServiceRole.entities.TestLabOperation.filter({
-      target_type: targetType,
-      target_key: targetKey,
-      status: { $in: BLOCKING_OPERATION_STATUSES },
-    }, '-created_date', 20);
-
-    const blocking = (operations || []).filter((op: any) => isBlockingOperationStatus(op.status));
-
-    if (blocking.length > 0) {
-      return { state: OPERATION_LOOKUP_STATES.BLOCKED, operations: blocking };
-    }
-    return { state: OPERATION_LOOKUP_STATES.CLEAR, operations: [] };
-  } catch (err) {
-    return { state: OPERATION_LOOKUP_STATES.UNAVAILABLE, operations: [], error: err.message };
-  }
-}
-
 // ── PLATFORM ADMIN + TEST-LAB PERMISSION CHECK ────────────────
 async function validateTestLabAuthority(base44: any, user: any): Promise<{ valid: boolean; reason?: string }> {
   if (!user) return { valid: false, reason: 'Not authenticated' };
@@ -345,185 +75,6 @@ async function validateTestLabAuthority(base44: any, user: any): Promise<{ valid
     return { valid: false, reason: 'Missing platform.test_lab.manage permission' };
   }
   return { valid: true };
-}
-
-// ── GET VERIFICATION RUN STATE (Build #28.2P-R.0R.1C) ────────
-// Fail-closed verification run lookup. Distinguishes:
-// NONE — query succeeded, zero active runs.
-// ACTIVE — query succeeded, exactly one active run.
-// UNAVAILABLE — query failed (MUST fail closed).
-// CONFLICT — more than one active run (MUST fail closed).
-async function getVerificationRunState(base44: any): Promise<{
-  state: string;
-  run?: any;
-  runs?: any[];
-  error?: string;
-}> {
-  try {
-    const runs = await base44.asServiceRole.entities.VerificationRun.filter({
-      status: VERIFICATION_RUN_STATUSES.ACTIVE,
-    }, '-created_date', 10);
-    if (!runs || runs.length === 0) return { state: VERIFICATION_RUN_LOOKUP_STATES.NONE };
-    if (runs.length === 1) return { state: VERIFICATION_RUN_LOOKUP_STATES.ACTIVE, run: runs[0] };
-    return { state: VERIFICATION_RUN_LOOKUP_STATES.CONFLICT, runs };
-  } catch (err) {
-    return { state: VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE, error: err.message };
-  }
-}
-
-// Legacy wrapper — returns the active run or null. Callers that need
-// fail-closed semantics should use getVerificationRunState directly.
-async function getActiveVerificationRun(base44: any): Promise<any | null> {
-  const vrs = await getVerificationRunState(base44);
-  if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.ACTIVE) return vrs.run;
-  return null;
-}
-
-// ── ATOMIC OPERATION LOCK (Build #28.2P-R.0R.1C) ───────────────
-// Uses a singleton TestLabLockRegistry record with a CAS pattern:
-//   filter: { id, 'active_locks.lock_key': { $ne: lockKey } }
-//   update: { $push: { active_locks: { lock_key, operation_id, ... } } }
-// MongoDB guarantees updateMany on a single document is atomic.
-// Read-back verification confirms which operation_id acquired the lock.
-
-const LOCK_REGISTRY_KEY = 'test_lab_global';
-
-async function ensureLockRegistry(base44: any): Promise<{
-  registry_id?: string;
-  conflict?: boolean;
-  error?: string;
-}> {
-  try {
-    const existing = await base44.asServiceRole.entities.TestLabLockRegistry.filter(
-      { registry_key: LOCK_REGISTRY_KEY }, '-created_date', 10
-    );
-    if (!existing || existing.length === 0) {
-      // Create the singleton
-      try {
-        const record = await base44.asServiceRole.entities.TestLabLockRegistry.create({
-          registry_key: LOCK_REGISTRY_KEY,
-          active_locks: [],
-          non_production: true,
-        });
-        return { registry_id: record?.id || '' };
-      } catch {
-        // Another request may have created it — re-query
-        const retry = await base44.asServiceRole.entities.TestLabLockRegistry.filter(
-          { registry_key: LOCK_REGISTRY_KEY }, '-created_date', 10
-        );
-        if (retry && retry.length === 1) return { registry_id: retry[0].id };
-        if (retry && retry.length > 1) return { conflict: true };
-        return { error: 'Cannot create or find lock registry' };
-      }
-    }
-    if (existing.length === 1) return { registry_id: existing[0].id };
-    // More than one registry — CONFLICT, fail closed
-    return { conflict: true };
-  } catch (err) {
-    return { error: err.message };
-  }
-}
-
-async function acquireOperationLock(base44: any, registryId: string, lockKey: string, operationId: string, targetType: string, targetKey: string): Promise<{ acquired: boolean; error?: string }> {
-  try {
-    // Atomic CAS: push only if lock_key is NOT already in active_locks
-    await base44.asServiceRole.entities.TestLabLockRegistry.updateMany(
-      { id: registryId, 'active_locks.lock_key': { $ne: lockKey } },
-      { $push: { active_locks: { lock_key: lockKey, operation_id: operationId, acquired_at: new Date().toISOString(), target_type: targetType, target_key: targetKey } } }
-    );
-    // Read back to verify acquisition
-    const registry = await base44.asServiceRole.entities.TestLabLockRegistry.get(registryId);
-    const myLock = (registry?.active_locks || []).find((l: any) => l.lock_key === lockKey);
-    if (myLock?.operation_id === operationId) return { acquired: true };
-    return { acquired: false };
-  } catch (err) {
-    return { acquired: false, error: err.message };
-  }
-}
-
-async function releaseOperationLock(base44: any, registryId: string, operationId: string): Promise<{ released: boolean; error?: string }> {
-  try {
-    await base44.asServiceRole.entities.TestLabLockRegistry.updateMany(
-      { id: registryId },
-      { $pull: { active_locks: { operation_id: operationId } } }
-    );
-    return { released: true };
-  } catch (err) {
-    return { released: false, error: err.message };
-  }
-}
-
-// ── PRIVILEGED OPERATION WRAPPER (Build #28.2P-R.0R.1C) ────────
-// Wraps the lock-acquire + createOperation + persistIntent pattern.
-// Returns { operation_id, record_id, intent_id, registry_id } or { error, status }.
-async function startPrivilegedOperation(base44: any, params: {
-  action: string;
-  target_type: string;
-  target_key: string;
-  tenant_id: string;
-  actor_id: string;
-  actor_name: string;
-  verification_run_id?: string;
-  reason: string;
-  intended_state: Record<string, any>;
-  lock_key_override?: string; // For verification activation global lock
-}): Promise<{ operation_id: string; record_id: string; intent_id: string; registry_id: string } | { error: string; status: number; extra?: any }> {
-  // 1. Ensure lock registry
-  const registry = await ensureLockRegistry(base44);
-  if (registry.error) return { error: 'lock_registry_unavailable', status: 503, extra: { error: registry.error } };
-  if (registry.conflict) return { error: 'lock_registry_conflict', status: 509 };
-
-  // 2. Generate operation_id
-  const operationId = generateOperationId();
-
-  // 3. Acquire lock
-  const lockKey = params.lock_key_override || lockKeyForTarget(params.target_type, params.target_key);
-  const lockResult = await acquireOperationLock(base44, registry.registry_id!, lockKey, operationId, params.target_type, params.target_key);
-  if (!lockResult.acquired) {
-    return { error: 'operation_in_progress', status: 409, extra: { lock_key: lockKey } };
-  }
-
-  // 4. Create TestLabOperation (PENDING)
-  const opCreate = await createOperation(base44, {
-    action: params.action,
-    target_type: params.target_type,
-    target_key: params.target_key,
-    tenant_id: params.tenant_id,
-    actor_id: params.actor_id,
-    actor_name: params.actor_name,
-    verification_run_id: params.verification_run_id,
-  });
-  if (!opCreate.operation_id) {
-    await releaseOperationLock(base44, registry.registry_id!, operationId);
-    return { error: 'audit_failure', status: 500, extra: { error: opCreate.error } };
-  }
-
-  // 5. Persist durable intent
-  const intent = await persistOperationIntent(base44, {
-    operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id,
-    audit_tenant_id: params.tenant_id,
-    actor_id: params.actor_id,
-    actor_name: params.actor_name,
-    action: params.action,
-    target: opCreate.record_id,
-    reason: params.reason,
-    intended_state: { ...params.intended_state, operation_id: operationId },
-  });
-  if (!intent.intent_id) {
-    await releaseOperationLock(base44, registry.registry_id!, operationId);
-    await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.FAILED, {
-      failure_code: 'intent_persistence_failed',
-      failure_summary: intent.error,
-    });
-    return { error: 'audit_failure', status: 500, extra: { error: intent.error, operation_id: operationId } };
-  }
-
-  return { operation_id: operationId, record_id: opCreate.record_id, intent_id: intent.intent_id, registry_id: registry.registry_id! };
-}
-
-// Release lock on terminal states (COMPLETED, FAILED). NOT on INCOMPLETE.
-async function releaseOnTerminal(base44: any, registryId: string, operationId: string): Promise<void> {
-  await releaseOperationLock(base44, registry.registry_id || registryId, operationId).catch(() => {});
 }
 
 // ============================================================
@@ -586,6 +137,8 @@ export default async function(req: Request): Promise<Response> {
         tenant_id: 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target.', { target_key: targetKeyVar });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot create verification run — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -682,6 +235,8 @@ export default async function(req: Request): Promise<Response> {
         verification_run_id: verification_run_id,
         lock_key_override: lockKeyForTarget(TARGET_TYPES.VERIFICATION_ACTIVATION, targetKeyForVerificationActivation()),
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another verification run activation is already in progress. Wait for it to complete.', { lock_key: 'verification_activation:global' });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot activate — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -790,6 +345,8 @@ export default async function(req: Request): Promise<Response> {
         action: 'complete_verification_run', target_type: TARGET_TYPES.VERIFICATION_RUN, target_key: targetKey,
         tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', verification_run_id,
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this verification run.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot complete — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -834,6 +391,8 @@ export default async function(req: Request): Promise<Response> {
         action: 'fail_verification_run', target_type: TARGET_TYPES.VERIFICATION_RUN, target_key: targetKey,
         tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', verification_run_id,
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this verification run.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot fail — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -879,6 +438,8 @@ export default async function(req: Request): Promise<Response> {
         action: 'archive_verification_run', target_type: TARGET_TYPES.VERIFICATION_RUN, target_key: targetKey,
         tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin', verification_run_id,
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this verification run.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot archive — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -962,8 +523,20 @@ export default async function(req: Request): Promise<Response> {
 
       // Release the atomic lock (INCOMPLETE → COMPLETED or FAILED is a terminal transition)
       const registry = await ensureLockRegistry(base44);
-      if (registry.registry_id && op.operation_id) {
-        await releaseOperationLock(base44, registry.registry_id, op.operation_id).catch(() => {});
+      let lockReleaseDegraded = false;
+      let lockReleaseError: string | null = null;
+      if (registry.uninitialized) {
+        lockReleaseDegraded = true;
+        lockReleaseError = 'Lock registry not initialized — cannot release operation lock';
+      } else if (registry.conflict) {
+        lockReleaseDegraded = true;
+        lockReleaseError = 'Lock registry conflict — cannot safely release operation lock';
+      } else if (registry.registry_id && op.operation_id) {
+        const releaseResult = await releaseOperationLock(base44, registry.registry_id, op.operation_id);
+        if (!releaseResult.verified) {
+          lockReleaseDegraded = true;
+          lockReleaseError = releaseResult.error || 'Lock release could not be verified';
+        }
       }
 
       return Response.json({
@@ -973,7 +546,11 @@ export default async function(req: Request): Promise<Response> {
         new_status: newStatus,
         reconciliation_state: resolution,
         reconciliation_audit_id: reconciliationAuditId,
-        message: `Operation reconciled to ${newStatus}. Dependent operations are now unblocked.`,
+        lock_release_degraded: lockReleaseDegraded,
+        lock_release_error: lockReleaseError,
+        message: lockReleaseDegraded
+          ? `Operation reconciled to ${newStatus}. WARNING: Lock release is degraded — ${lockReleaseError}. Manual reconciliation of the lock registry may be required.`
+          : `Operation reconciled to ${newStatus}. Dependent operations are now unblocked.`,
       });
     }
 
@@ -1033,15 +610,17 @@ export default async function(req: Request): Promise<Response> {
       }
 
       // STEP 0: Create TestLabOperation record (PENDING) + acquire atomic lock
-      const activeVRun = await getActiveVerificationRun(base44);
+      const optionalVRunId = await getOptionalVerificationRunId(base44);
       const opCreate = await createOperation(base44, {
         action: 'provision_tenant_b',
         target_type: TARGET_TYPES.SANDBOX_TENANT,
         target_key: targetKey,
         tenant_id: 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
-        verification_run_id: activeVRun?.verification_run_id,
+        verification_run_id: optionalVRunId,
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) {
         return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       }
@@ -1219,13 +798,15 @@ export default async function(req: Request): Promise<Response> {
       const existingEmployees = await base44.asServiceRole.entities.Employee.filter({ tenant_id: targetTenantId, email }).catch(() => []);
       if (existingEmployees && existingEmployees.length > 0) {
         const emp = existingEmployees[0];
-        const activeVRun = await getActiveVerificationRun(base44);
+        const optionalVRunId = await getOptionalVerificationRunId(base44);
         const opCreate = await createOperation(base44, {
           action: 'prepare_membership', target_type: TARGET_TYPES.TEST_MEMBERSHIP, target_key: targetKey,
           tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-          verification_run_id: activeVRun?.verification_run_id,
+          verification_run_id: optionalVRunId,
         });
-        if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
+        if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot record membership reuse — TestLabOperation could not be created.');
 
         const intent = await persistOperationIntent(base44, {
@@ -1252,12 +833,14 @@ export default async function(req: Request): Promise<Response> {
       }
 
       // STEP 0: Create TestLabOperation record (PENDING)
-      const activeVRun = await getActiveVerificationRun(base44);
+      const optionalVRunId = await getOptionalVerificationRunId(base44);
       const opCreate = await createOperation(base44, {
         action: 'prepare_membership', target_type: TARGET_TYPES.TEST_MEMBERSHIP, target_key: targetKey,
         tenant_id: targetTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-        verification_run_id: activeVRun?.verification_run_id,
+        verification_run_id: optionalVRunId,
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot prepare membership — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -1344,13 +927,15 @@ export default async function(req: Request): Promise<Response> {
       }
 
       // STEP 0: Create TestLabOperation record (PENDING)
-      const activeVRun = await getActiveVerificationRun(base44);
+      const optionalVRunId = await getOptionalVerificationRunId(base44);
       const opCreate = await createOperation(base44, {
         action: 'grant_permission', target_type: TARGET_TYPES.TEST_PERMISSION, target_key: targetKey,
         tenant_id: targetUser.data?.tenant_id || 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
-        verification_run_id: activeVRun?.verification_run_id,
+        verification_run_id: optionalVRunId,
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot grant permission — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -1429,13 +1014,15 @@ export default async function(req: Request): Promise<Response> {
       }
 
       // STEP 0: Create TestLabOperation record (PENDING)
-      const activeVRun = await getActiveVerificationRun(base44);
+      const optionalVRunId = await getOptionalVerificationRunId(base44);
       const opCreate = await createOperation(base44, {
         action: 'revoke_permission', target_type: TARGET_TYPES.TEST_PERMISSION, target_key: targetKey,
         tenant_id: targetUser.data?.tenant_id || 'platform',
         actor_id: user.id, actor_name: user.full_name || 'Admin',
-        verification_run_id: activeVRun?.verification_run_id,
+        verification_run_id: optionalVRunId,
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot revoke permission — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -1507,12 +1094,14 @@ export default async function(req: Request): Promise<Response> {
       }
 
       // STEP 0: Create TestLabOperation record (PENDING)
-      const activeVRun = await getActiveVerificationRun(base44);
+      const optionalVRunId = await getOptionalVerificationRunId(base44);
       const opCreate = await createOperation(base44, {
         action: 'attest_delivery', target_type: TARGET_TYPES.TEST_ATTESTATION, target_key: targetKey,
         tenant_id: auditTenantId, actor_id: user.id, actor_name: user.full_name || 'Admin',
-        verification_run_id: activeVRun?.verification_run_id,
+        verification_run_id: optionalVRunId,
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot attest — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -1594,9 +1183,20 @@ export default async function(req: Request): Promise<Response> {
       const tenant = await base44.asServiceRole.entities.Tenant.get(sandbox_tenant_id).catch(() => null);
       if (!tenant || !tenant.is_sandbox) return safeJson('forbidden', 403, 'Test Runs can only be created for sandbox tenants.');
 
-      // Get active verification run
-      const activeVRun = await getActiveVerificationRun(base44);
-      if (!activeVRun) return safeJson('invalid_request', 409, 'No active verification run exists. Create and activate a verification run before creating Test Runs.');
+      // Build #28.2P-R.0R.1C-F: FAIL-CLOSED verification run state for create_test_run.
+      // Does NOT use getOptionalVerificationRunId — security-sensitive operation
+      // must distinguish NONE, UNAVAILABLE, and CONFLICT explicitly.
+      const vrsCreate = await getVerificationRunState(base44);
+      if (vrsCreate.state === VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('verification_run_unavailable', 503, 'Cannot verify verification run state — database lookup failed. Test Run creation blocked for safety.');
+      }
+      if (vrsCreate.state === VERIFICATION_RUN_LOOKUP_STATES.CONFLICT) {
+        return safeJson('verification_run_conflict', 409, 'Multiple active verification runs detected. Reconciliation is required before creating Test Runs.');
+      }
+      if (vrsCreate.state === VERIFICATION_RUN_LOOKUP_STATES.NONE) {
+        return safeJson('no_active_verification_run', 409, 'No active verification run exists. Create and activate a verification run before creating Test Runs.');
+      }
+      const activeVRun = vrsCreate.run;
 
       const targetKey = targetKeyForTestRun(activeVRun.verification_run_id, sandbox_tenant_id, authorised_requester_email, permitted_service_key, test_tag);
 
@@ -1625,6 +1225,8 @@ export default async function(req: Request): Promise<Response> {
         tenant_id: sandbox_tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
         verification_run_id: activeVRun.verification_run_id,
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot create Test Run — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -1891,12 +1493,14 @@ export default async function(req: Request): Promise<Response> {
       }
 
       // STEP 0: Create TestLabOperation record (PENDING)
-      const activeVRun = await getActiveVerificationRun(base44);
+      const optionalVRunId = await getOptionalVerificationRunId(base44);
       const opCreate = await createOperation(base44, {
         action: 'reset_test_data', target_type: TARGET_TYPES.TEST_RESET, target_key: targetKey,
         tenant_id, actor_id: user.id, actor_name: user.full_name || 'Admin',
-        verification_run_id: activeVRun?.verification_run_id,
+        verification_run_id: optionalVRunId,
       });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Call initialize_lock_registry first.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
       if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target. Wait for it to complete or reconcile any incomplete operation.', { target_key: targetKey });
       if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot reset — TestLabOperation could not be created.', { error: opCreate.error });
 
@@ -2025,6 +1629,60 @@ export default async function(req: Request): Promise<Response> {
             : overallStatus === 'incomplete'
               ? 'Reset incomplete — a query phase failed. Not all relevant records may have been processed. See approvals_query_error/inbox_query_error.'
               : 'Reset failed — query errors and delete failures occurred. See error details.',
+      });
+    }
+
+    // ── INITIALIZE LOCK REGISTRY (Build #28.2P-R.0R.1C-F) ──────
+    // One-time singleton provisioning. After initialization, ensureLockRegistry
+    // is lookup-only — normal runtime CANNOT lazily create another registry.
+    if (action === 'initialize_lock_registry') {
+      const result = await initializeLockRegistry(base44);
+      if (result.error) return safeJson('internal_error', 500, 'Failed to initialize lock registry.', { error: result.error });
+      if (result.conflict) return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required — do not delete blindly.', { count_before: result.count_before });
+      return Response.json({
+        success: true,
+        registry_id: result.registry_id,
+        created: result.created,
+        count_before: result.count_before,
+        count_after: result.count_after,
+        message: result.created
+          ? 'Lock registry singleton created. Normal runtime is now lookup-only.'
+          : 'Lock registry singleton already exists. No action needed.',
+      });
+    }
+
+    // ── LOCK PROBE (CAS Runtime Proof — 1C-F) ───────────────────
+    // Temporary probe for proving Base44 CAS concurrency at runtime.
+    // Available only to platform.test_lab.manage operators.
+    // Accepts a server-allowlisted harmless probe key.
+    if (action === 'lock_probe') {
+      const { probe_key } = body;
+      if (!probe_key) return safeJson('invalid_request', 400, 'probe_key is required.');
+      if (!PROBE_LOCK_KEYS.includes(probe_key)) return safeJson('invalid_request', 400, `Invalid probe_key. Must be one of: ${PROBE_LOCK_KEYS.join(', ')}`);
+      const result = await probeLock(base44, probe_key);
+      if (!result.acquired) {
+        return Response.json({
+          success: false,
+          acquired: false,
+          probe_key,
+          operation_id: result.operation_id,
+          error: result.error,
+          message: result.error === 'operation_in_progress'
+            ? 'Lock is held by another request — CAS race loser.'
+            : result.error,
+        }, { status: 409 });
+      }
+      return Response.json({
+        success: true,
+        acquired: true,
+        released: result.released,
+        verified: result.verified,
+        probe_key,
+        operation_id: result.operation_id,
+        error: result.error,
+        message: result.verified
+          ? 'Lock acquired, held briefly, released and verified.'
+          : 'Lock acquired but release verification failed — degraded state.',
       });
     }
 
