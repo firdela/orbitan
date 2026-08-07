@@ -100,6 +100,7 @@ import InquiryQueue from '@/pages/platform/InquiryQueue';
 import AIGovernancePage from '@/pages/platform/AIGovernancePage';
 import AIRequestStatusPage from '@/pages/platform/AIRequestStatusPage';
 import TestLabSetupPage from '@/pages/platform/TestLabSetupPage';
+import TestLabGuard from '@/components/platform/TestLabGuard';
 
 // Foundation — Public & Admin Pages
 import AboutOrbitan from '@/pages/foundation/AboutOrbitan';
@@ -299,7 +300,7 @@ const AuthenticatedApp = () => {
       <Route path="/platform/pilot-deployment" element={<PilotDeploymentCentre />} />
       <Route path="/platform/inquiries" element={<InquiryQueue />} />
       <Route path="/platform/ai-governance" element={<AIGovernancePage />} />
-      <Route path="/platform/test-lab" element={<TestLabSetupPage />} />
+      <Route path="/platform/test-lab" element={<TestLabGuard><TestLabSetupPage /></TestLabGuard>} />
       <Route path="/ai-requests" element={<AIRequestStatusPage />} />
 
       {/* Foundation — Platform Admin Pages */}

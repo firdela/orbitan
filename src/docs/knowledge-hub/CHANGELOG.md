@@ -7,6 +7,44 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2P-R.0R (Orbitan Test Lab Security and Operational Repair) (2026-08-07)
+
+### Security Repair — Blocking Defects Fixed
+- **User role mapping corrected:** Tenant test identities now use `User.role='user'` (was `'admin'`). Only platform test identities use `User.role='admin'`. Prevents RoleGateway from routing tenant test users to the Platform Owner workspace.
+- **Route guard added:** `/platform/test-lab` is now wrapped by `TestLabGuard` — requires authenticated session, `User.role='admin'`, and effective `platform.test_lab.manage` permission. No Test Lab data request before the guard passes.
+- **Permission bootstrap implemented:** One-time `bootstrap_permission` action in `testLabSetup` — works only when no existing permission holder exists, targets the authenticated founder (no arbitrary target), grants only `platform.test_lab.manage`, requires a reason, creates mandatory audit evidence before mutation, permanently unavailable after first use.
+- **Fail-closed audit:** `auditTestLabAction` now throws on failure instead of catching and continuing. All privileged operations (provisioning, membership, permission grant/revoke, attestation, test-run creation, reset, bootstrap) require durable audit evidence.
+- **Audit tenant context corrected:** Audit records now use the actual target tenant ID (platform, Tenant A, or Tenant B) instead of always using Tenant A.
+- **Tenant B provisioning repaired:** Now creates full schema-valid hierarchy (Tenant → Company → Outlet) using correct Outlet fields (`type`, `address`, `company_id`) instead of non-existent fields (`outlet_type`, `address_line_1`, `is_active`, `is_sandbox`). Uses `test_lab_key` for idempotent identification. Company and Outlet errors are not swallowed.
+- **Client-controlled TTL replaced:** Created `TestRun` entity — protected test run authorisation record with server-derived TTL. Nexus gateway now validates the TestRun record server-side (exists, active, not expired, tenant matches, requester matches, service matches, autonomy matches, usage limit). Client-provided `test_ttl_minutes`, `test_tag`, `test_purpose` are no longer authority for short TTL.
+- **Schema-supported test tagging:** Added `is_test`, `test_run_id`, `test_tag`, `test_purpose`, `non_production` fields to AIApproval schema. Nexus writes these schema-supported fields instead of undeclared metadata.
+- **Email attestation persisted:** Created `TestLabAttestation` entity — stores per-alias, per-check attestation state persistently. No private destination addresses stored.
+- **Truthful readiness:** Readiness is now computed from persisted evidence — no hard-coded `true` values. `independent_approver_ready` requires distinct registered requester and approver with verified emails and linked memberships. `worker_isolation_ready` requires Worker with `User.role='user'` and `Employee.role='worker'`. `tenant_b_isolation_ready` requires complete valid hierarchy with linked identities. `platform_permission_distinction_ready` requires both platform users registered with correct permission state.
+- **Reset repaired:** Uses schema-supported `test_run_id` field. Returns attempted/deleted/retained/failed counts. Reset dialog trigger fixed. Immutable AIAuditEvent records retained.
+- **Analytics exclusion helper:** Added `productionExclusionFilter()` and `isProductionRecord()` to canonical config module. Applied to AIApproval queries. Comprehensive exclusion across all production aggregations remains a P0 blocker (documented).
+- **Mirrored tests replaced:** Test file now imports from canonical `base44/shared/test-lab-config.js` module — no duplicated constants or logic. 96 tests (up from 76) covering role mapping, route resolution, analytics exclusion, schema-supported tagging.
+- **Canonical JS module:** Created `base44/shared/test-lab-config.js` as pure JavaScript ESM module importable by both Deno functions and Node.js test runners. The `.ts` file re-exports from the `.js` module.
+
+### Live Backend Verification
+- Bootstrap permission: succeeded once (audit ID: 6a75ac7a79180a4007f43ebb), second attempt denied with 403
+- Readiness status: returns truthful data with all identities at `ALIAS_CONFIGURED` (no hard-coded passes)
+- Tenant B provisioning: created full hierarchy (tenant_id, company_id, outlet_id), idempotent retry confirmed
+- Email attestation: persisted to TestLabAttestation entity, verified in database
+- All tenant identities show `user_role: 'user'` in readiness response
+
+### Test Results
+- Test lab hardening: 96/96 passed (imports from canonical module)
+- Gateway hardening: 37/37 passed
+- Governance parity: 84/84 passed
+- Focused lint: 0 errors
+- Production build: exit code 0
+- Deliberate failure test: broken assertion → exit 1, restored → exit 0
+
+### Remaining P0 Blockers
+- Comprehensive analytics exclusion across ALL production aggregations (AI usage, product adoption, customer health, credit consumption, wallet reporting, operational metrics, business performance reports) — helper created but not yet applied to all aggregation queries
+- Test Run live verification (requires registered test identities)
+- Worker route/API denial live test (requires Worker session)
+
 ## [Unreleased] — Build #28.2P-R.0 (Orbitan Test Lab Infrastructure) (2026-08-06)
 
 ### Added — Internal Test Lab Setup Capability

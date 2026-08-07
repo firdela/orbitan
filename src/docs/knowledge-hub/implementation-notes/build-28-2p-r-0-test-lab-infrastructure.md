@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-06
 **Build:** #28.2P-R.0
-**Status:** Implemented — manual verification remains
+**Status:** IMPLEMENTED WITH BLOCKING SECURITY AND OPERATIONAL DEFECTS — REPAIR IN PROGRESS (Build #28.2P-R.0R)
 **Prerequisite for:** Build #28.2P-R.1 (live governance verification)
 
 ## Purpose

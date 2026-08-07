@@ -56,6 +56,10 @@
       "default": false,
       "description": "Orbitan Test Lab sandbox flag. When true, this tenant is hidden from public workplace discovery (discoverWorkplaces) and the Request Access flow. Used for platform-level prototyping, feature validation, and QA without impacting operational tenants. Only platform admins can see or join sandbox tenants."
     },
+    "test_lab_key": {
+      "type": "string",
+      "description": "Build #28.2P-R.0R \u2014 Stable canonical identifier for Test Lab sandbox tenants. Used for idempotent provisioning (e.g. 'TEST_LAB_B'). Null for production tenants."
+    },
     "manifest_key": {
       "type": "string",
       "description": "PlatformManifest.manifest_key this tenant uses for UI/navigation rendering. Null = legacy fallback nav. Set during provisioning (e.g. 'core_ops_v1')."
@@ -72,7 +76,7 @@
       "items": {
         "type": "string"
       },
-      "description": "Module keys hidden from this tenant's navigation (e.g. ['procurement'] for HBB tenants who don't need PO management). Applied by ManifestHydrator after subscription-policy intersection. Use for lightweight per-tenant UI simplification without creating a new manifest variant."
+      "description": "Module keys hidden from this tenant's navigation"
     },
     "enabled_packs": {
       "type": "array",
@@ -87,7 +91,7 @@
     },
     "governance_domain": {
       "type": "string",
-      "description": "Shield governance domain \u2014 resolved from ActivationRegistry at provisioning. e.g. 'fnb_standard_ops'. The shieldInterceptor binds GovernancePolicy records matching this domain for domain-aware policy resolution."
+      "description": "Shield governance domain \u2014 resolved from ActivationRegistry at provisioning."
     },
     "max_employees": {
       "type": "number",

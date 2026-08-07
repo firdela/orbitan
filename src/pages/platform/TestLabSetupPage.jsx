@@ -364,11 +364,13 @@ export default function TestLabSetupPage() {
                 Reset mutable tagged test records (pending AIApprovals, Orbit Inbox items) for a specific test run. Immutable AIAuditEvent records are retained per retention policy.
               </p>
               <AlertDialog open={resetDialog?.open || false} onOpenChange={(open) => !open && setResetDialog(null)}>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" className="gap-1.5" disabled={submitting}>
-                    <Trash2 className="w-3.5 h-3.5" /> Reset Test Data
-                  </Button>
-                </AlertDialogTrigger>
+                <Button
+                  variant="outline" className="gap-1.5"
+                  disabled={submitting}
+                  onClick={() => setResetDialog({ open: true, testRunId: '', tenantId: '' })}
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Reset Test Data
+                </Button>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Reset Mutable Test Data?</AlertDialogTitle>

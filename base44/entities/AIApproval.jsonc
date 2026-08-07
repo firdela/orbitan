@@ -1,7 +1,7 @@
 {
   "name": "AIApproval",
   "type": "object",
-  "description": "Orbitan AI Operating Layer \u2014 AI action approval lifecycle registry (Build #28.2O). Created when an AI request requires human approval (policy_decision=require_approval). Tracks the full approval lifecycle: pending \u2192 approved/rejected/expired/cancelled \u2192 executed/execution_failed. Ensures requester cannot self-approve, Workers cannot approve management-level actions, expired approvals cannot execute, and approval scope must exactly match the later execution. Single-use: once executed, the approval cannot be reused. Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan AI Operating Layer \u2014 AI action approval lifecycle registry (Build #28.2O). Created when an AI request requires human approval (policy_decision=require_approval). Tracks the full approval lifecycle: pending \u2192 approved/rejected/expired/cancelled \u2192 executed/execution_failed. Ensures requester cannot self-approve, Workers cannot approve management-level actions, expired approvals cannot execute, and approval scope must exactly match the later execution. Single-use: once executed, the approval cannot be reused. Build #28.2P-R.0R adds schema-supported test fields (is_test, test_run_id, test_tag, test_purpose, non_production) for queryable analytics exclusion and test-data reset. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string",
@@ -153,6 +153,28 @@
     "initial_audit_event_id": {
       "type": "string",
       "description": "Reference to the AIAuditEvent created when approval was first required."
+    },
+    "is_test": {
+      "type": "boolean",
+      "default": false,
+      "description": "Build #28.2P-R.0R \u2014 True when this approval was created as part of an authorised Test Lab run. Queryable field for analytics exclusion and test-data reset."
+    },
+    "test_run_id": {
+      "type": "string",
+      "description": "Build #28.2P-R.0R \u2014 Reference to the TestRun record that authorised this test approval. Null for production approvals."
+    },
+    "test_tag": {
+      "type": "string",
+      "description": "Build #28.2P-R.0R \u2014 Test classification tag e.g. 'approve_to_execute'. Null for production approvals."
+    },
+    "test_purpose": {
+      "type": "string",
+      "description": "Build #28.2P-R.0R \u2014 Human-readable purpose of this test approval. Null for production approvals."
+    },
+    "non_production": {
+      "type": "boolean",
+      "default": false,
+      "description": "Build #28.2P-R.0R \u2014 True when this is a non-production test record. Used by the analytics exclusion helper to filter test activity from production aggregations."
     }
   },
   "required": [

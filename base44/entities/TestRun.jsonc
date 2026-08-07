@@ -1,0 +1,130 @@
+{
+  "name": "TestRun",
+  "type": "object",
+  "description": "Orbitan Test Lab \u2014 Protected Test Run authorisation record (Build #28.2P-R.0R). Created by a platform.test_lab.manage operator to authorise a single sandbox test run with server-selected short TTL. Nexus gateway validates this record server-side before applying any short approval expiry. Client-provided TTL values are ignored. Prevents ordinary sandbox requesters from activating test TTL by merely supplying body fields. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "Sandbox tenant this test run is scoped to."
+    },
+    "test_run_id": {
+      "type": "string",
+      "description": "Server-generated unique identifier for this test run e.g. 'trun_2026_0001'."
+    },
+    "sandbox_tenant_id": {
+      "type": "string",
+      "description": "Explicit sandbox tenant ID this run is authorised for. Must match the requesting tenant."
+    },
+    "authorised_requester_user_id": {
+      "type": "string",
+      "description": "User ID who is authorised to use this test run. Nexus validates the requester matches."
+    },
+    "authorised_requester_name": {
+      "type": "string"
+    },
+    "permitted_service_key": {
+      "type": "string",
+      "description": "Nexus capability key this run is scoped to e.g. 'sop_gen'. Nexus rejects mismatched service."
+    },
+    "permitted_action_type": {
+      "type": "string",
+      "description": "Action type this run permits e.g. 'require_approval'."
+    },
+    "permitted_autonomy_level": {
+      "type": "string",
+      "enum": [
+        "L0_answer",
+        "L1_recommend",
+        "L2_draft",
+        "L3_execute"
+      ],
+      "description": "Autonomy level this run is scoped to."
+    },
+    "server_selected_ttl_minutes": {
+      "type": "number",
+      "description": "Server-selected TTL in minutes (1-10). Client cannot override this."
+    },
+    "test_tag": {
+      "type": "string",
+      "description": "Test classification tag e.g. 'approve_to_execute'."
+    },
+    "test_purpose": {
+      "type": "string",
+      "description": "Human-readable purpose of this test run."
+    },
+    "created_by_operator_id": {
+      "type": "string",
+      "description": "Platform admin who created this test run."
+    },
+    "created_by_operator_name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "consumed",
+        "expired",
+        "cancelled"
+      ],
+      "default": "active",
+      "description": "Lifecycle state. active \u2192 consumed (after use) or expired/cancelled."
+    },
+    "max_uses": {
+      "type": "number",
+      "default": 1,
+      "description": "Maximum number of times this run can be used. 1 = single-use."
+    },
+    "current_uses": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times this run has been consumed."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this test run expires. Cannot be used after expiry."
+    },
+    "consumed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this run was first consumed."
+    },
+    "non_production": {
+      "type": "boolean",
+      "default": true,
+      "description": "Always true \u2014 this is a test record excluded from production analytics."
+    }
+  },
+  "required": [
+    "tenant_id",
+    "test_run_id",
+    "sandbox_tenant_id",
+    "authorised_requester_user_id",
+    "permitted_service_key",
+    "server_selected_ttl_minutes",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

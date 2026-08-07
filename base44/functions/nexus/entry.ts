@@ -1011,50 +1011,117 @@ export default async function(req: Request): Promise<Response> {
         // Create AIApproval record
         const approvalKey = generateApprovalKey();
 
-        // ── SANDBOX TEST TTL (Build #28.2P-R.0) ────────────────
-        // Short TTL for tagged test approvals in sandbox tenants only.
+        // ── PROTECTED TEST RUN VALIDATION (Build #28.2P-R.0R) ───
+        // Client-provided test_ttl_minutes, test_tag, test_purpose are
+        // NO LONGER authority for short TTL. Only a valid TestRun record
+        // created by a platform.test_lab.manage operator authorises test TTL.
         let approvalTtlHours = APPROVAL_EXPIRY_HOURS;
         let isTestApproval = false;
         let testRunId: string | null = null;
         let testTag: string | null = null;
+        let testPurpose: string | null = null;
         let testMetadata: Record<string, any> | null = null;
 
-        if (body.test_run_id && body.test_tag) {
-          // Verify tenant is sandbox before applying test TTL
-          let tenantRecord: any = null;
+        if (body.test_run_id) {
+          // Fetch and validate the TestRun record server-side
+          let testRun: any = null;
           try {
-            tenantRecord = await base44.asServiceRole.entities.Tenant.get(tenantId);
-          } catch { /* non-critical */ }
+            const runs = await base44.asServiceRole.entities.TestRun.filter({
+              test_run_id: body.test_run_id,
+            });
+            testRun = runs?.[0] || null;
+          } catch { /* fetch error */ }
 
-          if (tenantRecord?.is_sandbox) {
-            isTestApproval = true;
-            testRunId = body.test_run_id;
-            testTag = body.test_tag;
-
-            // Server-controlled TTL — client cannot supply arbitrary timestamps
-            const requestedMinutes = body.test_ttl_minutes || SANDBOX_TEST_TTL_DEFAULT_MINUTES;
-            const clampedMinutes = Math.max(SANDBOX_TEST_TTL_MIN_MINUTES, Math.min(SANDBOX_TEST_TTL_MAX_MINUTES, requestedMinutes));
-            approvalTtlHours = clampedMinutes / 60;
-
-            testMetadata = {
-              environment: 'test',
-              test_run_id: testRunId,
-              test_tag: testTag,
-              sandbox_tenant_id: tenantId,
-              created_by_test: true,
-              non_production: true,
-              test_purpose: body.test_purpose || 'Governance verification test',
-              created_by_actor_id: actorId,
-              test_ttl_minutes: clampedMinutes,
-            };
-          } else {
-            // Production tenant attempted test TTL — deny
+          if (!testRun) {
             return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
-              detail: 'Test TTL is only available for sandbox tenants.',
+              detail: 'Test Run not found. A valid TestRun record is required for test TTL.',
               request_id: requestId,
             });
           }
+
+          // Validate TestRun lifecycle
+          if (testRun.status !== 'active') {
+            return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+              detail: `Test Run is '${testRun.status}', expected 'active'.`,
+              request_id: requestId,
+            });
+          }
+          if (testRun.expires_at && new Date(testRun.expires_at) < new Date()) {
+            return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+              detail: 'Test Run has expired.',
+              request_id: requestId,
+            });
+          }
+          // Validate sandbox_tenant_id matches
+          if (testRun.sandbox_tenant_id !== tenantId) {
+            return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+              detail: 'Test Run tenant mismatch.',
+              request_id: requestId,
+            });
+          }
+          // Validate authorised requester matches
+          if (testRun.authorised_requester_user_id !== actorId) {
+            return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+              detail: 'Test Run requester mismatch.',
+              request_id: requestId,
+            });
+          }
+          // Validate permitted service matches
+          if (testRun.permitted_service_key !== serviceKey) {
+            return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+              detail: 'Test Run service mismatch.',
+              request_id: requestId,
+            });
+          }
+          // Validate permitted autonomy matches
+          if (testRun.permitted_autonomy_level !== autonomyLevel) {
+            return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+              detail: 'Test Run autonomy level mismatch.',
+              request_id: requestId,
+            });
+          }
+          // Validate usage limit
+          if (testRun.current_uses >= testRun.max_uses) {
+            return safeErrorResponse(SAFE_ERROR_CODES.FORBIDDEN, 403, serviceKey, {
+              detail: 'Test Run has reached its maximum usage.',
+              request_id: requestId,
+            });
+          }
+
+          // All validations passed — use server-selected TTL
+          isTestApproval = true;
+          testRunId = testRun.test_run_id;
+          testTag = testRun.test_tag;
+          testPurpose = testRun.test_purpose;
+          approvalTtlHours = testRun.server_selected_ttl_minutes / 60;
+
+          testMetadata = {
+            environment: 'test',
+            test_run_id: testRunId,
+            test_tag: testTag,
+            sandbox_tenant_id: tenantId,
+            created_by_test: true,
+            non_production: true,
+            test_purpose: testPurpose,
+            created_by_actor_id: testRun.created_by_operator_id,
+            test_ttl_minutes: testRun.server_selected_ttl_minutes,
+          };
+
+          // Consume the Test Run (atomic increment)
+          try {
+            const newUses = (testRun.current_uses || 0) + 1;
+            const isConsumed = newUses >= testRun.max_uses;
+            await base44.asServiceRole.entities.TestRun.update(testRun.id, {
+              current_uses: newUses,
+              status: isConsumed ? 'consumed' : 'active',
+              consumed_at: testRun.consumed_at || new Date().toISOString(),
+            });
+          } catch (err) {
+            console.log(`[nexusGateway] TestRun consumption failed: ${err.message}`);
+          }
         }
+        // Client-provided test_ttl_minutes, test_tag, test_purpose without
+        // a valid test_run_id are silently ignored — no test TTL.
 
         const approvalExpiry = new Date(Date.now() + approvalTtlHours * 60 * 60 * 1000).toISOString();
         const approvingRole = isSensitiveAction(actionType) ? 'admin' : 'tenant_admin';
@@ -1085,7 +1152,13 @@ export default async function(req: Request): Promise<Response> {
             status: 'pending',
             approving_role: approvingRole,
             expires_at: approvalExpiry,
-            ...(testMetadata ? { metadata: testMetadata } : {}),
+            ...(isTestApproval ? {
+              is_test: true,
+              test_run_id: testRunId,
+              test_tag: testTag,
+              test_purpose: testPurpose,
+              non_production: true,
+            } : {}),
           });
           approvalId = approvalRecord?.id || null;
         } catch (err) {
