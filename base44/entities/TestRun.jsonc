@@ -1,7 +1,7 @@
 {
   "name": "TestRun",
   "type": "object",
-  "description": "Orbitan Test Lab \u2014 Protected Test Run authorisation record (Build #28.2P-R.0R.1B). Created by a platform.test_lab.manage operator to authorise a single sandbox test run with server-selected short TTL. Nexus gateway validates this record server-side before applying any short approval expiry. Client-provided TTL values are rejected \u2014 the server selects TTL from SERVER_TTL_POLICY based on the test_tag. Single-use acquisition is enforced via atomic CAS (updateMany with conditional filter + consumption_token verification). Build #28.2P-R.0R.1B adds verification_run_id linking to the active VerificationRun campaign. Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan Test Lab \u2014 Protected Test Run authorisation record (Build #28.2P-R.0R.1C). Created by a platform.test_lab.manage operator to authorise a single sandbox test run with server-selected short TTL. Nexus gateway validates this record server-side before applying any short approval expiry. Client-provided TTL values are rejected \u2014 the server selects TTL from SERVER_TTL_POLICY based on the test_tag. Single-use acquisition is enforced via atomic CAS (updateMany with conditional filter + consumption_token verification). Build #28.2P-R.0R.1C hardens RLS to service-role-only writes. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string",
@@ -115,9 +115,18 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "___service_only___"
+          }
+        }
+      ]
     },
     "read": {
       "user_condition": {
@@ -125,14 +134,32 @@
       }
     },
     "update": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "___service_only___"
+          }
+        }
+      ]
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$and": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "___service_only___"
+          }
+        }
+      ]
     }
   }
 }
