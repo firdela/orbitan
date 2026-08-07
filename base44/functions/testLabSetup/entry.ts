@@ -22,12 +22,12 @@ import {
 
 // Runtime helpers extracted to runtime.ts (Build #28.2P-R.0R.1C-F)
 import {
-  ensureLockRegistry, initializeLockRegistry,
-  acquireOperationLock, releaseOperationLock,
+  ensureLockRegistry,
+  releaseOperationLock,
   getVerificationRunState, getOptionalVerificationRunId,
   checkOperationState, createOperation, transitionOperation,
   persistOperationIntent, persistOperationCompletion,
-  persistOperationFailure, probeLock, PROBE_LOCK_KEYS,
+  persistOperationFailure,
 } from './runtime.ts';
 
 // ============================================================
@@ -1629,60 +1629,6 @@ export default async function(req: Request): Promise<Response> {
             : overallStatus === 'incomplete'
               ? 'Reset incomplete — a query phase failed. Not all relevant records may have been processed. See approvals_query_error/inbox_query_error.'
               : 'Reset failed — query errors and delete failures occurred. See error details.',
-      });
-    }
-
-    // ── INITIALIZE LOCK REGISTRY (Build #28.2P-R.0R.1C-F) ──────
-    // One-time singleton provisioning. After initialization, ensureLockRegistry
-    // is lookup-only — normal runtime CANNOT lazily create another registry.
-    if (action === 'initialize_lock_registry') {
-      const result = await initializeLockRegistry(base44);
-      if (result.error) return safeJson('internal_error', 500, 'Failed to initialize lock registry.', { error: result.error });
-      if (result.conflict) return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required — do not delete blindly.', { count_before: result.count_before });
-      return Response.json({
-        success: true,
-        registry_id: result.registry_id,
-        created: result.created,
-        count_before: result.count_before,
-        count_after: result.count_after,
-        message: result.created
-          ? 'Lock registry singleton created. Normal runtime is now lookup-only.'
-          : 'Lock registry singleton already exists. No action needed.',
-      });
-    }
-
-    // ── LOCK PROBE (CAS Runtime Proof — 1C-F) ───────────────────
-    // Temporary probe for proving Base44 CAS concurrency at runtime.
-    // Available only to platform.test_lab.manage operators.
-    // Accepts a server-allowlisted harmless probe key.
-    if (action === 'lock_probe') {
-      const { probe_key } = body;
-      if (!probe_key) return safeJson('invalid_request', 400, 'probe_key is required.');
-      if (!PROBE_LOCK_KEYS.includes(probe_key)) return safeJson('invalid_request', 400, `Invalid probe_key. Must be one of: ${PROBE_LOCK_KEYS.join(', ')}`);
-      const result = await probeLock(base44, probe_key);
-      if (!result.acquired) {
-        return Response.json({
-          success: false,
-          acquired: false,
-          probe_key,
-          operation_id: result.operation_id,
-          error: result.error,
-          message: result.error === 'operation_in_progress'
-            ? 'Lock is held by another request — CAS race loser.'
-            : result.error,
-        }, { status: 409 });
-      }
-      return Response.json({
-        success: true,
-        acquired: true,
-        released: result.released,
-        verified: result.verified,
-        probe_key,
-        operation_id: result.operation_id,
-        error: result.error,
-        message: result.verified
-          ? 'Lock acquired, held briefly, released and verified.'
-          : 'Lock acquired but release verification failed — degraded state.',
       });
     }
 

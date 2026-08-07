@@ -22,10 +22,6 @@ import {
 // ── CONSTANTS ──────────────────────────────────────────────────
 export const LOCK_REGISTRY_KEY = 'test_lab_global';
 
-// Server-allowlisted harmless probe keys for CAS runtime proof.
-// Normal business/test operations MUST NOT use these keys.
-export const PROBE_LOCK_KEYS = ['probe:test_a', 'probe:test_b'];
-
 // ── LOOKUP-ONLY LOCK REGISTRY (Build #28.2P-R.0R.1C-F) ────────
 // Normal runtime MUST NOT lazily create another registry.
 // The singleton is provisioned once through initializeLockRegistry,
@@ -224,6 +220,9 @@ export async function createOperation(base44: any, params: {
   verification_run_id?: string;
   lock_key_override?: string;
 }): Promise<{ operation_id: string; record_id: string; registry_id: string; error?: string; lock_error?: string }> {
+  // Track acquired lock state for cleanup on failure (Build #28.2P-R.0R.1C-F)
+  let acquiredRegistryId: string | null = null;
+  let acquiredOperationId: string | null = null;
   try {
     // 1. Ensure lock registry exists (LOOKUP-ONLY)
     const registry = await ensureLockRegistry(base44);
@@ -240,6 +239,10 @@ export async function createOperation(base44: any, params: {
     if (!lockResult.acquired) {
       return { operation_id: '', record_id: '', registry_id: '', lock_error: 'operation_in_progress' };
     }
+
+    // Track acquired lock for cleanup on failure
+    acquiredRegistryId = registry.registry_id!;
+    acquiredOperationId = operationId;
 
     // 4. Create TestLabOperation record
     const record = await base44.asServiceRole.entities.TestLabOperation.create({
@@ -261,11 +264,27 @@ export async function createOperation(base44: any, params: {
       non_production: true,
     });
     if (!record?.id) {
-      await releaseOperationLock(base44, registry.registry_id!, operationId);
+      // No durable record — release the lock with read-back verification
+      const releaseResult = await releaseOperationLock(base44, acquiredRegistryId, acquiredOperationId);
+      if (!releaseResult.verified) {
+        return { operation_id: '', record_id: '', registry_id: '', error: `TestLabOperation creation returned empty ID AND lock release failed: ${releaseResult.error}. Manual lock recovery may be required.` };
+      }
       return { operation_id: '', record_id: '', registry_id: '', error: 'TestLabOperation creation returned empty ID' };
     }
     return { operation_id: operationId, record_id: record.id, registry_id: registry.registry_id! };
   } catch (err) {
+    // Build #28.2P-R.0R.1C-F: If we acquired a lock but haven't created a
+    // durable record, attempt an ownership-safe release with read-back verification.
+    if (acquiredRegistryId && acquiredOperationId) {
+      try {
+        const releaseResult = await releaseOperationLock(base44, acquiredRegistryId, acquiredOperationId);
+        if (!releaseResult.verified) {
+          return { operation_id: '', record_id: '', registry_id: '', error: `TestLabOperation creation failed: ${err.message}. Lock release also failed: ${releaseResult.error}. Manual lock recovery may be required.` };
+        }
+      } catch (releaseErr) {
+        return { operation_id: '', record_id: '', registry_id: '', error: `TestLabOperation creation failed: ${err.message}. Lock release threw: ${releaseErr.message}. Manual lock recovery may be required.` };
+      }
+    }
     return { operation_id: '', record_id: '', registry_id: '', error: `TestLabOperation creation failed: ${err.message}` };
   }
 }
@@ -317,9 +336,14 @@ export async function persistOperationIntent(base44: any, params: {
     if (!intentId) {
       return { intent_id: '', error: 'Intent persistence returned empty ID — cannot proceed with mutation.' };
     }
-    await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.INTENT_PERSISTED, {
+    // Build #28.2P-R.0R.1C-F: Verify the transition succeeded before returning intent_id.
+    // Durable intent requires BOTH AuditLog evidence AND TestLabOperation INTENT_PERSISTED.
+    const transition = await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.INTENT_PERSISTED, {
       intent_audit_id: intentId,
     });
+    if (!transition.persisted) {
+      return { intent_id: '', error: `Intent audit was persisted (ID: ${intentId}) but the operation record could not be transitioned to INTENT_PERSISTED: ${transition.error}. Mutation blocked for safety.` };
+    }
     return { intent_id: intentId };
   } catch (err) {
     return { intent_id: '', error: `Intent persistence failed: ${err.message}` };
@@ -390,14 +414,34 @@ export async function persistOperationCompletion(base44: any, params: {
       });
       return { completion_id: '', persisted: false };
     }
-    await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.COMPLETED, {
+    const transition = await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.COMPLETED, {
       completion_audit_id: completionId,
       mutation_resource_ids: params.mutation_resource_ids || [],
       completed_at: new Date().toISOString(),
     });
-    // COMPLETED — release lock
+    if (!transition.persisted) {
+      // Completion audit exists but operation transition failed — degraded state
+      await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.INCOMPLETE, {
+        failure_code: 'completion_transition_failed',
+        failure_summary: `Completion audit persisted (${completionId}) but operation transition to COMPLETED failed: ${transition.error}`,
+      });
+      return { completion_id: completionId, persisted: false };
+    }
+    // Build #28.2P-R.0R.1C-F: Release lock with read-back verification.
+    // A COMPLETED operation must NOT report clean completion if its lock
+    // cannot be released and verified.
     if (params.registry_id && params.operation_id) {
-      await releaseOperationLock(base44, params.registry_id, params.operation_id);
+      const releaseResult = await releaseOperationLock(base44, params.registry_id, params.operation_id);
+      if (!releaseResult.verified) {
+        // Lock release failed — transition to INCOMPLETE for reconciliation
+        await transitionOperation(base44, params.operation_record_id, OPERATION_LIFECYCLE_STATES.INCOMPLETE, {
+          failure_code: 'lock_release_failed',
+          failure_summary: `Operation completed and audit persisted but lock release could not be verified: ${releaseResult.error}. Manual lock recovery may be required.`,
+          completion_audit_id: completionId,
+          mutation_resource_ids: params.mutation_resource_ids || [],
+        });
+        return { completion_id: completionId, persisted: false };
+      }
     }
     return { completion_id: completionId, persisted: true };
   } catch (err) {
@@ -421,7 +465,7 @@ export async function persistOperationFailure(base44: any, params: {
   error: string;
   registry_id?: string;
   operation_id?: string;
-}): Promise<void> {
+}): Promise<{ lock_release_degraded: boolean; lock_release_error?: string }> {
   try {
     await base44.asServiceRole.entities.AuditLog.create({
       tenant_id: params.audit_tenant_id,
@@ -445,50 +489,43 @@ export async function persistOperationFailure(base44: any, params: {
       failure_summary: params.error,
     });
   } catch { /* best effort — intent record already proves the attempt */ }
-  // FAILED — release lock (terminal state)
+  // Build #28.2P-R.0R.1C-F: FAILED — release lock (terminal state) with
+  // read-back verification. Do NOT swallow release errors via .catch(() => {}).
+  let lockReleaseDegraded = false;
+  let lockReleaseError: string | null = null;
   if (params.registry_id && params.operation_id) {
-    await releaseOperationLock(base44, params.registry_id, params.operation_id).catch(() => {});
+    try {
+      const releaseResult = await releaseOperationLock(base44, params.registry_id, params.operation_id);
+      if (!releaseResult.verified) {
+        lockReleaseDegraded = true;
+        lockReleaseError = releaseResult.error || 'Lock release verification failed';
+      }
+    } catch (releaseErr) {
+      lockReleaseDegraded = true;
+      lockReleaseError = releaseErr.message;
+    }
   }
+  // If lock release failed, record a degraded audit for recovery
+  if (lockReleaseDegraded) {
+    try {
+      await base44.asServiceRole.entities.AuditLog.create({
+        tenant_id: params.audit_tenant_id,
+        actor_id: params.actor_id, actor_name: params.actor_name,
+        actor_role: 'admin',
+        action_type: `test_lab_${params.action}_lock_release_degraded`,
+        module: 'system', category: 'governance', severity: 'critical',
+        event_source: 'testLabSetup',
+        target_entity: 'TestLabOperation', target_record_id: params.target,
+        details: `LOCK RELEASE DEGRADED — ${params.action} failed and lock release could not be verified: ${lockReleaseError}. Manual lock recovery may be required.`,
+        previous_state: null,
+        new_state: { operation_id: params.operation_id, lock_release_error: lockReleaseError },
+        shield_outcome: 'not_evaluated',
+      });
+    } catch { /* best effort */ }
+  }
+  return { lock_release_degraded: lockReleaseDegraded, lock_release_error: lockReleaseError || undefined };
 }
 
-// ── LOCK PROBE (CAS Runtime Proof — 1C-F) ─────────────────────
-// Temporary probe for proving Base44 CAS concurrency at runtime.
-// Available only to platform.test_lab.manage operators.
-// Accepts a server-allowlisted harmless probe key, acquires the lock,
-// holds it briefly, then releases it with read-back verification.
-export async function probeLock(base44: any, probeKey: string): Promise<{
-  acquired: boolean;
-  released: boolean;
-  verified: boolean;
-  operation_id: string;
-  error?: string;
-}> {
-  if (!PROBE_LOCK_KEYS.includes(probeKey)) {
-    return { acquired: false, released: false, verified: false, operation_id: '', error: 'Invalid probe key — must be one of: ' + PROBE_LOCK_KEYS.join(', ') };
-  }
-
-  const registry = await ensureLockRegistry(base44);
-  if (registry.uninitialized) return { acquired: false, released: false, verified: false, operation_id: '', error: 'lock_registry_uninitialized' };
-  if (registry.conflict) return { acquired: false, released: false, verified: false, operation_id: '', error: 'lock_registry_conflict' };
-  if (registry.error) return { acquired: false, released: false, verified: false, operation_id: '', error: registry.error };
-
-  const operationId = generateOperationId();
-  const lockResult = await acquireOperationLock(base44, registry.registry_id!, probeKey, operationId, 'test_probe', probeKey);
-  if (!lockResult.acquired) {
-    return { acquired: false, released: false, verified: false, operation_id: '', error: 'operation_in_progress' };
-  }
-
-  // Hold briefly to allow concurrent requests to race
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  // Release with read-back verification
-  const releaseResult = await releaseOperationLock(base44, registry.registry_id!, operationId);
-
-  return {
-    acquired: true,
-    released: releaseResult.released,
-    verified: releaseResult.verified,
-    operation_id: operationId,
-    error: releaseResult.error,
-  };
-}
+// Build #28.2P-R.0R.1C-F: probeLock and PROBE_LOCK_KEYS have been removed.
+// The live CAS proof was obtained and documented. Normal runtime no longer
+// exposes a temporary probe endpoint through the testLabSetup action router.
