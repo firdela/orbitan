@@ -1,7 +1,7 @@
 {
   "name": "TestLabAttestation",
   "type": "object",
-  "description": "Orbitan Test Lab \u2014 Persisted email delivery attestation record (Build #28.2P-R.0R.1C). Stores per-alias, per-check attestation state so readiness can be computed from persisted evidence rather than transient audit log entries. Never stores private destination addresses, passwords, invitation links, tokens, or message content. Build #28.2P-R.0R.1C hardens RLS to service-role-only writes. Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan Test Lab \u2014 Persisted email delivery attestation record (Build #28.2P-R.0R.1C-F). Stores per-alias, per-check attestation state so readiness can be computed from persisted evidence rather than transient audit log entries. Never stores private destination addresses, passwords, invitation links, tokens, or message content. Build #28.2P-R.0R.1C-F hardens RLS to service-role-only writes using a single impossible user_condition. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string",
@@ -61,18 +61,9 @@
   ],
   "rls": {
     "create": {
-      "$and": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "___service_only___"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "___service_only___"
+      }
     },
     "read": {
       "user_condition": {
@@ -80,32 +71,14 @@
       }
     },
     "update": {
-      "$and": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "___service_only___"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "___service_only___"
+      }
     },
     "delete": {
-      "$and": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "___service_only___"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "___service_only___"
+      }
     }
   }
 }
