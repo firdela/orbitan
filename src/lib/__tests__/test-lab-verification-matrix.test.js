@@ -22,7 +22,7 @@
 // ============================================================
 
 import {
-  TEST_IDENTITIES, PERSONA_KEYS, getPersonaByKey,
+  TEST_PERSONAS, PERSONA_KEYS, getPersonaByKey,
   VERIFICATION_RUN_CAMPAIGN_TYPES, PROOF_CLASSES,
   VERIFICATION_RESULT_STATUSES, MATRIX_VERSION,
   TENANT_A_ID, CROSS_TENANT_AI_PERMISSION, TEST_LAB_PERMISSION,
@@ -69,13 +69,16 @@ assert(PERSONA_KEYS.includes('tenant_b_worker'), 'tenant_b_worker exists');
 assert(PERSONA_KEYS.includes('platform_allowed'), 'platform_allowed exists');
 assert(PERSONA_KEYS.includes('platform_denied'), 'platform_denied exists');
 
-// ── 2. PERSONA KEY ON EACH IDENTITY ──────────────────────────
-console.log('\n=== Persona Key On Each Identity ===');
+// ── 2. PERSONA KEY ON EACH PERSONA ───────────────────────────
+console.log('\n=== Persona Key On Each Persona ===');
 
-for (const identity of TEST_IDENTITIES) {
-  assert(!!identity.persona_key, `${identity.email} has persona_key`);
-  assert(PERSONA_KEYS.includes(identity.persona_key), `${identity.email} persona_key is in PERSONA_KEYS`);
-  assert(getPersonaByKey(identity.persona_key) === identity, `getPersonaByKey('${identity.persona_key}') returns correct identity`);
+for (const persona of TEST_PERSONAS) {
+  assert(!!persona.persona_key, `${persona.persona_key} has persona_key`);
+  assert(PERSONA_KEYS.includes(persona.persona_key), `${persona.persona_key} is in PERSONA_KEYS`);
+  assert(getPersonaByKey(persona.persona_key) === persona, `getPersonaByKey('${persona.persona_key}') returns correct persona`);
+  // Zero-email: no email field
+  assert(!persona.email, `${persona.persona_key}: no email field (zero-email)`);
+  assert(!persona.canonical_email, `${persona.persona_key}: no canonical_email field (zero-email)`);
 }
 
 assert(getPersonaByKey('nonexistent') === null, 'Unknown persona key returns null');
@@ -89,10 +92,13 @@ const fixtureData = {
     [TENANT_A_ID]: [{ id: 'outlet_a_1' }],
     tenant_b_test_id: [{ id: 'outlet_b_1' }],
   },
-  employeesByEmail: {
-    'test.requester.a@orbitan.net': { id: 'emp_requester_a' },
-    'test.approver.a@orbitan.net': { id: 'emp_approver_a' },
-    'test.worker.a@orbitan.net': { id: 'emp_worker_a' },
+  employeesByFixtureKey: {
+    'emp_tenant_a_requester': { id: 'emp_requester_a' },
+    'emp_tenant_a_approver': { id: 'emp_approver_a' },
+    'emp_tenant_a_leader': { id: 'emp_leader_a' },
+    'emp_tenant_a_worker': { id: 'emp_worker_a' },
+    'emp_tenant_b_admin': { id: 'emp_admin_b' },
+    'emp_tenant_b_worker': { id: 'emp_worker_b' },
   },
   verificationRunId: 'vrun_test_001',
 };
@@ -102,7 +108,7 @@ for (const personaKey of PERSONA_KEYS) {
   assert(!ctx.error, `${personaKey}: no derivation error`);
   assert(ctx.persona_key === personaKey, `${personaKey}: persona_key matches`);
   assert(ctx.non_production === true, `${personaKey}: non_production=true`);
-  assert(ctx.version === '1.0.0', `${personaKey}: version set`);
+  assert(ctx.version === '2.0.0', `${personaKey}: version 2.0.0 (zero-email)`);
 }
 
 // Unknown persona key
@@ -115,8 +121,9 @@ console.log('\n=== Operator ≠ Evaluated Persona ===');
 
 const workerCtx = deriveTestSecurityContext('tenant_a_worker', fixtureData);
 assert(workerCtx.persona_key === 'tenant_a_worker', 'Persona key is tenant_a_worker');
-assert(!workerCtx.canonical_email.includes('founder'), 'Persona email is not founder email');
-assert(workerCtx.employee_fixture_id === 'emp_worker_a', 'Employee fixture ID from fixture data');
+assert(!workerCtx.canonical_email, 'Zero-email: no canonical_email in context');
+assert(workerCtx.employee_fixture_id === 'emp_worker_a', 'Employee fixture ID from fixture key data');
+assert(workerCtx.employee_fixture_key === 'emp_tenant_a_worker', 'Employee fixture key in context');
 // The operator (real admin) is NOT in the context — only the evaluated persona
 assert(!workerCtx.operator_actor_id, 'No operator_actor_id in TestSecurityContext');
 
@@ -127,7 +134,8 @@ const validInput = { scenario_id: 'tenant_isolation.worker_a_to_tenant_a' };
 const validCheck = validateClientScenarioInput(validInput);
 assert(validCheck.valid === true, 'Valid input (scenario_id only) passes');
 
-const forbiddenFields = ['role', 'permissions', 'tenant_id', 'outlet_id', 'user_id', 'employee_role', 'expected_result', 'persona', 'simulated_user', 'simulated_role', 'simulated_tenant', 'identity_override'];
+// Build #28.2Q-ZE.1 — zero-email: email/persona_key/alias also forbidden
+const forbiddenFields = ['role', 'permissions', 'tenant_id', 'outlet_id', 'user_id', 'employee_role', 'expected_result', 'persona', 'simulated_user', 'simulated_role', 'simulated_tenant', 'identity_override', 'email', 'canonical_email', 'alias', 'persona_key'];
 for (const field of forbiddenFields) {
   const badInput = { scenario_id: 'test', [field]: 'forged_value' };
   const check = validateClientScenarioInput(badInput);

@@ -9,7 +9,7 @@
 // ============================================================
 
 import {
-  TEST_IDENTITIES, TEST_LAB_PERMISSION, CROSS_TENANT_AI_PERMISSION,
+  TEST_PERSONAS, TEST_LAB_PERMISSION, CROSS_TENANT_AI_PERMISSION,
   TENANT_A_ID, TENANT_B_NAME, TENANT_B_TEST_LAB_KEY,
   SANDBOX_TENANT_DEFAULTS,
   NORMAL_APPROVAL_TTL_HOURS,
@@ -17,6 +17,7 @@ import {
   SANDBOX_TEST_TTL_DEFAULT_MINUTES,
   EMAIL_ATTESTATION_CHECKS, IDENTITY_READINESS_STATES,
   isAllowlistedTestAlias, getTestIdentity, isValidTestTtlMinutes,
+  getPersonaByKey, getPersonaByFixtureKey,
   createTestRunMetadata, isTestTagged,
   isPlatformAdmin, resolveWorkspaceRoute,
   productionExclusionFilter, isProductionRecord,
@@ -49,51 +50,67 @@ function assert(condition, message) {
   }
 }
 
-// ── 1. TEST IDENTITY ALLOWLIST ─────────────────────────────────
-console.log('\n=== Test Identity Allowlist ===');
+// ── 1. CANONICAL PERSONA REGISTRY (Build #28.2Q-ZE.1) ─────────
+console.log('\n=== Canonical Persona Registry (Zero-Email) ===');
 
-assert(TEST_IDENTITIES.length === 8, 'Exactly 8 test identities');
+assert(TEST_PERSONAS.length === 8, 'Exactly 8 canonical personas');
 
-const expectedEmails = [
-  'test.requester.a@orbitan.net', 'test.approver.a@orbitan.net',
-  'test.leader.a@orbitan.net', 'test.worker.a@orbitan.net',
-  'test.admin.b@orbitan.net', 'test.worker.b@orbitan.net',
-  'test.platform.allowed@orbitan.net', 'test.platform.denied@orbitan.net',
+const expectedPersonaKeys = [
+  'tenant_a_requester', 'tenant_a_approver', 'tenant_a_leader', 'tenant_a_worker',
+  'tenant_b_admin', 'tenant_b_worker', 'platform_allowed', 'platform_denied',
 ];
-for (const email of expectedEmails) {
-  assert(isAllowlistedTestAlias(email), `Allowlisted: ${email}`);
+for (const key of expectedPersonaKeys) {
+  assert(getPersonaByKey(key) !== null, `Persona exists: ${key}`);
 }
 
+// No persona requires routable email
+for (const persona of TEST_PERSONAS) {
+  assert(!persona.email, `${persona.persona_key}: no email field`);
+  assert(!!persona.persona_key, `${persona.persona_key}: has persona_key`);
+  assert(!!persona.employee_fixture_key || persona.tenant === 'platform', `${persona.persona_key}: has employee_fixture_key or is platform`);
+}
+
+// Deprecated email helpers always return false/null (zero-email)
+assert(!isAllowlistedTestAlias('test.requester.a@orbitan.net'), 'Deprecated: old alias returns false');
 assert(!isAllowlistedTestAlias('random@example.com'), 'Random email rejected');
 assert(!isAllowlistedTestAlias('founder@orbitan.net'), 'Founder email rejected');
 assert(!isAllowlistedTestAlias(''), 'Empty email rejected');
 assert(!isAllowlistedTestAlias(null), 'Null email rejected');
+assert(getTestIdentity('test.requester.a@orbitan.net') === null, 'Deprecated getTestIdentity returns null');
+
+// Fixture-key lookup works
+assert(getPersonaByFixtureKey('emp_tenant_a_requester') !== null, 'Fixture key lookup: emp_tenant_a_requester');
+assert(getPersonaByFixtureKey('emp_tenant_b_worker') !== null, 'Fixture key lookup: emp_tenant_b_worker');
+assert(getPersonaByFixtureKey('nonexistent') === null, 'Unknown fixture key returns null');
 
 // ── 2. CANONICAL ROLE MAPPING (SECURITY FIX) ──────────────────
 console.log('\n=== Canonical Role Mapping (Security Fix) ===');
 
-const tenantIdentities = TEST_IDENTITIES.filter(t => t.tenant !== 'platform');
-const platformIdentities = TEST_IDENTITIES.filter(t => t.tenant === 'platform');
+const tenantPersonas = TEST_PERSONAS.filter(t => t.tenant !== 'platform');
+const platformPersonas = TEST_PERSONAS.filter(t => t.tenant === 'platform');
 
-for (const identity of tenantIdentities) {
-  assert(identity.userRole === 'user', `${identity.email} has userRole='user' (not admin)`);
+for (const persona of tenantPersonas) {
+  assert(persona.userRole === 'user', `${persona.persona_key} has userRole='user' (not admin)`);
 }
 
-for (const identity of platformIdentities) {
-  assert(identity.userRole === 'admin', `${identity.email} has userRole='admin' (platform identity)`);
+for (const persona of platformPersonas) {
+  assert(persona.userRole === 'admin', `${persona.persona_key} has userRole='admin' (platform persona)`);
 }
 
-const testWorker = getTestIdentity('test.worker.a@orbitan.net');
-assert(testWorker.userRole === 'user', 'Test Worker A is NOT a platform admin');
+const testWorker = getPersonaByKey('tenant_a_worker');
+assert(testWorker.userRole === 'user', 'Tenant A Worker is NOT a platform admin');
 assert(!isPlatformAdmin(testWorker.userRole), 'isPlatformAdmin returns false for Worker');
 
-const tenantAdmin = getTestIdentity('test.admin.b@orbitan.net');
-assert(tenantAdmin.userRole === 'user', 'Tenant Admin B is NOT a platform admin');
+const tenantAdmin = getPersonaByKey('tenant_b_admin');
+assert(tenantAdmin.userRole === 'user', 'Tenant B Admin is NOT a platform admin');
 assert(!isPlatformAdmin(tenantAdmin.userRole), 'isPlatformAdmin returns false for tenant admin');
 
-const platformAllowed = getTestIdentity('test.platform.allowed@orbitan.net');
+const platformAllowed = getPersonaByKey('platform_allowed');
 assert(platformAllowed.userRole === 'admin', 'Platform Allowed IS a platform admin');
-assert(isPlatformAdmin(platformAllowed.userRole), 'isPlatformAdmin returns true for platform identity');
+assert(isPlatformAdmin(platformAllowed.userRole), 'isPlatformAdmin returns true for platform persona');
+
+// Worker cannot become platform admin
+assert(testWorker.userRole !== 'admin', 'Worker persona cannot become platform admin');
 
 // ── 3. WORKSPACE ROUTE RESOLUTION ─────────────────────────────
 console.log('\n=== Workspace Route Resolution ===');
@@ -107,9 +124,11 @@ assert(workerRoute !== '/leader-org', 'Worker does NOT resolve to /leader-org');
 // ── 4. EMPLOYEE ROLE MAPPING ───────────────────────────────────
 console.log('\n=== Employee Role Mapping ===');
 
-assert(getTestIdentity('test.requester.a@orbitan.net').employeeRole === 'worker', 'Requester is worker');
-assert(getTestIdentity('test.approver.a@orbitan.net').employeeRole === 'tenant_admin', 'Approver is tenant_admin');
-assert(getTestIdentity('test.leader.a@orbitan.net').employeeRole === 'outlet_manager', 'Leader is outlet_manager');
+assert(getPersonaByKey('tenant_a_requester').employeeRole === 'worker', 'Requester is worker');
+assert(getPersonaByKey('tenant_a_approver').employeeRole === 'tenant_admin', 'Approver is tenant_admin');
+assert(getPersonaByKey('tenant_a_leader').employeeRole === 'outlet_manager', 'Leader is outlet_manager');
+assert(getPersonaByKey('tenant_b_admin').employeeRole === 'tenant_admin', 'Tenant B Admin is tenant_admin');
+assert(getPersonaByKey('tenant_b_worker').employeeRole === 'worker', 'Tenant B Worker is worker');
 
 // ── 5. CROSS-TENANT PERMISSION ────────────────────────────────
 console.log('\n=== Cross-Tenant Permission ===');
@@ -117,8 +136,13 @@ console.log('\n=== Cross-Tenant Permission ===');
 assert(CROSS_TENANT_AI_PERMISSION === 'platform.ai.cross_tenant_operate', 'Permission string matches canonical');
 assert(TEST_LAB_PERMISSION === 'platform.test_lab.manage', 'Test lab permission string');
 
-const allowedCount = TEST_IDENTITIES.filter(t => t.requiresCrossTenantPermission).length;
-assert(allowedCount === 1, 'Exactly 1 identity requires cross-tenant permission');
+const allowedCount = TEST_PERSONAS.filter(t => t.requiresCrossTenantPermission).length;
+assert(allowedCount === 1, 'Exactly 1 persona requires cross-tenant permission');
+
+// platform_allowed requires cross-tenant permission
+assert(getPersonaByKey('platform_allowed').requiresCrossTenantPermission === true, 'platform_allowed requires cross-tenant permission');
+// platform_denied does NOT
+assert(getPersonaByKey('platform_denied').requiresCrossTenantPermission === false, 'platform_denied does NOT require cross-tenant permission');
 
 // ── 6. SANDBOX TENANT CONSTANTS ────────────────────────────────
 console.log('\n=== Sandbox Tenant Constants ===');
@@ -755,8 +779,8 @@ console.log('\n=== Canonical Target Keys ===');
 
 assert(targetKeyForSandboxTenant() === 'TEST_LAB_B', 'Sandbox tenant key = TEST_LAB_B');
 
-const membershipKey = targetKeyForMembership('tenant_123', 'test.requester.a@orbitan.net');
-assert(membershipKey === 'tenant_123:test.requester.a@orbitan.net', 'Membership key format');
+const membershipKey = targetKeyForMembership('tenant_123', 'emp_tenant_a_requester');
+assert(membershipKey === 'tenant_123:emp_tenant_a_requester', 'Membership key format (fixture-key based)');
 
 const permissionKey = targetKeyForPermission('user_456');
 assert(permissionKey === `user_456:${CROSS_TENANT_AI_PERMISSION}`, 'Permission key format');

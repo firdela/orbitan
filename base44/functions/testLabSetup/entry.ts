@@ -639,11 +639,47 @@ export default async function(req: Request): Promise<Response> {
       if (!reason || reason.length < 10) return safeJson('invalid_request', 400, 'A meaningful reconciliation reason is required (min 10 chars).');
 
       const ops = await base44.asServiceRole.entities.TestLabOperation.filter({ operation_id }).catch(() => []);
-      if (!ops || ops.length === 0) return safeJson('not_found', 404, 'TestLabOperation not found.');
+      const hasTestLabOperation = !!(ops && ops.length > 0);
+
+      // Build #28.2Q-ZE.1: Handle out-of-band transitions (no TestLabOperation record).
+      // This occurs when a state transition was performed directly (e.g., via exec_tool)
+      // without the canonical TestLabOperation lifecycle. Reconciliation records the
+      // truth WITHOUT claiming the original mutation had a canonical operation trail.
+      if (!hasTestLabOperation) {
+        const reconciliationAudit = await base44.asServiceRole.entities.AuditLog.create({
+          tenant_id: 'platform',
+          actor_id: user.id, actor_name: user.full_name || 'Admin',
+          actor_role: 'admin',
+          action_type: 'test_lab_reconcile_operation',
+          module: 'system', category: 'governance', severity: 'warning',
+          event_source: 'testLabSetup',
+          target_entity: 'VerificationRun', target_record_id: operation_id,
+          details: `OUT-OF-BAND RECONCILIATION — No TestLabOperation record. Resolution: ${resolution}. Reason: ${reason}`,
+          previous_state: { operation_id, had_testlaboperation: false },
+          new_state: { resolution, reconciled: true, out_of_band: true },
+          shield_outcome: 'not_evaluated',
+        }).catch(() => null);
+
+        return Response.json({
+          success: true,
+          operation_status: 'reconciled',
+          operation_id,
+          reconciliation_state: resolution,
+          out_of_band: true,
+          had_testlaboperation: false,
+          reconciliation_audit_id: reconciliationAudit?.id || '',
+          message: 'Out-of-band operation reconciled. The original transition did not have a canonical TestLabOperation trail. Reconciliation evidence has been recorded truthfully.',
+        });
+      }
+
       const op = ops[0];
 
-      if (op.status !== OPERATION_LIFECYCLE_STATES.INCOMPLETE) {
-        return safeJson('invalid_request', 400, `Operation is in ${op.status} status. Only INCOMPLETE operations can be reconciled.`);
+      // Build #28.2Q-ZE.1: Allow reconciliation of any non-terminal, non-reconciled status
+      // (not just INCOMPLETE). This includes PENDING and INTENT_PERSISTED operations.
+      if (op.status === OPERATION_LIFECYCLE_STATES.RECONCILED ||
+          op.status === OPERATION_LIFECYCLE_STATES.COMPLETED ||
+          op.status === OPERATION_LIFECYCLE_STATES.FAILED) {
+        return safeJson('invalid_request', 400, `Operation is in terminal status ${op.status}. Only non-terminal operations can be reconciled.`);
       }
 
       // Persist reconciliation audit evidence
@@ -919,6 +955,8 @@ export default async function(req: Request): Promise<Response> {
 
     // ── PREPARE MEMBERSHIP (intent-first) ──────────────────
     if (action === 'prepare_membership') {
+      // @deprecated Build #28.2Q-ZE.1 — Email-based Test Lab identity testing retired.
+      return safeJson('legacy_email_testing_retired', 409, 'Email-based Test Lab identity testing was retired by Build #28.2Q-ZE.1. Use automated persona-based verification.');
       const { email } = body;
       if (!email || !isAllowlistedTestAlias(email)) {
         return safeJson('invalid_request', 400, 'Email is not in the fixed test-identity allowlist.');
@@ -1059,6 +1097,8 @@ export default async function(req: Request): Promise<Response> {
 
     // ── GRANT CROSS-TENANT PERMISSION (intent-first) ───────
     if (action === 'grant_permission') {
+      // @deprecated Build #28.2Q-ZE.1 — Email-based Test Lab identity testing retired.
+      return safeJson('legacy_email_testing_retired', 409, 'Email-based Test Lab identity testing was retired by Build #28.2Q-ZE.1. Use automated persona-based verification.');
       const { email } = body;
       if (!email || !isAllowlistedTestAlias(email)) return safeJson('invalid_request', 400, 'Email is not in the fixed test-identity allowlist.');
       const identity = getTestIdentity(email)!;
@@ -1149,6 +1189,8 @@ export default async function(req: Request): Promise<Response> {
 
     // ── REVOKE CROSS-TENANT PERMISSION (intent-first) ──────
     if (action === 'revoke_permission') {
+      // @deprecated Build #28.2Q-ZE.1 — Email-based Test Lab identity testing retired.
+      return safeJson('legacy_email_testing_retired', 409, 'Email-based Test Lab identity testing was retired by Build #28.2Q-ZE.1. Use automated persona-based verification.');
       const { email } = body;
       if (!email || !isAllowlistedTestAlias(email)) return safeJson('invalid_request', 400, 'Email is not in the fixed test-identity allowlist.');
       const reason = body.reason || `Revoke cross-tenant AI permission from ${getTestIdentity(email)?.label || email}`;
@@ -1235,6 +1277,8 @@ export default async function(req: Request): Promise<Response> {
 
     // ── ATTEST EMAIL DELIVERY (intent-first, persisted) ────
     if (action === 'attest_delivery') {
+      // @deprecated Build #28.2Q-ZE.1 — Email-based Test Lab identity testing retired.
+      return safeJson('legacy_email_testing_retired', 409, 'Email-based Test Lab identity testing was retired by Build #28.2Q-ZE.1. Use automated persona-based verification.');
       const { email, check, verified } = body;
       if (!email || !isAllowlistedTestAlias(email)) return safeJson('invalid_request', 400, 'Email is not in the fixed test-identity allowlist.');
       if (!EMAIL_ATTESTATION_CHECKS.includes(check)) return safeJson('invalid_request', 400, `Invalid attestation check. Must be one of: ${EMAIL_ATTESTATION_CHECKS.join(', ')}`);
@@ -1332,6 +1376,8 @@ export default async function(req: Request): Promise<Response> {
 
     // ── CREATE TEST RUN (server-derived TTL, verification-run linked) ─
     if (action === 'create_test_run') {
+      // @deprecated Build #28.2Q-ZE.1 — Email-based Test Lab identity testing retired.
+      return safeJson('legacy_email_testing_retired', 409, 'Email-based Test Lab identity testing was retired by Build #28.2Q-ZE.1. Use automated persona-based verification.');
       const { sandbox_tenant_id, authorised_requester_email, permitted_service_key, permitted_action_type, permitted_autonomy_level, test_tag, test_purpose } = body;
       const clientTtlSupplied = body.ttl_minutes != null;
 
@@ -1462,28 +1508,35 @@ export default async function(req: Request): Promise<Response> {
       });
     }
 
-    // ── READINESS STATUS (current-verification-run scoped) ──
+    // ── READINESS STATUS (current-verification-run scoped, zero-email) ──
+    // Build #28.2Q-ZE.1 — Persona-based readiness. NO email, NO User.list,
+    // NO TestLabAttestation, NO EMAIL_ATTESTATION_CHECKS dependency.
+    // Persona readiness derives from TEST_PERSONAS + fixture availability.
     if (action === 'readiness_status') {
       let tenantA: any = null;
       try { tenantA = await base44.asServiceRole.entities.Tenant.get(TENANT_A_ID); } catch {}
 
       const tenantBResults = await base44.asServiceRole.entities.Tenant.filter({ test_lab_key: TENANT_B_TEST_LAB_KEY }).catch(() => []);
       const tenantB = tenantBResults?.[0] || null;
-
-      const allUsers = await base44.asServiceRole.entities.User.list().catch(() => []);
-      const testUsers = (allUsers || []).filter((u: any) => isAllowlistedTestAlias(u.email));
-
-      const employeesA = await base44.asServiceRole.entities.Employee.filter({ tenant_id: TENANT_A_ID }).catch(() => []);
       const tenantBId = tenantB?.id;
-      const employeesB = tenantBId ? await base44.asServiceRole.entities.Employee.filter({ tenant_id: tenantBId }).catch(() => []) : [];
 
-      const attestations = await base44.asServiceRole.entities.TestLabAttestation.list().catch(() => []);
+      // ── BUILD #28.2Q-ZE.1: PERSONA FIXTURE RESOLUTION (zero-email) ──
+      // Employee fixtures are resolved by test_fixture_key (NOT email).
+      const employeesA = await base44.asServiceRole.entities.Employee.filter({ tenant_id: TENANT_A_ID }).catch(() => []);
+      const employeesB = tenantBId ? await base44.asServiceRole.entities.Employee.filter({ tenant_id: tenantBId }).catch(() => []) : [];
+      const allEmployees = [...(employeesA || []), ...(employeesB || [])];
+      const employeesByFixtureKey: Record<string, any> = {};
+      for (const emp of allEmployees) {
+        if (emp.test_fixture_key) {
+          employeesByFixtureKey[emp.test_fixture_key] = emp;
+        }
+      }
 
       // ── BUILD #28.2P-R.0R.1C: FAIL-CLOSED VERIFICATION RUN STATE ──
       const vrs = await getVerificationRunState(base44);
       const activeVRun = vrs.state === VERIFICATION_RUN_LOOKUP_STATES.ACTIVE ? vrs.run : null;
       const activeVRunId = activeVRun?.verification_run_id || null;
-      const vrunLookupState = vrs.state; // NONE, ACTIVE, UNAVAILABLE, CONFLICT
+      const vrunLookupState = vrs.state;
 
       const sandboxTenantIds: string[] = [TENANT_A_ID];
       if (tenantBId) sandboxTenantIds.push(tenantBId);
@@ -1496,8 +1549,7 @@ export default async function(req: Request): Promise<Response> {
           tenant_id: { $in: sandboxTenantIds },
         }).catch(() => []);
         verifiedTaggedApproval = (taggedApprovals || []).find((a: any) =>
-          a.test_run_id && a.test_tag && a.is_test === true && a.non_production === true &&
-          a.test_run_id && a.test_tag
+          a.test_run_id && a.test_tag && a.is_test === true && a.non_production === true
         );
       }
 
@@ -1535,45 +1587,24 @@ export default async function(req: Request): Promise<Response> {
         unresolvedLookupAvailable = false;
       }
 
-      const identities = TEST_IDENTITIES.map(identity => {
-        const userRecord = testUsers.find((u: any) => u.email === identity.email);
-        const employee = [...(employeesA || []), ...(employeesB || [])].find((e: any) => e.email === identity.email);
-
-        let state = 'ALIAS_CONFIGURED';
-        if (employee) state = 'MEMBERSHIP_PREPARED';
-        if (userRecord) {
-          state = userRecord.is_verified ? 'EMAIL_VERIFIED' : 'EMAIL_VERIFICATION_REQUIRED';
-          if (employee?.user_id === userRecord.id) state = 'IDENTITY_LINKED';
-        }
-
-        const permissions = (userRecord?.data?.permissions || []) as string[];
-        const hasCrossTenant = permissions.includes(CROSS_TENANT_AI_PERMISSION);
-
-        const aliasAttestations = (attestations || []).filter((a: any) => a.alias === identity.email);
-        const allChecksVerified = EMAIL_ATTESTATION_CHECKS.every(check =>
-          aliasAttestations.some((a: any) => a.check_key === check && a.verified)
-        );
-
+      // ── BUILD #28.2Q-ZE.1: PERSONAS (zero-email) ──
+      // Persona readiness derives from TEST_PERSONAS + fixture availability.
+      // NO email, NO User.list, NO TestLabAttestation dependency.
+      const personas = TEST_PERSONAS.map((persona: any) => {
+        const employeeFixture = persona.employee_fixture_key ? employeesByFixtureKey[persona.employee_fixture_key] : null;
         return {
-          email: identity.email, label: identity.label, tenant: identity.tenant,
-          user_role: identity.userRole, employee_role: identity.employeeRole,
-          readiness_state: state,
-          user_registered: !!userRecord,
-          email_verified: userRecord?.is_verified || false,
-          membership_linked: !!(employee && userRecord && employee.user_id === userRecord.id),
-          cross_tenant_permission: identity.requiresCrossTenantPermission ? hasCrossTenant : null,
-          expected_cross_tenant: identity.requiresCrossTenantPermission,
-          delivery_attested: allChecksVerified,
+          persona_key: persona.persona_key,
+          label: persona.label,
+          global_role: persona.userRole,
+          employee_role: persona.employeeRole,
+          tenant: persona.tenant,
+          tenant_fixture_key: persona.tenant_fixture_key,
+          employee_fixture_key: persona.employee_fixture_key,
+          fixture_ready: !!(persona.employee_fixture_key ? employeeFixture : true),
+          employee_fixture_id: employeeFixture?.id || null,
+          non_production: true,
         };
       });
-
-      const requester = identities.find(i => i.email === 'test.requester.a@orbitan.net');
-      const approver = identities.find(i => i.email === 'test.approver.a@orbitan.net');
-      const workerA = identities.find(i => i.email === 'test.worker.a@orbitan.net');
-      const platformAllowed = identities.find(i => i.email === 'test.platform.allowed@orbitan.net');
-      const platformDenied = identities.find(i => i.email === 'test.platform.denied@orbitan.net');
-      const adminB = identities.find(i => i.email === 'test.admin.b@orbitan.net');
-      const workerB = identities.find(i => i.email === 'test.worker.b@orbitan.net');
 
       const tenantBHierarchyValid = !!(tenantB && tenantB.is_sandbox && tenantB.test_lab_key);
       let tenantBCompany = null, tenantBOutlet = null;
@@ -1581,13 +1612,33 @@ export default async function(req: Request): Promise<Response> {
         tenantBCompany = (await base44.asServiceRole.entities.Company.filter({ tenant_id: tenantBId }).catch(() => []))?.[0];
         tenantBOutlet = (await base44.asServiceRole.entities.Outlet.filter({ tenant_id: tenantBId }).catch(() => []))?.[0];
       }
-      const tenantBIsolationReady = !!(tenantBHierarchyValid && tenantBCompany && tenantBOutlet && adminB?.membership_linked && workerB?.membership_linked);
+      const tenantBAdminFixture = employeesByFixtureKey['emp_tenant_b_admin'];
+      const tenantBWorkerFixture = employeesByFixtureKey['emp_tenant_b_worker'];
+      const tenantBIsolationReady = !!(tenantBHierarchyValid && tenantBCompany && tenantBOutlet && tenantBAdminFixture && tenantBWorkerFixture);
+
+      // ── LEGACY EMAIL EVIDENCE (deprecated, NOT used for readiness) ──
+      // TestLabAttestation remains historical email-specific evidence.
+      // It is NOT included in automated_governance_readiness or persona readiness.
+      let legacyEmailEvidence: any = null;
+      try {
+        const attestations = await base44.asServiceRole.entities.TestLabAttestation.list();
+        legacyEmailEvidence = {
+          deprecated: true,
+          current_readiness_dependency: false,
+          attestation_count: attestations?.length || 0,
+        };
+      } catch {
+        legacyEmailEvidence = { deprecated: true, current_readiness_dependency: false, attestation_count: 0 };
+      }
 
       return Response.json({
         success: true,
         active_verification_run: activeVRun ? {
           verification_run_id: activeVRun.verification_run_id,
           status: activeVRun.status,
+          campaign_type: activeVRun.campaign_type,
+          matrix_version: activeVRun.matrix_version,
+          expected_personas: activeVRun.expected_personas,
           created_at: activeVRun.created_at,
           started_at: activeVRun.started_at,
           test_purpose: activeVRun.test_purpose,
@@ -1596,7 +1647,7 @@ export default async function(req: Request): Promise<Response> {
           A: tenantA ? { id: tenantA.id, name: tenantA.name, is_sandbox: tenantA.is_sandbox, status: tenantA.status, exists: true } : { exists: false },
           B: tenantB ? { id: tenantB.id, name: tenantB.name, is_sandbox: tenantB.is_sandbox, test_lab_key: tenantB.test_lab_key, status: tenantB.status, exists: true, company_id: tenantBCompany?.id, outlet_id: tenantBOutlet?.id } : { exists: false },
         },
-        identities,
+        personas,
         test_capability: {
           test_tagging_ready: !!verifiedTaggedApproval,
           test_tagging_evidence: verifiedTaggedApproval ? {
@@ -1616,10 +1667,7 @@ export default async function(req: Request): Promise<Response> {
             status: verifiedConsumedRun.status,
             sandbox_tenant_id: verifiedConsumedRun.sandbox_tenant_id,
           } : null,
-          independent_approver_ready: !!(requester?.user_registered && approver?.user_registered && requester?.email_verified && approver?.email_verified && requester?.membership_linked && approver?.membership_linked && requester?.email !== approver?.email),
-          worker_isolation_ready: !!(workerA?.user_registered && workerA?.user_role === 'user' && workerA?.employee_role === 'worker' && workerA?.membership_linked),
           tenant_b_isolation_ready: tenantBIsolationReady,
-          platform_permission_distinction_ready: !!(platformAllowed?.user_registered && platformDenied?.user_registered && platformAllowed?.cross_tenant_permission === true && platformDenied?.cross_tenant_permission === false),
           readiness_scope: activeVRunId ? 'current_verification_run' : 'no_active_run',
           verification_run_lookup_state: vrunLookupState,
           readiness_unavailable: vrunLookupState === VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE,
@@ -1629,6 +1677,7 @@ export default async function(req: Request): Promise<Response> {
         unresolved_operations: allUnresolved,
         has_unresolved_operations: allUnresolved.length > 0,
         unresolved_lookup_available: unresolvedLookupAvailable,
+        legacy_email_evidence: legacyEmailEvidence,
       });
     }
 
@@ -1792,6 +1841,108 @@ export default async function(req: Request): Promise<Response> {
             : overallStatus === 'incomplete'
               ? 'Reset incomplete — a query phase failed. Not all relevant records may have been processed. See approvals_query_error/inbox_query_error.'
               : 'Reset failed — query errors and delete failures occurred. See error details.',
+      });
+    }
+
+    // ── MIGRATE EMPLOYEE FIXTURE KEYS (Build #28.2Q-ZE.1) ───────
+    // One-time migration: adds test_fixture_key to the 6 existing
+    // canonical Employee fixtures using a server-defined mapping.
+    // Email is used ONLY as a migration bridge to locate legacy records.
+    // After migration, runtime resolution uses test_fixture_key exclusively.
+    if (action === 'migrate_employee_fixture_keys') {
+      const FIXTURE_MIGRATION_MAP = [
+        { email: 'test.requester.a@orbitan.net', fixture_key: 'emp_tenant_a_requester' },
+        { email: 'test.approver.a@orbitan.net', fixture_key: 'emp_tenant_a_approver' },
+        { email: 'test.leader.a@orbitan.net', fixture_key: 'emp_tenant_a_leader' },
+        { email: 'test.worker.a@orbitan.net', fixture_key: 'emp_tenant_a_worker' },
+        { email: 'test.admin.b@orbitan.net', fixture_key: 'emp_tenant_b_admin' },
+        { email: 'test.worker.b@orbitan.net', fixture_key: 'emp_tenant_b_worker' },
+      ];
+      const reason = body.reason || 'Build #28.2Q-ZE.1 — Migrate Employee fixtures to zero-email test_fixture_key';
+      if (reason.length < 5) return safeJson('invalid_request', 400, 'A meaningful reason is required.');
+      const targetKey = 'fixture_migration:all';
+
+      const opState = await checkOperationState(base44, TARGET_TYPES.TEST_MEMBERSHIP, targetKey);
+      if (opState.state === OPERATION_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('operation_state_unavailable', 503, 'Cannot verify operation state — operation ledger is unavailable. Migration blocked for safety.', { target_key: targetKey });
+      }
+      if (opState.state === OPERATION_LOOKUP_STATES.BLOCKED) {
+        return safeJson('incomplete_operation', 409, 'An incomplete operation exists for this migration. Recovery/reconciliation is required.', {
+          unresolved_operations: opState.operations.map((o: any) => ({ operation_id: o.operation_id, action: o.action, status: o.status })),
+        });
+      }
+
+      const optionalVRunId = await getOptionalVerificationRunId(base44);
+      const opCreate = await createOperation(base44, {
+        action: 'prepare_membership', target_type: TARGET_TYPES.TEST_MEMBERSHIP, target_key: targetKey,
+        tenant_id: 'platform', actor_id: user.id, actor_name: user.full_name || 'Admin',
+        verification_run_id: optionalVRunId,
+      });
+      if (opCreate.lock_error === 'lock_registry_uninitialized') return safeJson('lock_registry_uninitialized', 503, 'Lock registry has not been initialized. Disaster recovery initialization required.');
+      if (opCreate.lock_error === 'lock_registry_conflict') return safeJson('lock_registry_conflict', 509, 'Multiple lock registries detected. Reconciliation is required.');
+      if (opCreate.lock_error) return safeJson('operation_in_progress', 409, 'Another operation is already in progress for this target.', { target_key: targetKey });
+      if (!opCreate.operation_id) return safeJson('audit_failure', 500, 'Cannot migrate — TestLabOperation could not be created.', { error: opCreate.error });
+
+      const intent = await persistOperationIntent(base44, {
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: 'platform',
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'prepare_membership', target: opCreate.record_id, reason,
+        intended_state: { migration: 'fixture_keys', count: FIXTURE_MIGRATION_MAP.length, operation_id: opCreate.operation_id },
+      });
+      if (!intent.intent_id) return safeJson('audit_failure', 500, 'Cannot migrate — durable operation intent could not be persisted. No mutation has occurred.', { error: intent.error, operation_id: opCreate.operation_id });
+
+      const migrationResults: any[] = [];
+      const failedMigrations: any[] = [];
+      try {
+        for (const mapping of FIXTURE_MIGRATION_MAP) {
+          const existingEmployees = await base44.asServiceRole.entities.Employee.filter({ email: mapping.email }).catch(() => []);
+          if (!existingEmployees || existingEmployees.length === 0) {
+            failedMigrations.push({ email: mapping.email, fixture_key: mapping.fixture_key, error: 'Employee not found' });
+            continue;
+          }
+          const emp = existingEmployees[0];
+          if (emp.test_fixture_key === mapping.fixture_key) {
+            migrationResults.push({ email: mapping.email, fixture_key: mapping.fixture_key, employee_id: emp.id, already_migrated: true });
+            continue;
+          }
+          await base44.asServiceRole.entities.Employee.update(emp.id, { test_fixture_key: mapping.fixture_key });
+          migrationResults.push({ email: mapping.email, fixture_key: mapping.fixture_key, employee_id: emp.id, migrated: true });
+        }
+        await transitionOperation(base44, opCreate.record_id, OPERATION_LIFECYCLE_STATES.MUTATION_COMPLETED, {
+          mutation_resource_ids: migrationResults.map(r => r.employee_id),
+        });
+      } catch (mutErr) {
+        await persistOperationFailure(base44, {
+          operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: 'platform',
+          actor_id: user.id, actor_name: user.full_name || 'Admin',
+          action: 'prepare_membership', target: opCreate.record_id, reason, intent_id: intent.intent_id,
+          intended_state: { migration: 'in_progress' }, error: mutErr.message,
+        });
+        return safeJson('internal_error', 500, 'Failed to migrate Employee fixtures. Operation intent is persisted for recovery.', { intent_id: intent.intent_id, operation_id: opCreate.operation_id, error: mutErr.message });
+      }
+
+      const completion = await persistOperationCompletion(base44, {
+        operation_record_id: opCreate.record_id, registry_id: opCreate.registry_id, operation_id: opCreate.operation_id, audit_tenant_id: 'platform',
+        actor_id: user.id, actor_name: user.full_name || 'Admin',
+        action: 'prepare_membership', target: opCreate.record_id, reason, intent_id: intent.intent_id,
+        previous_state: { fixture_keys: 'none' },
+        new_state: { migration_results: migrationResults, failed_migrations: failedMigrations },
+        mutation_resource_ids: migrationResults.map(r => r.employee_id),
+      });
+      if (!completion.persisted) {
+        return Response.json({
+          success: false, operation_status: 'incomplete', operation_id: opCreate.operation_id,
+          intent_id: intent.intent_id, resource_id: targetKey,
+          migration_results: migrationResults, failed_migrations: failedMigrations,
+          message: 'Migration completed but completion evidence could not be persisted. Recovery/reconciliation is required.',
+        }, { status: 500 });
+      }
+
+      return Response.json({
+        success: true, operation_status: 'completed', operation_id: opCreate.operation_id,
+        migration_results: migrationResults, failed_migrations: failedMigrations,
+        intent_id: intent.intent_id, completion_audit_id: completion.completion_id,
+        message: `Employee fixture migration complete. ${migrationResults.length} fixtures processed, ${failedMigrations.length} failures.`,
       });
     }
 

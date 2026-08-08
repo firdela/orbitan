@@ -81,8 +81,8 @@ export function resolveTenantId(persona, fixtureData) {
 // Creates an immutable TestSecurityContext from a canonical persona
 // key + fixture data. This is the ONLY way to create a TestSecurityContext.
 //
-// BUILD #28.2Q-ZE.1: Fixture data uses employeesByFixtureKey (NOT
-// employeesByEmail). Employee fixture is resolved by the persona's
+// BUILD #28.2Q-ZE.1: Fixture data uses fixture-key-based employee
+// resolution. Employee fixture is resolved by the persona's
 // employee_fixture_key — no email lookup.
 //
 // The client NEVER provides role, permissions, tenant_id, outlet_id,
