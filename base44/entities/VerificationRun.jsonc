@@ -1,7 +1,7 @@
 {
   "name": "VerificationRun",
   "type": "object",
-  "description": "Orbitan Test Lab \u2014 Verification Campaign (Build #28.2P-R.0R.1B). Represents ONE complete governance verification cycle. Server-generated immutable verification_run_id links TestRun \u2192 AIApproval \u2192 audit evidence \u2192 Orbit Inbox lifecycle. Build #28.2P-R.0R.1C-F hardens RLS to service-role-only writes using a single impossible user_condition and enforces legal lifecycle transitions server-side. Only platform.test_lab.manage may create or activate. Readiness is calculated against the currently active verification run only. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan Test Lab \u2014 Verification Campaign (Build #28.2P-R.0R.3). Represents ONE complete governance verification cycle. Server-generated immutable verification_run_id links TestRun \u2192 AIApproval \u2192 audit evidence \u2192 Orbit Inbox lifecycle. Build #28.2P-R.0R.1C-F hardens RLS to service-role-only writes using a single impossible user_condition and enforces legal lifecycle transitions server-side. Build #28.2P-R.0R.3 adds campaign_type to distinguish automated policy matrix verification from legacy manual live-identity verification and auth canary verification. Only platform.test_lab.manage may create or activate. Readiness is calculated against the currently active verification run only. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "verification_run_id": {
       "type": "string",
@@ -45,6 +45,15 @@
       "default": "preparing",
       "description": "Lifecycle state. Legal transitions: preparing \u2192 active \u2192 completed/failed \u2192 archived. Illegal: completed/failed/archived \u2192 active."
     },
+    "campaign_type": {
+      "type": "string",
+      "enum": [
+        "manual_live_identity",
+        "automated_policy_matrix",
+        "auth_canary"
+      ],
+      "description": "Build #28.2P-R.0R.3 \u2014 Campaign methodology. manual_live_identity = legacy 8-account manual verification (superseded). automated_policy_matrix = server-side automated policy verification. auth_canary = real authentication lifecycle verification (#28.2Q)."
+    },
     "tenant_a_id": {
       "type": "string",
       "description": "Tenant A ID for this verification run."
@@ -58,7 +67,14 @@
       "items": {
         "type": "string"
       },
-      "description": "Expected test identity emails for this verification cycle."
+      "description": "Expected test identity emails for this verification cycle. For automated_policy_matrix campaigns, these are canonical persona emails \u2014 NOT required to be registered Base44 User accounts."
+    },
+    "expected_personas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Build #28.2P-R.0R.3 \u2014 Canonical persona keys for automated campaigns e.g. ['tenant_a_requester', 'tenant_a_approver', ...]. Distinct from expected_identity_matrix (which lists emails)."
     },
     "expected_scenarios": {
       "type": "array",
@@ -66,6 +82,23 @@
         "type": "string"
       },
       "description": "Expected test scenario tags e.g. ['approve_to_execute', 'cross_tenant_execution']."
+    },
+    "expected_proof_classes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "POLICY_UNIT",
+          "BACKEND_INTEGRATION",
+          "RLS",
+          "REAL_AUTH"
+        ]
+      },
+      "description": "Build #28.2P-R.0R.3 \u2014 Proof classes expected to be verified in this campaign. POLICY_UNIT and BACKEND_INTEGRATION for automated campaigns. RLS and REAL_AUTH deferred to manual/auth-canary campaigns."
+    },
+    "matrix_version": {
+      "type": "string",
+      "description": "Build #28.2P-R.0R.3 \u2014 Version of the verification matrix scenario registry used for this campaign."
     },
     "test_purpose": {
       "type": "string",
