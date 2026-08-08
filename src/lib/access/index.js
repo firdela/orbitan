@@ -1,39 +1,32 @@
 // ============================================================
-// ORBITANOS — Access Engine :: Public Barrel (ADR-0050)
-// Architecture Version 1.0 (Frozen)
+// ORBITANOS — Access Engine Re-export Shims
+// Build #28.2P-R.0R.3
 //
-// Single import surface for the Access Engine foundation.
-//   import { createAccessEngine, createDecision, DENIAL_REASONS }
-//     from '@/lib/access';
+// The canonical access modules now live in base44/shared/access/
+// (backend-accessible). These frontend shims re-export from
+// the canonical source so there is ONE implementation consumed
+// by both production and the Test Lab.
+//
+// The membership subdirectory remains frontend-only (it uses
+// React/SDK hooks) and is re-exported from ./membership/.
 // ============================================================
 
-export { ACCESS_ENGINE_VERSION } from './AccessEngine.js';
-export { createAccessEngine } from './AccessEngine.js';
+export { createAccessEngine, ACCESS_ENGINE_VERSION } from '../../../base44/shared/access/AccessEngine.js';
+export { createDecision, DECISION_VERSION, DECISION, DENIAL_REASONS, allowDecision, denyDecision } from '../../../base44/shared/access/DecisionObject.js';
+export { createPolicyEngine, POLICY_ENGINE_VERSION } from '../../../base44/shared/access/PolicyEngine.js';
+export { resolvePrecedence, PRECEDENCE_VERSION, scopeCovers, isAncestorScope } from '../../../base44/shared/access/precedence.js';
+export { permissionsForRole, ROLE_PACKS, PERMISSION_PACKS, PERMISSION_KEYS, PERMISSION_PACKS_VERSION, withPack } from '../../../base44/shared/access/PermissionPacks.js';
 
+// Membership modules (frontend-only — use React/SDK hooks)
 export {
-  DECISION_VERSION,
-  DECISION,
-  DENIAL_REASONS,
-  createDecision,
-  allowDecision,
-  denyDecision,
-} from './DecisionObject.js';
-
-export { POLICY_ENGINE_VERSION, createPolicyEngine } from './PolicyEngine.js';
-export { resolvePrecedence, scopeCovers, isAncestorScope, PRECEDENCE_VERSION } from './precedence.js';
-
-// Milestone 2 — Permission Packs & Membership compatibility layer
-export {
-  PERMISSION_PACKS_VERSION,
-  PERMISSION_PACKS,
-  PERMISSION_KEYS,
-  ROLE_PACKS,
-  permissionsForRole,
-} from './PermissionPacks.js';
-export {
+  MEMBERSHIP_RESOLVER_VERSION,
   createMembershipResolver,
   translateEmployee,
   normalizeMembershipStatus,
+} from './membership/MembershipResolver.js';
+
+export {
+  PERMISSION_RESOLVER_VERSION,
   createPermissionResolver,
   derivePermissions,
-} from './membership/index.js';
+} from './membership/PermissionResolver.js';

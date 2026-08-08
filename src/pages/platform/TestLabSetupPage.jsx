@@ -20,6 +20,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import PageHeader from '@/components/shared/PageHeader';
 import BackBar from '@/components/shared/BackBar';
 import { useToast } from '@/components/ui/use-toast';
+import AutomatedVerificationSection from '@/components/platform/AutomatedVerificationSection';
 
 const READINESS_CONFIG = {
   ALIAS_CONFIGURED: { label: 'Alias Configured', variant: 'secondary', icon: Mail },
@@ -329,6 +330,9 @@ export default function TestLabSetupPage() {
             </CardContent>
           </Card>
         </section>
+
+        {/* AUTOMATED VERIFICATION MATRIX */}
+        <AutomatedVerificationSection readiness={readiness} />
 
         {/* TEST CAPABILITY READINESS */}
         <section aria-labelledby="capability-section">

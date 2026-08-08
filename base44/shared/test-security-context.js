@@ -26,7 +26,7 @@ import {
 } from './test-lab-config.js';
 import {
   permissionsForRole, ROLE_PACKS, PERMISSION_KEYS,
-} from '../../src/lib/access/PermissionPacks.js';
+} from './access/PermissionPacks.js';
 
 export const TEST_SECURITY_CONTEXT_VERSION = '1.0.0';
 

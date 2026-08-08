@@ -5,6 +5,10 @@ import {
   validateApprovalScope, isValidTransition, isTerminalStatus,
   WORKER_SAFE_LINK, ADMIN_GOVERNANCE_LINK,
 } from '../../shared/nexus-gateway-utils.ts';
+import {
+  validateApproverAuthority, isSelfApproval,
+  canCancelApproval, canExecuteApproval,
+} from '../../shared/ai-approval-policy.ts';
 
 // ============================================================
 // ORBITAN AI OPERATING LAYER — Secure Approval Actions (Build #28.2P)
@@ -43,39 +47,10 @@ function safeJson(errorCode: string, status: number, message: string, extra: Rec
   return Response.json({ success: false, safe_error_code: errorCode, error: message, ...extra }, { status });
 }
 
-// ── APPROVER AUTHORITY VALIDATION ─────────────────────────────
-// Verifies the caller has the required role to approve/reject.
-// Workers can NEVER approve. The approving_role on the AIApproval
-// record determines the minimum required role.
-function validateApproverAuthority(
-  userRole: string | null,
-  approvalApprovingRole: string | null,
-): { valid: boolean; reason?: string } {
-  // Workers can never approve any AI action
-  if (isWorkerRole(userRole)) {
-    return { valid: false, reason: 'Workers cannot approve or reject AI actions' };
-  }
-  // If the approval specifies a required approving_role, check it
-  if (approvalApprovingRole === 'admin') {
-    if (userRole !== 'admin') {
-      return { valid: false, reason: 'This action requires a platform administrator to approve' };
-    }
-  } else if (approvalApprovingRole === 'tenant_admin') {
-    if (userRole !== 'admin' && userRole !== 'tenant_admin') {
-      return { valid: false, reason: 'This action requires a tenant administrator to approve' };
-    }
-  }
-  // For unspecified approving_role, allow admin and tenant_admin
-  if (userRole !== 'admin' && userRole !== 'tenant_admin') {
-    return { valid: false, reason: 'Only administrators can approve or reject AI actions' };
-  }
-  return { valid: true };
-}
-
-// ── SELF-APPROVAL PREVENTION ──────────────────────────────────
-function isSelfApproval(userId: string, requesterUserId: string): boolean {
-  return userId === requesterUserId;
-}
+// ── APPROVER AUTHORITY + SELF-APPROVAL ────────────────────────
+// Build #28.2P-R.0R.3: These functions are now imported from
+// base44/shared/ai-approval-policy.ts — the canonical source
+// shared with the Test Lab verification matrix. No behaviour change.
 
 // ── ORBIT INBOX UPDATE HELPER ──────────────────────────────────
 async function updateInboxForApprovalDecision(
@@ -301,10 +276,9 @@ export default async function(req: Request): Promise<Response> {
 
     // ── CANCEL: requester or admin only ──────────────────────
     if (action === 'cancel') {
-      const isRequester = approval.requester_user_id === user.id;
-      const isAdmin = user.role === 'admin';
-      if (!isRequester && !isAdmin) {
-        return safeJson('forbidden', 403, 'Only the requester or a platform administrator can cancel an approval.');
+      const cancelCheck = canCancelApproval(user.id, approval.requester_user_id, user.role);
+      if (!cancelCheck.valid) {
+        return safeJson('forbidden', 403, cancelCheck.reason || 'Cannot cancel approval.');
       }
 
       if (!isValidTransition(approval.status, 'cancelled')) {
@@ -373,10 +347,9 @@ export default async function(req: Request): Promise<Response> {
     // ── EXECUTE: dispatch approved request through canonical gateway ─
     if (action === 'execute') {
       // Only the requester or an admin can execute an approved request
-      const isRequester = approval.requester_user_id === user.id;
-      const isAdmin = user.role === 'admin';
-      if (!isRequester && !isAdmin) {
-        return safeJson('forbidden', 403, 'Only the requester or a platform administrator can execute an approved request.');
+      const execCheck = canExecuteApproval(user.id, approval.requester_user_id, user.role);
+      if (!execCheck.valid) {
+        return safeJson('forbidden', 403, execCheck.reason || 'Cannot execute approval.');
       }
 
       // Verify status is approved (not pending, not already executed, etc.)

@@ -18,6 +18,10 @@ import {
   targetKeyForVerificationRun, targetKeyForVerificationActivation,
   lockKeyForTarget,
   generateVerificationRunId,
+  VERIFICATION_RUN_CAMPAIGN_TYPES, PROOF_CLASSES,
+  VERIFICATION_RESULT_STATUSES, MATRIX_VERSION,
+  PERSONA_KEYS, getPersonaByKey,
+  targetKeyForVerificationMatrix,
 } from '../../shared/test-lab-config.ts';
 
 // Runtime helpers extracted to runtime.ts (Build #28.2P-R.0R.1C-F)
@@ -29,6 +33,7 @@ import {
   persistOperationIntent, persistOperationCompletion,
   persistOperationFailure,
 } from './runtime.ts';
+import { runSafeVerificationMatrix } from './verification-matrix.ts';
 
 // ============================================================
 // ORBITAN TEST LAB SETUP — Internal Governance Test Infrastructure
@@ -165,10 +170,14 @@ export default async function(req: Request): Promise<Response> {
           created_by_name: user.full_name || 'Admin',
           created_at: now,
           status: VERIFICATION_RUN_STATUSES.PREPARING,
+          campaign_type: body.campaign_type || VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX,
           tenant_a_id: TENANT_A_ID,
           tenant_b_id: null,
           expected_identity_matrix: TEST_IDENTITIES.map(t => t.email),
+          expected_personas: PERSONA_KEYS,
           expected_scenarios: Object.keys(body.expected_scenarios || {}),
+          expected_proof_classes: [PROOF_CLASSES.POLICY_UNIT, PROOF_CLASSES.BACKEND_INTEGRATION],
+          matrix_version: MATRIX_VERSION,
           test_purpose: testPurpose,
           non_production: true,
         });
@@ -1463,6 +1472,17 @@ export default async function(req: Request): Promise<Response> {
           readiness_unavailable: vrunLookupState === VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE,
           readiness_conflict: vrunLookupState === VERIFICATION_RUN_LOOKUP_STATES.CONFLICT,
         },
+        automated_governance_readiness: {
+          ready: true,
+          matrix_version: MATRIX_VERSION,
+          campaign_type: VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX,
+          proof_classes: [PROOF_CLASSES.POLICY_UNIT, PROOF_CLASSES.BACKEND_INTEGRATION],
+          rls_proof_status: 'DEFERRED',
+          real_auth_proof_status: 'DEFERRED_TO_BUILD_28_2Q',
+          requires_registered_users: false,
+          requires_verified_emails: false,
+          requires_sessions: false,
+        },
         unresolved_operations: allUnresolved,
         has_unresolved_operations: allUnresolved.length > 0,
         unresolved_lookup_available: unresolvedLookupAvailable,
@@ -1629,6 +1649,77 @@ export default async function(req: Request): Promise<Response> {
             : overallStatus === 'incomplete'
               ? 'Reset incomplete — a query phase failed. Not all relevant records may have been processed. See approvals_query_error/inbox_query_error.'
               : 'Reset failed — query errors and delete failures occurred. See error details.',
+      });
+    }
+
+    // ── RUN SAFE VERIFICATION MATRIX (Build #28.2P-R.0R.3) ──────
+    if (action === 'run_safe_verification_matrix') {
+      const { scenario_id } = body;
+
+      // Fail-closed verification run state check
+      const vrs = await getVerificationRunState(base44);
+      if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE) {
+        return safeJson('verification_run_unavailable', 503, 'Cannot verify verification run state — database lookup failed. Matrix execution blocked for safety.');
+      }
+      if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.CONFLICT) {
+        return safeJson('verification_run_conflict', 409, 'Multiple active verification runs detected. Reconciliation is required.');
+      }
+      if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.NONE) {
+        return safeJson('no_active_verification_run', 409, 'No active verification run exists. Create and activate an automated_policy_matrix verification run first.');
+      }
+
+      const activeRun = vrs.run;
+
+      // Validate campaign type (if set, must be automated_policy_matrix)
+      if (activeRun.campaign_type && activeRun.campaign_type !== VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX) {
+        return safeJson('invalid_campaign_type', 409, 'Active verification run is not an automated_policy_matrix campaign.', {
+          current_campaign_type: activeRun.campaign_type,
+        });
+      }
+
+      // Run the matrix — the orchestrator handles TestLabOperation lifecycle
+      const matrixResult = await runSafeVerificationMatrix(base44, user, {
+        verificationRunId: activeRun.verification_run_id,
+        scenarioId: scenario_id || null,
+      });
+
+      if (matrixResult.success === false) {
+        return Response.json(matrixResult, { status: matrixResult.safe_error_code === 'invalid_test_scenario' ? 400 : 500 });
+      }
+
+      return Response.json(matrixResult);
+    }
+
+    // ── GET MATRIX RESULTS (Build #28.2P-R.0R.3) ───────────────
+    if (action === 'get_matrix_results') {
+      const vrs = await getVerificationRunState(base44);
+      if (vrs.state !== VERIFICATION_RUN_LOOKUP_STATES.ACTIVE) {
+        return Response.json({ success: true, scenarios: [], message: 'No active verification run.' });
+      }
+      const activeVRunId = vrs.run.verification_run_id;
+      const results = await base44.asServiceRole.entities.TestLabVerificationResult.filter({
+        verification_run_id: activeVRunId,
+      }, '-completed_at', 200).catch(() => []);
+      const passCount = (results || []).filter((r: any) => r.result === VERIFICATION_RESULT_STATUSES.PASS).length;
+      const failCount = (results || []).filter((r: any) => r.result === VERIFICATION_RESULT_STATUSES.FAIL).length;
+      const blockedCount = (results || []).filter((r: any) => r.result === VERIFICATION_RESULT_STATUSES.BLOCKED).length;
+      const unverifiedCount = (results || []).filter((r: any) => r.result === VERIFICATION_RESULT_STATUSES.UNVERIFIED).length;
+      return Response.json({
+        success: true,
+        verification_run_id: activeVRunId,
+        matrix_version: MATRIX_VERSION,
+        total_scenarios: (results || []).length,
+        pass_count: passCount,
+        fail_count: failCount,
+        blocked_count: blockedCount,
+        unverified_count: unverifiedCount,
+        scenarios: (results || []).map((r: any) => ({
+          scenario_id: r.scenario_id, matrix_type: r.matrix_type, persona_key: r.persona_key,
+          source_tenant_id: r.source_tenant_id, target_tenant_id: r.target_tenant_id,
+          operation: r.operation, proof_class: r.proof_class,
+          expected_outcome: r.expected_outcome, actual_outcome: r.actual_outcome,
+          result: r.result, reason_code: r.reason_code, reason_detail: r.reason_detail,
+        })),
       });
     }
 

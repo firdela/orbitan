@@ -7,6 +7,35 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2P-R.0R.3 (Automated Test Lab Governance Matrix & Persona Verification) (2026-08-08)
+
+### Status: PASS — All 41 automated policy matrix scenarios pass. 0 real accounts required.
+
+### What Was Completed
+- **8-manual-account testing burden retired:** The unsustainable 8-account manual verification model has been replaced with a permanent automated governance verification matrix. The 8 canonical personas are retained as logical definitions — they are NOT required to be registered Base44 User accounts.
+- **Automated verification matrix:** 41 server-defined scenarios across 8 matrix categories (tenant isolation, worker boundary, approval authority, cross-tenant permission, tenant membership, approval scope, approval lifecycle, access engine). All 41 scenarios PASS.
+- **TestSecurityContext:** Server-only, immutable, derived from canonical `TEST_IDENTITIES` + `PermissionPacks`. The client may only submit a predefined `scenario_id` — no role/permission/tenant authority input is accepted.
+- **Pure authorization decision reuse:** The Test Lab exercises the SAME production `AccessEngine`, `PermissionPacks`, `validateTenantMembership`, `validateApprovalScope`, `isValidTransition`, `hasCrossTenantPermission`, and newly extracted `ai-approval-policy` functions. No mirrored authorization engine.
+- **Proof class taxonomy:** Every scenario is labelled with exactly one proof class: `POLICY_UNIT`, `BACKEND_INTEGRATION`, `RLS`, or `REAL_AUTH`. Phase 1 produces only `POLICY_UNIT` proofs. RLS is `DEFERRED` and `REAL_AUTH` is `DEFERRED_TO_BUILD_28_2Q` — never mislabelled as PASS.
+- **TestLabVerificationResult entity:** New evidence-only entity for matrix results. NOT a second authorization system. All records are `non_production=true`.
+- **VerificationRun campaign types:** Added `campaign_type`, `expected_personas`, `expected_proof_classes`, `matrix_version` fields to distinguish automated policy matrix campaigns from legacy manual live-identity campaigns and future auth canary campaigns.
+- **Access modules moved to `base44/shared/access/`:** The canonical `AccessEngine`, `PermissionPacks`, `DecisionObject`, `PolicyEngine`, and `precedence` modules now live in `base44/shared/access/` (backend-accessible). `src/lib/access/` re-exports from the canonical source. ONE implementation consumed by both production and Test Lab.
+- **ai-approval-policy extraction:** Pure approval decision functions (`validateApproverAuthority`, `isSelfApproval`, `canCancelApproval`, `canExecuteApproval`, `isApproverIndependent`) extracted from `aiApprovalActions/entry.ts` into `base44/shared/ai-approval-policy.js`. Both production and Test Lab import from the same canonical source.
+- **nexus-gateway-utils .js version:** Pure functions moved to `nexus-gateway-utils.js` (Node.js + Deno compatible). The `.ts` version re-exports and adds SDK-dependent functions.
+- **Test Lab UI:** New `AutomatedVerificationSection` component added to `TestLabSetupPage`. Shows campaign overview, summary stats, proof class legend, and per-scenario results grouped by matrix type.
+- **asServiceRole boundary:** `asServiceRole` is used for orchestration, evidence persistence, and fixture loading only — NOT as persona impersonation. The operator (real admin) and evaluated persona are always distinct in every `TestLabVerificationResult` record.
+- **No paid AI invoked:** The safe matrix calls only pure policy functions. No external AI providers, no wallet debits, no production customer mutations.
+- **Regression suites pass:** test-lab-verification-matrix (608), test-lab-hardening (475), nexus-gateway-hardening (37), ai-governance-parity (84).
+- **Production build:** exit 0.
+- **Real backend execution:** `run_safe_verification_matrix` executed through the protected `testLabSetup` backend — 41/41 scenarios PASS, `all_passed: true`, `operation_status: completed`.
+
+### What Is Deferred
+- **RLS proof:** `DEFERRED` — requires genuine Base44 user context (Act as User is editor/admin-only, not programmatically callable). May be spot-checked later with a tiny number of manual Act as User sessions.
+- **REAL_AUTH proof:** `DEFERRED_TO_BUILD_28_2Q` — requires a real email/password canary account. One canary target: `test.auth.canary@orbitan.net`. No Google accounts.
+- **Old VerificationRun lifecycle:** `vrun_msj2zitu_kbcxjg` (ACTIVE, manual_live_identity) should be transitioned ACTIVE → FAILED (reason: `testing_methodology_superseded`) → ARCHIVED through the canonical `testLabSetup` action router before creating a new `automated_policy_matrix` campaign. Not yet executed — deferred to founder decision.
+- **Existing 8 invitations:** Obsolete for routine governance verification. May be ignored/expired or revoked once during migration. NOT a completion blocker.
+- **Shield automated policy extraction:** Deferred — would require extracting a pure Shield condition-evaluation kernel. Not a blocker for this build.
+
 ## [Unreleased] — Build #28.2P-R.0R.2 (Live Identity, Tenant Isolation & Approve→Execute Verification) (2026-08-07)
 
 ### Status: PASS WITH BLOCKING GAPS — Human authentication checkpoint required
