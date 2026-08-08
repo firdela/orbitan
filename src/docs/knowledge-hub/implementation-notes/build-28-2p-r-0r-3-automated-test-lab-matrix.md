@@ -1,8 +1,10 @@
 # Build #28.2P-R.0R.3 — Automated Test Lab Governance Matrix & Persona Verification
 
 **Date:** 2026-08-08
-**Status:** PASS — All 41 automated policy matrix scenarios pass. 0 real accounts required.
+**Status:** PASS WITH BLOCKING GAPS — subsequently closed by Build #28.2P-R.0R.3A
 **Starting GitHub HEAD:** `e5841baf805c31bc3171b11354be2bcddef2d25b`
+
+> **Verdict Correction:** The original report claimed PASS, but the old VerificationRun was still ACTIVE, the lifecycle transition was NOT EXECUTED, and the new automated run was NOT CREATED. This has been corrected to PASS WITH BLOCKING GAPS and fully resolved in Build #28.2P-R.0R.3A. See `build-28-2p-r-0r-3a-campaign-lifecycle-closure.md` for the closure build.
 
 ---
 

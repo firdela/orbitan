@@ -81,6 +81,21 @@
 | AUD-01 | Critical actions | perform sale/refund | AuditLog entries | ⚠️ live #15 |
 | EXP-01 | Data export | exportData | tenant/employee/attendance/etc. | ⚠️ live #15 |
 
+## Test Lab governance verification (Build #28.2P-R.0R.3A)
+| ID | Workflow | Role | Steps | Expected | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| TL-01 | Automated policy matrix | admin | `run_safe_verification_matrix` via testLabSetup | 45/45 scenarios PASS, all POLICY_UNIT | ✅ |
+| TL-02 | Campaign-type fail-closed | admin | run matrix against non-automated run | rejected `invalid_campaign_type` | ✅ |
+| TL-03 | Non-production guard (selector) | admin | `get_matrix_results` with production run | rejected `production_record_forbidden` | ✅ |
+| TL-04 | Non-production guard (readiness) | admin | readiness with production campaign | `ready=false` | ✅ |
+| TL-05 | Server-derived expected_scenarios | admin | `create_verification_run` automated | `expected_scenarios = ALL_SCENARIOS` server-side | ✅ |
+| TL-06 | Evidence-derived readiness | admin | `readiness_status` | `ready=true` from persisted evidence, not hardcoded | ✅ |
+| TL-07 | 8-persona coverage | admin | matrix results | all 8 personas covered | ✅ |
+| TL-08 | RLS live-session verification | admin | Act as User spot-check | DEFERRED — editor/admin-only, not programmatically callable | ⏳ |
+| TL-09 | REAL_AUTH canary | admin | email/password auth lifecycle | DEFERRED_TO_BUILD_28_2Q — 1 canary target, no Google accounts | ⏳ |
+
+> **Proof classes:** `POLICY_UNIT` = pure production decision logic (automated, 0 real accounts). `RLS` = actual row-level security under a genuine user security context (deferred). `REAL_AUTH` = actual authentication lifecycle (deferred to #28.2Q). Routine governance validation uses `automated_policy_matrix` — NOT the old 8-manual-account workflow (retired).
+
 ## Summary
 - ✅ Passed (engine/route verified): 18
 - ⚠️ Partial (structural; live regression → #15): 22

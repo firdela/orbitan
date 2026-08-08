@@ -24,7 +24,7 @@ import {
   targetKeyForVerificationMatrix,
 } from '../../shared/test-lab-config.ts';
 
-import { ALL_SCENARIOS, getScenarioCount } from './verification-scenarios.js';
+import { ALL_SCENARIOS } from './verification-scenarios.js';
 
 // Runtime helpers extracted to runtime.ts (Build #28.2P-R.0R.1C-F)
 import {
@@ -117,10 +117,13 @@ async function computeAutomatedReadiness(base44: any): Promise<any> {
     return { ...baseResult, state: 'UNAVAILABLE', message: 'Verification run query returned null.' };
   }
 
-  // 2. Filter for current matrix_version
-  const currentVersionRuns = automatedRuns.filter((r: any) => r.matrix_version === MATRIX_VERSION);
+  // 2. Filter for current matrix_version AND non_production=true
+  // Build #28.2P-R.0R.3A — a production or untagged campaign must NEVER make ready=true
+  const currentVersionRuns = automatedRuns.filter((r: any) =>
+    r.matrix_version === MATRIX_VERSION && r.non_production === true
+  );
   if (currentVersionRuns.length === 0) {
-    return { ...baseResult, state: 'NO_CAMPAIGN', message: 'No automated_policy_matrix campaign with current matrix version exists.' };
+    return { ...baseResult, state: 'NO_CAMPAIGN', message: 'No non-production automated_policy_matrix campaign with current matrix version exists.' };
   }
 
   // 3. Categorize by status
@@ -317,7 +320,13 @@ export default async function(req: Request): Promise<Response> {
           tenant_b_id: null,
           expected_identity_matrix: TEST_IDENTITIES.map(t => t.email),
           expected_personas: PERSONA_KEYS,
-          expected_scenarios: Object.keys(body.expected_scenarios || {}),
+          // Build #28.2P-R.0R.3A — server-derived expected_scenarios for automated campaigns.
+          // The browser/client cannot define the canonical automated scenario matrix.
+          // For automated_policy_matrix: ALL_SCENARIOS is the server-defined registry.
+          // For other campaign types: client-provided expected_scenarios are preserved.
+          expected_scenarios: (body.campaign_type || VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX) === VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX
+            ? ALL_SCENARIOS.map((s: any) => s.scenario_id)
+            : Object.keys(body.expected_scenarios || {}),
           expected_proof_classes: [PROOF_CLASSES.POLICY_UNIT],
           matrix_version: MATRIX_VERSION,
           test_purpose: testPurpose,
@@ -1843,6 +1852,10 @@ export default async function(req: Request): Promise<Response> {
         if (run.campaign_type !== VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX) {
           return Response.json({ success: false, safe_error_code: 'invalid_campaign_type', error: 'Selector may only target automated_policy_matrix runs.' }, { status: 400 });
         }
+        // Build #28.2P-R.0R.3A — non-production guard: production records are forbidden
+        if (run.non_production !== true) {
+          return Response.json({ success: false, safe_error_code: 'production_record_forbidden', error: 'Selector may only target non-production verification runs.' }, { status: 403 });
+        }
         targetRun = run;
       } else {
         // Default: try ACTIVE automated_policy_matrix first
@@ -1851,14 +1864,17 @@ export default async function(req: Request): Promise<Response> {
           targetRun = vrs.run;
         }
         // If no active automated run, try latest COMPLETED automated run
+        // Build #28.2P-R.0R.3A — must be non_production=true AND current matrix_version
         if (!targetRun) {
           const completedRuns = await base44.asServiceRole.entities.VerificationRun.filter({
             campaign_type: VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX,
             status: VERIFICATION_RUN_STATUSES.COMPLETED,
           }, '-completed_at', 10).catch(() => []);
           if (completedRuns && completedRuns.length > 0) {
-            const currentVersion = completedRuns.filter((r: any) => r.matrix_version === MATRIX_VERSION);
-            targetRun = currentVersion[0] || completedRuns[0];
+            const currentVersionNonProd = completedRuns.filter((r: any) =>
+              r.matrix_version === MATRIX_VERSION && r.non_production === true
+            );
+            targetRun = currentVersionNonProd[0] || null;
           }
         }
       }

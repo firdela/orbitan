@@ -7,9 +7,38 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2P-R.0R.3A (Automated Campaign Lifecycle, Schema & Readiness Truthfulness Closure) (2026-08-08)
+
+### Status: PASS — All 45 automated policy matrix scenarios pass. Evidence-derived readiness = true. 0 real accounts required for routine policy verification.
+
+### What Was Completed
+- **Campaign-type fail-closed validation:** `run_safe_verification_matrix` now rejects null, undefined, `manual_live_identity`, `auth_canary`, and any unknown `campaign_type` value. Only `automated_policy_matrix` is accepted. The previous truthy-and-not-equal check that allowed null/undefined has been replaced with a strict equality check.
+- **TestLabOperation schema parity:** Added `run_safe_verification_matrix` to the `action` enum and `verification_matrix` to the `target_type` enum. The matrix operation now creates a valid TestLabOperation using the canonical schema.
+- **Evidence-derived readiness:** Removed hardcoded `ready: true`. Readiness is now computed by `computeAutomatedReadiness()` from persisted evidence. Ready is TRUE only when: (1) a COMPLETED `automated_policy_matrix` VerificationRun exists with current `MATRIX_VERSION` AND `non_production=true`, (2) all 45 required scenarios have PASS `TestLabVerificationResult` records, (3) `fail_count = 0` and `blocked_count = 0`, (4) all results have `non_production = true`, (5) all 8 canonical personas are covered, (6) no unresolved `TestLabOperation` for that campaign, (7) evidence belongs to that exact `verification_run_id`.
+- **Non-production guards added:** Matrix result selector (`get_matrix_results`) now requires `non_production === true` for both selector mode and default completed-run lookup. `computeAutomatedReadiness` requires the candidate VerificationRun itself to have `non_production === true`. A production or untagged campaign can NEVER make `ready = true`.
+- **Server-derived expected_scenarios:** `create_verification_run` now server-derives `expected_scenarios` from `ALL_SCENARIOS` for `automated_policy_matrix` campaigns. The browser/client cannot define the canonical automated scenario matrix. Client-provided `expected_scenarios` preserved for other campaign types only.
+- **Completed-result retrieval:** `get_matrix_results` now defaults to (1) current ACTIVE `automated_policy_matrix` run, or (2) latest COMPLETED `automated_policy_matrix` run with current `MATRIX_VERSION` and `non_production=true`. Never selects `manual_live_identity`, `auth_canary`, old matrix versions, or production records.
+- **Full 8-persona coverage:** Added 4 tenant isolation scenarios for `tenant_a_leader` and `tenant_b_admin`. Total: 45 scenarios (41 + 4). All 8 canonical personas now have scenario results.
+- **Old manual run legally retired:** `vrun_msj2zitu_kbcxjg` transitioned ACTIVE → FAILED → ARCHIVED through the canonical action router with full TestLabOperation audit trail. Historical evidence preserved.
+- **Fresh automated campaign:** `vrun_msk2pwoe_9y016l` — `campaign_type = automated_policy_matrix`, `matrix_version = 0R.3.1`, `non_production = true`. Lifecycle: PREPARING → ACTIVE → COMPLETED. Not archived — remains the latest durable evidence-bearing campaign.
+- **Matrix executed:** 45/45 scenarios PASS, 0 FAIL, 0 BLOCKED. All evidence `non_production = true`. No paid AI. No wallet debit. No production mutation.
+- **Proof class truthfulness:** All 45 scenarios are `POLICY_UNIT` only. `expected_proof_classes = [POLICY_UNIT]`. No `BACKEND_INTEGRATION` scenarios exist. Campaign-level backend evidence is reported separately, not relabelled as per-scenario proof.
+- **Unused import cleanup:** `getScenarioCount` removed from `entry.ts` imports (was introduced by 0R.3 but never used).
+- **Regression suites pass:** test-lab-0r3a-closure (48), test-lab-verification-matrix (648), test-lab-hardening (475), nexus-gateway-hardening (37), ai-governance-parity (84). Total: 1,292.
+- **Deliberate failure test:** Broken assertion produces non-zero exit; restored produces zero exit.
+- **Production build:** exit 0.
+
+### What Remains Deferred
+- **RLS proof:** DEFERRED — Act as User is editor/admin-only, not programmatically callable. Manual spot-check deferred.
+- **REAL_AUTH proof:** DEFERRED_TO_BUILD_28_2Q — 1 email/password canary target. No Google accounts.
+- **Eight manual accounts:** Remain retired. Existing invitations obsolete. No new invitations sent.
+
 ## [Unreleased] — Build #28.2P-R.0R.3 (Automated Test Lab Governance Matrix & Persona Verification) (2026-08-08)
 
-### Status: PASS — All 41 automated policy matrix scenarios pass. 0 real accounts required.
+### Status: PASS WITH BLOCKING GAPS — Corrected in Build #28.2P-R.0R.3A
+
+### Previous Verdict Correction
+The original report claimed PASS, but the old VerificationRun was still ACTIVE, the lifecycle transition was NOT EXECUTED, and the new automated run was NOT CREATED. This has been corrected to PASS WITH BLOCKING GAPS and fully resolved in Build #28.2P-R.0R.3A.
 
 ### What Was Completed
 - **8-manual-account testing burden retired:** The unsustainable 8-account manual verification model has been replaced with a permanent automated governance verification matrix. The 8 canonical personas are retained as logical definitions — they are NOT required to be registered Base44 User accounts.
