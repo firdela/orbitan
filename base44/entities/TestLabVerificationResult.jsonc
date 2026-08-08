@@ -1,0 +1,163 @@
+{
+  "name": "TestLabVerificationResult",
+  "type": "object",
+  "description": "Orbitan Test Lab \u2014 Automated Verification Matrix Result (Build #28.2P-R.0R.3). One record per scenario per verification campaign. Stores the expected-vs-actual comparison for each automated governance matrix scenario. NOT a second authorization system \u2014 evidence only. Proof class (POLICY_UNIT, BACKEND_INTEGRATION, RLS, REAL_AUTH) is explicitly recorded so the founder can see what has actually been verified. RLS and REAL_AUTH scenarios that cannot be programmatically verified are marked DEFERRED/UNVERIFIED, never PASS. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
+  "properties": {
+    "verification_run_id": {
+      "type": "string",
+      "description": "Reference to the VerificationRun this result belongs to."
+    },
+    "scenario_id": {
+      "type": "string",
+      "description": "Canonical server-defined scenario identifier e.g. 'tenant_isolation.worker_a_to_tenant_b'."
+    },
+    "matrix_type": {
+      "type": "string",
+      "enum": [
+        "tenant_isolation",
+        "worker_boundary",
+        "approval_authority",
+        "cross_tenant_permission",
+        "tenant_membership",
+        "approval_scope",
+        "approval_lifecycle",
+        "access_engine"
+      ],
+      "description": "Matrix category for grouping and display."
+    },
+    "persona_key": {
+      "type": "string",
+      "description": "Canonical persona key evaluated e.g. 'tenant_a_worker'. Derived server-side from TEST_IDENTITIES \u2014 never client-supplied."
+    },
+    "source_tenant_id": {
+      "type": "string",
+      "description": "Source tenant context for this scenario. Null for platform-level scenarios."
+    },
+    "target_tenant_id": {
+      "type": "string",
+      "description": "Target tenant context for this scenario. Null for same-tenant or platform-level scenarios."
+    },
+    "operation": {
+      "type": "string",
+      "description": "Operation being verified e.g. 'access_own_tenant_resource', 'approve_ai_action', 'cross_tenant_ai_execute'."
+    },
+    "proof_class": {
+      "type": "string",
+      "enum": [
+        "POLICY_UNIT",
+        "BACKEND_INTEGRATION",
+        "RLS",
+        "REAL_AUTH"
+      ],
+      "description": "Proof class \u2014 determines what kind of evidence this is. POLICY_UNIT = pure production decision logic. BACKEND_INTEGRATION = protected backend orchestration. RLS = actual row-level security. REAL_AUTH = actual authentication lifecycle."
+    },
+    "expected_outcome": {
+      "type": "string",
+      "enum": [
+        "allow",
+        "deny",
+        "require_approval",
+        "pass",
+        "fail"
+      ],
+      "description": "Expected outcome for this scenario."
+    },
+    "actual_outcome": {
+      "type": "string",
+      "enum": [
+        "allow",
+        "deny",
+        "require_approval",
+        "pass",
+        "fail",
+        "blocked",
+        "unverified",
+        "not_applicable"
+      ],
+      "description": "Actual outcome observed during verification."
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "blocked",
+        "unverified",
+        "not_applicable"
+      ],
+      "description": "Overall result. pass = expected matches actual. fail = expected does not match. blocked = infrastructure failure (NOT pass). unverified = RLS/REAL_AUTH deferred. not_applicable = scenario not relevant."
+    },
+    "reason_code": {
+      "type": "string",
+      "description": "Machine-readable reason code e.g. 'expected_deny_actual_allow', 'tenant_mismatch', 'no_permission', 'infrastructure_error'."
+    },
+    "reason_detail": {
+      "type": "string",
+      "description": "Human-readable explanation of the result. Never includes secrets, tokens, or private data."
+    },
+    "policy_module": {
+      "type": "string",
+      "description": "Production policy module that was evaluated e.g. 'AccessEngine', 'nexus-gateway-utils.validateTenantMembership', 'ai-approval-policy.validateApproverAuthority'."
+    },
+    "evaluator_version": {
+      "type": "string",
+      "description": "Version of the matrix evaluator that produced this result."
+    },
+    "operator_actor_id": {
+      "type": "string",
+      "description": "Real authenticated platform admin who initiated the verification run. Distinct from the evaluated persona."
+    },
+    "operator_actor_name": {
+      "type": "string"
+    },
+    "evidence_reference": {
+      "type": "string",
+      "description": "Reference to supporting evidence (e.g. AuditLog record ID) if applicable."
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "non_production": {
+      "type": "boolean",
+      "default": true,
+      "description": "Always true \u2014 test evidence excluded from production analytics."
+    }
+  },
+  "required": [
+    "verification_run_id",
+    "scenario_id",
+    "matrix_type",
+    "persona_key",
+    "proof_class",
+    "expected_outcome",
+    "actual_outcome",
+    "result"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "___service_only___"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "___service_only___"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "___service_only___"
+      }
+    }
+  }
+}

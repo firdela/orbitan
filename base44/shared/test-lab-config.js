@@ -33,6 +33,7 @@ export const TENANT_B_TEST_LAB_KEY = 'TEST_LAB_B';
 export const TEST_IDENTITIES = [
   {
     email: 'test.requester.a@orbitan.net',
+    persona_key: 'tenant_a_requester',
     label: 'Tenant A Requester',
     tenant: 'A',
     userRole: 'user',
@@ -44,6 +45,7 @@ export const TEST_IDENTITIES = [
   },
   {
     email: 'test.approver.a@orbitan.net',
+    persona_key: 'tenant_a_approver',
     label: 'Tenant A Approver',
     tenant: 'A',
     userRole: 'user',
@@ -55,6 +57,7 @@ export const TEST_IDENTITIES = [
   },
   {
     email: 'test.leader.a@orbitan.net',
+    persona_key: 'tenant_a_leader',
     label: 'Tenant A Leader/Manager',
     tenant: 'A',
     userRole: 'user',
@@ -66,6 +69,7 @@ export const TEST_IDENTITIES = [
   },
   {
     email: 'test.worker.a@orbitan.net',
+    persona_key: 'tenant_a_worker',
     label: 'Tenant A Second Worker',
     tenant: 'A',
     userRole: 'user',
@@ -77,6 +81,7 @@ export const TEST_IDENTITIES = [
   },
   {
     email: 'test.admin.b@orbitan.net',
+    persona_key: 'tenant_b_admin',
     label: 'Tenant B Administrator',
     tenant: 'B',
     userRole: 'user',
@@ -88,6 +93,7 @@ export const TEST_IDENTITIES = [
   },
   {
     email: 'test.worker.b@orbitan.net',
+    persona_key: 'tenant_b_worker',
     label: 'Tenant B Worker',
     tenant: 'B',
     userRole: 'user',
@@ -99,6 +105,7 @@ export const TEST_IDENTITIES = [
   },
   {
     email: 'test.platform.allowed@orbitan.net',
+    persona_key: 'platform_allowed',
     label: 'Platform Admin (Cross-Tenant Allowed)',
     tenant: 'platform',
     userRole: 'admin',
@@ -110,6 +117,7 @@ export const TEST_IDENTITIES = [
   },
   {
     email: 'test.platform.denied@orbitan.net',
+    persona_key: 'platform_denied',
     label: 'Platform Admin (Cross-Tenant Denied)',
     tenant: 'platform',
     userRole: 'admin',
@@ -327,6 +335,58 @@ export function isLegalVerificationRunTransition(fromStatus, toStatus) {
   return allowed.includes(toStatus);
 }
 
+// ── VERIFICATION RUN CAMPAIGN TYPES (Build #28.2P-R.0R.3) ──────
+// Distinguishes verification campaign methodologies.
+// manual_live_identity: legacy 8-account manual verification (superseded)
+// automated_policy_matrix: server-side automated policy verification
+// auth_canary: real authentication lifecycle verification (#28.2Q)
+export const VERIFICATION_RUN_CAMPAIGN_TYPES = {
+  MANUAL_LIVE_IDENTITY: 'manual_live_identity',
+  AUTOMATED_POLICY_MATRIX: 'automated_policy_matrix',
+  AUTH_CANARY: 'auth_canary',
+};
+
+// ── PROOF CLASSES (Build #28.2P-R.0R.3) ───────────────────────
+// Every verification scenario MUST be labelled with exactly one proof class.
+// POLICY_UNIT: pure production decision logic vs server-derived TestSecurityContext
+// BACKEND_INTEGRATION: protected Test Lab orchestration exercising non-production backend
+// RLS: actual Base44 row-level security under a genuine/proven user security context
+// REAL_AUTH: actual Base44 authentication lifecycle
+export const PROOF_CLASSES = {
+  POLICY_UNIT: 'POLICY_UNIT',
+  BACKEND_INTEGRATION: 'BACKEND_INTEGRATION',
+  RLS: 'RLS',
+  REAL_AUTH: 'REAL_AUTH',
+};
+
+// ── VERIFICATION RESULT STATUSES (Build #28.2P-R.0R.3) ────────
+export const VERIFICATION_RESULT_STATUSES = {
+  PASS: 'pass',
+  FAIL: 'fail',
+  BLOCKED: 'blocked',
+  UNVERIFIED: 'unverified',
+  NOT_APPLICABLE: 'not_applicable',
+};
+
+// ── MATRIX VERSION (Build #28.2P-R.0R.3) ──────────────────────
+export const MATRIX_VERSION = '0R.3.1';
+
+// ── CANONICAL PERSONA KEYS (Build #28.2P-R.0R.3) ──────────────
+export const PERSONA_KEYS = [
+  'tenant_a_requester', 'tenant_a_approver', 'tenant_a_leader', 'tenant_a_worker',
+  'tenant_b_admin', 'tenant_b_worker',
+  'platform_allowed', 'platform_denied',
+];
+
+export function getPersonaByKey(personaKey) {
+  return TEST_IDENTITIES.find(t => t.persona_key === personaKey) || null;
+}
+
+// ── VERIFICATION MATRIX TARGET KEY (Build #28.2P-R.0R.3) ──────
+export function targetKeyForVerificationMatrix(verificationRunId) {
+  return `vmatrix:${verificationRunId}`;
+}
+
 // ── CANONICAL TARGET KEY GENERATORS (Build #28.2P-R.0R.1B) ────
 // Deterministic server-side target correlation. Prevents incomplete
 // operations from becoming invisible due to logical-key vs database-ID
@@ -340,6 +400,7 @@ export const TARGET_TYPES = {
   TEST_RESET: 'test_reset',
   VERIFICATION_RUN: 'verification_run',
   VERIFICATION_ACTIVATION: 'verification_activation',
+  VERIFICATION_MATRIX: 'verification_matrix',
 };
 
 export function targetKeyForSandboxTenant() {
