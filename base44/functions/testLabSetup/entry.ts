@@ -24,6 +24,8 @@ import {
   targetKeyForVerificationMatrix,
 } from '../../shared/test-lab-config.ts';
 
+import { ALL_SCENARIOS, getScenarioCount } from './verification-scenarios.js';
+
 // Runtime helpers extracted to runtime.ts (Build #28.2P-R.0R.1C-F)
 import {
   ensureLockRegistry,
@@ -80,6 +82,146 @@ async function validateTestLabAuthority(base44: any, user: any): Promise<{ valid
     return { valid: false, reason: 'Missing platform.test_lab.manage permission' };
   }
   return { valid: true };
+}
+
+// ── AUTOMATED GOVERNANCE READINESS (Build #28.2P-R.0R.3A) ────
+// Evidence-derived readiness. Never hardcoded true.
+// Ready ONLY when a COMPLETED automated_policy_matrix campaign with
+// current MATRIX_VERSION has all required scenario PASS evidence,
+// all non_production=true, full persona coverage, and no unresolved
+// TestLabOperation for that campaign.
+async function computeAutomatedReadiness(base44: any): Promise<any> {
+  const baseResult = {
+    ready: false,
+    matrix_version: MATRIX_VERSION,
+    campaign_type: VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX,
+    proof_classes: [PROOF_CLASSES.POLICY_UNIT],
+    rls_proof_status: 'DEFERRED',
+    real_auth_proof_status: 'DEFERRED_TO_BUILD_28_2Q',
+    requires_registered_users: false,
+    requires_verified_emails: false,
+    requires_sessions: false,
+  };
+
+  // 1. Find all automated_policy_matrix VerificationRuns
+  let automatedRuns: any[] | null = null;
+  try {
+    automatedRuns = await base44.asServiceRole.entities.VerificationRun.filter({
+      campaign_type: VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX,
+    }, '-created_at', 50);
+  } catch {
+    return { ...baseResult, state: 'UNAVAILABLE', message: 'Cannot query verification runs — evidence unavailable.' };
+  }
+
+  if (!automatedRuns) {
+    return { ...baseResult, state: 'UNAVAILABLE', message: 'Verification run query returned null.' };
+  }
+
+  // 2. Filter for current matrix_version
+  const currentVersionRuns = automatedRuns.filter((r: any) => r.matrix_version === MATRIX_VERSION);
+  if (currentVersionRuns.length === 0) {
+    return { ...baseResult, state: 'NO_CAMPAIGN', message: 'No automated_policy_matrix campaign with current matrix version exists.' };
+  }
+
+  // 3. Categorize by status
+  const completedRuns = currentVersionRuns.filter((r: any) => r.status === VERIFICATION_RUN_STATUSES.COMPLETED)
+    .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime());
+  const activeRuns = currentVersionRuns.filter((r: any) => r.status === VERIFICATION_RUN_STATUSES.ACTIVE);
+  const failedRuns = currentVersionRuns.filter((r: any) => r.status === VERIFICATION_RUN_STATUSES.FAILED);
+
+  let candidateRun: any = null;
+  let state = 'NO_CAMPAIGN';
+
+  if (completedRuns.length > 0) {
+    candidateRun = completedRuns[0];
+    state = 'COMPLETED';
+  } else if (activeRuns.length > 0) {
+    candidateRun = activeRuns[0];
+    state = 'IN_PROGRESS';
+  } else if (failedRuns.length > 0) {
+    candidateRun = failedRuns[0];
+    state = 'FAILED';
+  }
+
+  if (state !== 'COMPLETED' || !candidateRun) {
+    return { ...baseResult, state, verification_run_id: candidateRun?.verification_run_id || null,
+      message: state === 'IN_PROGRESS' ? 'Campaign is active but not yet completed.' : state === 'FAILED' ? 'Campaign failed.' : 'No completed automated campaign found.' };
+  }
+
+  // 4. Check all required scenarios have TestLabVerificationResult records
+  let results: any[] | null = null;
+  try {
+    results = await base44.asServiceRole.entities.TestLabVerificationResult.filter({
+      verification_run_id: candidateRun.verification_run_id,
+    }, '-completed_at', 200);
+  } catch {
+    return { ...baseResult, state: 'UNAVAILABLE', verification_run_id: candidateRun.verification_run_id,
+      message: 'Cannot query verification results — evidence unavailable.' };
+  }
+
+  if (!results) {
+    return { ...baseResult, state: 'UNAVAILABLE', verification_run_id: candidateRun.verification_run_id,
+      message: 'Verification result query returned null.' };
+  }
+
+  // 5. Check all required scenario_ids are present and PASS
+  const requiredScenarioIds = ALL_SCENARIOS.map((s: any) => s.scenario_id);
+  const resultScenarioIds = results.map((r: any) => r.scenario_id);
+  const missingScenarios = requiredScenarioIds.filter((id: string) => !resultScenarioIds.includes(id));
+  const allRequiredPresent = missingScenarios.length === 0;
+
+  const passCount = results.filter((r: any) => r.result === VERIFICATION_RESULT_STATUSES.PASS).length;
+  const failCount = results.filter((r: any) => r.result === VERIFICATION_RESULT_STATUSES.FAIL).length;
+  const blockedCount = results.filter((r: any) => r.result === VERIFICATION_RESULT_STATUSES.BLOCKED).length;
+
+  // 6. All required POLICY_UNIT scenarios must PASS
+  const policyUnitResults = results.filter((r: any) => r.proof_class === PROOF_CLASSES.POLICY_UNIT);
+  const allPolicyUnitPass = policyUnitResults.every((r: any) => r.result === VERIFICATION_RESULT_STATUSES.PASS);
+
+  // 7. Every persisted result must have non_production = true
+  const allNonProduction = results.every((r: any) => r.non_production === true);
+
+  // 8. Persona coverage matches canonical expected persona matrix
+  const resultPersonas = [...new Set(results.map((r: any) => r.persona_key))];
+  const missingPersonas = PERSONA_KEYS.filter((p: string) => !resultPersonas.includes(p));
+  const personaCoverageComplete = missingPersonas.length === 0;
+
+  // 9. No unresolved/incomplete TestLabOperation for that campaign
+  let hasUnresolvedOps = false;
+  try {
+    const unresolvedOps = await base44.asServiceRole.entities.TestLabOperation.filter({
+      verification_run_id: candidateRun.verification_run_id,
+      status: { $in: BLOCKING_OPERATION_STATUSES },
+    });
+    hasUnresolvedOps = !!(unresolvedOps && unresolvedOps.length > 0);
+  } catch {
+    // If we can't query, fail closed
+    hasUnresolvedOps = true;
+  }
+
+  // 10. Evidence belongs to THAT exact verification_run_id (enforced by filter above)
+
+  const ready = allRequiredPresent && failCount === 0 && blockedCount === 0 && allPolicyUnitPass && allNonProduction && personaCoverageComplete && !hasUnresolvedOps;
+
+  return {
+    ...baseResult,
+    ready,
+    state: ready ? 'COMPLETED' : 'EVIDENCE_INCOMPLETE',
+    verification_run_id: candidateRun.verification_run_id,
+    campaign_status: candidateRun.status,
+    total_required_scenarios: requiredScenarioIds.length,
+    total_results: results.length,
+    pass_count: passCount,
+    fail_count: failCount,
+    blocked_count: blockedCount,
+    missing_scenarios: missingScenarios,
+    missing_personas: missingPersonas,
+    all_non_production: allNonProduction,
+    has_unresolved_operations: hasUnresolvedOps,
+    message: ready
+      ? 'Automated governance readiness verified from persisted evidence.'
+      : 'Campaign completed but evidence is incomplete or inconsistent.',
+  };
 }
 
 // ============================================================
@@ -176,7 +318,7 @@ export default async function(req: Request): Promise<Response> {
           expected_identity_matrix: TEST_IDENTITIES.map(t => t.email),
           expected_personas: PERSONA_KEYS,
           expected_scenarios: Object.keys(body.expected_scenarios || {}),
-          expected_proof_classes: [PROOF_CLASSES.POLICY_UNIT, PROOF_CLASSES.BACKEND_INTEGRATION],
+          expected_proof_classes: [PROOF_CLASSES.POLICY_UNIT],
           matrix_version: MATRIX_VERSION,
           test_purpose: testPurpose,
           non_production: true,
@@ -1472,17 +1614,7 @@ export default async function(req: Request): Promise<Response> {
           readiness_unavailable: vrunLookupState === VERIFICATION_RUN_LOOKUP_STATES.UNAVAILABLE,
           readiness_conflict: vrunLookupState === VERIFICATION_RUN_LOOKUP_STATES.CONFLICT,
         },
-        automated_governance_readiness: {
-          ready: true,
-          matrix_version: MATRIX_VERSION,
-          campaign_type: VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX,
-          proof_classes: [PROOF_CLASSES.POLICY_UNIT, PROOF_CLASSES.BACKEND_INTEGRATION],
-          rls_proof_status: 'DEFERRED',
-          real_auth_proof_status: 'DEFERRED_TO_BUILD_28_2Q',
-          requires_registered_users: false,
-          requires_verified_emails: false,
-          requires_sessions: false,
-        },
+        automated_governance_readiness: await computeAutomatedReadiness(base44),
         unresolved_operations: allUnresolved,
         has_unresolved_operations: allUnresolved.length > 0,
         unresolved_lookup_available: unresolvedLookupAvailable,
@@ -1670,10 +1802,12 @@ export default async function(req: Request): Promise<Response> {
 
       const activeRun = vrs.run;
 
-      // Validate campaign type (if set, must be automated_policy_matrix)
-      if (activeRun.campaign_type && activeRun.campaign_type !== VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX) {
-        return safeJson('invalid_campaign_type', 409, 'Active verification run is not an automated_policy_matrix campaign.', {
-          current_campaign_type: activeRun.campaign_type,
+      // Validate campaign type — MUST be exactly automated_policy_matrix.
+      // Rejects null, undefined, manual_live_identity, auth_canary, and any unknown value.
+      // Build #28.2P-R.0R.3A — fail-closed: no automatic conversion of legacy runs.
+      if (activeRun.campaign_type !== VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX) {
+        return safeJson('invalid_campaign_type', 409, 'Active verification run is not an automated_policy_matrix campaign. The matrix may only run against an explicitly created automated_policy_matrix VerificationRun.', {
+          current_campaign_type: activeRun.campaign_type || null,
         });
       }
 
@@ -1692,11 +1826,47 @@ export default async function(req: Request): Promise<Response> {
 
     // ── GET MATRIX RESULTS (Build #28.2P-R.0R.3) ───────────────
     if (action === 'get_matrix_results') {
-      const vrs = await getVerificationRunState(base44);
-      if (vrs.state !== VERIFICATION_RUN_LOOKUP_STATES.ACTIVE) {
-        return Response.json({ success: true, scenarios: [], message: 'No active verification run.' });
+      // Build #28.2P-R.0R.3A — supports both ACTIVE and latest COMPLETED
+      // automated_policy_matrix runs. Never selects manual/auth-canary runs.
+      const requestedVRunId = body.verification_run_id || null;
+      let targetRun: any = null;
+
+      if (requestedVRunId) {
+        // Selector mode — lookup only, does not provide authority
+        const selectorRuns = await base44.asServiceRole.entities.VerificationRun.filter({
+          verification_run_id: requestedVRunId,
+        }).catch(() => []);
+        if (!selectorRuns || selectorRuns.length === 0) {
+          return Response.json({ success: false, safe_error_code: 'not_found', error: 'Verification run not found.' }, { status: 404 });
+        }
+        const run = selectorRuns[0];
+        if (run.campaign_type !== VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX) {
+          return Response.json({ success: false, safe_error_code: 'invalid_campaign_type', error: 'Selector may only target automated_policy_matrix runs.' }, { status: 400 });
+        }
+        targetRun = run;
+      } else {
+        // Default: try ACTIVE automated_policy_matrix first
+        const vrs = await getVerificationRunState(base44);
+        if (vrs.state === VERIFICATION_RUN_LOOKUP_STATES.ACTIVE && vrs.run.campaign_type === VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX) {
+          targetRun = vrs.run;
+        }
+        // If no active automated run, try latest COMPLETED automated run
+        if (!targetRun) {
+          const completedRuns = await base44.asServiceRole.entities.VerificationRun.filter({
+            campaign_type: VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX,
+            status: VERIFICATION_RUN_STATUSES.COMPLETED,
+          }, '-completed_at', 10).catch(() => []);
+          if (completedRuns && completedRuns.length > 0) {
+            const currentVersion = completedRuns.filter((r: any) => r.matrix_version === MATRIX_VERSION);
+            targetRun = currentVersion[0] || completedRuns[0];
+          }
+        }
       }
-      const activeVRunId = vrs.run.verification_run_id;
+
+      if (!targetRun) {
+        return Response.json({ success: true, scenarios: [], message: 'No automated_policy_matrix verification run found (active or completed).' });
+      }
+      const activeVRunId = targetRun.verification_run_id;
       const results = await base44.asServiceRole.entities.TestLabVerificationResult.filter({
         verification_run_id: activeVRunId,
       }, '-completed_at', 200).catch(() => []);
