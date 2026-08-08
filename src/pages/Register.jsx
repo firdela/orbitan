@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { UserPlus, Mail, Loader2 } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import AuthAlert from "@/components/auth/AuthAlert";
@@ -13,6 +13,7 @@ import GoogleIcon from "@/components/GoogleIcon";
 import { MicrosoftIcon, AppleIcon } from "@/components/SSOIcons";
 import { classifyRegisterError, classifyVerifyError, AUTH_ERROR_TYPES } from "@/lib/auth-errors";
 import { navigateToReturnUrl, resolveReturnUrl } from "@/lib/auth-redirects";
+import { validatePassword } from "@/lib/auth-password-policy";
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
@@ -62,13 +63,9 @@ export default function Register() {
     e.preventDefault();
     setError("");
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match. Please ensure both fields are identical.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    const passwordCheck = validatePassword(password, confirmPassword);
+    if (!passwordCheck.valid) {
+      setError(passwordCheck.message);
       return;
     }
 
@@ -103,6 +100,12 @@ export default function Register() {
     } catch (err) {
       const authError = classifyVerifyError(err);
       setError(authError.message);
+
+      // If already verified, redirect to login after showing the message
+      if (authError.type === AUTH_ERROR_TYPES.ACCOUNT_ALREADY_VERIFIED) {
+        setTimeout(() => { window.location.href = '/login'; }, 2000);
+        return;
+      }
 
       // Focus the error alert for screen readers
       setTimeout(() => {

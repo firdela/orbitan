@@ -108,13 +108,13 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setAuthChecked(true);
       
-      // If user auth fails, it might be an expired token
-      if (error.status === 401 || error.status === 403) {
-        // Build #28.2G.1 → #28.2H — Use canonical redirect utilities.
-        // Capture the return URL so the user returns to their intended page
-        // after re-authentication. Only capture if NOT on an auth route
-        // (to prevent redirect loops). Flag session expiry so the login
-        // page can show a "your session expired" message.
+      // Build #28.2Q — 401 and 403 are NOT the same condition.
+      // 401 = session expired (token invalid/revoked) → re-authenticate.
+      // 403 = authorization/workspace denial (user is authenticated but
+      //       lacks app access) → do NOT flag session expired or redirect
+      //       to login (that would cause a loop). The AuthenticatedApp
+      //       renders the appropriate access-denied / not-registered state.
+      if (error.status === 401) {
         captureReturnUrl();
         flagSessionExpired();
 
@@ -122,6 +122,14 @@ export const AuthProvider = ({ children }) => {
         setAuthError({
           type: 'auth_required',
           message: sessionError.message,
+        });
+      } else if (error.status === 403) {
+        // Authorization denial — user is authenticated but lacks access.
+        // Do NOT clear the session or flag expiry. Show access-denied state.
+        const authError = classifySessionError(error);
+        setAuthError({
+          type: 'user_not_registered',
+          message: authError.message,
         });
       }
     }

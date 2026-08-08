@@ -1,3 +1,4 @@
+/* global process */
 // ============================================================
 // ORBITAN — Authentication Error Mapping Test Suite
 //
@@ -16,12 +17,12 @@ import {
   classifyResetError,
   classifySessionError,
   AUTH_ERROR_TYPES,
-} from '../auth-errors';
+} from '../auth-errors.js';
 import {
   sanitizePath,
   isAuthRoute,
   resolveReturnUrl,
-} from '../auth-redirects';
+} from '../auth-redirects.js';
 
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
@@ -254,3 +255,30 @@ export function runAuthTests() {
 }
 
 export const AUTH_TEST_COUNT = tests.length;
+
+// ── Self-Executing Runner (for direct node execution) ──
+// Polyfill browser environment for Node.js testing
+if (typeof globalThis.window === 'undefined') {
+  globalThis.window = { location: { origin: 'http://localhost:3000', pathname: '/', search: '' } };
+}
+if (typeof globalThis.sessionStorage === 'undefined') {
+  const _store = new Map();
+  globalThis.sessionStorage = {
+    getItem: (k) => _store.has(k) ? _store.get(k) : null,
+    setItem: (k, v) => _store.set(k, String(v)),
+    removeItem: (k) => _store.delete(k),
+    clear: () => _store.clear(),
+  };
+}
+
+const _results = runAuthTests();
+console.log('\n=== Auth Errors Test Results ===');
+console.log(`Passed: ${_results.passed}`);
+console.log(`Failed: ${_results.failed}`);
+console.log(`Total: ${_results.total}`);
+if (_results.failed > 0) {
+  console.error('\n❌ FAILURES:');
+  _results.results.filter(r => r.status === 'fail').forEach(r => console.error(`  - ${r.name}: ${r.error}`));
+  process.exit(1);
+}
+console.log('\n✅ All auth error tests passed.');

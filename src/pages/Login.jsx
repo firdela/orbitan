@@ -17,8 +17,11 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [errorType, setErrorType] = useState(null);
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
   const formRef = useRef(null);
 
   // Show "session expired" message if the user was redirected here by AuthContext
@@ -41,7 +44,9 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setErrorType(null);
     setInfo("");
+    setResendSuccess(false);
     setLoading(true);
     try {
       await base44.auth.loginViaEmailPassword(email, password);
@@ -49,14 +54,8 @@ export default function Login() {
       navigateToReturnUrl("/workspace");
     } catch (err) {
       const authError = classifyLoginError(err);
-
-      // If verification is required, show a helpful message with a link to resend
-      if (authError.type === AUTH_ERROR_TYPES.VERIFICATION_REQUIRED) {
-        setError(authError.message);
-        setInfo("");
-      } else {
-        setError(authError.message);
-      }
+      setError(authError.message);
+      setErrorType(authError.type);
 
       // Focus the form for screen readers after error
       setTimeout(() => {
@@ -65,6 +64,21 @@ export default function Login() {
       }, 50);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Resend verification code for unverified accounts (login context)
+  const handleResendVerification = async () => {
+    if (!email || resendLoading) return;
+    setResendLoading(true);
+    setResendSuccess(false);
+    try {
+      await base44.auth.resendOtp(email);
+      setResendSuccess(true);
+    } catch {
+      // Silent fail — don't reveal account state or break enumeration protection
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -135,6 +149,24 @@ export default function Login() {
 
       {info && <AuthAlert variant="warning" message={info} />}
       {error && <AuthAlert variant="error" message={error} />}
+      {errorType === AUTH_ERROR_TYPES.VERIFICATION_REQUIRED && (
+        <div className="mb-4 text-center">
+          {resendSuccess ? (
+            <p className="text-xs text-emerald-400" role="status">
+              A new verification code has been sent to your email.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={resendLoading || !email}
+              className="text-xs text-blue-400 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {resendLoading ? 'Sending code...' : 'Resend verification code'}
+            </button>
+          )}
+        </div>
+      )}
 
       <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">

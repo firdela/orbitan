@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Lock, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import AuthAlert from "@/components/auth/AuthAlert";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { classifyResetError } from "@/lib/auth-errors";
 import { clearReturnUrl } from "@/lib/auth-redirects";
+import { validatePassword } from "@/lib/auth-password-policy";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -36,13 +36,9 @@ export default function ResetPassword() {
     e.preventDefault();
     setError("");
 
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match. Please ensure both fields are identical.");
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    const passwordCheck = validatePassword(newPassword, confirmPassword);
+    if (!passwordCheck.valid) {
+      setError(passwordCheck.message);
       return;
     }
 
