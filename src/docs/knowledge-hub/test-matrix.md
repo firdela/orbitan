@@ -1,9 +1,17 @@
-# OrbitanOS — Final Test Matrix (Build #14)
+# OrbitanOS — Final Test Matrix (Build #28.2Q-ZE.1)
 
 > Each test has: ID, workflow, role, tenant, outlet, preconditions, steps,
 > expected, actual, pass/fail, evidence, defect ref, retest. Execution status
 > marked honestly: ✅ passed (engine/route verified), ⚠️ partial (structural
 > only, live regression → #15), ⏳ pending (#15).
+
+> **Build #28.2Q-ZE.1 — Zero-Email Test Lab Migration:** The Test Lab now uses
+> `TEST_PERSONAS` (keyed by `persona_key` + `employee_fixture_key`) instead of
+> `TEST_IDENTITIES` (keyed by email). The 8 canonical governance personas are
+> logical testing models — NOT registered Base44 User accounts. Authority
+> derives from server-side fixture resolution, not email delivery. The auth
+> canary campaign (`vrun_msk4wcye_9lhamf`) has been retired (ACTIVE → FAILED →
+> ARCHIVED). REAL_AUTH is NOT claimed. See `defect-register.md` ZE-01/ZE-02.
 
 ## Authentication
 | ID | Workflow | Role | Steps | Expected | Status |

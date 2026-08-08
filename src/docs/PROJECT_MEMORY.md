@@ -7,7 +7,7 @@
 >
 > **Build Philosophy:** Build less. Validate more.
 >
-> **Last updated:** 2026-08-08 (Build #28.2P-R.0R.3A — Automated Campaign Lifecycle Closure: PASS, 45/45 scenarios, evidence-derived readiness = true, 0 real accounts required for routine policy verification)
+> **Last updated:** 2026-08-08 (Build #28.2Q-ZE.1 — Zero-Email Test Lab Persona Migration: TEST_PERSONAS replaces TEST_IDENTITIES, TestSecurityContext derives from persona_key + fixture_key (no email), Tenant Digital Twins provisioned, auth canary vrun_msk4wcye_9lhamf retired ACTIVE → FAILED → ARCHIVED, REAL_AUTH NOT claimed)
 
 ---
 

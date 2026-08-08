@@ -56,7 +56,7 @@ function assertEqual(actual, expected, message) {
   }
 }
 
-console.log('\n=== Build #28.2P-R.0R.3A Closure Tests ===\n');
+console.log('\n=== Build #28.2Q-ZE.1 Zero-Email Migration Closure Tests ===\n');
 
 // ── 1. TESTLABOPERATION SCHEMA ENUM PARITY ───────────────────
 console.log('--- TestLabOperation Schema Enum Parity ---');
@@ -300,7 +300,80 @@ console.log('\n--- getScenarioCount Unused Import Removed ---');
 assert(!entryCode.includes('getScenarioCount'),
   'getScenarioCount import removed from entry.ts (was unused)');
 
-// ── 18. DELIBERATE FAILURE ───────────────────────────────────
+// ── 18. ZERO-EMAIL MIGRATION (Build #28.2Q-ZE.1) ────────────
+console.log('\n--- Zero-Email Migration (Build #28.2Q-ZE.1) ---');
+
+// TEST_PERSONAS is the canonical registry
+assert(configCode.includes('export const TEST_PERSONAS'),
+  'TEST_PERSONAS is exported from test-lab-config.js');
+assert(configCode.includes('persona_key:'),
+  'TEST_PERSONAS entries have persona_key field');
+assert(configCode.includes('employee_fixture_key:'),
+  'TEST_PERSONAS entries have employee_fixture_key field');
+assert(configCode.includes('tenant_fixture_key:'),
+  'TEST_PERSONAS entries have tenant_fixture_key field');
+
+// TEST_IDENTITIES is a deprecated alias
+assert(configCode.includes('@deprecated') && configCode.includes('TEST_IDENTITIES = TEST_PERSONAS'),
+  'TEST_IDENTITIES is a @deprecated alias to TEST_PERSONAS');
+
+// Email-based helpers are deprecated and return false/null
+assert(configCode.includes('isAllowlistedTestAlias(_email)') && configCode.includes('return false'),
+  'isAllowlistedTestAlias is deprecated and returns false');
+assert(configCode.includes('getTestIdentity(_email)') && configCode.includes('return null'),
+  'getTestIdentity is deprecated and returns null');
+
+// Persona lookup functions exist
+assert(configCode.includes('export function getPersonaByKey('),
+  'getPersonaByKey function is defined');
+assert(configCode.includes('export function getPersonaByFixtureKey('),
+  'getPersonaByFixtureKey function is defined');
+
+// Verification matrix uses TEST_PERSONAS (not TEST_IDENTITIES)
+const matrixPath = join(__dirname, '../../../base44/functions/testLabSetup/verification-matrix.ts');
+const matrixCode = readFileSync(matrixPath, 'utf8');
+assert(matrixCode.includes('TEST_PERSONAS') && !matrixCode.includes('TEST_IDENTITIES'),
+  'Verification matrix imports TEST_PERSONAS (not TEST_IDENTITIES)');
+assert(matrixCode.includes('employeesByFixtureKey') && !matrixCode.includes('employeesByEmail'),
+  'Verification matrix uses employeesByFixtureKey (not employeesByEmail)');
+
+// Employee schema has test_fixture_key
+const employeeSchemaPath = join(__dirname, '../../../base44/entities/Employee.jsonc');
+const employeeSchemaRaw = readFileSync(employeeSchemaPath, 'utf8');
+assert(employeeSchemaRaw.includes('test_fixture_key'),
+  'Employee schema includes test_fixture_key field');
+
+// VerificationRun schema has expected_identity_matrix deprecated
+const vrunSchemaPath = join(__dirname, '../../../base44/entities/VerificationRun.jsonc');
+const vrunSchemaRaw = readFileSync(vrunSchemaPath, 'utf8');
+assert(vrunSchemaRaw.includes('@deprecated') && vrunSchemaRaw.includes('expected_identity_matrix'),
+  'VerificationRun schema marks expected_identity_matrix as @deprecated');
+assert(vrunSchemaRaw.includes('expected_personas'),
+  'VerificationRun schema has expected_personas field');
+
+// Tenant Digital Twins module exists
+const twinsPath = join(__dirname, '../../../base44/shared/test-tenant-digital-twins.js');
+try {
+  const twinsCode = readFileSync(twinsPath, 'utf8');
+  assert(twinsCode.includes('TENANT_DIGITAL_TWINS'),
+    'Tenant Digital Twins module exists and exports TENANT_DIGITAL_TWINS');
+  assert(twinsCode.includes('tenant_a_standard') && twinsCode.includes('tenant_b_standard'),
+    'Tenant Digital Twins includes tenant_a_standard and tenant_b_standard profiles');
+} catch {
+  assert(false, 'Tenant Digital Twins module file exists');
+}
+
+// TestSecurityContext uses persona-based identity (no email)
+const securityContextPath = join(__dirname, '../../../base44/shared/test-security-context.js');
+const securityContextCode = readFileSync(securityContextPath, 'utf8');
+assert(securityContextCode.includes('employeesByFixtureKey') && !securityContextCode.includes('employeesByEmail'),
+  'TestSecurityContext uses employeesByFixtureKey (not employeesByEmail)');
+assert(securityContextCode.includes('synthetic_test_persona'),
+  'TestSecurityContext uses synthetic_test_persona identity type');
+assert(securityContextCode.includes('test_persona:'),
+  'TestSecurityContext identity uses test_persona: prefix (not email)');
+
+// ── 19. DELIBERATE FAILURE ───────────────────────────────────
 console.log('\n--- Deliberate Failure ---');
 
 // Deliberately fail to verify the test runner catches failures
@@ -314,7 +387,7 @@ if (deliberateFail) {
 }
 
 // ── RESULTS ─────────────────────────────────────────────────
-console.log('\n=== Build #28.2P-R.0R.3A Closure Test Results ===');
+console.log('\n=== Build #28.2Q-ZE.1 Closure Test Results ===');
 console.log(`Passed: ${passed}`);
 console.log(`Failed: ${failed}`);
 console.log(`Total: ${passed + failed}`);
@@ -325,4 +398,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log('\n✅ All Build #28.2P-R.0R.3A closure tests passed.');
+console.log('\n✅ All Build #28.2Q-ZE.1 zero-email migration closure tests passed.');

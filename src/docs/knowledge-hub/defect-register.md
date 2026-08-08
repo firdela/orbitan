@@ -58,6 +58,13 @@
 | RC-12 | Console warnings | Dev-mode SW cache purge prevents React version mismatch | ✅ PASS | PWAUpdateListener purges stale caches + unregisters SW in DEV mode |
 | RC-13 | Dead/duplicate code | Legacy redirects consolidated (P2); duplicate severity styles removed (P3) | ✅ PASS | 17 redirects → data-driven array; SEVERITY_STYLES → StatusBadge severity keys |
 
+## Resolved defects (Build #28.2Q-ZE.1 — Zero-Email Test Lab Migration)
+
+| ID | Severity | Module | Impact | Root cause | Fix | Files changed | Retest |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| ZE-01 | S2 | Test Lab / Auth | Auth canary campaign `vrun_msk4wcye_9lhamf` stuck in ACTIVE state — REAL_AUTH never verified, email never received, campaign blocking readiness | Auth canary methodology required email delivery verification which never completed; campaign left in ACTIVE state indefinitely | Campaign retired through legal lifecycle: ACTIVE → FAILED (reason: `methodology_superseded_zero_email_testing_policy`) → ARCHIVED. REAL_AUTH NOT claimed. Historical evidence preserved. | `base44/entities/VerificationRun.jsonc` (schema), Production database (state transition) | ✅ Final state verified: `status = archived`, `completed_at` and `archived_at` set |
+| ZE-02 | S3 | Test Lab / Identity | Email-based test identity model required 8 artificial email accounts, Cloudflare aliases, and founder-managed mailboxes — unsustainable operational burden | `TEST_IDENTITIES` registry keyed by email address; `TestSecurityContext` resolved employees by email; `TestLabAttestation` verified email delivery | Replaced with `TEST_PERSONAS` registry keyed by `persona_key` + `employee_fixture_key`. `TestSecurityContext` resolves fixtures by key (not email). `Tenant Digital Twins` provide synthetic tenant profiles. Email helpers deprecated. | `base44/shared/test-lab-config.js`, `base44/shared/test-security-context.js`, `base44/shared/test-tenant-digital-twins.js`, `base44/entities/Employee.jsonc` | ✅ All scenario evaluators use `persona_key`; no email references remain in verification matrix |
+
 ## Open defects
 | ID | Severity | Module | Status | Blocker |
 | :--- | :--- | :--- | :--- | :--- |

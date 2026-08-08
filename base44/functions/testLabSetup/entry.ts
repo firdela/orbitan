@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
 import {
-  TEST_IDENTITIES, TEST_LAB_PERMISSION, CROSS_TENANT_AI_PERMISSION,
+  TEST_PERSONAS, TEST_LAB_PERMISSION, CROSS_TENANT_AI_PERMISSION,
   TENANT_A_ID, TENANT_A_NAME, TENANT_B_NAME, TENANT_B_TEST_LAB_KEY,
   SANDBOX_TENANT_DEFAULTS,
   SANDBOX_TEST_TTL_DEFAULT_MINUTES, EMAIL_ATTESTATION_CHECKS,
@@ -318,7 +318,9 @@ export default async function(req: Request): Promise<Response> {
           campaign_type: body.campaign_type || VERIFICATION_RUN_CAMPAIGN_TYPES.AUTOMATED_POLICY_MATRIX,
           tenant_a_id: TENANT_A_ID,
           tenant_b_id: null,
-          expected_identity_matrix: TEST_IDENTITIES.map(t => t.email),
+          // Build #28.2Q-ZE.1 — expected_identity_matrix is @deprecated.
+          // New zero-email campaigns use expected_personas (persona keys) instead.
+          // Do NOT populate expected_identity_matrix with email addresses.
           expected_personas: PERSONA_KEYS,
           // Build #28.2P-R.0R.3A — server-derived expected_scenarios for automated campaigns.
           // The browser/client cannot define the canonical automated scenario matrix.

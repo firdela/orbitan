@@ -7,6 +7,26 @@ alongside the relevant architecture/product/user/developer docs.
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Build #28.2Q-ZE.1 (Zero-Email Test Lab Persona Migration & Auth Canary Retirement) (2026-08-08)
+
+### Status: MIGRATION COMPLETE — Zero-email persona architecture replaces email-based test identity model. Auth canary retired. REAL_AUTH NOT claimed.
+
+### What Was Completed
+- **TEST_PERSONAS canonical registry:** `TEST_IDENTITIES` replaced by `TEST_PERSONAS` — 8 persona definitions keyed by `persona_key` (not email). Each persona carries `tenant_fixture_key`, `outlet_fixture_key`, `employee_fixture_key` for deterministic server-side fixture resolution. `TEST_IDENTITIES` retained as `@deprecated` alias pointing to the same array for backward-compatible imports.
+- **TestSecurityContext zero-email refactor:** `deriveTestSecurityContext()` now resolves employee fixtures by `employee_fixture_key` (NOT email). `buildAccessEngineRequest()` constructs identity as `test_persona:persona_key` with `type: 'synthetic_test_persona'` — no email in the identity object. `validateClientScenarioInput()` rejects email-based authority injection (`email`, `canonical_email`, `alias`, `persona_key`).
+- **Tenant Digital Twins module:** New `base44/shared/test-tenant-digital-twins.js` provides deterministic synthetic tenant fixture profiles (`tenant_a_standard`, `tenant_b_standard`) linked by `tenant_fixture_key`. Not production tenants — synthetic fixtures only.
+- **Employee schema:** Added `test_fixture_key` field to Employee entity — non-production fixture key for synthetic Employee records used by the Test Lab. Null for production employees. Never user-facing.
+- **VerificationRun schema:** `expected_identity_matrix` field marked `@deprecated (Build #28.2Q-ZE.1)`. New zero-email campaigns use `expected_personas` + `expected_scenarios` instead. Historical records remain readable.
+- **Verification matrix orchestrator:** `loadFixtureData()` now builds `employeesByFixtureKey` map (NOT `employeesByEmail`). Import changed from `TEST_IDENTITIES` to `TEST_PERSONAS`. All scenario evaluators already use `persona_key` — no email references remain.
+- **Email-based helpers deprecated:** `isAllowlistedTestAlias()` and `getTestIdentity()` now always return `false`/`null` — no email is allowlisted. `getPersonaByKey()` and `getPersonaByFixtureKey()` are the canonical lookup methods.
+- **Auth canary retired:** `vrun_msk4wcye_9lhamf` transitioned ACTIVE → FAILED (reason: `methodology_superseded_zero_email_testing_policy`) → ARCHIVED. REAL_AUTH NOT verified — email was never received. Historical evidence preserved. No REAL_AUTH PASS claimed.
+- **Zero-Email Testing Principle enforced:** Testing requires no artificial email accounts, no Cloudflare aliases, no founder-managed mailboxes. Authority derives from internal persona keys, never client-injected email or identity claims.
+
+### What Remains Deferred
+- **RLS proof:** DEFERRED — Act as User is editor/admin-only, not programmatically callable. Manual spot-check deferred.
+- **REAL_AUTH proof:** DEFERRED — Auth canary methodology superseded by zero-email policy. Real authentication lifecycle verification will be addressed in a future build using a non-email approach.
+- **Governance matrix regression:** Pending execution against the new persona architecture to confirm 45/45 scenarios still PASS.
+
 ## [Unreleased] — Build #28.2P-R.0R.3A (Automated Campaign Lifecycle, Schema & Readiness Truthfulness Closure) (2026-08-08)
 
 ### Status: PASS — All 45 automated policy matrix scenarios pass. Evidence-derived readiness = true. 0 real accounts required for routine policy verification.
