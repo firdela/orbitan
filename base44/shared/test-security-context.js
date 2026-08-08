@@ -1,9 +1,9 @@
 // ============================================================
 // ORBITAN TEST LAB — Ephemeral Test Security Context
-// Build #28.2P-R.0R.3
+// Build #28.2Q-ZE.1 — Zero-Email Persona Migration
 //
 // Server-only immutable TestSecurityContext derivation from
-// canonical TEST_IDENTITIES + PermissionPacks.
+// canonical TEST_PERSONAS + PermissionPacks + Tenant Digital Twins.
 //
 // A TestSecurityContext is NOT:
 //   - a Base44 User
@@ -12,15 +12,23 @@
 //   - a browser user
 //   - a localStorage identity
 //   - a client-selected authority
+//   - an email identity
 //
 // All authoritative fields are derived SERVER-SIDE from canonical
 // fixtures. The client may only submit a predefined scenario ID.
+//
+// BUILD #28.2Q-ZE.1 — ZERO-EMAIL:
+//   - No canonical_email in the context
+//   - No employeesByEmail lookup
+//   - Employee fixture resolved by employee_fixture_key
+//   - AccessEngine identity uses test_persona:persona_key (no email)
+//   - identity.type = 'synthetic_test_persona'
 //
 // Pure functions only — no SDK calls, no side effects.
 // ============================================================
 
 import {
-  TEST_IDENTITIES, TENANT_A_ID, TENANT_B_TEST_LAB_KEY,
+  TEST_PERSONAS, TENANT_A_ID, TENANT_B_TEST_LAB_KEY,
   CROSS_TENANT_AI_PERMISSION, TEST_LAB_PERMISSION,
   getPersonaByKey, PERSONA_KEYS,
 } from './test-lab-config.js';
@@ -28,41 +36,30 @@ import {
   permissionsForRole, ROLE_PACKS, PERMISSION_KEYS,
 } from './access/PermissionPacks.js';
 
-export const TEST_SECURITY_CONTEXT_VERSION = '1.0.0';
+export const TEST_SECURITY_CONTEXT_VERSION = '2.0.0';
 
 // ── RESOLVE EFFECTIVE PERMISSIONS ─────────────────────────────
 // Derives effective permissions from the canonical PermissionPacks
 // ROLE_PACKS registry. Platform personas also receive (or not)
 // the cross-tenant AI permission based on their definition.
-//
-// This uses the SAME production permission registry — no duplicate
-// permission definitions exist in the Test Lab.
 export function resolveEffectivePermissions(persona) {
   if (!persona) return [];
 
   // Platform personas use their global admin role + explicit permissions
   if (persona.tenant === 'platform') {
     const basePerms = [];
-    // Platform allowed: has cross-tenant AI permission
     if (persona.requiresCrossTenantPermission) {
       basePerms.push(CROSS_TENANT_AI_PERMISSION);
     }
-    // Neither platform persona receives test_lab.manage
-    // (the real operator owns that permission)
     return basePerms;
   }
 
   // Tenant personas derive permissions from their Employee role
-  // via the canonical PermissionPacks ROLE_PACKS registry
   const rolePerms = permissionsForRole(persona.employeeRole);
-
-  // Add any explicitly prohibited permissions as deny entries
-  // (for testing explicit-deny precedence)
   return rolePerms;
 }
 
 // ── RESOLVE PROHIBITED PERMISSIONS ────────────────────────────
-// Returns the list of permissions this persona must NEVER have.
 export function resolveProhibitedPermissions(persona) {
   if (!persona) return [];
   return persona.prohibitedPermissions || [];
@@ -84,6 +81,10 @@ export function resolveTenantId(persona, fixtureData) {
 // Creates an immutable TestSecurityContext from a canonical persona
 // key + fixture data. This is the ONLY way to create a TestSecurityContext.
 //
+// BUILD #28.2Q-ZE.1: Fixture data uses employeesByFixtureKey (NOT
+// employeesByEmail). Employee fixture is resolved by the persona's
+// employee_fixture_key — no email lookup.
+//
 // The client NEVER provides role, permissions, tenant_id, outlet_id,
 // user_id, or employee_role. All are derived server-side.
 export function deriveTestSecurityContext(personaKey, fixtureData = {}) {
@@ -99,20 +100,21 @@ export function deriveTestSecurityContext(personaKey, fixtureData = {}) {
   const effectivePermissions = resolveEffectivePermissions(persona);
   const prohibitedPermissions = resolveProhibitedPermissions(persona);
 
-  // Resolve outlet_id from fixture data
+  // Resolve outlet_id from fixture data by tenant
   const outletId = fixtureData?.outletsByTenant?.[tenantId]?.[0]?.id || null;
 
-  // Resolve employee_fixture_id from fixture data
-  const employeeFixtureId = fixtureData?.employeesByEmail?.[persona.email]?.id || null;
+  // Build #28.2Q-ZE.1: Resolve employee_fixture_id by fixture key (NOT email)
+  const employeeFixtureKey = persona.employee_fixture_key;
+  const employeeFixtureId = fixtureData?.employeesByFixtureKey?.[employeeFixtureKey]?.id || null;
 
   return Object.freeze({
     persona_key: persona.persona_key,
-    canonical_email: persona.email,
     label: persona.label,
     global_role: persona.userRole,
     tenant_id: tenantId,
     outlet_id: outletId,
     employee_fixture_id: employeeFixtureId,
+    employee_fixture_key: employeeFixtureKey,
     employee_role: persona.employeeRole,
     effective_permissions: effectivePermissions,
     prohibited_permissions: prohibitedPermissions,
@@ -127,16 +129,17 @@ export function deriveTestSecurityContext(personaKey, fixtureData = {}) {
 // Constructs a request object compatible with the production
 // AccessEngine.evaluate() from a TestSecurityContext.
 //
-// This is how the Test Lab exercises the SAME production AccessEngine
-// without creating a second authorization engine.
+// BUILD #28.2Q-ZE.1: Identity uses a deterministic synthetic ID
+// (test_persona:persona_key) with type 'synthetic_test_persona'.
+// No email is included — AccessEngine does not require it.
 export function buildAccessEngineRequest(ctx, resource, action, overrides = {}) {
   if (!ctx || ctx.error) return null;
 
   // Construct the identity object expected by AccessEngine
+  // Build #28.2Q-ZE.1: No email — synthetic test persona identity
   const identity = {
     id: ctx.employee_fixture_id || `test_persona:${ctx.persona_key}`,
-    type: 'user',
-    email: ctx.canonical_email,
+    type: 'synthetic_test_persona',
     platform_role: ctx.global_role,
     role: ctx.global_role,
   };
@@ -186,11 +189,16 @@ export function buildAccessEngineRequest(ctx, resource, action, overrides = {}) 
 // ── VALIDATE CLIENT SCENARIO INPUT ────────────────────────────
 // Ensures the client has NOT supplied any authority-adjacent fields.
 // The client may only submit a scenario_id — nothing else.
+//
+// BUILD #28.2Q-ZE.1: Also rejects email-based authority injection
+// (canonical_email, email, alias) to enforce zero-email policy.
 export function validateClientScenarioInput(input) {
   const forbiddenKeys = [
     'role', 'permissions', 'tenant_id', 'outlet_id', 'user_id',
     'employee_role', 'expected_result', 'persona', 'simulated_user',
     'simulated_role', 'simulated_tenant', 'identity_override',
+    // Build #28.2Q-ZE.1 — zero-email: reject email-based authority
+    'email', 'canonical_email', 'alias', 'persona_key',
   ];
   const violations = [];
   for (const key of forbiddenKeys) {

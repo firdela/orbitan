@@ -24,7 +24,7 @@
 // ============================================================
 
 import {
-  TEST_IDENTITIES, TENANT_A_ID, TENANT_B_TEST_LAB_KEY,
+  TEST_PERSONAS, TENANT_A_ID, TENANT_B_TEST_LAB_KEY,
   TARGET_TYPES, targetKeyForVerificationMatrix,
   PROOF_CLASSES, VERIFICATION_RESULT_STATUSES, MATRIX_VERSION,
   PERSONA_KEYS, getPersonaByKey,
@@ -56,16 +56,17 @@ async function loadFixtureData(base44: any): Promise<any> {
   const tenantBId = tenantB?.id || null;
   const employeesBFinal = tenantBId ? await base44.asServiceRole.entities.Employee.filter({ tenant_id: tenantBId }).catch(() => []) : [];
 
-  const employeesByEmail: Record<string, any> = {};
+  // Build #28.2Q-ZE.1 — Zero-Email: resolve employees by fixture_key (NOT email)
+  const employeesByFixtureKey: Record<string, any> = {};
   for (const emp of [...(employeesA || []), ...employeesBFinal]) {
-    if (emp?.email) employeesByEmail[emp.email] = emp;
+    if (emp?.test_fixture_key) employeesByFixtureKey[emp.test_fixture_key] = emp;
   }
 
   const outletsByTenant: Record<string, any[]> = {};
   outletsByTenant[TENANT_A_ID] = outletsA || [];
   if (tenantBId) outletsByTenant[tenantBId] = outletsB || [];
 
-  return { tenantA, tenantB, tenantBId, employeesByEmail, outletsByTenant };
+  return { tenantA, tenantB, tenantBId, employeesByFixtureKey, outletsByTenant };
 }
 
 // ── RUN SINGLE SCENARIO ──────────────────────────────────────

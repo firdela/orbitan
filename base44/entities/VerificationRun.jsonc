@@ -1,7 +1,7 @@
 {
   "name": "VerificationRun",
   "type": "object",
-  "description": "Orbitan Test Lab \u2014 Verification Campaign (Build #28.2P-R.0R.3). Represents ONE complete governance verification cycle. Server-generated immutable verification_run_id links TestRun \u2192 AIApproval \u2192 audit evidence \u2192 Orbit Inbox lifecycle. Build #28.2P-R.0R.1C-F hardens RLS to service-role-only writes using a single impossible user_condition and enforces legal lifecycle transitions server-side. Build #28.2P-R.0R.3 adds campaign_type to distinguish automated policy matrix verification from legacy manual live-identity verification and auth canary verification. Only platform.test_lab.manage may create or activate. Readiness is calculated against the currently active verification run only. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
+  "description": "Orbitan Test Lab \u2014 Verification Campaign (Build #28.2Q-ZE.1). Represents ONE complete governance verification cycle. Server-generated immutable verification_run_id links TestRun \u2192 AIApproval \u2192 audit evidence \u2192 Orbit Inbox lifecycle. Build #28.2P-R.0R.1C-F hardens RLS to service-role-only writes using a single impossible user_condition and enforces legal lifecycle transitions server-side. Build #28.2P-R.0R.3 adds campaign_type to distinguish automated policy matrix verification from legacy manual live-identity verification and auth canary verification. Build #28.2Q-ZE.1 deprecates expected_identity_matrix for new zero-email campaigns \u2014 use expected_personas + expected_scenarios instead. Only platform.test_lab.manage may create or activate. Readiness is calculated against the currently active verification run only. Internal test infrastructure \u2014 never exposed to customer tenants. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "verification_run_id": {
       "type": "string",
@@ -52,7 +52,7 @@
         "automated_policy_matrix",
         "auth_canary"
       ],
-      "description": "Build #28.2P-R.0R.3 \u2014 Campaign methodology. manual_live_identity = legacy 8-account manual verification (superseded). automated_policy_matrix = server-side automated policy verification. auth_canary = real authentication lifecycle verification (#28.2Q)."
+      "description": "Build #28.2P-R.0R.3 \u2014 Campaign methodology. manual_live_identity = legacy 8-account manual verification (superseded). automated_policy_matrix = server-side automated policy verification. auth_canary = real authentication lifecycle verification (#28.2Q, superseded by zero-email policy in #28.2Q-ZE.1)."
     },
     "tenant_a_id": {
       "type": "string",
@@ -67,14 +67,14 @@
       "items": {
         "type": "string"
       },
-      "description": "Expected test identity emails for this verification cycle. For automated_policy_matrix campaigns, these are canonical persona emails \u2014 NOT required to be registered Base44 User accounts."
+      "description": "@deprecated (Build #28.2Q-ZE.1) \u2014 Legacy email-oriented identity matrix. Retained for historical readability of existing VerificationRun records. New zero-email automated campaigns MUST NOT populate this field with email addresses \u2014 use expected_personas + expected_scenarios instead. Historical records remain readable."
     },
     "expected_personas": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Build #28.2P-R.0R.3 \u2014 Canonical persona keys for automated campaigns e.g. ['tenant_a_requester', 'tenant_a_approver', ...]. Distinct from expected_identity_matrix (which lists emails)."
+      "description": "Build #28.2P-R.0R.3 \u2014 Canonical persona keys for automated campaigns e.g. ['tenant_a_requester', 'tenant_a_approver', ...]. Build #28.2Q-ZE.1 \u2014 This is the canonical identity reference for zero-email campaigns (replaces expected_identity_matrix)."
     },
     "expected_scenarios": {
       "type": "array",

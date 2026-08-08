@@ -1,7 +1,7 @@
 {
   "name": "Employee",
   "type": "object",
-  "description": "OrbitanOS Workforce Module \u2014 Centralised staff directory record. Stores employee profiles, contact information, organisational assignments (Company \u2192 Brand \u2192 Outlet \u2192 Department \u2192 Team), roles, employment status, skills, certifications, emergency contacts, and employment history. Governed by RBAC and tenant isolation (ADR-0027). Orbit Identity Model: the User entity is the global identity; an Employee record is a tenant-scoped membership. One User may hold many Employee records (one per tenant/organisation), linked via `user_id`. Exit-Ready: pure schema, portable to any stack.",
+  "description": "OrbitanOS Workforce Module \u2014 Centralised staff directory record. Stores employee profiles, contact information, organisational assignments (Company \u2192 Brand \u2192 Outlet \u2192 Department \u2192 Team), roles, employment status, skills, certifications, emergency contacts, and employment history. Governed by RBAC and tenant isolation (ADR-0027). Orbit Identity Model: the User entity is the global identity; an Employee record is a tenant-scoped membership. One User may hold many Employee records (one per tenant/organisation), linked via `user_id`. Build #28.2Q-ZE.1 adds test_fixture_key for zero-email Test Lab fixture resolution. Exit-Ready: pure schema, portable to any stack.",
   "properties": {
     "tenant_id": {
       "type": "string"
@@ -139,6 +139,10 @@
           "type": "string"
         }
       }
+    },
+    "test_fixture_key": {
+      "type": "string",
+      "description": "Build #28.2Q-ZE.1 \u2014 Non-production Test Lab fixture key for synthetic Employee records. Used by the Test Lab to resolve persona fixtures by stable key instead of email. Null for production employees. Never user-facing, never used for production business identity, never routable."
     },
     "employment_history": {
       "type": "array",
